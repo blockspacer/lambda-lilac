@@ -1,0 +1,72 @@
+[submodule "deps/assimp"]
+	path = deps/assimp
+	url = https://github.com/assimp/assimp
+[submodule "deps/bullet3"]
+	path = deps/bullet3
+	url = https://github.com/bulletphysics/bullet3
+[submodule "deps/tinygltf"]
+	path = deps/tinygltf
+	url = https://github.com/syoyo/tinygltf
+[submodule "deps/imgui"]
+	path = deps/imgui
+	url = https://github.com/ocornut/imgui
+[submodule "deps/EASTL"]
+	path = deps/EASTL
+	url = https://github.com/electronicarts/EASTL
+[submodule "deps/enet"]
+	path = deps/enet
+	url = https://github.com/lsalzman/enet
+[submodule "deps/glfw"]
+	path = deps/glfw
+	url = https://github.com/glfw/glfw
+[submodule "deps/glm"]
+	path = deps/glm
+	url = https://github.com/g-truc/glm
+[submodule "deps/MeshDecimation"]
+	path = deps/MeshDecimation
+	url = https://github.com/kmammou/MeshDecimation
+[submodule "deps/nuklear"]
+	path = deps/nuklear
+	url = https://github.com/vurtun/nuklear
+[submodule "deps/SDL-mirror"]
+	path = deps/SDL-mirror
+	url = https://github.com/spurious/SDL-mirror
+[submodule "deps/inih"]
+	path = deps/inih
+	url = https://github.com/benhoyt/inih
+[submodule "deps/stb"]
+	path = deps/stb
+	url = https://github.com/nothings/stb
+[submodule "deps/tinyxml2"]
+	path = deps/tinyxml2
+	url = https://github.com/leethomason/tinyxml2
+[submodule "deps/FastNoise"]
+	path = deps/FastNoise
+	url = https://github.com/Auburns/FastNoise.git
+[submodule "deps/soloud"]
+	path = deps/soloud
+	url = https://github.com/jarikomppa/soloud.git
+[submodule "deps/rapidjson"]
+	path = deps/rapidjson
+	url = https://github.com/Tencent/rapidjson.git
+[submodule "deps/wren"]
+	path = deps/wren
+	url = https://github.com/munificent/wren.git
+[submodule "deps/AngelScript"]
+	path = deps/AngelScript
+	url = https://github.com/IngwiePhoenix/AngelScript.git
+[submodule "deps/DirectXTex"]
+	path = deps/DirectXTex
+	url = https://github.com/Microsoft/DirectXTex.git
+[submodule "cef-project"]
+	path = cef-project
+	url = https://github.com/chromiumembedded/cef-project.git
+[submodule "deps/glslang"]
+	path = deps/glslang
+	url = https://github.com/KhronosGroup/glslang.git
+[submodule "deps/SPIRV-Cross"]
+	path = deps/SPIRV-Cross
+	url = https://github.com/KhronosGroup/SPIRV-Cross.git
+[submodule "deps/lz4"]
+	path = deps/lz4
+	url = https://github.com/lz4/lz4.git

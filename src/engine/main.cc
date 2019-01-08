@@ -1,0 +1,485 @@
+#include "assets/shader.h"
+#include <memory/memory.h>
+#include <iostream>
+#include "systems/transform_system.h"
+#include "platform/scene.h"
+#include "systems/entity_system.h"
+#include "systems/transform_system.h"
+#include "systems/camera_system.h"
+#include "systems/mesh_render_system.h"
+#include "systems/light_system.h"
+#include "assets/mesh_io.h"
+#include "assets/shader_io.h"
+#include <containers/containers.h>
+#include <fstream>
+#include "scripting/binding/script_binding.h"
+#include <INIReader.h>
+#include "utils/mt_manager.h"
+#include <utils/file_system.h>
+#include <algorithm>
+
+#if VIOLET_GUI_CEF
+#include "gui/gui.h"
+#endif
+
+#if VIOLET_WIN32
+#include <windows.h>
+#endif
+
+#define USE_GUI 0
+#if USE_GUI && !VIOLET_GUI_CEF
+#undef USE_GUI
+#define USE_GUI 1
+#endif
+
+#if defined VIOLET_RENDERER_D3D11
+#include "renderers/d3d11/d3d11_renderer.h"
+#elif defined VIOLET_RENDERER_METAL
+#include "renderers/no/no_renderer.h"
+#elif defined VIOLET_RENDERER_NO
+#include "renderers/no/no_renderer.h"
+#endif
+
+#if defined VIOLET_WINDOW_WIN32
+#include "windows/win32/win32_window.h"
+#endif
+#if defined VIOLET_WINDOW_GLFW
+#include "windows/glfw/glfw_window.h"
+#endif
+#if defined VIOLET_WINDOW_SDL2
+#include "windows/sdl2/sdl2_window.h"
+#endif
+  
+//#undef VIOLET_SCRIPTING_WREN
+
+#if defined VIOLET_SCRIPTING_ANGEL
+#include "scripting/angel-script/angel_script_context.h"
+#endif
+#if defined VIOLET_SCRIPTING_WREN
+#include "scripting/wren/wren_context.h"
+#endif
+
+#if defined VIOLET_IMGUI_NUKLEAR
+#include "imgui/nuklear_imgui.h"
+#endif
+#if defined VIOLET_IMGUI_DEAR
+#include "imgui/dear_imgui.h"
+#endif
+#if defined VIOLET_IMGUI_NO
+#include "imgui/no_imgui.h"
+#endif
+
+
+using namespace lambda;
+
+#if USE_GUI
+asset::VioletTextureHandle g_gui_texture;
+#endif
+
+glm::vec4 RGBtoHSV(const glm::vec4& rgb) {
+  glm::vec4 hsv = rgb;
+  float fCMax = std::fmaxf(std::fmaxf(rgb.x, rgb.y), rgb.z);
+  float fCMin = std::fminf(std::fminf(rgb.x, rgb.y), rgb.z);
+  float fDelta = fCMax - fCMin;
+  
+  if(fDelta > 0) {
+    if(fCMax == rgb.x) {
+      hsv.x = 60 * (fmodf(((rgb.y - rgb.z) / fDelta), 6));
+    } else if(fCMax == rgb.y) {
+      hsv.x = 60 * (((rgb.z - rgb.x) / fDelta) + 2);
+    } else if(fCMax == rgb.z) {
+      hsv.x = 60 * (((rgb.x - rgb.y) / fDelta) + 4);
+    }
+    
+    if(fCMax > 0) {
+      hsv.y = fDelta / fCMax;
+    } else {
+      hsv.y = 0;
+    }
+    
+    hsv.z = fCMax;
+  } else {
+    hsv.x = 0;
+    hsv.y = 0;
+    hsv.z = fCMax;
+  }
+  
+  if(hsv.x < 0) {
+    hsv.x = 360 + hsv.x;
+  }
+
+  return hsv;
+}
+glm::vec4 HSVtoRGB(const glm::vec4& hsv) {
+  glm::vec4 rgb = hsv;
+  float fC = hsv.z * hsv.y; // Chroma
+  float fHPrime = fmodf(hsv.x / 60.0f, 6.0f);
+  float fX = fC * (1 - fabsf(fmodf(fHPrime, 2) - 1));
+  float fM = hsv.z - fC;
+  
+  if(0 <= fHPrime&& fHPrime < 1) {
+    rgb.x = fC;
+    rgb.y = fX;
+    rgb.z = 0;
+  } else if(1 <= fHPrime&& fHPrime < 2) {
+    rgb.x = fX;
+    rgb.y = fC;
+    rgb.z = 0;
+  } else if(2 <= fHPrime&& fHPrime < 3) {
+    rgb.x = 0;
+    rgb.y = fC;
+    rgb.z = fX;
+  } else if(3 <= fHPrime&& fHPrime < 4) {
+    rgb.x = 0;
+    rgb.y = fX;
+    rgb.z = fC;
+  } else if(4 <= fHPrime&& fHPrime < 5) {
+    rgb.x = fX;
+    rgb.y = 0;
+    rgb.z = fC;
+  } else if(5 <= fHPrime&& fHPrime < 6) {
+    rgb.x = fC;
+    rgb.y = 0;
+    rgb.z = fX;
+  } else {
+    rgb.x = 0;
+    rgb.y = 0;
+    rgb.z = 0;
+  }
+  
+  rgb.x += fM;
+  rgb.y += fM;
+  rgb.z += fM;
+
+  return rgb;
+}
+
+class FrameCounter
+{
+public:
+  void tick()
+  {
+    frames++;
+    if (timer.elapsed().seconds() >= timer_switch)
+    {
+      timer.reset();
+      last_frames = (unsigned int)((double)frames * (1.0 / timer_switch));
+      frames = 0u;
+    }
+  }
+  void setSwitch(const double& timer_switch)
+  {
+    this->timer_switch = timer_switch;
+  }
+  unsigned int getFrames() const
+  {
+    return last_frames;
+  }
+
+private:
+  utilities::Timer timer;
+  double timer_switch = 1.0;
+  unsigned int frames = 0u;
+  unsigned int last_frames = 0u;
+};
+
+class MyWorld : public world::IWorld
+{
+public:
+  MyWorld(
+    foundation::SharedPointer<platform::IWindow> window,
+    foundation::SharedPointer<platform::IRenderer> renderer,
+    foundation::SharedPointer<asset::AssetManager> asset_manager,
+    foundation::SharedPointer<scripting::IScriptContext> scripting,
+    foundation::SharedPointer<platform::IImGUI> imgui
+  ) : IWorld(window, renderer, asset_manager, scripting, imgui) {}
+
+  virtual ~MyWorld() {};
+
+  void initialize() override
+  {
+#if USE_GUI
+    gui_.initialize(g_gui_texture);
+    getRenderer()->getPostProcessManager().addTarget(platform::RenderTarget(Name("gui"), g_gui_texture));
+    //gui_.loadURL("C:/github/lambda-engine/test.html");
+#endif
+  }
+  void deinitialize() override
+  {
+  }
+  double round(double value, unsigned int power)
+  {
+    double p = (double)pow(10, power);
+    return floor(value * p) / p;
+  }
+  class Average
+  {
+  public:
+    void add(float entry)
+    {
+      idx = (idx + 1u) % kCount;
+      averages[idx] = entry;
+    }
+    float average() const
+    {
+      float average = 0.0f;
+      for (uint8_t i = 0u; i < kCount; ++i)
+        average += averages[i];
+      return average / (float)kCount;
+    }
+  private:
+    uint8_t idx = 0u;
+    static constexpr uint8_t kCount = 100u;
+    float averages[kCount];
+  };
+  void frameInfo()
+  {
+    foundation::SharedPointer<platform::IImGUI> imgui = getImGUI();
+    frame_counter.tick();
+
+    static double frame_target_max = 60.0;
+    static double frame_target_min = 40.0;
+    double frame_fps = (double)frame_counter.getFrames();
+    double frame_budget = frame_target_max / frame_fps;
+    double frame_budget_h;
+    if (frame_fps < frame_target_min)
+    {
+      frame_budget_h = 0.0;
+    }
+    else if (frame_fps > frame_target_max)
+    {
+      frame_budget_h = 120.0;
+    }
+    else
+    {
+      frame_budget_h = 120.0 * ((frame_fps - frame_target_min) / (frame_target_max - frame_target_min));
+    }
+
+    static bool open = true;
+    if (imgui->imBegin("info", open, glm::vec2(0.0f, 0.0f), glm::vec2(170.0f, 200.0f)))
+    {
+      imgui->imText("fps:");
+      imgui->imText(toString(round(frame_fps, 3u)));
+      imgui->imText("ms:");
+      imgui->imText(toString(round(1.0 / frame_fps, 3u)));
+      imgui->imText("budget:");
+      imgui->imTextColoured(toString(round(frame_budget, 3u)), HSVtoRGB(glm::vec4(frame_budget_h, 1.0f, 1.0f, 1.0f)));
+
+      /*static Average timer_clear_everything;
+      static Average timer_main_camera;
+      static Average timer_lighting;
+      static Average timer_post_processing;
+      static Average timer_debug_rendering;
+      static Average timer_copy_to_screen;
+      static Average timer_imgui;
+      timer_clear_everything.add((float)getRenderer()->getTimerMicroSeconds("Clear Everything") / 1000.0f);
+      timer_main_camera.add((float)getRenderer()->getTimerMicroSeconds("Main Camera") / 1000.0f);
+      timer_lighting.add((float)getRenderer()->getTimerMicroSeconds("Lighting") / 1000.0f);
+      timer_post_processing.add((float)getRenderer()->getTimerMicroSeconds("Post Processing") / 1000.0f);
+      timer_debug_rendering.add((float)getRenderer()->getTimerMicroSeconds("Debug Rendering") / 1000.0f);
+      timer_copy_to_screen.add((float)getRenderer()->getTimerMicroSeconds("Copy To Screen") / 1000.0f);
+      timer_imgui.add((float)getRenderer()->getTimerMicroSeconds("ImGUI") / 1000.0f);
+
+      imgui->imText(toString(std::round(timer_clear_everything.average() * 100.0f) / 100.0f) + " - Clear Everything");
+      imgui->imText(toString(std::round(timer_main_camera.average() * 100.0f) / 100.0f) + " - Main Camera");
+      imgui->imText(toString(std::round(timer_lighting.average() * 100.0f) / 100.0f) + " - Lighting");
+      imgui->imText(toString(std::round(timer_post_processing.average() * 100.0f) / 100.0f) + " - Post Processing");
+      imgui->imText(toString(std::round(timer_debug_rendering.average() * 100.0f) / 100.0f) + " - Debug Rendering");
+      imgui->imText(toString(std::round(timer_copy_to_screen.average() * 100.0f) / 100.0f) + " - Copy To Screen");
+      imgui->imText(toString(std::round(timer_imgui.average() * 100.0f) / 100.0f) + " - ImGUI");*/
+
+      static float dynamic_resolution_scale = 1.0f;
+      if (imgui->imFloat1("DRS", dynamic_resolution_scale))
+      {
+        getRenderer()->setShaderVariable(platform::ShaderVariable(Name("dynamic_resolution_scale"), dynamic_resolution_scale));
+      }
+      static float ambient_intensity = 1.0f;
+      if (imgui->imFloat1("AI", ambient_intensity))
+      {
+        getRenderer()->setShaderVariable(platform::ShaderVariable(Name("ambient_intensity"), ambient_intensity));
+      }
+    }
+
+    imgui->imEnd();
+  }
+  void update(const double& delta_time) override
+  {
+#if USE_GUI
+    gui_.update(delta_time);
+#endif
+
+    foundation::SharedPointer<platform::IImGUI> imgui = getImGUI();
+
+    bool cursor_open = false;
+    imgui->imBegin("cursor", cursor_open, getWindow()->getSize() / 2u - 1u, glm::vec2(3.0f, 3.0f), 0u);
+    imgui->imEnd();
+
+    frameInfo();
+
+    static bool menu_right = true;
+    //if (menu_right)
+    {
+      static asset::VioletTextureHandle selected_texture;
+
+      float preview_image_height = 200.0f;
+      float max_image_width = 100.0f;
+      static bool selected_open = false;
+      if (imgui->imBegin("Buffers", menu_right, glm::vec2(getWindow()->getSize().x - (max_image_width + 25.0f), 0.0f), glm::vec2(max_image_width + 25.0f, getWindow()->getSize().y - (selected_open ? preview_image_height : 0.0f))))
+      {
+        Vector<String> render_targets;
+        for (const auto& it : getPostProcessManager().getAllTargets())
+        {
+          render_targets.push_back(it.first.getName());
+        }
+        std::sort(render_targets.begin(), render_targets.end());
+
+        for (const String& render_target : render_targets)
+        {
+          asset::VioletTextureHandle texture = getPostProcessManager().getTarget(Name(render_target)).getTexture();
+          if (imgui->imButtonImage(texture, glm::vec2(max_image_width)))
+          {
+            if (selected_texture != texture)
+            {
+              selected_texture = texture;
+              selected_open    = true;
+            }
+            else
+            {
+              selected_open = !selected_open;
+            }
+          }
+          imgui->imLabel(render_target);
+        }
+      }
+      imgui->imEnd();
+
+      if (selected_open)
+      {
+        glm::vec2 selected_size(preview_image_height);
+        float selected_aspect = (float)selected_texture->getLayer(0u).getWidth() / (float)selected_texture->getLayer(0u).getHeight();
+        selected_size.x = floorf((selected_aspect > 1.0f) ? (selected_size.x * selected_aspect) : (selected_size.y * selected_aspect));
+
+        if (imgui->imBegin("Selected", selected_open, glm::vec2(getWindow()->getSize().x - selected_size.x, getWindow()->getSize().y - selected_size.y), selected_size, platform::ImGUIFlags::kNoScrollbar))
+        {
+          imgui->imImage(selected_texture, selected_size);
+        }
+        imgui->imEnd();
+      }
+    }
+  }
+  virtual void fixedUpdate() override
+  {
+  }
+  virtual void handleWindowMessage(const platform::WindowMessage& message) override
+  {
+#if USE_GUI
+    if (gui_.handleWindowMessage(message))
+      return;
+#endif
+
+    switch (message.type)
+    {
+    case platform::WindowMessageType::kClose:
+      getWindow()->close();
+      break;
+    default:
+      break;
+    }
+  }
+
+private:
+  FrameCounter frame_counter;
+#if USE_GUI
+  gui::GUI gui_;
+#endif
+};
+
+int main(int argc, char** argv)
+{
+  if (argc == 1)
+    LMB_ASSERT(false, "No project folder was speficied!")
+  else if (argc == 2)
+    LMB_ASSERT(false, "No entry script was specified!")
+
+  lambda::FileSystem::SetBaseDir(argv[1]);
+  String script(argv[2]);
+
+  {
+#if defined VIOLET_RENDERER_D3D11
+    foundation::SharedPointer<platform::IRenderer> renderer = foundation::Memory::constructShared<windows::D3D11Renderer>();
+#elif defined VIOLET_RENDERER_METAL
+    foundation::SharedPointer<platform::IRenderer> renderer = foundation::Memory::constructShared<windows::NoRenderer>();
+#elif defined VIOLET_RENDERER_NO
+    foundation::SharedPointer<platform::IRenderer> renderer = foundation::Memory::constructShared<windows::NoRenderer>();
+#else
+#error No valid renderer found!
+#endif
+
+    {
+#if defined VIOLET_WINDOW_WIN32
+      foundation::SharedPointer<platform::IWindow> window = foundation::Memory::constructShared<window::Win32Window>();
+#elif defined VIOLET_WINDOW_GLFW
+      foundation::SharedPointer<platform::IWindow> window = foundation::Memory::constructShared<window::GLFWWindow>();
+#elif defined VIOLET_WINDOW_SDL2
+      foundation::SharedPointer<platform::IWindow> window = foundation::Memory::constructShared<window::SDL2Window>();
+#else
+#error No valid window found!
+#endif
+
+#if defined VIOLET_SCRIPTING_WREN
+      foundation::SharedPointer<scripting::IScriptContext> scripting = foundation::Memory::constructShared<scripting::WrenContext>();
+      script = "resources/scripts/wren/main.wren";
+#elif defined VIOLET_SCRIPTING_ANGEL
+      foundation::SharedPointer<scripting::IScriptContext> scripting = foundation::Memory::constructShared<scripting::AngelScriptContext>();
+      script = "resources/scripts/angelscript/main.as";
+#else
+#error No valid scripting engine found!
+#endif
+
+#if defined VIOLET_IMGUI_NUKLEAR
+      foundation::SharedPointer<platform::IImGUI> imgui = foundation::Memory::constructShared<imgui::NuklearImGUI>();
+#elif defined VIOLET_IMGUI_DEAR
+      foundation::SharedPointer<platform::IImGUI> imgui = foundation::Memory::constructShared<imgui::DearImGUI>();
+#elif defined VIOLET_IMGUI_NO
+      foundation::SharedPointer<platform::IImGUI> imgui = foundation::Memory::constructShared<imgui::NoImGUI>();
+#else
+#error No valid imgui found!
+#endif
+
+      foundation::SharedPointer<asset::AssetManager> asset_manager = foundation::Memory::constructShared<asset::AssetManager>();
+
+      window->create(glm::uvec2(1280u, 720u), "Engine");
+      asset_manager->initialize(renderer);
+
+#if USE_GUI
+      {
+        g_gui_texture = asset::TextureManager::getInstance()->create(Name("Back Buffer GUI"));
+        asset::VioletTextureHandle tex = g_gui_texture;
+        if (tex->getLayerCount() == 0u)
+          tex->addLayer(asset::TextureLayer());
+
+        asset::TextureLayer& layer = tex->getLayer(0u);
+        layer.setFormat(TextureFormat::kB8G8R8A8);
+        layer.setFlags(kTextureFlagDynamicData | kTextureFlagResize);
+
+        layer.resize(1u, 1u);
+        Vector<char> data = { (char)255, (char)255, (char)255, (char)255 };
+        layer.setData(data);
+      }
+#endif
+
+      MyWorld world(window, renderer, asset_manager, scripting, imgui);
+      imgui->setFont("resources/fonts/DroidSans.ttf", 16.0f);
+      
+      scripting::ScriptBinding(&world);
+      scripting->loadScripts({ script });
+
+      world.run();
+
+      scripting->terminate();
+      scripting::ScriptRelease();
+	  }
+  }
+
+  return 0;
+}
