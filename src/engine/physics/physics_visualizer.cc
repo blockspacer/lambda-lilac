@@ -42,9 +42,9 @@ namespace lambda
 
     ///////////////////////////////////////////////////////////////////////////
     void PhysicVisualizer::drawSphere(
-      const btVector3& p,
-      btScalar radius, 
-      const btVector3& color)
+      const btVector3& /*p*/,
+      btScalar /*radius*/,
+      const btVector3& /*color*/)
     {
       assert(false);
     }
@@ -72,11 +72,11 @@ namespace lambda
 
     ///////////////////////////////////////////////////////////////////////////
     void PhysicVisualizer::drawContactPoint(
-      const btVector3& PointOnB, 
-      const btVector3& normalOnB, 
-      btScalar distance, 
-      int lifeTime, 
-      const btVector3& color)
+      const btVector3& /*PointOnB*/,
+      const btVector3& /*normalOnB*/,
+      btScalar /*distance*/,
+      int /*lifeTime*/,
+      const btVector3& /*color*/)
     {
       LMB_ASSERT(false, "PHYSICS: DrawContactPoint not implemented");
     }
@@ -89,8 +89,8 @@ namespace lambda
 
     ///////////////////////////////////////////////////////////////////////////
     void PhysicVisualizer::draw3dText(
-      const btVector3& location, 
-      const char* textString)
+      const btVector3& /*location*/,
+      const char* /*textString*/)
     {
       LMB_ASSERT(false, "PHYSICS: Draw3DText not implemented");
     }

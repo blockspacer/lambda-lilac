@@ -35,8 +35,8 @@ namespace lambda
       virtual ~ISystem() { };
       virtual void initialize(world::IWorld& world) = 0;
       virtual void deinitialize() = 0;
-      virtual void update(const double& delta_time) {};
-      virtual void fixedUpdate(const double& time_step) {};
+      virtual void update(const double& /*delta_time*/) {};
+      virtual void fixedUpdate(const double& /*time_step*/) {};
       virtual void onRender() {};
       static size_t systemId() { return 0; };
 

@@ -50,7 +50,7 @@ namespace lambda
   
       // Find the leftmost point 
       int l = 0; 
-      for (int i = 1; i < points.size(); i++)
+      for (int i = 1; i < (int)points.size(); i++)
       {
         if (points[i].x < points[l].x)
         {
@@ -73,7 +73,7 @@ namespace lambda
         // wise point in q. If any point 'i' is more counterclock- 
         // wise than q, then update q. 
         q = (p + 1) % points.size();
-        for (int i = 0; i < points.size(); i++) 
+        for (int i = 0; i < (int)points.size(); i++)
         { 
           // If i is more counterclockwise than current q, then 
           // update q 
@@ -197,7 +197,7 @@ namespace lambda
         transform.setLocalRotation(sub_mesh.io.rotation);
         transform.setLocalScale(sub_mesh.io.scale);
 
-        if (i != sub_mesh.io.parent)
+        if ((int)i != sub_mesh.io.parent)
         {
           transform.setParent(transforms.at(sub_mesh.io.parent));
         }

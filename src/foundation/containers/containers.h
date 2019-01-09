@@ -75,7 +75,7 @@ namespace lambda
     char c = '\0';
 
     size_t size = str.size();
-    for (int i = 0; i < size; ++i)
+    for (size_t i = 0ul; i < size; ++i)
     {
       c = str.at(i);
       if (c == delim)
@@ -256,13 +256,17 @@ namespace lambda
     {
     };
 
+#if VIOLET_WIN32
 #pragma warning(disable : 4309)
+#endif
     template<uint32_t CRC, char Head, char ...Tail> struct Crc32Impl<CRC, Head, Tail...>
     {
       static constexpr uint32_t value = Crc32Impl<crc32_table[static_cast<unsigned char>(CRC) ^ static_cast<unsigned char>(Head)] ^ (CRC >> 8), Tail...>::value;
     };
+#if VIOLET_WIN32
 #pragma warning(default : 4309)
-
+#endif
+    
     template<uint32_t CRC> struct Crc32Impl<CRC>
     {
       static constexpr uint32_t value = CRC ^ 0xFFFFFFFF;
@@ -276,7 +280,7 @@ namespace lambda
       return *s == 0 ? crc ^ 0xFFFFFFFF : crc32_rec(crc32_table[static_cast<unsigned char>(crc) ^ static_cast<unsigned char>(*s)] ^ (crc >> 8), s + 1);
     }
 
-    inline constexpr uint32_t operator "" _crc32(const char *s, size_t len)
+    inline constexpr uint32_t operator "" _crc32(const char *s, size_t /*len*/)
     {
       return crc32_rec(0xFFFFFFFF, s);
     }
@@ -294,7 +298,7 @@ namespace lambda
   {
     return crc32::crc32(s);
   }
-  inline constexpr uint32_t operator "" _hash(const char* s, size_t len)
+  inline constexpr uint32_t operator "" _hash(const char* s, size_t /*len*/)
   {
     return crc32::crc32(s);
   }

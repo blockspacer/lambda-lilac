@@ -9,21 +9,21 @@ namespace lambda
     Name() :
       name_(""), hash_(0u)
     {
-#if defined _DEBUG || defined VIOLET_OSX
+#if VIOLET_DEBUG
       dbg_cstr_ = nullptr;
 #endif
     }
     Name(const String& name) :
       name_(name), hash_(hash(name_))
     {
-#if defined _DEBUG || defined VIOLET_OSX
+#if VIOLET_DEBUG
       dbg_cstr_ = name_.c_str();
 #endif
     }
     Name(const Name& other) :
       name_(other.name_), hash_(other.hash_)
     {
-#if defined _DEBUG || defined VIOLET_OSX
+#if VIOLET_DEBUG
       dbg_cstr_ = name_.c_str();
 #endif
     }
@@ -31,7 +31,7 @@ namespace lambda
     {
       hash_ = other.hash_;
       name_ = other.name_;
-#if defined _DEBUG || defined VIOLET_OSX
+#if VIOLET_DEBUG
       dbg_cstr_ = name_.c_str();
 #endif
     }
@@ -53,11 +53,11 @@ namespace lambda
     {
       return hash_ != other.hash_;
     }
-    void operator=(const size_t& reset)
+    void operator=(const size_t& /*reset*/)
     {
       hash_ = 0u;
       name_.clear();
-#if defined _DEBUG || defined VIOLET_OSX
+#if VIOLET_DEBUG
       dbg_cstr_ = nullptr;
 #endif
     }
@@ -65,7 +65,7 @@ namespace lambda
     {
       hash_ = hash(str);
       name_ = str;
-#if defined _DEBUG || defined VIOLET_OSX
+#if VIOLET_DEBUG
       dbg_cstr_ = name_.c_str();
 #endif
     }
@@ -73,7 +73,7 @@ namespace lambda
   private:
     String name_;
     size_t hash_;
-#if defined _DEBUG || defined VIOLET_OSX
+#if VIOLET_DEBUG
     const char* dbg_cstr_;
 #endif
   };

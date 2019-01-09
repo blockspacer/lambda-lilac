@@ -327,7 +327,7 @@ namespace lambda
       Name name, 
       uint32_t width, 
       uint32_t height, 
-      uint32_t layers, 
+      uint32_t /*layers*/,
       TextureFormat format, 
       uint32_t flags, 
       const Vector<unsigned char>& data)
@@ -351,7 +351,7 @@ namespace lambda
       Name name, 
       uint32_t width, 
       uint32_t height, 
-      uint32_t layers, 
+      uint32_t /*layers*/, 
       TextureFormat format, 
       uint32_t flags, 
       const Vector<char>& data)
