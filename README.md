@@ -69,4 +69,6 @@ You can check out the documentation for our scripting implementation <a href="do
   </div>
 </div>
 
+<b>Make sure to install LFS with: </b> git lfs install --skip-smudge
+
 [![Waffle.io - Columns and their card count](https://badge.waffle.io/hvonck/lambda-engine.svg?columns=all)](https://waffle.io/hvonck/lambda-engine)
