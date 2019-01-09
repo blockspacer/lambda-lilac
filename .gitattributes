@@ -7,3 +7,4 @@ wav_* filter=lfs diff=lfs merge=lfs -text
 *.gltf filter=lfs diff=lfs merge=lfs -text
 *.glb filter=lfs diff=lfs merge=lfs -text
 *.bin filter=lfs diff=lfs merge=lfs -text
+*.test_extension filter=lfs diff=lfs merge=lfs -text
