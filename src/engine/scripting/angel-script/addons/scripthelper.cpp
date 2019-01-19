@@ -1,39 +1,42 @@
 #include "scripthelper.h"
+#include <string.h>
 #include <assert.h>
 #include <stdio.h>
 #include <fstream>
 #include <set>
 #include <stdlib.h>
 
+using namespace lambda;
+
 BEGIN_AS_NAMESPACE
 
 int CompareRelation(asIScriptEngine *engine, void *lobj, void *robj, int typeId, int &result)
 {
-    // TODO: If a lot of script objects are going to be compared, e.g. when sorting an array,
-    //       then the method id and context should be cached between calls.
+	// TODO: If a lot of script objects are going to be compared, e.g. when sorting an array,
+	//       then the method id and context should be cached between calls.
 
 	int retval = -1;
 	asIScriptFunction *func = 0;
 
 	asITypeInfo *ti = engine->GetTypeInfoById(typeId);
-	if( ti )
+	if (ti)
 	{
 		// Check if the object type has a compatible opCmp method
-		for( asUINT n = 0; n < ti->GetMethodCount(); n++ )
+		for (asUINT n = 0; n < ti->GetMethodCount(); n++)
 		{
 			asIScriptFunction *f = ti->GetMethodByIndex(n);
 			asDWORD flags;
-			if( strcmp(f->GetName(), "opCmp") == 0 &&
+			if (strcmp(f->GetName(), "opCmp") == 0 &&
 				f->GetReturnTypeId(&flags) == asTYPEID_INT32 &&
 				flags == asTM_NONE &&
-				f->GetParamCount() == 1 )
+				f->GetParamCount() == 1)
 			{
 				int paramTypeId;
 				f->GetParam(0, &paramTypeId, &flags);
 
 				// The parameter must be an input reference of the same type
 				// If the reference is a inout reference, then it must also be read-only
-				if( !(flags & asTM_INREF) || typeId != paramTypeId || ((flags & asTM_OUTREF) && !(flags & asTM_CONST)) )
+				if (!(flags & asTM_INREF) || typeId != paramTypeId || ((flags & asTM_OUTREF) && !(flags & asTM_CONST)))
 					break;
 
 				// Found the method
@@ -43,7 +46,7 @@ int CompareRelation(asIScriptEngine *engine, void *lobj, void *robj, int typeId,
 		}
 	}
 
-	if( func )
+	if (func)
 	{
 		// Call the method
 		asIScriptContext *ctx = engine->CreateContext();
@@ -51,7 +54,7 @@ int CompareRelation(asIScriptEngine *engine, void *lobj, void *robj, int typeId,
 		ctx->SetObject(lobj);
 		ctx->SetArgAddress(0, robj);
 		int r = ctx->Execute();
-		if( r == asEXECUTION_FINISHED )
+		if (r == asEXECUTION_FINISHED)
 		{
 			result = (int)ctx->GetReturnDWord();
 
@@ -66,31 +69,31 @@ int CompareRelation(asIScriptEngine *engine, void *lobj, void *robj, int typeId,
 
 int CompareEquality(asIScriptEngine *engine, void *lobj, void *robj, int typeId, bool &result)
 {
-    // TODO: If a lot of script objects are going to be compared, e.g. when searching for an
+	// TODO: If a lot of script objects are going to be compared, e.g. when searching for an
 	//       entry in a set, then the method and context should be cached between calls.
 
 	int retval = -1;
 	asIScriptFunction *func = 0;
 
 	asITypeInfo *ti = engine->GetTypeInfoById(typeId);
-	if( ti )
+	if (ti)
 	{
 		// Check if the object type has a compatible opEquals method
-		for( asUINT n = 0; n < ti->GetMethodCount(); n++ )
+		for (asUINT n = 0; n < ti->GetMethodCount(); n++)
 		{
 			asIScriptFunction *f = ti->GetMethodByIndex(n);
 			asDWORD flags;
-			if( strcmp(f->GetName(), "opEquals") == 0 &&
+			if (strcmp(f->GetName(), "opEquals") == 0 &&
 				f->GetReturnTypeId(&flags) == asTYPEID_BOOL &&
 				flags == asTM_NONE &&
-				f->GetParamCount() == 1 )
+				f->GetParamCount() == 1)
 			{
 				int paramTypeId;
 				f->GetParam(0, &paramTypeId, &flags);
 
 				// The parameter must be an input reference of the same type
 				// If the reference is a inout reference, then it must also be read-only
-				if( !(flags & asTM_INREF) || typeId != paramTypeId || ((flags & asTM_OUTREF) && !(flags & asTM_CONST)) )
+				if (!(flags & asTM_INREF) || typeId != paramTypeId || ((flags & asTM_OUTREF) && !(flags & asTM_CONST)))
 					break;
 
 				// Found the method
@@ -100,7 +103,7 @@ int CompareEquality(asIScriptEngine *engine, void *lobj, void *robj, int typeId,
 		}
 	}
 
-	if( func )
+	if (func)
 	{
 		// Call the method
 		asIScriptContext *ctx = engine->CreateContext();
@@ -108,7 +111,7 @@ int CompareEquality(asIScriptEngine *engine, void *lobj, void *robj, int typeId,
 		ctx->SetObject(lobj);
 		ctx->SetArgAddress(0, robj);
 		int r = ctx->Execute();
-		if( r == asEXECUTION_FINISHED )
+		if (r == asEXECUTION_FINISHED)
 		{
 			result = ctx->GetReturnByte() ? true : false;
 
@@ -122,7 +125,7 @@ int CompareEquality(asIScriptEngine *engine, void *lobj, void *robj, int typeId,
 		// If the opEquals method doesn't exist, then we try with opCmp instead
 		int relation;
 		retval = CompareRelation(engine, lobj, robj, typeId, relation);
-		if( retval >= 0 )
+		if (retval >= 0)
 			result = relation == 0 ? true : false;
 	}
 
@@ -146,10 +149,10 @@ int ExecuteString(asIScriptEngine *engine, const char *code, void *ref, int refT
 
 	// GetModule will free unused types, so to be on the safe side we'll hold on to a reference to the type
 	asITypeInfo *type = 0;
-	if( refTypeId & asTYPEID_MASK_OBJECT )
+	if (refTypeId & asTYPEID_MASK_OBJECT)
 	{
 		type = engine->GetTypeInfoById(refTypeId);
-		if( type )
+		if (type)
 			type->AddRef();
 	}
 
@@ -157,13 +160,13 @@ int ExecuteString(asIScriptEngine *engine, const char *code, void *ref, int refT
 	asIScriptModule *execMod = mod ? mod : engine->GetModule("ExecuteString", asGM_ALWAYS_CREATE);
 
 	// Now it's ok to release the type
-	if( type )
+	if (type)
 		type->Release();
 
 	// Compile the function that can be executed
 	asIScriptFunction *func = 0;
 	int r = execMod->CompileFunction("ExecuteString", funcCode.c_str(), -1, 0, &func);
-	if( r < 0 )
+	if (r < 0)
 		return r;
 
 	// If no context was provided, request a new one from the engine
@@ -200,7 +203,7 @@ int ExecuteString(asIScriptEngine *engine, const char *code, void *ref, int refT
 
 	// Clean up
 	func->Release();
-	if( !ctx ) engine->ReturnContext(execCtx);
+	if (!ctx) engine->ReturnContext(execCtx);
 
 	return r;
 }
@@ -222,11 +225,11 @@ int WriteConfigToStream(asIScriptEngine *engine, std::ostream &strm)
 		{
 			lambda::String str = decl;
 			size_t pos = 0;
-			for(;;)
+			for (;;)
 			{
 				// Find " characters
-				pos = str.find("\"",pos);
-				if( pos == lambda::String::npos )
+				pos = str.find("\"", pos);
+				if (pos == String::npos)
 					break;
 
 				// Add a \ to escape them
@@ -242,15 +245,15 @@ int WriteConfigToStream(asIScriptEngine *engine, std::ostream &strm)
 
 	asDWORD currAccessMask = 0;
 	lambda::String currNamespace = "";
-	engine->SetDefaultNamespace(currNamespace.c_str());
+	engine->SetDefaultNamespace("");
 
 	// Export the engine version, just for info
 	strm << "// AngelScript " << asGetLibraryVersion() << "\n";
-	strm << "// Lib options " <<  asGetLibraryOptions() << "\n";
+	strm << "// Lib options " << asGetLibraryOptions() << "\n";
 
 	// Export the relevant engine properties
 	strm << "// Engine properties\n";
-	for( n = 0; n < asEP_LAST_PROPERTY; n++ )
+	for (n = 0; n < asEP_LAST_PROPERTY; n++)
 		strm << "ep " << n << " " << engine->GetEngineProperty(asEEngineProp(n)) << "\n";
 
 	// Make sure the default array type is expanded to the template form
@@ -260,17 +263,17 @@ int WriteConfigToStream(asIScriptEngine *engine, std::ostream &strm)
 	// Write enum types and their values
 	strm << "\n// Enums\n";
 	c = engine->GetEnumCount();
-	for( n = 0; n < c; n++ )
+	for (n = 0; n < c; n++)
 	{
 		asITypeInfo *ti = engine->GetEnumByIndex(n);
 		asDWORD accessMask = ti->GetAccessMask();
-		if( accessMask != currAccessMask )
+		if (accessMask != currAccessMask)
 		{
 			strm << "access " << std::hex << (unsigned int)(accessMask) << std::dec << "\n";
 			currAccessMask = accessMask;
 		}
 		const char *nameSpace = ti->GetNamespace();
-		if( nameSpace != currNamespace )
+		if (nameSpace != currNamespace)
 		{
 			strm << "namespace \"" << nameSpace << "\"\n";
 			currNamespace = nameSpace;
@@ -278,7 +281,7 @@ int WriteConfigToStream(asIScriptEngine *engine, std::ostream &strm)
 		}
 		const char *enumName = ti->GetName();
 		strm << "enum " << enumName << "\n";
-		for( asUINT m = 0; m < ti->GetEnumValueCount(); m++ )
+		for (asUINT m = 0; m < ti->GetEnumValueCount(); m++)
 		{
 			const char *valName;
 			int val;
@@ -291,29 +294,29 @@ int WriteConfigToStream(asIScriptEngine *engine, std::ostream &strm)
 	strm << "\n// Types\n";
 
 	// Keep a list of the template types, as the methods for these need to be exported first
-	lambda::Set<asITypeInfo*> templateTypes;
+	Set<asITypeInfo*> templateTypes;
 
 	c = engine->GetObjectTypeCount();
-	for( n = 0; n < c; n++ )
+	for (n = 0; n < c; n++)
 	{
 		asITypeInfo *type = engine->GetObjectTypeByIndex(n);
 		asDWORD accessMask = type->GetAccessMask();
-		if( accessMask != currAccessMask )
+		if (accessMask != currAccessMask)
 		{
 			strm << "access " << std::hex << (unsigned int)(accessMask) << std::dec << "\n";
 			currAccessMask = accessMask;
 		}
 		const char *nameSpace = type->GetNamespace();
-		if( nameSpace != currNamespace )
+		if (nameSpace != currNamespace)
 		{
 			strm << "namespace \"" << nameSpace << "\"\n";
 			currNamespace = nameSpace;
 			engine->SetDefaultNamespace(currNamespace.c_str());
 		}
-		if( type->GetFlags() & asOBJ_SCRIPT_OBJECT )
+		if (type->GetFlags() & asOBJ_SCRIPT_OBJECT)
 		{
 			// This should only be interfaces
-			assert( type->GetSize() == 0 );
+			assert(type->GetSize() == 0);
 
 			strm << "intf " << type->GetName() << "\n";
 		}
@@ -325,24 +328,24 @@ int WriteConfigToStream(asIScriptEngine *engine, std::ostream &strm)
 			strm << "objtype \"" << engine->GetTypeDeclaration(type->GetTypeId()) << "\" " << (unsigned int)(type->GetFlags() & asOBJ_MASK_VALID_FLAGS) << "\n";
 
 			// Store the template types (but not template instances)
-			if( (type->GetFlags() & asOBJ_TEMPLATE) && type->GetSubType() && (type->GetSubType()->GetFlags() & asOBJ_TEMPLATE_SUBTYPE) )
+			if ((type->GetFlags() & asOBJ_TEMPLATE) && type->GetSubType() && (type->GetSubType()->GetFlags() & asOBJ_TEMPLATE_SUBTYPE))
 				templateTypes.insert(type);
 		}
 	}
 
 	c = engine->GetTypedefCount();
-	for( n = 0; n < c; n++ )
+	for (n = 0; n < c; n++)
 	{
 		asITypeInfo *ti = engine->GetTypedefByIndex(n);
 		const char *nameSpace = ti->GetNamespace();
-		if( nameSpace != currNamespace )
+		if (nameSpace != currNamespace)
 		{
 			strm << "namespace \"" << nameSpace << "\"\n";
 			currNamespace = nameSpace;
 			engine->SetDefaultNamespace(currNamespace.c_str());
 		}
 		asDWORD accessMask = ti->GetAccessMask();
-		if( accessMask != currAccessMask )
+		if (accessMask != currAccessMask)
 		{
 			strm << "access " << std::hex << (unsigned int)(accessMask) << std::dec << "\n";
 			currAccessMask = accessMask;
@@ -351,19 +354,19 @@ int WriteConfigToStream(asIScriptEngine *engine, std::ostream &strm)
 	}
 
 	c = engine->GetFuncdefCount();
-	for( n = 0; n < c; n++ )
+	for (n = 0; n < c; n++)
 	{
 		asITypeInfo *funcDef = engine->GetFuncdefByIndex(n);
 		asDWORD accessMask = funcDef->GetAccessMask();
 		const char *nameSpace = funcDef->GetNamespace();
 		// Child funcdefs do not have any namespace, as they belong to the parent object
-		if( nameSpace && nameSpace != currNamespace )
+		if (nameSpace && nameSpace != currNamespace)
 		{
 			strm << "namespace \"" << nameSpace << "\"\n";
 			currNamespace = nameSpace;
 			engine->SetDefaultNamespace(currNamespace.c_str());
 		}
-		if( accessMask != currAccessMask )
+		if (accessMask != currAccessMask)
 		{
 			strm << "access " << std::hex << (unsigned int)(accessMask) << std::dec << "\n";
 			currAccessMask = accessMask;
@@ -377,20 +380,20 @@ int WriteConfigToStream(asIScriptEngine *engine, std::ostream &strm)
 		static void Write(asIScriptEngine *engine, std::ostream &strm, asITypeInfo *type, lambda::String &currNamespace, asDWORD &currAccessMask)
 		{
 			const char *nameSpace = type->GetNamespace();
-			if( nameSpace != currNamespace )
+			if (nameSpace != currNamespace)
 			{
 				strm << "namespace \"" << nameSpace << "\"\n";
 				currNamespace = nameSpace;
 				engine->SetDefaultNamespace(currNamespace.c_str());
 			}
 			lambda::String typeDecl = engine->GetTypeDeclaration(type->GetTypeId());
-			if( type->GetFlags() & asOBJ_SCRIPT_OBJECT )
+			if (type->GetFlags() & asOBJ_SCRIPT_OBJECT)
 			{
-				for( asUINT m = 0; m < type->GetMethodCount(); m++ )
+				for (asUINT m = 0; m < type->GetMethodCount(); m++)
 				{
 					asIScriptFunction *func = type->GetMethodByIndex(m);
 					asDWORD accessMask = func->GetAccessMask();
-					if( accessMask != currAccessMask )
+					if (accessMask != currAccessMask)
 					{
 						strm << "access " << std::hex << (unsigned int)(accessMask) << std::dec << "\n";
 						currAccessMask = accessMask;
@@ -401,52 +404,58 @@ int WriteConfigToStream(asIScriptEngine *engine, std::ostream &strm)
 			else
 			{
 				asUINT m;
-				for( m = 0; m < type->GetFactoryCount(); m++ )
+				for (m = 0; m < type->GetFactoryCount(); m++)
 				{
 					asIScriptFunction *func = type->GetFactoryByIndex(m);
 					asDWORD accessMask = func->GetAccessMask();
-					if( accessMask != currAccessMask )
+					if (accessMask != currAccessMask)
 					{
 						strm << "access " << std::hex << (unsigned int)(accessMask) << std::dec << "\n";
 						currAccessMask = accessMask;
 					}
 					strm << "objbeh \"" << typeDecl.c_str() << "\" " << asBEHAVE_FACTORY << " \"" << Escape::Quotes(func->GetDeclaration(false)).c_str() << "\"\n";
 				}
-				for( m = 0; m < type->GetBehaviourCount(); m++ )
+				for (m = 0; m < type->GetBehaviourCount(); m++)
 				{
 					asEBehaviours beh;
 					asIScriptFunction *func = type->GetBehaviourByIndex(m, &beh);
 
-					if( beh == asBEHAVE_CONSTRUCT )
+					if (beh == asBEHAVE_CONSTRUCT)
 						// Prefix 'void'
 						strm << "objbeh \"" << typeDecl.c_str() << "\" " << beh << " \"void " << Escape::Quotes(func->GetDeclaration(false)).c_str() << "\"\n";
-					else if( beh == asBEHAVE_DESTRUCT )
+					else if (beh == asBEHAVE_DESTRUCT)
 						// Prefix 'void' and remove ~
-						strm << "objbeh \"" << typeDecl.c_str() << "\" " << beh << " \"void " << Escape::Quotes(func->GetDeclaration(false)).c_str()+1 << "\"\n";
+						strm << "objbeh \"" << typeDecl.c_str() << "\" " << beh << " \"void " << Escape::Quotes(func->GetDeclaration(false)).c_str() + 1 << "\"\n";
 					else
 						strm << "objbeh \"" << typeDecl.c_str() << "\" " << beh << " \"" << Escape::Quotes(func->GetDeclaration(false)).c_str() << "\"\n";
 				}
-				for( m = 0; m < type->GetMethodCount(); m++ )
+				for (m = 0; m < type->GetMethodCount(); m++)
 				{
 					asIScriptFunction *func = type->GetMethodByIndex(m);
 					asDWORD accessMask = func->GetAccessMask();
-					if( accessMask != currAccessMask )
+					if (accessMask != currAccessMask)
 					{
 						strm << "access " << std::hex << (unsigned int)(accessMask) << std::dec << "\n";
 						currAccessMask = accessMask;
 					}
 					strm << "objmthd \"" << typeDecl.c_str() << "\" \"" << Escape::Quotes(func->GetDeclaration(false)).c_str() << "\"\n";
 				}
-				for( m = 0; m < type->GetPropertyCount(); m++ )
+				for (m = 0; m < type->GetPropertyCount(); m++)
 				{
 					asDWORD accessMask;
 					type->GetProperty(m, 0, 0, 0, 0, 0, 0, &accessMask);
-					if( accessMask != currAccessMask )
+					if (accessMask != currAccessMask)
 					{
 						strm << "access " << std::hex << (unsigned int)(accessMask) << std::dec << "\n";
 						currAccessMask = accessMask;
 					}
-					strm << "objprop \"" << typeDecl.c_str() << "\" \"" << type->GetPropertyDeclaration(m) << "\"\n";
+					strm << "objprop \"" << typeDecl.c_str() << "\" \"" << type->GetPropertyDeclaration(m) << "\"";
+
+					// Save information about composite properties
+					int compositeOffset;
+					bool isCompositeIndirect;
+					type->GetProperty(m, 0, 0, 0, 0, 0, 0, 0, &compositeOffset, &isCompositeIndirect);
+					strm << " " << compositeOffset << " " << (isCompositeIndirect ? "1" : "0") << "\n";
 				}
 			}
 		}
@@ -455,7 +464,7 @@ int WriteConfigToStream(asIScriptEngine *engine, std::ostream &strm)
 	// Write the members of the template types, so they can be fully registered before any other type uses them
 	// TODO: Order the template types based on dependency to avoid failure if one type uses instances of another 
 	strm << "\n// Template type members\n";
-	for( lambda::Set<asITypeInfo*>::iterator it = templateTypes.begin(); it != templateTypes.end(); ++it )
+	for (Set<asITypeInfo*>::iterator it = templateTypes.begin(); it != templateTypes.end(); ++it)
 	{
 		asITypeInfo *type = *it;
 		TypeWriter::Write(engine, strm, type, currNamespace, currAccessMask);
@@ -465,10 +474,10 @@ int WriteConfigToStream(asIScriptEngine *engine, std::ostream &strm)
 	strm << "\n// Type members\n";
 
 	c = engine->GetObjectTypeCount();
-	for( n = 0; n < c; n++ )
+	for (n = 0; n < c; n++)
 	{
 		asITypeInfo *type = engine->GetObjectTypeByIndex(n);
-		if( templateTypes.find(type) == templateTypes.end() )
+		if (templateTypes.find(type) == templateTypes.end())
 			TypeWriter::Write(engine, strm, type, currNamespace, currAccessMask);
 	}
 
@@ -476,18 +485,18 @@ int WriteConfigToStream(asIScriptEngine *engine, std::ostream &strm)
 	strm << "\n// Functions\n";
 
 	c = engine->GetGlobalFunctionCount();
-	for( n = 0; n < c; n++ )
+	for (n = 0; n < c; n++)
 	{
 		asIScriptFunction *func = engine->GetGlobalFunctionByIndex(n);
 		const char *nameSpace = func->GetNamespace();
-		if( nameSpace != currNamespace )
+		if (nameSpace != currNamespace)
 		{
 			strm << "namespace \"" << nameSpace << "\"\n";
 			currNamespace = nameSpace;
 			engine->SetDefaultNamespace(currNamespace.c_str());
 		}
 		asDWORD accessMask = func->GetAccessMask();
-		if( accessMask != currAccessMask )
+		if (accessMask != currAccessMask)
 		{
 			strm << "access " << std::hex << (unsigned int)(accessMask) << std::dec << "\n";
 			currAccessMask = accessMask;
@@ -499,7 +508,7 @@ int WriteConfigToStream(asIScriptEngine *engine, std::ostream &strm)
 	strm << "\n// Properties\n";
 
 	c = engine->GetGlobalPropertyCount();
-	for( n = 0; n < c; n++ )
+	for (n = 0; n < c; n++)
 	{
 		const char *name;
 		int typeId;
@@ -507,12 +516,12 @@ int WriteConfigToStream(asIScriptEngine *engine, std::ostream &strm)
 		asDWORD accessMask;
 		const char *nameSpace;
 		engine->GetGlobalPropertyByIndex(n, &name, &nameSpace, &typeId, &isConst, 0, 0, &accessMask);
-		if( accessMask != currAccessMask )
+		if (accessMask != currAccessMask)
 		{
 			strm << "access " << std::hex << (unsigned int)(accessMask) << std::dec << "\n";
 			currAccessMask = accessMask;
 		}
-		if( nameSpace != currNamespace )
+		if (nameSpace != currNamespace)
 		{
 			strm << "namespace \"" << nameSpace << "\"\n";
 			currNamespace = nameSpace;
@@ -521,19 +530,26 @@ int WriteConfigToStream(asIScriptEngine *engine, std::ostream &strm)
 		strm << "prop \"" << (isConst ? "const " : "") << engine->GetTypeDeclaration(typeId) << " " << name << "\"\n";
 	}
 
-	engine->SetDefaultNamespace("");
-
 	// Write lambda::String factory
-	strm << "\n// String factory\n";
+	strm << "\n// lambda::String factory\n";
+
+	// Reset the namespace for the lambda::String factory and default array type
+	if ("" != currNamespace)
+	{
+		strm << "namespace \"\"\n";
+		currNamespace = "";
+		engine->SetDefaultNamespace("");
+	}
+
 	asDWORD flags = 0;
 	int typeId = engine->GetStringFactoryReturnTypeId(&flags);
-	if( typeId > 0 )
+	if (typeId > 0)
 		strm << "strfactory \"" << ((flags & asTM_CONST) ? "const " : "") << engine->GetTypeDeclaration(typeId) << ((flags & asTM_INOUTREF) ? "&" : "") << "\"\n";
 
 	// Write default array type
 	strm << "\n// Default array type\n";
 	typeId = engine->GetDefaultArrayTypeId();
-	if( typeId > 0 )
+	if (typeId > 0)
 		strm << "defarray \"" << engine->GetTypeDeclaration(typeId) << "\"\n";
 
 	// Restore original settings
@@ -542,7 +558,7 @@ int WriteConfigToStream(asIScriptEngine *engine, std::ostream &strm)
 	return 0;
 }
 
-int ConfigEngineFromStream(asIScriptEngine *engine, std::istream &strm, const char *configFile)
+int ConfigEngineFromStream(asIScriptEngine *engine, std::istream &strm, const char *configFile, asIStringFactory *stringFactory)
 {
 	int r;
 
@@ -553,7 +569,7 @@ int ConfigEngineFromStream(asIScriptEngine *engine, std::istream &strm, const ch
 		{
 			asUINT len = 0;
 			asETokenClass t = engine->ParseToken(&text[pos], text.length() - pos, &len);
-			while( (t == asTC_WHITESPACE || t == asTC_COMMENT) && pos < text.length() )
+			while ((t == asTC_WHITESPACE || t == asTC_COMMENT) && pos < text.length())
 			{
 				pos += len;
 				t = engine->ParseToken(&text[pos], text.length() - pos, &len);
@@ -569,11 +585,11 @@ int ConfigEngineFromStream(asIScriptEngine *engine, std::istream &strm, const ch
 		static void ReplaceSlashQuote(lambda::String &str)
 		{
 			size_t pos = 0;
-			for(;;)
+			for (;;)
 			{
-				// Search for \" in the lambda::String
+				// Search for \" in the string
 				pos = str.find("\\\"", pos);
-				if( pos == lambda::String::npos )
+				if (pos == String::npos)
 					break;
 
 				// Remove the \ character
@@ -584,8 +600,8 @@ int ConfigEngineFromStream(asIScriptEngine *engine, std::istream &strm, const ch
 		static asUINT GetLineNumber(const lambda::String &text, asUINT pos)
 		{
 			asUINT count = 1;
-			for( asUINT n = 0; n < pos; n++ )
-				if( text[n] == '\n' )
+			for (asUINT n = 0; n < pos; n++)
+				if (text[n] == '\n')
 					count++;
 
 			return count;
@@ -595,7 +611,7 @@ int ConfigEngineFromStream(asIScriptEngine *engine, std::istream &strm, const ch
 	// Since we are only going to compile the script and never actually execute it,
 	// we turn off the initialization of global variables, so that the compiler can
 	// just register dummy types and functions for the application interface.
-	r = engine->SetEngineProperty(asEP_INIT_GLOBAL_VARS_AFTER_BUILD, false); assert( r >= 0 );
+	r = engine->SetEngineProperty(asEP_INIT_GLOBAL_VARS_AFTER_BUILD, false); assert(r >= 0);
 
 	// Read the entire file
 	char buffer[1000];
@@ -604,16 +620,16 @@ int ConfigEngineFromStream(asIScriptEngine *engine, std::istream &strm, const ch
 		strm.getline(buffer, 1000);
 		config += buffer;
 		config += "\n";
-	} while( !strm.eof() && strm.good() );
+	} while (!strm.eof() && strm.good());
 
 	// Process the configuration file and register each entity
-	asUINT pos  = 0;
-	while( pos < config.length() )
+	asUINT pos = 0;
+	while (pos < config.length())
 	{
 		lambda::String token;
 		// TODO: The position where the initial token is found should be stored for error messages
 		in::GetToken(engine, token, config, pos);
-		if( token == "ep" )
+		if (token == "ep")
 		{
 			lambda::String tmp;
 			in::GetToken(engine, tmp, config, pos);
@@ -621,11 +637,11 @@ int ConfigEngineFromStream(asIScriptEngine *engine, std::istream &strm, const ch
 			asEEngineProp ep = asEEngineProp(atol(tmp.c_str()));
 
 			// Only set properties that affect the compiler
-			if( ep != asEP_COPY_SCRIPT_SECTIONS &&
+			if (ep != asEP_COPY_SCRIPT_SECTIONS &&
 				ep != asEP_MAX_STACK_SIZE &&
 				ep != asEP_INIT_GLOBAL_VARS_AFTER_BUILD &&
 				ep != asEP_EXPAND_DEF_ARRAY_TO_TMPL &&
-				ep != asEP_AUTO_GARBAGE_COLLECT )
+				ep != asEP_AUTO_GARBAGE_COLLECT)
 			{
 				// Get the value for the property
 				in::GetToken(engine, tmp, config, pos);
@@ -637,27 +653,27 @@ int ConfigEngineFromStream(asIScriptEngine *engine, std::istream &strm, const ch
 				engine->SetEngineProperty(ep, value);
 			}
 		}
-		else if( token == "namespace" )
+		else if (token == "namespace")
 		{
 			lambda::String ns;
 			in::GetToken(engine, ns, config, pos);
 			ns = ns.substr(1, ns.length() - 2);
 
 			r = engine->SetDefaultNamespace(ns.c_str());
-			if( r < 0 )
+			if (r < 0)
 			{
 				engine->WriteMessage(configFile, in::GetLineNumber(config, pos), 0, asMSGTYPE_ERROR, "Failed to set namespace");
 				return -1;
 			}
 		}
-		else if( token == "access" )
+		else if (token == "access")
 		{
 			lambda::String maskStr;
 			in::GetToken(engine, maskStr, config, pos);
 			asDWORD mask = strtoul(maskStr.c_str(), 0, 16);
 			engine->SetDefaultAccessMask(mask);
 		}
-		else if( token == "objtype" )
+		else if (token == "objtype")
 		{
 			lambda::String name, flags;
 			in::GetToken(engine, name, config, pos);
@@ -667,13 +683,13 @@ int ConfigEngineFromStream(asIScriptEngine *engine, std::istream &strm, const ch
 			// The size of the value type doesn't matter, because the
 			// engine must adjust it anyway for different platforms
 			r = engine->RegisterObjectType(name.c_str(), (atol(flags.c_str()) & asOBJ_VALUE) ? 1 : 0, atol(flags.c_str()));
-			if( r < 0 )
+			if (r < 0)
 			{
 				engine->WriteMessage(configFile, in::GetLineNumber(config, pos), 0, asMSGTYPE_ERROR, "Failed to register object type");
 				return -1;
 			}
 		}
-		else if( token == "objbeh" )
+		else if (token == "objbeh")
 		{
 			lambda::String name, behaviour, decl;
 			in::GetToken(engine, name, config, pos);
@@ -685,11 +701,11 @@ int ConfigEngineFromStream(asIScriptEngine *engine, std::istream &strm, const ch
 
 			// Remove the $ that the engine prefixes the behaviours with
 			size_t n = decl.find("$");
-			if( n != lambda::String::npos )
+			if (n != String::npos)
 				decl[n] = ' ';
 
 			asEBehaviours behave = static_cast<asEBehaviours>(atol(behaviour.c_str()));
-			if( behave == asBEHAVE_TEMPLATE_CALLBACK )
+			if (behave == asBEHAVE_TEMPLATE_CALLBACK)
 			{
 				// TODO: How can we let the compiler register this? Maybe through a plug-in system? Or maybe by implementing the callback as a script itself
 				engine->WriteMessage(configFile, in::GetLineNumber(config, pos), 0, asMSGTYPE_WARNING, "Cannot register template callback without the actual implementation");
@@ -697,14 +713,14 @@ int ConfigEngineFromStream(asIScriptEngine *engine, std::istream &strm, const ch
 			else
 			{
 				r = engine->RegisterObjectBehaviour(name.c_str(), behave, decl.c_str(), asFUNCTION(0), asCALL_GENERIC);
-				if( r < 0 )
+				if (r < 0)
 				{
 					engine->WriteMessage(configFile, in::GetLineNumber(config, pos), 0, asMSGTYPE_ERROR, "Failed to register behaviour");
 					return -1;
 				}
 			}
 		}
-		else if( token == "objmthd" )
+		else if (token == "objmthd")
 		{
 			lambda::String name, decl;
 			in::GetToken(engine, name, config, pos);
@@ -714,22 +730,24 @@ int ConfigEngineFromStream(asIScriptEngine *engine, std::istream &strm, const ch
 			in::ReplaceSlashQuote(decl);
 
 			r = engine->RegisterObjectMethod(name.c_str(), decl.c_str(), asFUNCTION(0), asCALL_GENERIC);
-			if( r < 0 )
+			if (r < 0)
 			{
 				engine->WriteMessage(configFile, in::GetLineNumber(config, pos), 0, asMSGTYPE_ERROR, "Failed to register object method");
 				return -1;
 			}
 		}
-		else if( token == "objprop" )
+		else if (token == "objprop")
 		{
-			lambda::String name, decl;
+			lambda::String name, decl, compositeOffset, isCompositeIndirect;
 			in::GetToken(engine, name, config, pos);
 			name = name.substr(1, name.length() - 2);
 			in::GetToken(engine, decl, config, pos);
 			decl = decl.substr(1, decl.length() - 2);
+			in::GetToken(engine, compositeOffset, config, pos);
+			in::GetToken(engine, isCompositeIndirect, config, pos);
 
 			asITypeInfo *type = engine->GetTypeInfoById(engine->GetTypeIdByDecl(name.c_str()));
-			if( type == 0 )
+			if (type == 0)
 			{
 				engine->WriteMessage(configFile, in::GetLineNumber(config, pos), 0, asMSGTYPE_ERROR, "Type doesn't exist for property registration");
 				return -1;
@@ -737,26 +755,26 @@ int ConfigEngineFromStream(asIScriptEngine *engine, std::istream &strm, const ch
 
 			// All properties must have different offsets in order to make them
 			// distinct, so we simply register them with an incremental offset
-			r = engine->RegisterObjectProperty(name.c_str(), decl.c_str(), type->GetPropertyCount());
-			if( r < 0 )
+			r = engine->RegisterObjectProperty(name.c_str(), decl.c_str(), type->GetPropertyCount(), compositeOffset != "0" ? type->GetPropertyCount() : 0, isCompositeIndirect != "0");
+			if (r < 0)
 			{
 				engine->WriteMessage(configFile, in::GetLineNumber(config, pos), 0, asMSGTYPE_ERROR, "Failed to register object property");
 				return -1;
 			}
 		}
-		else if( token == "intf" )
+		else if (token == "intf")
 		{
 			lambda::String name, size, flags;
 			in::GetToken(engine, name, config, pos);
 
 			r = engine->RegisterInterface(name.c_str());
-			if( r < 0 )
+			if (r < 0)
 			{
 				engine->WriteMessage(configFile, in::GetLineNumber(config, pos), 0, asMSGTYPE_ERROR, "Failed to register interface");
 				return -1;
 			}
 		}
-		else if( token == "intfmthd" )
+		else if (token == "intfmthd")
 		{
 			lambda::String name, decl;
 			in::GetToken(engine, name, config, pos);
@@ -765,13 +783,13 @@ int ConfigEngineFromStream(asIScriptEngine *engine, std::istream &strm, const ch
 			in::ReplaceSlashQuote(decl);
 
 			r = engine->RegisterInterfaceMethod(name.c_str(), decl.c_str());
-			if( r < 0 )
+			if (r < 0)
 			{
 				engine->WriteMessage(configFile, in::GetLineNumber(config, pos), 0, asMSGTYPE_ERROR, "Failed to register interface method");
 				return -1;
 			}
 		}
-		else if( token == "func" )
+		else if (token == "func")
 		{
 			lambda::String decl;
 			in::GetToken(engine, decl, config, pos);
@@ -779,13 +797,13 @@ int ConfigEngineFromStream(asIScriptEngine *engine, std::istream &strm, const ch
 			in::ReplaceSlashQuote(decl);
 
 			r = engine->RegisterGlobalFunction(decl.c_str(), asFUNCTION(0), asCALL_GENERIC);
-			if( r < 0 )
+			if (r < 0)
 			{
 				engine->WriteMessage(configFile, in::GetLineNumber(config, pos), 0, asMSGTYPE_ERROR, "Failed to register global function");
 				return -1;
 			}
 		}
-		else if( token == "prop" )
+		else if (token == "prop")
 		{
 			lambda::String decl;
 			in::GetToken(engine, decl, config, pos);
@@ -794,52 +812,60 @@ int ConfigEngineFromStream(asIScriptEngine *engine, std::istream &strm, const ch
 			// All properties must have different offsets in order to make them
 			// distinct, so we simply register them with an incremental offset.
 			// The pointer must also be non-null so we add 1 to have a value.
-			r = engine->RegisterGlobalProperty(decl.c_str(), reinterpret_cast<void*>(asPWORD(engine->GetGlobalPropertyCount()+1)));
-			if( r < 0 )
+			r = engine->RegisterGlobalProperty(decl.c_str(), reinterpret_cast<void*>(asPWORD(engine->GetGlobalPropertyCount() + 1)));
+			if (r < 0)
 			{
 				engine->WriteMessage(configFile, in::GetLineNumber(config, pos), 0, asMSGTYPE_ERROR, "Failed to register global property");
 				return -1;
 			}
 		}
-		else if( token == "strfactory" )
+		else if (token == "strfactory")
 		{
 			lambda::String type;
 			in::GetToken(engine, type, config, pos);
 			type = type.substr(1, type.length() - 2);
 
-			r = engine->RegisterStringFactory(type.c_str(), asFUNCTION(0), asCALL_GENERIC);
-			if( r < 0 )
+			if (stringFactory == 0)
 			{
-				engine->WriteMessage(configFile, in::GetLineNumber(config, pos), 0, asMSGTYPE_ERROR, "Failed to register lambda::String factory");
+				engine->WriteMessage(configFile, in::GetLineNumber(config, pos), 0, asMSGTYPE_WARNING, "Cannot register lambda::String factory without the actual implementation");
 				return -1;
 			}
+			else
+			{
+				r = engine->RegisterStringFactory(type.c_str(), stringFactory);
+				if (r < 0)
+				{
+					engine->WriteMessage(configFile, in::GetLineNumber(config, pos), 0, asMSGTYPE_ERROR, "Failed to register lambda::String factory");
+					return -1;
+				}
+			}
 		}
-		else if( token == "defarray" )
+		else if (token == "defarray")
 		{
 			lambda::String type;
 			in::GetToken(engine, type, config, pos);
 			type = type.substr(1, type.length() - 2);
 
 			r = engine->RegisterDefaultArrayType(type.c_str());
-			if( r < 0 )
+			if (r < 0)
 			{
 				engine->WriteMessage(configFile, in::GetLineNumber(config, pos), 0, asMSGTYPE_ERROR, "Failed to register the default array type");
 				return -1;
 			}
 		}
-		else if( token == "enum" )
+		else if (token == "enum")
 		{
 			lambda::String type;
 			in::GetToken(engine, type, config, pos);
 
 			r = engine->RegisterEnum(type.c_str());
-			if( r < 0 )
+			if (r < 0)
 			{
 				engine->WriteMessage(configFile, in::GetLineNumber(config, pos), 0, asMSGTYPE_ERROR, "Failed to register enum type");
 				return -1;
 			}
 		}
-		else if( token == "enumval" )
+		else if (token == "enumval")
 		{
 			lambda::String type, name, value;
 			in::GetToken(engine, type, config, pos);
@@ -847,13 +873,13 @@ int ConfigEngineFromStream(asIScriptEngine *engine, std::istream &strm, const ch
 			in::GetToken(engine, value, config, pos);
 
 			r = engine->RegisterEnumValue(type.c_str(), name.c_str(), atol(value.c_str()));
-			if( r < 0 )
+			if (r < 0)
 			{
 				engine->WriteMessage(configFile, in::GetLineNumber(config, pos), 0, asMSGTYPE_ERROR, "Failed to register enum value");
 				return -1;
 			}
 		}
-		else if( token == "typedef" )
+		else if (token == "typedef")
 		{
 			lambda::String type, decl;
 			in::GetToken(engine, type, config, pos);
@@ -861,20 +887,20 @@ int ConfigEngineFromStream(asIScriptEngine *engine, std::istream &strm, const ch
 			decl = decl.substr(1, decl.length() - 2);
 
 			r = engine->RegisterTypedef(type.c_str(), decl.c_str());
-			if( r < 0 )
+			if (r < 0)
 			{
 				engine->WriteMessage(configFile, in::GetLineNumber(config, pos), 0, asMSGTYPE_ERROR, "Failed to register typedef");
 				return -1;
 			}
 		}
-		else if( token == "funcdef" )
+		else if (token == "funcdef")
 		{
 			lambda::String decl;
 			in::GetToken(engine, decl, config, pos);
 			decl = decl.substr(1, decl.length() - 2);
 
 			r = engine->RegisterFuncdef(decl.c_str());
-			if( r < 0 )
+			if (r < 0)
 			{
 				engine->WriteMessage(configFile, in::GetLineNumber(config, pos), 0, asMSGTYPE_ERROR, "Failed to register funcdef");
 				return -1;
@@ -887,7 +913,7 @@ int ConfigEngineFromStream(asIScriptEngine *engine, std::istream &strm, const ch
 
 lambda::String GetExceptionInfo(asIScriptContext *ctx, bool showStack)
 {
-	if( ctx->GetState() != asEXECUTION_EXCEPTION ) return "";
+	if (ctx->GetState() != asEXECUTION_EXCEPTION) return "";
 
 	std::stringstream text;
 
@@ -898,15 +924,15 @@ lambda::String GetExceptionInfo(asIScriptContext *ctx, bool showStack)
 	text << "line: " << ctx->GetExceptionLineNumber() << "\n";
 	text << "desc: " << ctx->GetExceptionString() << "\n";
 
-	if( showStack )
+	if (showStack)
 	{
 		text << "--- call stack ---\n";
-		for( asUINT n = 1; n < ctx->GetCallstackSize(); n++ )
+		for (asUINT n = 1; n < ctx->GetCallstackSize(); n++)
 		{
 			function = ctx->GetFunction(n);
-			if( function )
+			if (function)
 			{
-				if( function->GetFuncType() == asFUNC_SCRIPT )
+				if (function->GetFuncType() == asFUNC_SCRIPT)
 				{
 					text << (function->GetScriptSectionName() ? function->GetScriptSectionName() : "") << " (" << ctx->GetLineNumber(n) << "): " << function->GetDeclaration() << "\n";
 				}
@@ -924,7 +950,38 @@ lambda::String GetExceptionInfo(asIScriptContext *ctx, bool showStack)
 		}
 	}
 
-	return text.str().c_str();
+	return lmbString(text.str());
+}
+
+void ScriptThrow(const lambda::String &msg)
+{
+	asIScriptContext *ctx = asGetActiveContext();
+	if (ctx)
+		ctx->SetException(msg.c_str());
+}
+
+lambda::String ScriptGetExceptionInfo()
+{
+	asIScriptContext *ctx = asGetActiveContext();
+	if (!ctx)
+		return "";
+
+	const char *msg = ctx->GetExceptionString();
+	if (msg == 0)
+		return "";
+
+	return lambda::String(msg);
+}
+
+void RegisterExceptionRoutines(asIScriptEngine *engine)
+{
+	int r;
+
+	// The lambda::String type must be available
+	assert(engine->GetTypeInfoByDecl("string"));
+
+	r = engine->RegisterGlobalFunction("void throw(const lambda::String &in)", asFUNCTION(ScriptThrow), asCALL_CDECL); assert(r >= 0);
+	r = engine->RegisterGlobalFunction("lambda::String getExceptionInfo()", asFUNCTION(ScriptGetExceptionInfo), asCALL_CDECL); assert(r >= 0);
 }
 
 END_AS_NAMESPACE

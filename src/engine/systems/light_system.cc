@@ -31,8 +31,8 @@ namespace lambda
       }
 
       data_.push_back(LightData(entity));
-      data_to_entity_[(uint32_t)data_.size() - 1u] = entity.id();
-      entity_to_data_[entity.id()] = (uint32_t)data_.size() - 1u;
+      data_to_entity_[(uint32_t)data_.size() - 1u] = entity;
+      entity_to_data_[entity] = (uint32_t)data_.size() - 1u;
       
       auto& data = lookUpData(entity);
       data.type  = LightType::kUnknown;
@@ -54,7 +54,7 @@ namespace lambda
     }
     bool LightSystem::hasComponent(const entity::Entity& entity)
     {
-      return entity_to_data_.find(entity.id()) != entity_to_data_.end();
+      return entity_to_data_.find(entity) != entity_to_data_.end();
     }
     void LightSystem::removeComponent(const entity::Entity& entity)
     {
@@ -402,13 +402,13 @@ namespace lambda
     }
     LightData& LightSystem::lookUpData(const entity::Entity& entity)
     {
-      assert(entity_to_data_.find(entity.id()) != entity_to_data_.end());
-      return data_.at(entity_to_data_.at(entity.id()));
+      assert(entity_to_data_.find(entity) != entity_to_data_.end());
+      return data_.at(entity_to_data_.at(entity));
     }
     const LightData& LightSystem::lookUpData(const entity::Entity& entity) const
     {
-      assert(entity_to_data_.find(entity.id()) != entity_to_data_.end());
-      return data_.at(entity_to_data_.at(entity.id()));
+      assert(entity_to_data_.find(entity) != entity_to_data_.end());
+      return data_.at(entity_to_data_.at(entity));
     }
     void LightSystem::renderDirectional(const entity::Entity& entity)
     {
@@ -1091,7 +1091,7 @@ namespace lambda
     {
     }
     BaseLightComponent::BaseLightComponent() :
-      BaseLightComponent(entity::Entity::invalid(), nullptr)
+      BaseLightComponent(entity::InvalidEntity, nullptr)
     {
     }
     DirectionalLightComponent::DirectionalLightComponent(const entity::Entity& entity, LightSystem* system) :

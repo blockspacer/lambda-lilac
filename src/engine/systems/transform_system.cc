@@ -71,13 +71,13 @@ namespace lambda
 
     const TransformData& TransformSystem::lookUpData(const entity::Entity& entity) const
     {
-      assert(entity_to_data_.find(entity.id()) != entity_to_data_.end());
-      return data_.at(entity_to_data_.at(entity.id()));
+      assert(entity_to_data_.find(entity) != entity_to_data_.end());
+      return data_.at(entity_to_data_.at(entity));
     }
     TransformData& TransformSystem::lookUpData(const entity::Entity& entity)
     {
-      assert(entity_to_data_.find(entity.id()) != entity_to_data_.end());
-      return data_.at(entity_to_data_.at(entity.id()));
+      assert(entity_to_data_.find(entity) != entity_to_data_.end());
+      return data_.at(entity_to_data_.at(entity));
     }
 
     void TransformSystem::cleanIfDirty(TransformData& data)
@@ -92,7 +92,7 @@ namespace lambda
         data.local  = glm::scale(data.local, data.scale);
         
         // World.
-        if (data.getParent() == root_ || data.getParent().id() == data.entity.id())
+        if (data.getParent() == root_ || data.getParent() == data.entity)
         {
           data.world = data.local;
         }
@@ -127,8 +127,8 @@ namespace lambda
     TransformComponent TransformSystem::addComponent(const entity::Entity& entity)
     {
       data_.push_back(TransformData(entity));
-      data_to_entity_[(uint32_t)data_.size() - 1u] = entity.id();
-      entity_to_data_[entity.id()] = (uint32_t)data_.size() - 1u;
+      data_to_entity_[(uint32_t)data_.size() - 1u] = entity;
+      entity_to_data_[entity] = (uint32_t)data_.size() - 1u;
 
       return TransformComponent(entity, this);
     }
@@ -140,12 +140,12 @@ namespace lambda
 
     bool TransformSystem::hasComponent(const entity::Entity& entity)
     {
-      return entity_to_data_.find(entity.id()) != entity_to_data_.end();
+      return entity_to_data_.find(entity) != entity_to_data_.end();
     }
 
     void TransformSystem::removeComponent(const entity::Entity& entity)
     {
-      const auto& it = entity_to_data_.find(entity.id());
+      const auto& it = entity_to_data_.find(entity);
       if (it != entity_to_data_.end())
       {
         uint32_t id = it->second;
@@ -183,7 +183,7 @@ namespace lambda
     bool TransformSystem::hasParent(const entity::Entity& entity) const
     {
       const TransformData& data = lookUpData(entity);
-      return true == data.getParent().isAlive()&& data.getParent() != entity;
+      return data.getParent() != 0u && data.getParent() != entity;
     }
 
     entity::Entity TransformSystem::getParent(const entity::Entity& entity)
@@ -288,7 +288,7 @@ namespace lambda
     void TransformSystem::setWorldTranslation(const entity::Entity& entity, const glm::vec3& translation)
     {
       const TransformData& data = lookUpData(entity);
-      if (false == data.getParent().isAlive() || data.getParent() == entity)
+      if (0u == data.getParent() || data.getParent() == entity)
       {
         setLocalTranslation(entity, translation);
         return;
@@ -302,7 +302,7 @@ namespace lambda
     void TransformSystem::setWorldRotation(const entity::Entity& entity, const glm::quat& rotation)
     {
       const TransformData& data = lookUpData(entity);
-      if (false == data.getParent().isAlive() || data.getParent() == entity)
+      if (0u == data.getParent() || data.getParent() == entity)
       {
         setLocalRotation(entity, rotation);
         return;
@@ -323,7 +323,7 @@ namespace lambda
     void TransformSystem::setWorldScale(const entity::Entity& entity, const glm::vec3& scale)
     {
       const TransformData& data = lookUpData(entity);
-      if (false == data.getParent().isAlive() || data.getParent() == entity)
+      if (0u == data.getParent() || data.getParent() == entity)
       {
         setLocalScale(entity, scale);
         return;
@@ -347,7 +347,7 @@ namespace lambda
     glm::quat TransformSystem::getWorldRotation(const entity::Entity& entity)
     {
       const TransformData& data = lookUpData(entity);
-      if (data.getParent().isAlive()&& entity != data.getParent())
+      if (data.getParent() != 0u && entity != data.getParent())
       {
         return data.rotation * getWorldRotation(data.getParent());
       }
@@ -360,7 +360,7 @@ namespace lambda
     glm::vec3 TransformSystem::getWorldScale(const entity::Entity& entity)
     {
       const TransformData& data = lookUpData(entity);
-      if (data.getParent().isAlive()&& entity != data.getParent())
+      if (data.getParent() != 0u && entity != data.getParent())
       {
         return data.scale * getWorldScale(data.getParent());
       }

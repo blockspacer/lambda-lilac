@@ -3,11 +3,6 @@
 
 namespace lambda
 {
-  namespace entity
-  {
-    class Entity;
-  }
-
   namespace components
   {
     ///////////////////////////////////////////////////////////////////////////

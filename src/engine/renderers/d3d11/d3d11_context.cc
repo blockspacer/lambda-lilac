@@ -633,7 +633,7 @@ float4 PS(VSOutput pIn) : SV_TARGET0
       default_.viewport.y = 0.0f;
       default_.viewport.z = (float)width;
       default_.viewport.w = (float)height;
-      setViewports({ default_.viewport });
+			setViewports(Vector<glm::vec4>{ default_.viewport });
 
 			world_->getPostProcessManager().resize(glm::vec2(width, height) * render_scale_);
       

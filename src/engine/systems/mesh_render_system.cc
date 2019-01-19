@@ -21,78 +21,6 @@ namespace lambda
 {
   namespace components
   {
-    // To find orientation of ordered triplet (p, q, r). 
-    // The function returns following values 
-    // 0 --> p, q and r are colinear 
-    // 1 --> Clockwise 
-    // 2 --> Counterclockwise 
-    int orientation(glm::vec2 p, glm::vec2 q, glm::vec2 r)
-    {
-      int val = (int)((q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y));
-
-      if (val == 0)
-      {
-        return 0;  // colinear 
-      }
-      return (val > 0) ? 1 : 2; // clock or counterclock wise 
-    }
-
-    Vector<glm::vec2> convexHull(Vector<glm::vec2> points)
-    { 
-      // There must be at least 3 points 
-      if (points.size() < 3)
-      {
-        return points;
-      }
-
-      // Initialize Result 
-      Vector<glm::vec2> hull;
-  
-      // Find the leftmost point 
-      int l = 0; 
-      for (int i = 1; i < points.size(); i++)
-      {
-        if (points[i].x < points[l].x)
-        {
-          l = i;
-        }
-      }
-
-      // Start from leftmost point, keep moving counterclockwise 
-      // until reach the start point again.  This loop runs O(h) 
-      // times where h is number of points in result or output. 
-      int p = l, q; 
-      do
-      { 
-        // Add current point to result 
-        hull.push_back(points[p]); 
-  
-        // Search for a point 'q' such that orientation(p, x, 
-        // q) is counterclockwise for all points 'x'. The idea 
-        // is to keep track of last visited most counterclock- 
-        // wise point in q. If any point 'i' is more counterclock- 
-        // wise than q, then update q. 
-        q = (p + 1) % points.size();
-        for (int i = 0; i < points.size(); i++) 
-        { 
-          // If i is more counterclockwise than current q, then 
-          // update q 
-          if (orientation(points[p], points[i], points[q]) == 2)
-          {
-            q = i;
-          }
-        } 
-  
-        // Now q is the most counterclockwise with respect to p 
-        // Set p as q for next iteration, so that q is added to 
-        // result 'hull' 
-        p = q; 
-  
-      } while (p != l);  // While we don't come to first point 
-  
-      return hull;
-    } 
-
     MeshRenderSystem::~MeshRenderSystem()
     {
       for (auto& it : data_)
@@ -248,17 +176,17 @@ namespace lambda
     }
     void MeshRenderSystem::makeStatic(const entity::Entity& entity)
     {
-      auto e = std::find(dynamic_renderables_.begin(), dynamic_renderables_.end(), entity);
-      if (e != dynamic_renderables_.end())
-      {
-        dynamic_renderables_.erase(e);
-      }
+			for (const auto& data : static_renderables_)
+				if (data->entity == entity)
+					return;
+
+      auto it = eastl::find(dynamic_renderables_.begin(), dynamic_renderables_.end(), entity);
+      if (it != dynamic_renderables_.end())
+        dynamic_renderables_.erase(it);
 
       const MeshRenderData& data = lookUpData(entity);
       if (!data.mesh)
-      {
         return;
-      }
 
 
       utilities::Renderable* renderable = foundation::Memory::construct<utilities::Renderable>();
@@ -291,12 +219,16 @@ namespace lambda
       static_zone_manager_.addToken(
         glm::vec2(renderable->min.x, renderable->min.z), 
         glm::vec2(renderable->max.x, renderable->max.z), 
-        utilities::Token(entity.id(), renderable)
+        utilities::Token(entity, renderable)
       );
       static_renderables_.push_back(renderable);
     }
     void MeshRenderSystem::makeDynamic(const entity::Entity& entity)
     {
+			for (const auto& data : dynamic_renderables_)
+				if (data == entity)
+					return;
+
       for (uint32_t i = 0u; i < static_renderables_.size(); ++i)
       {
         if (static_renderables_.at(i)->entity == entity)
@@ -307,7 +239,7 @@ namespace lambda
         }
       }
 
-      static_zone_manager_.removeToken(utilities::Token(entity.id(), nullptr));
+      static_zone_manager_.removeToken(utilities::Token(entity, nullptr));
 
       dynamic_renderables_.push_back(entity);
     }
@@ -350,9 +282,11 @@ namespace lambda
     }
     void MeshRenderSystem::onRender()
     {
+			//while (!dynamic_renderables_.empty())
+			//	makeStatic(dynamic_renderables_.back());
     }
 
-    void MeshRenderSystem::createRenderList(utilities::Culler & culler, const utilities::Frustum & frustum)
+    void MeshRenderSystem::createRenderList(utilities::Culler& culler, const utilities::Frustum & frustum)
     {
       culler.cullStatics(static_zone_manager_, frustum);
       culler.cullDynamics(dynamic_renderables_, entity_to_data_, data_, transform_system_, frustum);
@@ -396,9 +330,9 @@ namespace lambda
       inline bool operator() (const MeshRenderData* mesh1, const MeshRenderData* mesh2)
       {
         if (larger)
-          return entity_to_depth.at(mesh1->entity.id()) > entity_to_depth.at(mesh2->entity.id());
+          return entity_to_depth.at(mesh1->entity) > entity_to_depth.at(mesh2->entity);
         else
-          return entity_to_depth.at(mesh1->entity.id()) < entity_to_depth.at(mesh2->entity.id());
+          return entity_to_depth.at(mesh1->entity) < entity_to_depth.at(mesh2->entity);
       }
     };
 
@@ -464,13 +398,9 @@ namespace lambda
         auto sub_mesh = renderable->mesh->getSubMeshes().at(renderable->sub_mesh);
         // TODO (Hilze): Implement.
         if (sub_mesh.io.double_sided == true || (sub_mesh.io.tex_alb >= 0 && renderable->mesh->getAttachedTextures().at(sub_mesh.io.tex_alb)->getLayer(0u).containsAlpha()))
-        {
           renderer->setRasterizerState(platform::RasterizerState::SolidNone());
-        }
         else
-        {
           renderer->setRasterizerState(platform::RasterizerState::SolidFront());
-        }
 
         renderer->draw();
       }
@@ -483,8 +413,8 @@ namespace lambda
       }
 
       data_.push_back(MeshRenderData(entity));
-      data_to_entity_[(uint32_t)data_.size() - 1u] = entity.id();
-      entity_to_data_[entity.id()] = (uint32_t)data_.size() - 1u;
+      data_to_entity_[(uint32_t)data_.size() - 1u] = entity;
+      entity_to_data_[entity] = (uint32_t)data_.size() - 1u;
       
       dynamic_renderables_.push_back(entity);
 
@@ -496,7 +426,7 @@ namespace lambda
     }
     bool MeshRenderSystem::hasComponent(const entity::Entity& entity)
     {
-      return entity_to_data_.find(entity.id()) != entity_to_data_.end();
+      return entity_to_data_.find(entity) != entity_to_data_.end();
     }
     void MeshRenderSystem::removeComponent(const entity::Entity& entity)
     {
@@ -515,15 +445,19 @@ namespace lambda
         data_to_entity_.erase(id);
       }
     }
+		String MeshRenderSystem::profilerInfo() const
+		{
+			return "Dynamics: " + toString(dynamic_renderables_.size()) + "\nStatics: " + toString(static_renderables_.size());
+		}
     MeshRenderData& MeshRenderSystem::lookUpData(const entity::Entity& entity)
     {
-      assert(entity_to_data_.find(entity.id()) != entity_to_data_.end());
-      return data_.at(entity_to_data_.at(entity.id()));
+      assert(entity_to_data_.find(entity) != entity_to_data_.end());
+      return data_.at(entity_to_data_.at(entity));
     }
     const MeshRenderData& MeshRenderSystem::lookUpData(const entity::Entity& entity) const
     {
-      assert(entity_to_data_.find(entity.id()) != entity_to_data_.end());
-      return data_.at(entity_to_data_.at(entity.id()));
+      assert(entity_to_data_.find(entity) != entity_to_data_.end());
+      return data_.at(entity_to_data_.at(entity));
     }
     MeshRenderComponent::MeshRenderComponent(const entity::Entity& entity, MeshRenderSystem* system) :
       IComponent(entity), system_(system)

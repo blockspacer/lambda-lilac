@@ -16,8 +16,8 @@ namespace lambda
       require(collider_system_, entity);
 
       data_.push_back(RigidBodyData(entity));
-      data_to_entity_[(uint32_t)data_.size() - 1u] = entity.id();
-      entity_to_data_[entity.id()] = (uint32_t)data_.size() - 1u;
+      data_to_entity_[(uint32_t)data_.size() - 1u] = entity;
+      entity_to_data_[entity] = (uint32_t)data_.size() - 1u;
 
       /** Init start */
       RigidBodyData& data = lookUpData(entity);
@@ -43,11 +43,11 @@ namespace lambda
     }
     bool RigidBodySystem::hasComponent(const entity::Entity& entity)
     {
-      return entity_to_data_.find(entity.id()) != entity_to_data_.end();
+      return entity_to_data_.find(entity) != entity_to_data_.end();
     }
     void RigidBodySystem::removeComponent(const entity::Entity& entity)
     {
-      const auto& it = entity_to_data_.find(entity.id());
+      const auto& it = entity_to_data_.find(entity);
       if (it != entity_to_data_.end())
       {
         {
@@ -201,13 +201,13 @@ namespace lambda
     }
     RigidBodyData& RigidBodySystem::lookUpData(const entity::Entity& entity)
     {
-      LMB_ASSERT(entity_to_data_.find(entity.id()) != entity_to_data_.end(), ("RigidBody: could not find component: " + toString(entity.id())).c_str());
-      return data_.at(entity_to_data_.at(entity.id()));
+      LMB_ASSERT(entity_to_data_.find(entity) != entity_to_data_.end(), ("RigidBody: could not find component: " + toString(entity)).c_str());
+      return data_.at(entity_to_data_.at(entity));
     }
     const RigidBodyData& RigidBodySystem::lookUpData(const entity::Entity& entity) const
     {
-      LMB_ASSERT(entity_to_data_.find(entity.id()) != entity_to_data_.end(), ("RigidBody: could not find component: " + toString(entity.id())).c_str());
-      return data_.at(entity_to_data_.at(entity.id()));
+      LMB_ASSERT(entity_to_data_.find(entity) != entity_to_data_.end(), ("RigidBody: could not find component: " + toString(entity)).c_str());
+      return data_.at(entity_to_data_.at(entity));
     }
     RigidBodyComponent::RigidBodyComponent(const entity::Entity& entity, RigidBodySystem* system) :
       IComponent(entity), system_(system)

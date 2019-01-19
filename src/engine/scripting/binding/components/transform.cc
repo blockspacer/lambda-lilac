@@ -19,83 +19,83 @@ namespace lambda
         //// Construction ///////////////////////////////////////////////////////////////////////////
         void Create(const uint64_t& id)
         {
-          g_transform_system->addComponent(entity::Entity(id, g_entity_system));
+          g_transform_system->addComponent((entity::Entity)id);
         }
         void Destroy(const uint64_t& id)
         {
-          g_transform_system->removeComponent(entity::Entity(id, g_entity_system));
+          g_transform_system->removeComponent((entity::Entity)id);
         }
         //// Translation ////////////////////////////////////////////////////////////////////////////
         void SetWorldPosition(const uint64_t& id, const ScriptVec3& v)
         {
-          g_transform_system->setWorldTranslation(entity::Entity(id, g_entity_system), v);
+          g_transform_system->setWorldTranslation((entity::Entity)id, v);
         }
         ScriptVec3 GetWorldPosition(const uint64_t& id)
         {
-          return g_transform_system->getWorldTranslation(entity::Entity(id, g_entity_system));
+          return g_transform_system->getWorldTranslation((entity::Entity)id);
         }
         void SetLocalPosition(const uint64_t& id, const ScriptVec3& v)
         {
-          g_transform_system->setLocalTranslation(entity::Entity(id, g_entity_system), v);
+          g_transform_system->setLocalTranslation((entity::Entity)id, v);
         }
         ScriptVec3 GetLocalPosition(const uint64_t& id)
         {
-          return g_transform_system->getLocalTranslation(entity::Entity(id, g_entity_system));
+          return g_transform_system->getLocalTranslation((entity::Entity)id);
         }
         //// Rotation ///////////////////////////////////////////////////////////////////////////////
         void SetWorldRotation(const uint64_t& id, const ScriptQuat& r)
         {
-          g_transform_system->getComponent(entity::Entity(id, g_entity_system)).setWorldRotation(r);
+          g_transform_system->getComponent((entity::Entity)id).setWorldRotation(r);
         }
         ScriptQuat GetWorldRotation(const uint64_t& id)
         {
-          return g_transform_system->getWorldRotation(entity::Entity(id, g_entity_system));
+          return g_transform_system->getWorldRotation((entity::Entity)id);
         }
         void SetWorldRotationEuler(const uint64_t& id, const ScriptVec3& r)
         {
-          g_transform_system->getComponent(entity::Entity(id, g_entity_system)).setWorldRotation(r);
+          g_transform_system->getComponent((entity::Entity)id).setWorldRotation(r);
         }
         ScriptVec3 GetWorldRotationEuler(const uint64_t& id)
         {
-          return glm::eulerAngles(g_transform_system->getWorldRotation(entity::Entity(id, g_entity_system)));
+          return glm::eulerAngles(g_transform_system->getWorldRotation((entity::Entity)id));
         }
         void SetLocalRotation(const uint64_t& id, const ScriptQuat& q)
         {
-          g_transform_system->setLocalRotation(entity::Entity(id, g_entity_system), q);
+          g_transform_system->setLocalRotation((entity::Entity)id, q);
         }
         ScriptQuat GetLocalRotation(const uint64_t& id)
         {
-          return g_transform_system->getLocalRotation(entity::Entity(id, g_entity_system));
+          return g_transform_system->getLocalRotation((entity::Entity)id);
         }
         void SetLocalRotationEuler(const uint64_t& id, const ScriptVec3& r)
         {
-          g_transform_system->setLocalRotation(entity::Entity(id, g_entity_system), r);
+          g_transform_system->setLocalRotation((entity::Entity)id, r);
         }
         ScriptVec3 GetLocalRotationEuler(const uint64_t& id)
         {
-          return glm::eulerAngles(g_transform_system->getLocalRotation(entity::Entity(id, g_entity_system)));
+          return glm::eulerAngles(g_transform_system->getLocalRotation((entity::Entity)id));
         }
         //// Scale //////////////////////////////////////////////////////////////////////////////////
         void SetWorldScale(const uint64_t& id, const ScriptVec3& s)
         {
-          g_transform_system->setWorldScale(entity::Entity(id, g_entity_system), s);
+          g_transform_system->setWorldScale((entity::Entity)id, s);
         }
         ScriptVec3 GetWorldScale(const uint64_t& id)
         {
-          return g_transform_system->getWorldScale(entity::Entity(id, g_entity_system));
+          return g_transform_system->getWorldScale((entity::Entity)id);
         }
         void SetLocalScale(const uint64_t& id, const ScriptVec3& s)
         {
-          g_transform_system->setLocalScale(entity::Entity(id, g_entity_system), s);
+          g_transform_system->setLocalScale((entity::Entity)id, s);
         }
         ScriptVec3 GetLocalScale(const uint64_t& id)
         {
-          return g_transform_system->getLocalScale(entity::Entity(id, g_entity_system));
+          return g_transform_system->getLocalScale((entity::Entity)id);
         }
         //// Parenting //////////////////////////////////////////////////////////////////////////////
         void SetParent(const uint64_t& id, const uint64_t& parent_id)
           {
-            g_transform_system->setParent(entity::Entity(id, g_entity_system), entity::Entity(parent_id, g_entity_system));
+            g_transform_system->setParent((entity::Entity)id, (entity::Entity)parent_id);
           }
 
         lambda::Map<lambda::String, void*> Bind(world::IWorld* world)

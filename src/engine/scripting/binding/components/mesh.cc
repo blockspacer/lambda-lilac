@@ -22,63 +22,63 @@ namespace lambda
 
         void Create(const uint64_t& id)
         {
-          g_mesh_render_system->addComponent(entity::Entity(id, g_entity_system));
+          g_mesh_render_system->addComponent((entity::Entity)id);
         }
         void Destroy(const uint64_t& id)
         {
-          g_mesh_render_system->removeComponent(entity::Entity(id, g_entity_system));
+          g_mesh_render_system->removeComponent((entity::Entity)id);
         }
         void Attach(const uint64_t& id, const uint64_t& mesh_id)
         {
-          g_mesh_render_system->getComponent(entity::Entity(id, g_entity_system)).attachMesh(assets::mesh::Get(mesh_id));
+          g_mesh_render_system->getComponent((entity::Entity)id).attachMesh(assets::mesh::Get(mesh_id));
         }
         void SetMesh(const uint64_t& id, const uint64_t& mesh_id)
         {
-          g_mesh_render_system->setMesh(entity::Entity(id, g_entity_system), assets::mesh::Get(mesh_id));
+          g_mesh_render_system->setMesh((entity::Entity)id, assets::mesh::Get(mesh_id));
         }
         void SetSubMesh(const uint64_t& id, const uint16_t& sub_mesh)
         {
-          g_mesh_render_system->setSubMesh(entity::Entity(id, g_entity_system), (uint32_t)sub_mesh);
+          g_mesh_render_system->setSubMesh((entity::Entity)id, (uint32_t)sub_mesh);
         }
         void SetAlbedoTexture(const uint64_t& id, const uint64_t& texture)
         {
-          g_mesh_render_system->setAlbedoTexture(entity::Entity(id, g_entity_system), assets::texture::Get(texture));
+          g_mesh_render_system->setAlbedoTexture((entity::Entity)id, assets::texture::Get(texture));
         }
         void SetNormalTexture(const uint64_t& id, const uint64_t& texture)
         {
-          g_mesh_render_system->setNormalTexture(entity::Entity(id, g_entity_system), assets::texture::Get(texture));
+          g_mesh_render_system->setNormalTexture((entity::Entity)id, assets::texture::Get(texture));
         }
         void SetMetallicRoughnessTexture(const uint64_t& id, const uint64_t& texture)
         {
-          g_mesh_render_system->setMetallicRoughnessTexture(entity::Entity(id, g_entity_system), assets::texture::Get(texture));
+          g_mesh_render_system->setMetallicRoughnessTexture((entity::Entity)id, assets::texture::Get(texture));
         }
         void MakeStatic(const uint64_t& id)
         {
-          g_mesh_render_system->makeStatic(entity::Entity(id, g_entity_system));
+          g_mesh_render_system->makeStatic((entity::Entity)id);
         }
         void MakeStaticRecursive(const uint64_t& id)
         {
-          const entity::Entity e(id, g_entity_system);
+          const entity::Entity e = (entity::Entity)id;
           if (g_mesh_render_system->hasComponent(e))
             g_mesh_render_system->makeStatic(e);
 
           if (g_transform_system->hasComponent(e))
             for (const auto& child : g_transform_system->getChildren(e))
-              MakeStaticRecursive(child.id());
+              MakeStaticRecursive(child);
         }
         void MakeDynamic(const uint64_t& id)
         {
-          g_mesh_render_system->makeDynamic(entity::Entity(id, g_entity_system));
+          g_mesh_render_system->makeDynamic((entity::Entity)id);
         }
         void MakeDynamicRecursive(const uint64_t& id)
         {
-          const entity::Entity e(id, g_entity_system);
+          const entity::Entity e = (entity::Entity)id;
           if (g_mesh_render_system->hasComponent(e))
             g_mesh_render_system->makeDynamic(e);
 
           if (g_transform_system->hasComponent(e))
             for (const auto& child : g_transform_system->getChildren(e))
-              MakeDynamicRecursive(child.id());
+              MakeDynamicRecursive(child);
         }
 
         extern Map<lambda::String, void*> Bind(world::IWorld* world)

@@ -20,47 +20,47 @@ namespace lambda
 
         void Create(const uint64_t& id)
         {
-          g_rigid_body_system->addComponent(entity::Entity(id, g_entity_system));
+          g_rigid_body_system->addComponent((entity::Entity)id);
         }
         void Destroy(const uint64_t& id)
         {
-          g_rigid_body_system->removeComponent(entity::Entity(id, g_entity_system));
+          g_rigid_body_system->removeComponent((entity::Entity)id);
         }
         ScriptVec3 GetVelocity(const uint64_t& id)
         {
-          return g_rigid_body_system->getVelocity(entity::Entity(id, g_entity_system));
+          return g_rigid_body_system->getVelocity((entity::Entity)id);
         }
         void SetVelocity(const uint64_t& id, const ScriptVec3& v)
         {
-          g_rigid_body_system->setVelocity(entity::Entity(id, g_entity_system), v);
+          g_rigid_body_system->setVelocity((entity::Entity)id, v);
         }
         ScriptVec3 GetAngularVelocity(const uint64_t& id)
         {
-          return g_rigid_body_system->getAngularVelocity(entity::Entity(id, g_entity_system));
+          return g_rigid_body_system->getAngularVelocity((entity::Entity)id);
         }
         void SetAngularVelocity(const uint64_t& id, const ScriptVec3& v)
         {
-          g_rigid_body_system->setAngularVelocity(entity::Entity(id, g_entity_system), v);
+          g_rigid_body_system->setAngularVelocity((entity::Entity)id, v);
         }
         uint8_t GetVelocityConstraints(const uint64_t& id)
         {
-          return g_rigid_body_system->getVelocityConstraints(entity::Entity(id, g_entity_system));
+          return g_rigid_body_system->getVelocityConstraints((entity::Entity)id);
         }
         void SetVelocityConstraints(const uint64_t& id, const uint8_t& constraints)
         {
-          g_rigid_body_system->setVelocityConstraints(entity::Entity(id, g_entity_system), constraints);
+          g_rigid_body_system->setVelocityConstraints((entity::Entity)id, constraints);
         }
         uint8_t GetAngularConstraints(const uint64_t& id)
         {
-          return g_rigid_body_system->getAngularConstraints(entity::Entity(id, g_entity_system));
+          return g_rigid_body_system->getAngularConstraints((entity::Entity)id);
         }
         void SetAngularConstraints(const uint64_t& id, const uint8_t& constraints)
         {
-          g_rigid_body_system->setAngularConstraints(entity::Entity(id, g_entity_system), constraints);
+          g_rigid_body_system->setAngularConstraints((entity::Entity)id, constraints);
         }
         void ApplyImpulse(const uint64_t& id, const ScriptVec3& impulse)
         {
-          g_rigid_body_system->applyImpulse(entity::Entity(id, g_entity_system), impulse);
+          g_rigid_body_system->applyImpulse((entity::Entity)id, impulse);
         }
 
         extern Map<lambda::String, void*> Bind(world::IWorld* world)

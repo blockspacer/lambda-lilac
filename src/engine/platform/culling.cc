@@ -60,7 +60,7 @@ namespace lambda
       for (const entity::Entity& entity : dynamic_entities)
       {
         const components::MeshRenderData* data =
-          &mesh_render_data[entity_to_data.at(entity.id())];
+          &mesh_render_data[entity_to_data.at(entity)];
 
         bool visible = true;
 

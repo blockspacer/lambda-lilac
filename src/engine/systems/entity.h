@@ -6,8 +6,10 @@ namespace lambda
   namespace entity
   {
     class EntitySystem;
+		typedef uint32_t Entity;
+		constexpr Entity InvalidEntity = 0u;
 
-    class Entity
+		/*class Entity
     {
     public:
       friend class EntitySystem;
@@ -28,18 +30,18 @@ namespace lambda
     protected:
       size_t id_;
       EntitySystem* system_;
-    };
+    };*/
   }
 }
 
-namespace eastl
-{
-  template <>
-  struct hash<lambda::entity::Entity>
-  {
-    size_t operator()(const lambda::entity::Entity& k) const
-    {
-      return k.id();
-    }
-  };
-}
+//namespace eastl
+//{
+//  template <>
+//  struct hash<lambda::entity::Entity>
+//  {
+//    size_t operator()(const lambda::entity::Entity& k) const
+//    {
+//      return k.id();
+//    }
+//  };
+//}

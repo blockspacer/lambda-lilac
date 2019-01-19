@@ -108,10 +108,8 @@ namespace lambda
           }*/
 
           transform = object->getWorldTransform();
-          const entity::Entity entity(
-            (size_t)rigid_body->getUserIndex(), 
-            entity_system_.get()
-          );
+          const entity::Entity entity = 
+            (uint32_t)rigid_body->getUserIndex();
           glm::vec3 pos = transform_system_->getWorldTranslation(entity);
           glm::quat rot = transform_system_->getWorldRotation(entity);
           if (false == (std::isnan(pos.x) || 
@@ -152,10 +150,8 @@ namespace lambda
             transform = object->getWorldTransform();
           }
 
-          const entity::Entity entity(
-            (size_t)rigid_body->getUserIndex(), 
-            entity_system_.get()
-          );
+          const entity::Entity entity =
+            (uint32_t)rigid_body->getUserIndex();
 
           glm::quat rot(
             transform.getRotation().w(),
@@ -263,10 +259,8 @@ namespace lambda
       Vector<entity::Entity> entities(callback.entities.size());
       for (uint64_t i = 0u; i < entities.size(); ++i)
       {
-        entities.at(i) = entity::Entity(
-          (size_t)callback.entities.at(i), 
-          entity_system_.get()
-        );
+				entities.at(i) = 
+					(uint32_t)callback.entities.at(i);
       }
       
       return entities;

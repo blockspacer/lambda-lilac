@@ -21,63 +21,63 @@ namespace lambda
 
         void CreateSpot(const uint64_t& id)
         {
-          g_light_system->addSpotLight(entity::Entity(id, g_entity_system));
+          g_light_system->addSpotLight((entity::Entity)id);
         }
         void CreatePoint(const uint64_t& id)
         {
-          g_light_system->addPointLight(entity::Entity(id, g_entity_system));
+          g_light_system->addPointLight((entity::Entity)id);
         }
         void CreateDirectional(const uint64_t& id)
         {
-          g_light_system->addDirectionalLight(entity::Entity(id, g_entity_system));
+          g_light_system->addDirectionalLight((entity::Entity)id);
         }
         void CreateCascade(const uint64_t& id)
         {
-          g_light_system->addCascadedLight(entity::Entity(id, g_entity_system));
+          g_light_system->addCascadedLight((entity::Entity)id);
         }
         void Destroy(const uint64_t& id)
         {
-          g_light_system->removeComponent(entity::Entity(id, g_entity_system));
+          g_light_system->removeComponent((entity::Entity)id);
         }
         void SetLightColour(const uint64_t& id, const ScriptVec3& colour)
         {
-          g_light_system->setColour(entity::Entity(id, g_entity_system), colour);
+          g_light_system->setColour((entity::Entity)id, colour);
         }
         ScriptVec3 GetLightColour(const uint64_t& id)
         {
-          return g_light_system->getColour(entity::Entity(id, g_entity_system));
+          return g_light_system->getColour((entity::Entity)id);
         }
         void SetLightIntensity(const uint64_t& id, const float& intensity)
         {
-          g_light_system->setIntensity(entity::Entity(id, g_entity_system), intensity);
+          g_light_system->setIntensity((entity::Entity)id, intensity);
         }
         float GetLightIntensity(const uint64_t& id)
         {
-          return g_light_system->getIntensity(entity::Entity(id, g_entity_system));
+          return g_light_system->getIntensity((entity::Entity)id);
         }
         void SetAmbientColour(const uint64_t& id, const ScriptVec3& colour)
         {
-          g_light_system->setAmbient(entity::Entity(id, g_entity_system), colour);
+          g_light_system->setAmbient((entity::Entity)id, colour);
         }
         ScriptVec3 GetAmbientColour(const uint64_t& id)
         {
-          return g_light_system->getDirectionalLight(entity::Entity(id, g_entity_system)).getAmbient();
+          return g_light_system->getDirectionalLight((entity::Entity)id).getAmbient();
         }
         void SetShadowType(const uint64_t& id, const uint8_t& shadow_type)
         {
-          g_light_system->setShadowType(entity::Entity(id, g_entity_system), (lambda::components::ShadowType)shadow_type);
+          g_light_system->setShadowType((entity::Entity)id, (lambda::components::ShadowType)shadow_type);
         }
         uint8_t GetShadowType(const uint64_t& id)
         {
-          return (uint8_t)g_light_system->getShadowType(entity::Entity(id, g_entity_system));
+          return (uint8_t)g_light_system->getShadowType((entity::Entity)id);
         }
         void SetDepth(const uint64_t& id, const float& depth)
         {
-          g_light_system->setDepth(entity::Entity(id, g_entity_system), depth);
+          g_light_system->setDepth((entity::Entity)id, depth);
         }
         float GetDepth(const uint64_t& id)
         {
-          return g_light_system->getDepth(entity::Entity(id, g_entity_system));
+          return g_light_system->getDepth((entity::Entity)id);
         }
         void SetRenderTargets(const uint64_t& id, const void* shadow_maps)
         {
@@ -86,55 +86,55 @@ namespace lambda
           for (uint32_t i = 0u; i < maps.size(); ++i)
             maps.at(i) = g_world->getPostProcessManager().getTarget(input_values.vec_string.at(i));
 
-          g_light_system->setRenderTarget(entity::Entity(id, g_entity_system), maps);
+          g_light_system->setRenderTarget((entity::Entity)id, maps);
         }
         void SetTexture(const uint64_t& id, const uint64_t& texture_id)
         {
-          g_light_system->setTexture(entity::Entity(id, g_entity_system), assets::texture::Get(texture_id));
+          g_light_system->setTexture((entity::Entity)id, assets::texture::Get(texture_id));
         }
         void SetEnabled(const uint64_t& id, const bool& enabled)
         {
-          g_light_system->setEnabled(entity::Entity(id, g_entity_system), enabled);
+          g_light_system->setEnabled((entity::Entity)id, enabled);
         }
         bool GetEnabled(const uint64_t& id)
         {
-          return g_light_system->getEnabled(entity::Entity(id, g_entity_system));
+          return g_light_system->getEnabled((entity::Entity)id);
         }
         void SetDynamicFrequency(const uint64_t& id, const uint8_t& frequency)
         {
-          g_light_system->setDynamicFrequency(entity::Entity(id, g_entity_system), frequency);
+          g_light_system->setDynamicFrequency((entity::Entity)id, frequency);
         }
         uint8_t GetDynamicFrequency(const uint64_t& id)
         {
-          return g_light_system->getDynamicFrequency(entity::Entity(id, g_entity_system));
+          return g_light_system->getDynamicFrequency((entity::Entity)id);
         }
         void MakeRSM(const uint64_t& id)
         {
-          g_light_system->setRSM(entity::Entity(id, g_entity_system), true);
+          g_light_system->setRSM((entity::Entity)id, true);
         }
         void SetInnerCutOff(const uint64_t& id, const float& inner_cut_off)
         {
-          g_light_system->setCutOff(entity::Entity(id, g_entity_system), utilities::Angle::fromRad(inner_cut_off));
+          g_light_system->setCutOff((entity::Entity)id, utilities::Angle::fromRad(inner_cut_off));
         }
         float GetInnerCutOff(const uint64_t& id)
         {
-          return g_light_system->getCutOff(entity::Entity(id, g_entity_system)).asRad();
+          return g_light_system->getCutOff((entity::Entity)id).asRad();
         }
         void SetOuterCutOff(const uint64_t& id, const float& outer_cut_off)
         {
-          g_light_system->setOuterCutOff(entity::Entity(id, g_entity_system), utilities::Angle::fromRad(outer_cut_off));
+          g_light_system->setOuterCutOff((entity::Entity)id, utilities::Angle::fromRad(outer_cut_off));
         }
         float GetOuterCutOff(const uint64_t& id)
         {
-          return g_light_system->getOuterCutOff(entity::Entity(id, g_entity_system)).asRad();
+          return g_light_system->getOuterCutOff((entity::Entity)id).asRad();
         }
         void SetSize(const uint64_t& id, const float& size)
         {
-          g_light_system->setSize(entity::Entity(id, g_entity_system), size);
+          g_light_system->setSize((entity::Entity)id, size);
         }
         float GetSize(const uint64_t& id)
         {
-          return g_light_system->getSize(entity::Entity(id, g_entity_system));
+          return g_light_system->getSize((entity::Entity)id);
         }
      
         extern Map<lambda::String, void*> Bind(world::IWorld* world)

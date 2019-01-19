@@ -21,9 +21,9 @@ namespace lambda
       virtual void deinitialize() override {};
 
     private:
-      static const size_t kFreeIdIncrement = 64u;
-      size_t free_id_count_ = 1;
-      Queue<size_t> free_ids_;
+      static const uint32_t kFreeIdIncrement = 64u;
+			uint32_t free_id_count_ = 1;
+      Queue<uint32_t> free_ids_;
     };
   }
 }

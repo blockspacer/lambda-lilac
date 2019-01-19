@@ -111,6 +111,7 @@ namespace lambda
       MeshRenderComponent getComponent(const entity::Entity& entity);
       bool hasComponent(const entity::Entity& entity);
       void removeComponent(const entity::Entity& entity);
+			virtual String profilerInfo() const override;
 
     private:
       MeshRenderData& lookUpData(const entity::Entity& entity);
@@ -125,9 +126,9 @@ namespace lambda
       foundation::SharedPointer<TransformSystem> transform_system_;
       world::IWorld* world_;
 
-      Vector<entity::Entity> dynamic_renderables_;
-      Vector<utilities::Renderable*>    static_renderables_;
-      utilities::ZoneManager static_zone_manager_;
+      Vector<entity::Entity>         dynamic_renderables_;
+      Vector<utilities::Renderable*> static_renderables_;
+      utilities::ZoneManager         static_zone_manager_;
 
       asset::VioletTextureHandle default_albedo_;
       asset::VioletTextureHandle default_normal_;

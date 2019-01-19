@@ -39,6 +39,7 @@ namespace lambda
       virtual void fixedUpdate(const double& time_step) {};
       virtual void onRender() {};
       static size_t systemId() { return 0; };
+			virtual String profilerInfo() const { return ""; }
 
     protected:
       template<typename T>

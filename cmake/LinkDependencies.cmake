@@ -183,7 +183,7 @@ function(LinkDependencies)
   # /// ANGEL SCRIPT //////////////////////////////////////////////
     IF(${VIOLET_SCRIPTING_ANGEL})
       ADD_SUBDIRECTORY("deps/AngelScript/sdk/angelscript/projects/cmake")
-      # TARGET_INCLUDE_DIRECTORIES(angelscript INTERFACE "deps/AngelScript/sdk/angelscript/include")
+      # TARGET_INCLUDE_DIRECTORIES(angelscript PUBLIC "deps/AngelScript/sdk/angelscript/include")
       SetSolutionFolder("deps/scripting"  angelscript)
     ENDIF()
 

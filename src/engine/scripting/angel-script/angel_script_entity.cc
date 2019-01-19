@@ -192,12 +192,12 @@ namespace lambda
 
     void AngelScriptEntity::construct()
     {
-      setId(k_component_manager_->getEntitySystem()->createEntity().id());
+      setId(k_component_manager_->getEntitySystem()->createEntity());
     }
 
     void AngelScriptEntity::destruct()
     {
-      k_component_manager_->getEntitySystem()->destroyEntity(entity::Entity(id_, k_component_manager_->getEntitySystem()));
+      k_component_manager_->getEntitySystem()->destroyEntity((entity::Entity)id_);
       k_component_manager_->clear(id_);
       k_ref_counts_.erase(id_);
       id_ = 0u;

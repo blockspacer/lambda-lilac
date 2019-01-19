@@ -99,7 +99,7 @@ namespace lambda
     void CameraSystem::onRender()
     {
       // Check if there is no camera. If so, the program should exit.
-      if (false == main_camera_.isAlive())
+      if (main_camera_ == 0u)
       {
         LMB_ASSERT(false, "There was no camera set");
         return;
@@ -137,18 +137,14 @@ namespace lambda
     CameraComponent CameraSystem::addComponent(const entity::Entity& entity)
     {
       if (false == transform_system_->hasComponent(entity))
-      {
         transform_system_->addComponent(entity);
-      }
 
       data_.push_back(CameraData(entity));
-      data_to_entity_[(uint32_t)data_.size() - 1u] = entity.id();
-      entity_to_data_[entity.id()] = (uint32_t)data_.size() - 1u;
+      data_to_entity_[(uint32_t)data_.size() - 1u] = entity;
+      entity_to_data_[entity] = (uint32_t)data_.size() - 1u;
       
-      if (false == main_camera_.isAlive())
-      {
+      if (main_camera_ == 0u)
         setMainCamera(entity);
-      }
       
       return CameraComponent(entity, this);
     }
@@ -158,11 +154,11 @@ namespace lambda
     }
     bool CameraSystem::hasComponent(const entity::Entity& entity)
     {
-      return entity_to_data_.find(entity.id()) != entity_to_data_.end();
+      return entity_to_data_.find(entity) != entity_to_data_.end();
     }
     void CameraSystem::removeComponent(const entity::Entity& entity)
     {
-      const auto& it = entity_to_data_.find(entity.id());
+      const auto& it = entity_to_data_.find(entity);
       if (it != entity_to_data_.end())
       {
         uint32_t id = it->second;
@@ -258,13 +254,13 @@ namespace lambda
     }
     CameraData& CameraSystem::lookUpData(const entity::Entity& entity)
     {
-      assert(entity_to_data_.find(entity.id()) != entity_to_data_.end());
-      return data_.at(entity_to_data_.at(entity.id()));
+      assert(entity_to_data_.find(entity) != entity_to_data_.end());
+      return data_.at(entity_to_data_.at(entity));
     }
     const CameraData& CameraSystem::lookUpData(const entity::Entity& entity) const
     {
-      assert(entity_to_data_.find(entity.id()) != entity_to_data_.end());
-      return data_.at(entity_to_data_.at(entity.id()));
+      assert(entity_to_data_.find(entity) != entity_to_data_.end());
+      return data_.at(entity_to_data_.at(entity));
     }
     CameraData::CameraData(const CameraData & other)
     {

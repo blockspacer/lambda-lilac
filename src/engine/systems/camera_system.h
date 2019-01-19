@@ -97,7 +97,7 @@ namespace lambda
       foundation::SharedPointer<MeshRenderSystem> mesh_render_system_;
       world::IWorld* world_;
 
-      entity::Entity main_camera_;
+      entity::Entity main_camera_ = entity::InvalidEntity;
       utilities::Frustum main_camera_frustum_;
       utilities::Culler main_camera_culler_;
     };
