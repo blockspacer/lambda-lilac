@@ -280,9 +280,7 @@ SET(UtilsSources
   "utils/mt_manager.h"
   "utils/mt_manager.cc"
   "utils/name.h"
-  "utils/timer.h"
   "utils/renderable.h"
-  "utils/timer.cc"
   "utils/zone_manager.h"
   "utils/zone_manager.cc"
 )
@@ -405,6 +403,11 @@ IF(${VIOLET_ASSET_ASSIMP})
 	TARGET_LINK_LIBRARIES(lambda-engine PUBLIC _assimp)
 ENDIF()
 
+# /// ANGEL SCRIPT //////////////////////////////////////////////
+IF(${VIOLET_SCRIPTING_ANGEL})
+  TARGET_INCLUDE_DIRECTORIES(lambda-engine PUBLIC "../../deps/AngelScript/sdk/angelscript/include")
+ENDIF()
+
 IF(${VIOLET_CONFIG_NETWORKING})
 	TARGET_LINK_LIBRARIES(lambda-engine PUBLIC lambda-networking)
 ENDIF()
@@ -414,7 +417,7 @@ IF(${VIOLET_WIN32})
 ENDIF()
 
 IF(${VIOLET_GUI_CEF})
-  TARGET_LINK_LIBRARIES(lambda-engine PUBLIC "C:/github/lambda-engine/cef-project/third_party/cef/cef_binary_3.3538.1852.gcb937fc_windows64/Release/libcef.lib")
+  TARGET_LINK_LIBRARIES(lambda-engine PUBLIC "../../cef-project/third_party/cef/cef_binary_3.3538.1852.gcb937fc_windows64/Release/libcef.lib")
   TARGET_LINK_LIBRARIES(lambda-engine PUBLIC comctl32.lib shlwapi.lib rpcrt4.lib libcef_dll_wrapper)
 ENDIF()
 

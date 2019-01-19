@@ -74,11 +74,7 @@ namespace lambda
         }
         inline void setButton(const MouseButtons& button, const bool& value)
         {
-          const auto& it = buttons.find(button);
-          if (it != buttons.end())
-            it->second = value;
-          else
-            buttons.insert(eastl::make_pair(button, value));
+					buttons[button] = value;
         }
         inline float getAxis(const MouseAxes& axis) const
         {

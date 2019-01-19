@@ -111,8 +111,8 @@
 //    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //    void IRenderFlush::bindCamera(IRenderFlushData flush, entity::Entity entity)
 //    {
-//      components::CameraData&    data      = flush.cameras.data[flush.cameras.entity_to_data[entity.id()]];
-//      components::TransformData& transform = flush.transforms.data[flush.transforms.entity_to_data[entity.id()]];
+//      components::CameraData&    data      = flush.cameras.data[flush.cameras.entity_to_data[entity]];
+//      components::TransformData& transform = flush.transforms.data[flush.transforms.entity_to_data[entity]];
 //      
 //      const glm::mat4x4 view = glm::inverse(transform.getWorld());
 //      const glm::mat4x4 projection = glm::perspective(

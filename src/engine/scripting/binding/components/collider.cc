@@ -22,11 +22,11 @@ namespace lambda
 
         void Create(const uint64_t& id)
         {
-          g_collider_system->addComponent(entity::Entity(id, g_entity_system));
+          g_collider_system->addComponent((entity::Entity)id);
         }
         void Destroy(const uint64_t& id)
         {
-          g_collider_system->removeComponent(entity::Entity(id, g_entity_system));
+          g_collider_system->removeComponent((entity::Entity)id);
         }
         void AddMeshCollider(entity::Entity entity, asset::MeshHandle mesh)
         {
@@ -49,19 +49,19 @@ namespace lambda
         }
         void MakeBoxCollider(const uint64_t& id)
         {
-          g_collider_system->makeBox(entity::Entity(id, g_entity_system));
+          g_collider_system->makeBox((uint32_t)id);
         }
         void MakeSphereCollider(const uint64_t& id)
         {
-          g_collider_system->makeSphere(entity::Entity(id, g_entity_system));
+          g_collider_system->makeSphere((uint32_t)id);
         }
         void MakeCapsuleCollider(const uint64_t& id)
         {
-          g_collider_system->makeCapsule(entity::Entity(id, g_entity_system));
+          g_collider_system->makeCapsule((uint32_t)id);
         }
         void MakeMeshCollider(const uint64_t& id, const uint64_t& mesh_id)
         {
-          AddMeshCollider(entity::Entity(id, g_entity_system), assets::mesh::Get(mesh_id));
+          AddMeshCollider((uint32_t)id, assets::mesh::Get(mesh_id));
         }
 
         extern Map<lambda::String, void*> Bind(world::IWorld* world)

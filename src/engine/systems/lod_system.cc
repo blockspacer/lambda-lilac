@@ -55,8 +55,8 @@ namespace lambda
       require(transform_system_.get(), entity);
 
       data_.push_back(LODData(entity));
-      data_to_entity_[(uint32_t)data_.size() - 1u] = entity.id();
-      entity_to_data_[entity.id()] = (uint32_t)data_.size() - 1u;
+      data_to_entity_[(uint32_t)data_.size() - 1u] = entity;
+      entity_to_data_[entity] = (uint32_t)data_.size() - 1u;
 
       auto& data =lookUpData(entity);
       data.base_lod.setDistance(0.0f);
@@ -70,11 +70,11 @@ namespace lambda
     }
     bool LODSystem::hasComponent(const entity::Entity& entity)
     {
-      return entity_to_data_.find(entity.id()) != entity_to_data_.end();
+      return entity_to_data_.find(entity) != entity_to_data_.end();
     }
     void LODSystem::removeComponent(const entity::Entity& entity)
     {
-      const auto& it = entity_to_data_.find(entity.id());
+      const auto& it = entity_to_data_.find(entity);
       if (it != entity_to_data_.end())
       {
         uint32_t id = it->second;
@@ -150,13 +150,13 @@ namespace lambda
     }
     LODData& LODSystem::lookUpData(const entity::Entity& entity)
     {
-      LMB_ASSERT(entity_to_data_.find(entity.id()) != entity_to_data_.end(), "LOD: could not find component");
-      return data_.at(entity_to_data_.at(entity.id()));
+      LMB_ASSERT(entity_to_data_.find(entity) != entity_to_data_.end(), "LOD: could not find component");
+      return data_.at(entity_to_data_.at(entity));
     }
     const LODData& LODSystem::lookUpData(const entity::Entity& entity) const
     {
-      LMB_ASSERT(entity_to_data_.find(entity.id()) != entity_to_data_.end(), "LOD: could not find component");
-      return data_.at(entity_to_data_.at(entity.id()));
+      LMB_ASSERT(entity_to_data_.find(entity) != entity_to_data_.end(), "LOD: could not find component");
+      return data_.at(entity_to_data_.at(entity));
     }
     LODData::LODData(const LODData & other)
     {

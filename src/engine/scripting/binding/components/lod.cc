@@ -21,11 +21,11 @@ namespace lambda
 
         void Create(const uint64_t& id)
         {
-          g_lod_system->addComponent(entity::Entity(id, g_entity_system));
+          g_lod_system->addComponent((entity::Entity)id);
         }
         void Destroy(const uint64_t& id)
         {
-          g_lod_system->removeComponent(entity::Entity(id, g_entity_system));
+          g_lod_system->removeComponent((entity::Entity)id);
         }
         void AddLOD(const uint64_t& id, const uint64_t& mesh_id, const float& distance)
         {
@@ -33,7 +33,7 @@ namespace lambda
           lod.setDistance(distance);
           lod.setMesh(assets::mesh::Get(mesh_id));
 
-          g_lod_system->addLOD(entity::Entity(id, g_entity_system), lod);
+          g_lod_system->addLOD((entity::Entity)id, lod);
         }
         void AddLOD_(entity::Entity entity, const lambda::components::LOD& lod, const float& distance)
         {
@@ -55,7 +55,7 @@ namespace lambda
           lod.setDistance(distance);
           lod.setMesh(assets::mesh::Get(mesh_id));
 
-          AddLOD_(entity::Entity(id, g_entity_system), lod, distance);
+          AddLOD_((entity::Entity)id, lod, distance);
         }
 
         extern Map<lambda::String, void*> Bind(world::IWorld* world)

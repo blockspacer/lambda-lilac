@@ -83,33 +83,34 @@ class Trees {
                         selected_mesh = (selected_mesh < 8) ? (selected_mesh / 2) : (selected_mesh - 4)
 
                         if (selected_mesh == 0) {
-                            mesh_render.attach(tree_mesh_01)
-                            tree.addComponent(Collider).makeMeshColliderRecursive(tree_mesh_01)
+                          mesh_render.attach(tree_mesh_01)
+                          tree.addComponent(Collider).makeMeshColliderRecursive(tree_mesh_01)
                         }
                         if (selected_mesh == 1) {
-                            mesh_render.attach(tree_mesh_02)
-                            tree.addComponent(Collider).makeMeshColliderRecursive(tree_mesh_02)
+                          mesh_render.attach(tree_mesh_02)
+                          tree.addComponent(Collider).makeMeshColliderRecursive(tree_mesh_02)
                         }
                         if (selected_mesh == 2) {
-                            mesh_render.attach(tree_mesh_03)
-                            tree.addComponent(Collider).makeMeshColliderRecursive(tree_mesh_03)
+                          mesh_render.attach(tree_mesh_03)
+                          tree.addComponent(Collider).makeMeshColliderRecursive(tree_mesh_03)
                         }
                         if (selected_mesh == 3) {
-                            mesh_render.attach(tree_mesh_04)
-                            tree.addComponent(Collider).makeMeshColliderRecursive(tree_mesh_04)
+                          mesh_render.attach(tree_mesh_04)
+                          tree.addComponent(Collider).makeMeshColliderRecursive(tree_mesh_04)
                         }
                         if (selected_mesh == 4) {
-                            mesh_render.attach(bush_mesh_01)
-                            tree.addComponent(Collider).makeMeshColliderRecursive(bush_mesh_01)
+                          mesh_render.attach(bush_mesh_01)
+                          tree.addComponent(Collider).makeMeshColliderRecursive(bush_mesh_01)
                         }
                         if (selected_mesh == 5) {
-                            mesh_render.attach(bush_mesh_02)
-                            tree.addComponent(Collider).makeMeshColliderRecursive(bush_mesh_02)
+                          mesh_render.attach(bush_mesh_02)
+                          tree.addComponent(Collider).makeMeshColliderRecursive(bush_mesh_02)
                         }
                         if (selected_mesh == 6) {
-                            mesh_render.attach(bush_mesh_03)
-                            tree.addComponent(Collider).makeMeshColliderRecursive(bush_mesh_03)
+                          mesh_render.attach(bush_mesh_03)
+                          tree.addComponent(Collider).makeMeshColliderRecursive(bush_mesh_03)
                         }
+                        
                         mesh_render.makeStaticRecursive()
                         _trees.add(tree)
                     } 

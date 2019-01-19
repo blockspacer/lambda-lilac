@@ -137,18 +137,20 @@ class FreeLookCamera
 
     // Move the player.
     float movement_length = movement.LengthSqr();
-    if (movement_length > 0.0f)
+    
+		if (movement_length > 0.0f)
     {
       if (movement_length > 1.0f)
       {
         movement.Normalize();
       }
-
+			
       float speed = speed_base + data.inp_mov_spr * (speed_sprint - speed_base);
       movement *= data.delta_time * speed;
 
       float vel_length = Vec2(data.velocity.x, data.velocity.z).Length();
       float mov_length = movement.Length();
+			
       float mul = Clamp(0.0f, 1.0f, (Lerp(max_speed, max_speed_sprint, data.inp_mov_spr) - vel_length) / mov_length);
       data.velocity += Vec3(movement.x, 0.0f, movement.y) * mul;
     }

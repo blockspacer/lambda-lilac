@@ -18,19 +18,19 @@ namespace lambda
 
         void Create(const uint64_t& id)
         {
-          g_wave_source_system->addComponent(entity::Entity(id, g_entity_system));
+          g_wave_source_system->addComponent((entity::Entity)id);
         }
         void Destroy(const uint64_t& id)
         {
-          g_wave_source_system->removeComponent(entity::Entity(id, g_entity_system));
+          g_wave_source_system->removeComponent((entity::Entity)id);
         }
         void SetBuffer(const uint64_t& id, const uint64_t& wave_id)
         {
-          g_wave_source_system->setBuffer(entity::Entity(id, g_entity_system), assets::wave::Get(wave_id));
+          g_wave_source_system->setBuffer((entity::Entity)id, assets::wave::Get(wave_id));
         }
         uint64_t GetBuffer(const uint64_t& id)
         {
-          auto buffer = g_wave_source_system->getBuffer(entity::Entity(id, g_entity_system));
+          auto buffer = g_wave_source_system->getBuffer((entity::Entity)id);
 
           for (uint64_t i = 0u; i < assets::wave::Count(); ++i)
             if (assets::wave::Get(i) == buffer)
@@ -40,75 +40,75 @@ namespace lambda
         }
         void Play(const uint64_t& id)
         {
-          g_wave_source_system->play(entity::Entity(id, g_entity_system));
+          g_wave_source_system->play((entity::Entity)id);
         }
         void Pause(const uint64_t& id)
         {
-          g_wave_source_system->pause(entity::Entity(id, g_entity_system));
+          g_wave_source_system->pause((entity::Entity)id);
         }
         void Stop(const uint64_t& id)
         {
-          g_wave_source_system->stop(entity::Entity(id, g_entity_system));
+          g_wave_source_system->stop((entity::Entity)id);
         }
         uint8_t GetState(const uint64_t& id)
         {
-          return (uint8_t)g_wave_source_system->getState(entity::Entity(id, g_entity_system));
+          return (uint8_t)g_wave_source_system->getState((entity::Entity)id);
         }
         void SetRelativeToListener(const uint64_t& id, const bool& relative_to_listener)
         {
-          g_wave_source_system->setRelativeToListener(entity::Entity(id, g_entity_system), relative_to_listener);
+          g_wave_source_system->setRelativeToListener((entity::Entity)id, relative_to_listener);
         }
         bool GetRelativeToListener(const uint64_t& id)
         {
-          return g_wave_source_system->getRelativeToListener(entity::Entity(id, g_entity_system));
+          return g_wave_source_system->getRelativeToListener((entity::Entity)id);
         }
         void SetLoop(const uint64_t& id, const bool& loop)
         {
-          g_wave_source_system->setLoop(entity::Entity(id, g_entity_system), loop);
+          g_wave_source_system->setLoop((entity::Entity)id, loop);
         }
         bool GetLoop(const uint64_t& id)
         {
-          return g_wave_source_system->getLoop(entity::Entity(id, g_entity_system));
+          return g_wave_source_system->getLoop((entity::Entity)id);
         }
         void SetOffset(const uint64_t& id, const float& offset)
         {
-          g_wave_source_system->setOffset(entity::Entity(id, g_entity_system), offset);
+          g_wave_source_system->setOffset((entity::Entity)id, offset);
         }
         void SetVolume(const uint64_t& id, const float& volume)
         {
-          g_wave_source_system->setVolume(entity::Entity(id, g_entity_system), volume);
+          g_wave_source_system->setVolume((entity::Entity)id, volume);
         }
         float GetVolume(const uint64_t& id)
         {
-          return g_wave_source_system->getVolume(entity::Entity(id, g_entity_system));
+          return g_wave_source_system->getVolume((entity::Entity)id);
         }
         void SetGain(const uint64_t& id, const float& gain)
         {
-          g_wave_source_system->setGain(entity::Entity(id, g_entity_system), gain);
+          g_wave_source_system->setGain((entity::Entity)id, gain);
         }
         float GetGain(const uint64_t& id)
         {
-          return g_wave_source_system->getGain(entity::Entity(id, g_entity_system));
+          return g_wave_source_system->getGain((entity::Entity)id);
         }
         void SetPitch(const uint64_t& id, const float& pitch)
         {
-          g_wave_source_system->setPitch(entity::Entity(id, g_entity_system), pitch);
+          g_wave_source_system->setPitch((entity::Entity)id, pitch);
         }
         float GetPitch(const uint64_t& id)
         {
-          return g_wave_source_system->getPitch(entity::Entity(id, g_entity_system));
+          return g_wave_source_system->getPitch((entity::Entity)id);
         }
         void SetRadius(const uint64_t& id, const float& radius)
         {
-          g_wave_source_system->setRadius(entity::Entity(id, g_entity_system), radius);
+          g_wave_source_system->setRadius((entity::Entity)id, radius);
         }
         float GetRadius(const uint64_t& id)
         {
-          return g_wave_source_system->getRadius(entity::Entity(id, g_entity_system));
+          return g_wave_source_system->getRadius((entity::Entity)id);
         }
         void SetListener(const uint64_t& id)
         {
-          g_wave_source_system->setListener(entity::Entity(id, g_entity_system));
+          g_wave_source_system->setListener((entity::Entity)id);
         }
 
         extern Map<lambda::String, void*> Bind(world::IWorld* world)

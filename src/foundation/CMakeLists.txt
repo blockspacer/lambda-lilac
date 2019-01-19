@@ -38,6 +38,10 @@ SET(UtilsSources
   "utils/console.cc"
   "utils/file_system.h"
   "utils/file_system.cc"
+  "utils/profiler.h"
+  "utils/profiler.cc"
+  "utils/timer.h"
+  "utils/timer.cc"
   "utils/utilities.h"
 )
 

@@ -95,7 +95,7 @@ namespace lambda
       void setParent(entity::Entity p) { parent = p; }
 
     private:
-      entity::Entity parent;
+      entity::Entity parent = entity::InvalidEntity;
     };
 
 

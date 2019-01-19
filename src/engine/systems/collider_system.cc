@@ -20,8 +20,8 @@ namespace lambda
       require(transform_system_.get(), entity);
 
       data_.push_back(ColliderData(entity));
-      data_to_entity_[(uint32_t)data_.size() - 1u] = entity.id();
-      entity_to_data_[entity.id()] = (uint32_t)data_.size() - 1u;
+      data_to_entity_[(uint32_t)data_.size() - 1u] = entity;
+      entity_to_data_[entity] = (uint32_t)data_.size() - 1u;
 
       /** Init start */
       ColliderData& data = lookUpData(entity);
@@ -39,7 +39,7 @@ namespace lambda
         /*inertia*/      btVector3(0.0f, 0.0f, 0.0f)
       );
       data.rigid_body = foundation::Memory::construct<btRigidBody>(ground_rigid_body_ci);
-      data.rigid_body->setUserIndex((int)entity.id());
+      data.rigid_body->setUserIndex((int)entity);
       data.rigid_body->setCollisionFlags(btRigidBody::CF_STATIC_OBJECT);
       /** Init end */
 
@@ -55,7 +55,7 @@ namespace lambda
     }
     bool ColliderSystem::hasComponent(const entity::Entity& entity)
     {
-      return entity_to_data_.find(entity.id()) != entity_to_data_.end();
+      return entity_to_data_.find(entity) != entity_to_data_.end();
     }
     void ColliderSystem::removeComponent(const entity::Entity& entity)
     {
@@ -64,7 +64,7 @@ namespace lambda
         rigid_body_system_->removeComponent(entity);
       }
 
-      const auto& it = entity_to_data_.find(entity.id());
+      const auto& it = entity_to_data_.find(entity);
       if (it != entity_to_data_.end())
       {
         {
@@ -247,13 +247,13 @@ namespace lambda
     }
     ColliderData& ColliderSystem::lookUpData(const entity::Entity& entity)
     {
-      assert(entity_to_data_.find(entity.id()) != entity_to_data_.end());
-      return data_.at(entity_to_data_.at(entity.id()));
+      assert(entity_to_data_.find(entity) != entity_to_data_.end());
+      return data_.at(entity_to_data_.at(entity));
     }
     const ColliderData& ColliderSystem::lookUpData(const entity::Entity& entity) const
     {
-      assert(entity_to_data_.find(entity.id()) != entity_to_data_.end());
-      return data_.at(entity_to_data_.at(entity.id()));
+      assert(entity_to_data_.find(entity) != entity_to_data_.end());
+      return data_.at(entity_to_data_.at(entity));
     }
     ColliderComponent::ColliderComponent(const entity::Entity& entity, ColliderSystem* system) :
       IComponent(entity), system_(system)

@@ -17,6 +17,7 @@
 #include "utils/mt_manager.h"
 #include <utils/file_system.h>
 #include <algorithm>
+#include "utils/profiler.h"
 
 #if VIOLET_GUI_CEF
 #include "gui/gui.h"
@@ -250,7 +251,7 @@ public:
       frame_budget_h = 120.0 * ((frame_fps - frame_target_min) / (frame_target_max - frame_target_min));
 
     static bool open = true;
-    if (imgui->imBegin("info", open, glm::vec2(0.0f, 0.0f), glm::vec2(170.0f, 200.0f)))
+    if (imgui->imBegin("info", open, glm::vec2(0.0f, 0.0f), glm::vec2(170.0f, 600.0f)))
     {
       imgui->imText("fps:");
       imgui->imText(toString(round(frame_fps, 3u)));
@@ -258,6 +259,23 @@ public:
       imgui->imText(toString(round(1.0 / frame_fps, 3u)));
       imgui->imText("budget:");
       imgui->imTextColoured(toString(round(frame_budget, 3u)), HSVtoRGB(glm::vec4(frame_budget_h, 1.0f, 1.0f, 1.0f)));
+
+			// Profiler.
+
+#define XX(x) imgui->imTextMultiLine(toString(round(utilities::Profiler::getInstance().getTime(x), 3u)) + " - " + x);
+			XX("Scripting: CollectGarbage");
+			XX("Scripting: FixedUpdate");
+			XX("Scripting: Update");
+			XX("Systems: FixedUpdate");
+			XX("Systems: Update");
+			XX("Systems: OnRender");
+			XX("Renderer: Update");
+			XX("Renderer: StartFrame");
+			XX("Renderer: EndFrame");
+			XX("ImGUI: Update");
+			XX("ImGUI: GenerateCommandList");
+
+			imgui->imTextMultiLine(getScene().getSystem<components::MeshRenderSystem>()->profilerInfo());
 
       /*static Average timer_clear_everything;
       static Average timer_main_camera;

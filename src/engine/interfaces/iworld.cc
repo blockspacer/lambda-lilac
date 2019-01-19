@@ -1,4 +1,5 @@
 #include "iworld.h"
+#include "utils/profiler.h"
 
 namespace lambda
 {
@@ -58,27 +59,34 @@ namespace lambda
         if (window_->getSize().x == 0.0f || window_->getSize().y == 0.0f)
           continue;
 
-        scripting_->collectGarbage();
+				utilities::Profiler::getInstance().startTimer("Scripting: CollectGarbage");
+				scripting_->collectGarbage();
+				utilities::Profiler::getInstance().endTimer("Scripting: CollectGarbage");
+
         scripting_->executeFunction("Input::InputHelper::UpdateAxes", {});
 
-        static unsigned char max_step_count_count = 8u;
+				static unsigned char max_step_count_count = 8u;
         unsigned char time_step_count = 0u;
         time_step_remainer += delta_time_;
         while (time_step_remainer >= time_step && 
           time_step_count++ < max_step_count_count)
         {
-          time_step_remainer -= time_step;
+					utilities::Profiler::getInstance().startTimer("Scripting: FixedUpdate");
+					time_step_remainer -= time_step;
           scripting_->executeFunction(
             "Game::FixedUpdate", 
             { 
               scripting::ScriptValue((float)time_step) 
             }
           );
+					utilities::Profiler::getInstance().endTimer("Scripting: FixedUpdate");
 
-          for (auto& system : getScene().getAllSystems())
+					utilities::Profiler::getInstance().startTimer("Systems: FixedUpdate");
+					for (auto& system : getScene().getAllSystems())
           {
             system->fixedUpdate(time_step);
           }
+					utilities::Profiler::getInstance().endTimer("Systems: FixedUpdate");
 
           fixedUpdate();
         }
@@ -88,30 +96,46 @@ namespace lambda
             std::floor(time_step_remainer / time_step) * time_step;
         }
 
-        scripting_->executeFunction(
+				utilities::Profiler::getInstance().startTimer("Scripting: Update");
+				scripting_->executeFunction(
           "Game::Update", 
           { 
             scripting::ScriptValue((float)delta_time_) 
           }
         );
-        update(delta_time_);
-        for (auto& system : getScene().getAllSystems())
-        {
+				utilities::Profiler::getInstance().endTimer("Scripting: Update");
+
+				update(delta_time_);
+      
+				utilities::Profiler::getInstance().startTimer("Systems: Update");
+				for (auto& system : getScene().getAllSystems())
           system->update(delta_time_);
-        }
+				utilities::Profiler::getInstance().endTimer("Systems: Update");
 
-        imgui_->update(delta_time_);
-        renderer_->update(delta_time_);
+				utilities::Profiler::getInstance().startTimer("ImGUI: Update");
+				imgui_->update(delta_time_);
+				utilities::Profiler::getInstance().endTimer("ImGUI: Update");
+        
+				utilities::Profiler::getInstance().startTimer("Renderer: Update");
+				renderer_->update(delta_time_);
+				utilities::Profiler::getInstance().endTimer("Renderer: Update");
 
-        renderer_->startFrame();
+				utilities::Profiler::getInstance().startTimer("Renderer: StartFrame");
+				renderer_->startFrame();
+				utilities::Profiler::getInstance().endTimer("Renderer: StartFrame");
 
-        for (auto& system : getScene().getAllSystems())
-        {
+				utilities::Profiler::getInstance().startTimer("Systems: OnRender");
+				for (auto& system : getScene().getAllSystems())
           system->onRender();
-        }
+				utilities::Profiler::getInstance().endTimer("Systems: OnRender");
 
-        imgui_->generateCommandList();
-        renderer_->endFrame();
+				utilities::Profiler::getInstance().startTimer("ImGUI: GenerateCommandList");
+				imgui_->generateCommandList();
+				utilities::Profiler::getInstance().endTimer("ImGUI: GenerateCommandList");
+        
+				utilities::Profiler::getInstance().startTimer("Renderer: EndFrame");
+				renderer_->endFrame();
+				utilities::Profiler::getInstance().endTimer("Renderer: EndFrame");
       }
 
       scripting_->executeFunction("Game::Terminate", {});
@@ -135,10 +159,9 @@ namespace lambda
       {
         bool was_handled = false;
         if (imgui_->inputHandleMessage(message))
-        {
           was_handled = true;
-        }
-        switch (message.type)
+        
+				switch (message.type)
         {
         case platform::WindowMessageType::kResize:
           getRenderer()->resize();
@@ -167,10 +190,9 @@ namespace lambda
         default:
           break;
         }
+
         if (!was_handled)
-        {
           handleWindowMessage(message);
-        }
       }
 
       mouse_.update(mouse_state);

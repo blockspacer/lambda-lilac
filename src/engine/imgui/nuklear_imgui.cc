@@ -846,10 +846,8 @@ float4 PS(PS_INPUT input) : SV_Target
       const String& text, 
       const platform::ImGUITextAlign& text_align)
     {
-      for (const String& line : split(text, '\n'))
-      {
+      for (String line : split(text, '\n'))
         imText(line);
-      }
     }
 
     ///////////////////////////////////////////////////////////////////////////

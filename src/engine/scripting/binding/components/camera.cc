@@ -22,27 +22,27 @@ namespace lambda
 
         void Create(const uint64_t& id)
         {
-          g_camera_system->addComponent(entity::Entity(id, g_entity_system));
+          g_camera_system->addComponent((entity::Entity)id);
         }
         void Destroy(const uint64_t& id)
         {
-          g_camera_system->removeComponent(entity::Entity(id, g_entity_system));
+          g_camera_system->removeComponent((entity::Entity)id);
         }
         void SetNear(const uint64_t& id, const float& near)
         {
-          g_camera_system->setNearPlane(entity::Entity(id, g_entity_system), utilities::Distance(near));
+          g_camera_system->setNearPlane((entity::Entity)id, utilities::Distance(near));
         }
         float GetNear(const uint64_t& id)
         {
-          return g_camera_system->getNearPlane(entity::Entity(id, g_entity_system)).asMeter();
+          return g_camera_system->getNearPlane((entity::Entity)id).asMeter();
         }
         void SetFar(const uint64_t& id, const float& far)
         {
-          g_camera_system->setFarPlane(entity::Entity(id, g_entity_system), utilities::Distance(far));
+          g_camera_system->setFarPlane((entity::Entity)id, utilities::Distance(far));
         }
         float GetFar(const uint64_t& id)
         {
-          return g_camera_system->getFarPlane(entity::Entity(id, g_entity_system)).asMeter();
+          return g_camera_system->getFarPlane((entity::Entity)id).asMeter();
         }
         void AddShaderPass(const uint64_t& id, const String& name, const uint64_t& shader_id, const void* input_array, const void* output_array)
         {
@@ -57,8 +57,7 @@ namespace lambda
           for (uint32_t i = 0; i < output_values.vec_string.size(); ++i)
             output.at(i) = g_world->getPostProcessManager().getTarget(output_values.vec_string.at(i));
 
-          g_camera_system->getComponent(
-            entity::Entity(id, g_entity_system)
+          g_camera_system->getComponent((entity::Entity)id
           ).addShaderPass(platform::ShaderPass(name, shader, input, output));
         }
 

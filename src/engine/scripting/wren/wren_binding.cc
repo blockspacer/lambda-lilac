@@ -36,6 +36,9 @@ namespace lambda
 {
   namespace scripting
   {
+//#define WREN_ALLOC foundation::Memory::allocate
+#define WREN_ALLOC malloc
+
     ///////////////////////////////////////////////////////////////////////////
     world::IWorld* g_world;
     entity::EntitySystem* g_entitySystem;
@@ -79,7 +82,7 @@ class Console {
     foreign static warning(string)
 }
 )";
-        char* data = (char*)foundation::Memory::allocate(str.size() + 1u);
+        char* data = (char*)WREN_ALLOC(str.size() + 1u);
         memcpy(data, str.data(), str.size() + 1u);
         return data;
       }
@@ -152,7 +155,7 @@ foreign class Vec2 {
     foreign y=(y)
 }
 )";
-        char* data = (char*)foundation::Memory::allocate(str.size() + 1u);
+        char* data = (char*)WREN_ALLOC(str.size() + 1u);
         memcpy(data, str.data(), str.size() + 1u);
         return data;
       }
@@ -227,7 +230,7 @@ foreign class Vec2 {
         if (strcmp(signature, "toString") == 0) return [](WrenVM* vm) {
           glm::vec2& vec = *GetForeign<glm::vec2>(vm);
           String str = "[" + lambda::toString(vec.x) + ", " + lambda::toString(vec.y) + "]";
-          const char* c_str = (const char*)foundation::Memory::allocate(str.size() + 1u);
+          const char* c_str = (const char*)WREN_ALLOC(str.size() + 1u);
           memcpy((void*)c_str, str.data(), str.size() + 1u);
           wrenSetSlotString(vm, 0, c_str);
         };
@@ -286,7 +289,7 @@ foreign class Vec3 {
     foreign z=(z)
 }
 )";
-        char* data = (char*)foundation::Memory::allocate(str.size() + 1u);
+        char* data = (char*)WREN_ALLOC(str.size() + 1u);
         memcpy(data, str.data(), str.size() + 1u);
         return data;
       }
@@ -406,7 +409,7 @@ foreign class Vec3 {
           String str = "[" + lambda::toString(vec.x) + ", " + 
             lambda::toString(vec.y) + ", " + lambda::toString(vec.z) + "]";
           const char* c_str = 
-            (const char*)foundation::Memory::allocate(str.size() + 1u);
+            (const char*)WREN_ALLOC(str.size() + 1u);
           memcpy((void*)c_str, str.data(), str.size() + 1u);
           wrenSetSlotString(vm, 0, c_str);
         };
@@ -466,7 +469,7 @@ foreign class Vec4 {
     foreign w=(w)
 }
 )";
-        char* data = (char*)foundation::Memory::allocate(str.size() + 1u);
+        char* data = (char*)WREN_ALLOC(str.size() + 1u);
         memcpy(data, str.data(), str.size() + 1u);
         return data;
       }
@@ -588,7 +591,7 @@ foreign class Vec4 {
             lambda::toString(vec.y) + ", " + lambda::toString(vec.z) + ", " + 
             lambda::toString(vec.w) + "]";
           const char* c_str = 
-            (const char*)foundation::Memory::allocate(str.size() + 1u);
+            (const char*)WREN_ALLOC(str.size() + 1u);
           memcpy((void*)c_str, str.data(), str.size() + 1u);
           wrenSetSlotString(vm, 0, c_str);
         };
@@ -630,7 +633,7 @@ foreign class Quat {
     foreign w=(w)
 }
 )";
-        char* data = (char*)foundation::Memory::allocate(str.size() + 1u);
+        char* data = (char*)WREN_ALLOC(str.size() + 1u);
         memcpy(data, str.data(), str.size() + 1u);
         return data;
       }
@@ -748,7 +751,7 @@ foreign class Quat {
             lambda::toString(vec.y) + ", " + lambda::toString(vec.z) + ", " + 
             lambda::toString(vec.w) + "]";
           const char* c_str =
-            (const char*)foundation::Memory::allocate(str.size() + 1u);
+            (const char*)WREN_ALLOC(str.size() + 1u);
           memcpy((void*)c_str, str.data(), str.size() + 1u);
           wrenSetSlotString(vm, 0, c_str);
         };
@@ -795,7 +798,7 @@ class TextureFormat {
 
 
 )";
-        char* data = (char*)foundation::Memory::allocate(str.size() + 1u);
+        char* data = (char*)WREN_ALLOC(str.size() + 1u);
         memcpy(data, str.data(), str.size() + 1u);
         return data;
       }
@@ -919,7 +922,7 @@ foreign class Shader {
     foreign setVariableFloat4(name, value)
 }
 )";
-        char* data = (char*)foundation::Memory::allocate(str.size() + 1u);
+        char* data = (char*)WREN_ALLOC(str.size() + 1u);
         memcpy(data, str.data(), str.size() + 1u);
         return data;
       }
@@ -960,9 +963,10 @@ foreign class Shader {
       {
         if (strcmp(signature, "load(_)") == 0) return [](WrenVM* vm) {
           const char* ch = wrenGetSlotString(vm, 1);
-          String str(strlen(ch), '\0');
-          memcpy((void*)str.c_str(), ch, strlen(ch));
-          Name name(str);
+					//String str(strlen(ch), '\0');
+					//memcpy((void*)str.c_str(), ch, strlen(ch));
+					String str = ch;
+					Name name(str);
           asset::ShaderHandle& handle = *make(vm);
           static uint32_t s_idx = 0u;
           auto shader_01 = io::ShaderIO::load(name.getName());
@@ -1033,7 +1037,7 @@ foreign class Wave {
     foreign static load(name)
 }
 )";
-        char* data = (char*)foundation::Memory::allocate(str.size() + 1u);
+        char* data = (char*)WREN_ALLOC(str.size() + 1u);
         memcpy(data, str.data(), str.size() + 1u);
         return data;
       }
@@ -1115,7 +1119,7 @@ foreign class Mesh {
     foreign recalculateTangents()
 }
 )";
-        char* data = (char*)foundation::Memory::allocate(str.size() + 1u);
+        char* data = (char*)WREN_ALLOC(str.size() + 1u);
         memcpy(data, str.data(), str.size() + 1u);
         return data;
       }
@@ -1671,7 +1675,7 @@ foreign class GameObject {
     foreign id
 }
 )";
-        char* data = (char*)foundation::Memory::allocate(str.size() + 1u);
+        char* data = (char*)WREN_ALLOC(str.size() + 1u);
         memcpy(data, str.data(), str.size() + 1u);
         return data;
       }
@@ -1712,7 +1716,7 @@ foreign class GameObject {
           wrenSetSlotDouble(
             vm, 
             0, 
-            (double)GetForeign<entity::Entity>(vm)->id()
+            (double)*GetForeign<entity::Entity>(vm)
           );
         };
         return nullptr;
@@ -1769,7 +1773,7 @@ foreign class Transform {
     foreign localEuler=(e)   
 }
 )";
-        char* data = (char*)foundation::Memory::allocate(str.size() + 1u);
+        char* data = (char*)WREN_ALLOC(str.size() + 1u);
         memcpy(data, str.data(), str.size() + 1u);
         return data;
       }
@@ -1803,7 +1807,7 @@ foreign class Transform {
         if (strcmp(signature, "goAdd(_)") == 0) return [](WrenVM* vm) {
           TransformHandle* handle = GetForeign<TransformHandle>(vm);
           entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
-          g_scriptingData.getData(e.id()).transform = wrenGetSlotHandle(vm, 0);
+          g_scriptingData.getData(e).transform = wrenGetSlotHandle(vm, 0);
           handle->handle = g_transformSystem->addComponent(e);
           handle->entity = e;
         };
@@ -1812,7 +1816,7 @@ foreign class Transform {
             vm, 
             0, 
             g_scriptingData.getData(
-              GetForeign<entity::Entity>(vm, 1)->id()
+              *GetForeign<entity::Entity>(vm, 1)
             ).transform
           );
         };
@@ -1971,7 +1975,7 @@ foreign class Camera {
     fov(rad) { fovRad = rad }
 }
 )";
-        char* data = (char*)foundation::Memory::allocate(str.size() + 1u);
+        char* data = (char*)WREN_ALLOC(str.size() + 1u);
         memcpy(data, str.data(), str.size() + 1u);
         return data;
       }
@@ -2005,7 +2009,7 @@ foreign class Camera {
           handle->handle = g_cameraSystem->addComponent(e);
           handle->entity = e;
           
-          g_scriptingData.getData(handle->handle.entity().id()).camera = 
+          g_scriptingData.getData(handle->handle.entity()).camera = 
             wrenGetSlotHandle(vm, 0);
         };
         if (strcmp(signature, "goGet(_)") == 0) return [](WrenVM* vm) {
@@ -2013,7 +2017,7 @@ foreign class Camera {
             vm, 
             0, 
             g_scriptingData.getData(
-              GetForeign<entity::Entity>(vm, 1)->id()
+              *GetForeign<entity::Entity>(vm, 1)
             ).camera
           );
         };
@@ -2154,7 +2158,7 @@ foreign class MeshRender {
     foreign metallicRoughness=(mr)
 }
 )";
-        char* data = (char*)foundation::Memory::allocate(str.size() + 1u);
+        char* data = (char*)WREN_ALLOC(str.size() + 1u);
         memcpy(data, str.data(), str.size() + 1u);
         return data;
       }
@@ -2177,27 +2181,27 @@ foreign class MeshRender {
       }
      
       /////////////////////////////////////////////////////////////////////////
-      void MakeStaticRecursive(const uint64_t& id)
+      void MakeStaticRecursive(const entity::Entity& id)
       {
-        const entity::Entity e(id, g_entitySystem);
+        const entity::Entity e = id;
         if (g_meshRenderSystem->hasComponent(e))
           g_meshRenderSystem->makeStatic(e);
 
         if (g_transformSystem->hasComponent(e))
           for (const auto& child : g_transformSystem->getChildren(e))
-            MakeStaticRecursive(child.id());
+            MakeStaticRecursive(child);
       }
     
       /////////////////////////////////////////////////////////////////////////
-      void MakeDynamicRecursive(const uint64_t& id)
+      void MakeDynamicRecursive(const entity::Entity& id)
       {
-        const entity::Entity e(id, g_entitySystem);
+        const entity::Entity e = id;
         if (g_meshRenderSystem->hasComponent(e))
           g_meshRenderSystem->makeDynamic(e);
 
         if (g_transformSystem->hasComponent(e))
           for (const auto& child : g_transformSystem->getChildren(e))
-            MakeDynamicRecursive(child.id());
+            MakeDynamicRecursive(child);
       }
      
       /////////////////////////////////////////////////////////////////////////
@@ -2214,7 +2218,7 @@ foreign class MeshRender {
           entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
           handle->handle = g_meshRenderSystem->addComponent(e);
           handle->entity = e;
-          g_scriptingData.getData(handle->handle.entity().id()).mesh_render = 
+          g_scriptingData.getData(handle->handle.entity()).mesh_render = 
             wrenGetSlotHandle(vm, 0);
         };
         if (strcmp(signature, "goGet(_)") == 0) return [](WrenVM* vm) {
@@ -2222,7 +2226,7 @@ foreign class MeshRender {
             vm, 
             0, 
             g_scriptingData.getData(
-              GetForeign<entity::Entity>(vm, 1)->id()
+              *GetForeign<entity::Entity>(vm, 1)
             ).mesh_render
           );
         };
@@ -2312,9 +2316,12 @@ foreign class MeshRender {
         };
         if (strcmp(signature, "makeStaticRecursive()") == 0) 
           return [](WrenVM* vm) {
-          MakeStaticRecursive(
-            GetForeign<MeshRenderHandle>(vm)->handle.entity()
-          );
+					entity::Entity uptop = 
+						GetForeign<MeshRenderHandle>(vm)->handle.entity();
+					while (g_transformSystem->getParent(uptop) != entity::Entity())
+						uptop = g_transformSystem->getParent(uptop);
+					
+					MakeStaticRecursive(uptop);
         };
         if (strcmp(signature, "makeDynamicRecursive()") == 0) 
           return [](WrenVM* vm) {
@@ -2349,7 +2356,7 @@ foreign class Lod {
     foreign addLodRecursive(mesh, distance)
 }
 )";
-        char* data = (char*)foundation::Memory::allocate(str.size() + 1u);
+        char* data = (char*)WREN_ALLOC(str.size() + 1u);
         memcpy(data, str.data(), str.size() + 1u);
         return data;
       }
@@ -2382,7 +2389,7 @@ foreign class Lod {
           entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
           handle->handle = g_lodSystem->addComponent(e);
           handle->entity = e;
-          g_scriptingData.getData(handle->handle.entity().id()).lod = 
+          g_scriptingData.getData(handle->handle.entity()).lod = 
             wrenGetSlotHandle(vm, 0);
         };
         if (strcmp(signature, "goGet(_)") == 0) return [](WrenVM* vm) {
@@ -2390,7 +2397,7 @@ foreign class Lod {
             vm, 
             0, 
             g_scriptingData.getData(
-              GetForeign<entity::Entity>(vm, 1)->id()
+              *GetForeign<entity::Entity>(vm, 1)
             ).lod
           );
         };
@@ -2469,7 +2476,7 @@ class RigidBody {
     foreign angularConstraints=(angularConstraints)   
 }
 )";
-        char* data = (char*)foundation::Memory::allocate(str.size() + 1u);
+        char* data = (char*)WREN_ALLOC(str.size() + 1u);
         memcpy(data, str.data(), str.size() + 1u);
         return data;
       }
@@ -2505,7 +2512,7 @@ class RigidBody {
           entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
           handle->handle = g_rigidBodySystem->addComponent(e);
           handle->entity = e;
-          g_scriptingData.getData(handle->handle.entity().id()).rigid_body = 
+          g_scriptingData.getData(handle->handle.entity()).rigid_body = 
             wrenGetSlotHandle(vm, 0);
         };
         if (strcmp(signature, "goGet(_)") == 0) return [](WrenVM* vm) {
@@ -2513,7 +2520,7 @@ class RigidBody {
             vm, 
             0, 
             g_scriptingData.getData(
-              GetForeign<entity::Entity>(vm, 1)->id()
+              *GetForeign<entity::Entity>(vm, 1)
             ).rigid_body
           );
         };
@@ -2638,7 +2645,7 @@ foreign class WaveSource {
     foreign radius=(radius) 
 }
 )";
-        char* data = (char*)foundation::Memory::allocate(str.size() + 1u);
+        char* data = (char*)WREN_ALLOC(str.size() + 1u);
         memcpy(data, str.data(), str.size() + 1u);
         return data;
       }
@@ -2675,7 +2682,7 @@ foreign class WaveSource {
           handle->handle = g_waveSourceSystem->addComponent(e);
           handle->entity = e;
           g_scriptingData.getData(
-            handle->handle.entity().id()
+            handle->handle.entity()
           ).wave_source = wrenGetSlotHandle(vm, 0);
         };
         if (strcmp(signature, "goGet(_)") == 0) return [](WrenVM* vm) {
@@ -2683,7 +2690,7 @@ foreign class WaveSource {
             vm, 
             0, 
             g_scriptingData.getData(
-              GetForeign<entity::Entity>(vm, 1)->id()
+              *GetForeign<entity::Entity>(vm, 1)
             ).wave_source
           );
         };
@@ -2838,7 +2845,7 @@ foreign class Collider {
     foreign makeMeshColliderRecursive(mesh)
 }
 )";
-        char* data = (char*)foundation::Memory::allocate(str.size() + 1u);
+        char* data = (char*)WREN_ALLOC(str.size() + 1u);
         memcpy(data, str.data(), str.size() + 1u);
         return data;
       }
@@ -2894,10 +2901,10 @@ foreign class Collider {
           entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
           handle->handle = g_colliderSystem->addComponent(e);
           handle->entity = e;
-          /*Handle*/ g_scriptingData.getData(handle->handle.entity().id()).collider = wrenGetSlotHandle(vm, 0);
+          /*Handle*/ g_scriptingData.getData(handle->handle.entity()).collider = wrenGetSlotHandle(vm, 0);
         };
         if (strcmp(signature, "goGet(_)") == 0) return [](WrenVM* vm) {
-          /*Handle*/ wrenSetSlotHandle(vm, 0, g_scriptingData.getData(GetForeign<entity::Entity>(vm, 1)->id()).collider);
+          /*Handle*/ wrenSetSlotHandle(vm, 0, g_scriptingData.getData(*GetForeign<entity::Entity>(vm, 1)).collider);
         };
         if (strcmp(signature, "goRemove(_)") == 0) return [](WrenVM* vm) {
           ColliderHandle* handle = GetForeign<ColliderHandle>(vm);
@@ -2988,7 +2995,7 @@ class ShadowTypes {
     static Dynamic      { 3 }
 }
 )";
-        char* data = (char*)foundation::Memory::allocate(str.size() + 1u);
+        char* data = (char*)WREN_ALLOC(str.size() + 1u);
         memcpy(data, str.data(), str.size() + 1u);
         return data;
       }
@@ -3017,10 +3024,10 @@ class ShadowTypes {
           entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
           handle->handle = g_lightSystem->addComponent(e);
           handle->entity = e;
-          /*Handle*/ g_scriptingData.getData(handle->handle.entity().id()).light = wrenGetSlotHandle(vm, 0);
+          /*Handle*/ g_scriptingData.getData(handle->handle.entity()).light = wrenGetSlotHandle(vm, 0);
         };
         if (strcmp(signature, "goGet(_)") == 0) return [](WrenVM* vm) {
-          /*Handle*/ wrenSetSlotHandle(vm, 0, g_scriptingData.getData(GetForeign<entity::Entity>(vm, 1)->id()).light);
+          /*Handle*/ wrenSetSlotHandle(vm, 0, g_scriptingData.getData(*GetForeign<entity::Entity>(vm, 1)).light);
         };
         if (strcmp(signature, "goRemove(_)") == 0) return [](WrenVM* vm) {
           LightHandle* handle = GetForeign<LightHandle>(vm);
@@ -3180,7 +3187,7 @@ class ShadowTypes {
           for (uint32_t i = 0u; i < render_targets.size(); ++i)
           {
             String str = render_targets[i].getName().getName();
-            const char* c_str = (const char*)foundation::Memory::allocate(str.size() + 1u);
+            const char* c_str = (const char*)WREN_ALLOC(str.size() + 1u);
             memcpy((void*)c_str, str.data(), str.size() + 1u);
             wrenSetSlotString(vm, 1, c_str);
             wrenInsertInList(vm, 0, -1, 1);
@@ -3249,7 +3256,7 @@ class MonoBehaviour {
     foreign goRemovePrivate(gameObject)
 }
 )";
-        char* data = (char*)foundation::Memory::allocate(str.size() + 1u);
+        char* data = (char*)WREN_ALLOC(str.size() + 1u);
         memcpy(data, str.data(), str.size() + 1u);
         return data;
       }
@@ -3259,7 +3266,7 @@ class MonoBehaviour {
         if (strcmp(signature, "goAddPrivate(_)") == 0) return [](WrenVM* vm) {
           entity::Entity entity = *GetForeign<entity::Entity>(vm, 1);
           g_monoBehaviourSystem->addComponent(entity);
-          /*Handle*/ g_scriptingData.getData(entity.id()).mono_behaviour = wrenGetSlotHandle(vm, 0);
+          /*Handle*/ g_scriptingData.getData(entity).mono_behaviour = wrenGetSlotHandle(vm, 0);
 
 
           g_monoBehaviourSystem->setObject          (entity, wrenGetSlotHandle (vm, 0));
@@ -3275,7 +3282,7 @@ class MonoBehaviour {
           g_monoBehaviourSystem->setOnTriggerExit   (entity, wrenMakeCallHandle(vm, "onTriggerExit(_)"));
         };
         if (strcmp(signature, "goGet(_)") == 0) return [](WrenVM* vm) {
-          /*Handle*/ wrenSetSlotHandle(vm, 0, g_scriptingData.getData(GetForeign<entity::Entity>(vm, 1)->id()).mono_behaviour);
+          /*Handle*/ wrenSetSlotHandle(vm, 0, g_scriptingData.getData(*GetForeign<entity::Entity>(vm, 1)).mono_behaviour);
         };
         if (strcmp(signature, "goRemovePrivate(_)") == 0) return [](WrenVM* vm) {
           entity::Entity entity = *GetForeign<entity::Entity>(vm, 1);
@@ -3291,8 +3298,8 @@ class MonoBehaviour {
           FREE(OnTriggerEnter);
           FREE(OnTriggerExit);
 
-          /*Handle*/ wrenReleaseHandle(vm, g_scriptingData.getData(entity.id()).mono_behaviour);
-          /*Handle*/ g_scriptingData.getData(entity.id()).mono_behaviour = nullptr;
+          /*Handle*/ wrenReleaseHandle(vm, g_scriptingData.getData(entity).mono_behaviour);
+          /*Handle*/ g_scriptingData.getData(entity).mono_behaviour = nullptr;
         };
         return nullptr;
       }
@@ -3322,7 +3329,7 @@ class Graphics {
     foreign static setCascadeShadersRSM(generate, modify, publish)
 }
 )";
-        char* data = (char*)foundation::Memory::allocate(str.size() + 1u);
+        char* data = (char*)WREN_ALLOC(str.size() + 1u);
         memcpy(data, str.data(), str.size() + 1u);
         return data;
       }
@@ -3445,7 +3452,7 @@ class PostProcess {
     foreign static hammerhead(input, output)
 }
 )";
-        char* data = (char*)foundation::Memory::allocate(str.size() + 1u);
+        char* data = (char*)WREN_ALLOC(str.size() + 1u);
         memcpy(data, str.data(), str.size() + 1u);
         return data;
       }
@@ -3800,7 +3807,7 @@ class Keys {
     static Escape       { 0x1B }
 }
 )";
-        char* data = (char*)foundation::Memory::allocate(str.size() + 1u);
+        char* data = (char*)WREN_ALLOC(str.size() + 1u);
         memcpy(data, str.data(), str.size() + 1u);
         return data;
       }
@@ -3899,7 +3906,7 @@ class Math {
     static radToDeg { 57.2958 }
 }
 )";
-        char* data = (char*)foundation::Memory::allocate(str.size() + 1u);
+        char* data = (char*)WREN_ALLOC(str.size() + 1u);
         memcpy(data, str.data(), str.size() + 1u);
         return data;
       }
@@ -4016,7 +4023,7 @@ class Time {
     foreign static deltaTime
 }
 )";
-        char* data = (char*)foundation::Memory::allocate(str.size() + 1u);
+        char* data = (char*)WREN_ALLOC(str.size() + 1u);
         memcpy(data, str.data(), str.size() + 1u);
         return data;
       }
@@ -4048,7 +4055,7 @@ foreign class File {
     static ReadWrite { 3 }
 }
 )";
-        char* data = (char*)foundation::Memory::allocate(str.size() + 1u);
+        char* data = (char*)WREN_ALLOC(str.size() + 1u);
         memcpy(data, str.data(), str.size() + 1u);
         return data;
       }
@@ -4156,7 +4163,7 @@ foreign class NoiseInterpolation {
     static Quintic { 2 }
 }
 )";
-        char* data = (char*)foundation::Memory::allocate(str.size() + 1u);
+        char* data = (char*)WREN_ALLOC(str.size() + 1u);
         memcpy(data, str.data(), str.size() + 1u);
         return data;
       }
@@ -4283,7 +4290,7 @@ class Assert {
     foreign static throw(msg)
 }
 )";
-        char* data = (char*)foundation::Memory::allocate(str.size() + 1u);
+        char* data = (char*)WREN_ALLOC(str.size() + 1u);
         memcpy(data, str.data(), str.size() + 1u);
         return data;
       }
@@ -4412,7 +4419,7 @@ class Assert {
       else
       {
         String str = FileSystem::FileToString(String(name_cstr) + ".wren");
-        char* data = (char*)foundation::Memory::allocate(str.size() + 1u);
+        char* data = (char*)WREN_ALLOC(str.size() + 1u);
         memcpy(data, str.data(), str.size() + 1u);
         return data;
       }

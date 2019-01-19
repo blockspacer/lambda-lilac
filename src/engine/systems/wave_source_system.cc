@@ -46,7 +46,7 @@ namespace lambda
       glm::vec3 listener_up(0.0f, 1.0f, 0.0f);
       glm::vec3 listener_forward(1.0f, 0.0f, 0.0f);
       glm::vec3 listener_velocity(0.0f);
-      if (listener_.isAlive())
+      if (listener_ != 0u)
       {
         listener_position = transform_system_->getComponent(listener_).getWorldTranslation();
         listener_forward  = transform_system_->getComponent(listener_).getWorldForward();
@@ -85,8 +85,8 @@ namespace lambda
       }
 
       data_.push_back(WaveSourceData(entity));
-      data_to_entity_[(uint32_t)data_.size() - 1u] = entity.id();
-      entity_to_data_[entity.id()] = (uint32_t)data_.size() - 1u;
+      data_to_entity_[(uint32_t)data_.size() - 1u] = entity;
+      entity_to_data_[entity] = (uint32_t)data_.size() - 1u;
 
       return WaveSourceComponent(entity, this);
     }
@@ -100,7 +100,7 @@ namespace lambda
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     bool WaveSourceSystem::hasComponent(const entity::Entity& entity)
     {
-      return entity_to_data_.find(entity.id()) != entity_to_data_.end();
+      return entity_to_data_.find(entity) != entity_to_data_.end();
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -267,15 +267,15 @@ namespace lambda
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     WaveSourceData& WaveSourceSystem::lookUpData(const entity::Entity& entity)
     {
-      assert(entity_to_data_.find(entity.id()) != entity_to_data_.end());
-      return data_.at(entity_to_data_.at(entity.id()));
+      assert(entity_to_data_.find(entity) != entity_to_data_.end());
+      return data_.at(entity_to_data_.at(entity));
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     const WaveSourceData& WaveSourceSystem::lookUpData(const entity::Entity& entity) const
     {
-      assert(entity_to_data_.find(entity.id()) != entity_to_data_.end());
-      return data_.at(entity_to_data_.at(entity.id()));
+      assert(entity_to_data_.find(entity) != entity_to_data_.end());
+      return data_.at(entity_to_data_.at(entity));
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

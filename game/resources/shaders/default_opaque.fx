@@ -54,6 +54,8 @@ cbuffer cbPerMesh
   float3 camera_position;
 }
 
+#define TEST_ALBEDO 0
+
 PSOutput PS(VSOutput pIn)
 {
   PSOutput pOut;
@@ -61,6 +63,20 @@ PSOutput PS(VSOutput pIn)
   if (tex_albedo.Sample(SamLinearWarp, pIn.tex).a < 0.25f)
     discard;
   pOut.albedo.a = 1.0f;
+
+#if TEST_ALBEDO
+	float ex = abs(floor(pIn.hPosition.x));
+	float ey = abs(floor(pIn.hPosition.y));
+	float ez = abs(floor(pIn.hPosition.z));
+	float sex = abs(floor(pIn.hPosition.x * 10.0f));
+	float sey = abs(floor(pIn.hPosition.y * 10.0f));
+	float sez = abs(floor(pIn.hPosition.z * 10.0f));
+
+	float even = fmod(ey + ez + ex, 2.0f);
+	float sub_even = fmod(sey + sez + sex, 2.0f);
+	
+	pOut.albedo.rgb = lerp(lerp(0.4, 0.5, sub_even), lerp(0.9, 1.0, sub_even), even);
+#endif
 
   float3 N      = normalize(pIn.normal);
   float2 mr     = tex_mr.Sample(SamLinearWarp, pIn.tex).bg; //* metallic_roughness;
