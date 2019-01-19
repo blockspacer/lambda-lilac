@@ -37,7 +37,7 @@ namespace lambda
       int r;
 
       r = engine->RegisterObjectType("Entity", sizeof(AngelScriptEntity), asOBJ_VALUE | asOBJ_POD | asOBJ_APP_CLASS_CA); assert(r >= 0);
-      r = engine->RegisterObjectBehaviour("Entity", asBEHAVE_CONSTRUCT, "void f()", asFUNCTION(entityc1), asCALL_CDECL_OBJLAST); assert(r >= 0);
+      r = engine->RegisterObjectBehaviour("Entity", asBEHAVE_CONSTRUCT, "void f()", asFUNCTIONPR(entityc1, (AngelScriptEntity*), void), asCALL_CDECL_OBJLAST); assert(r >= 0);
       r = engine->RegisterObjectBehaviour("Entity", asBEHAVE_CONSTRUCT, "void f(const Entity &in)", asFUNCTION(entityc2), asCALL_CDECL_OBJLAST); assert(r >= 0);
       r = engine->RegisterObjectBehaviour("Entity", asBEHAVE_CONSTRUCT, "void f(Entity)", asFUNCTION(entityc2), asCALL_CDECL_OBJLAST); assert(r >= 0);
       r = engine->RegisterObjectBehaviour("Entity", asBEHAVE_DESTRUCT,  "void f()", asFUNCTION(entityd1), asCALL_CDECL_OBJLAST); assert(r >= 0);
@@ -406,6 +406,10 @@ namespace lambda
       foundation::Memory::deallocate(data);
     }
 
+    AngelScriptContext::~AngelScriptContext()
+    {
+    }
+
     bool AngelScriptContext::initialize(const Map<String, void*>& functions)
     {
       asSetGlobalMemoryFunctions(asAlloc, asFree);
@@ -429,12 +433,18 @@ namespace lambda
       kVec3TypeId   = engine_->GetTypeInfoByName("Vec3")->GetTypeId();
       kVec4TypeId   = engine_->GetTypeInfoByName("Vec4")->GetTypeId();
 
-      ret = engine_->RegisterGlobalProperty("const float Deg2Rad",  (void*)&utilities::Angle::degToRad); assert(ret >= 0);
-      ret = engine_->RegisterGlobalProperty("const float Rad2Deg",  (void*)&utilities::Angle::radToDeg); assert(ret >= 0);
-      ret = engine_->RegisterGlobalProperty("const float DegToRad", (void*)&utilities::Angle::degToRad); assert(ret >= 0);
-      ret = engine_->RegisterGlobalProperty("const float RadToDeg", (void*)&utilities::Angle::radToDeg); assert(ret >= 0);
-      ret = engine_->RegisterGlobalProperty("const float Tau",      (void*)&utilities::Angle::tau); assert(ret >= 0);
-      ret = engine_->RegisterGlobalProperty("const float Pi",       (void*)&utilities::Angle::pi);  assert(ret >= 0);
+      
+      static constexpr float pi = 3.14159265f;
+      static constexpr float tau = 6.28318531f;
+      static constexpr float degToRad = tau / 360.0f;
+      static constexpr float radToDeg = 360.0f / tau;
+
+      ret = engine_->RegisterGlobalProperty("const float Deg2Rad",  (void*)&degToRad); assert(ret >= 0);
+      ret = engine_->RegisterGlobalProperty("const float Rad2Deg",  (void*)&radToDeg); assert(ret >= 0);
+      ret = engine_->RegisterGlobalProperty("const float DegToRad", (void*)&degToRad); assert(ret >= 0);
+      ret = engine_->RegisterGlobalProperty("const float RadToDeg", (void*)&radToDeg); assert(ret >= 0);
+      ret = engine_->RegisterGlobalProperty("const float Tau",      (void*)&tau); assert(ret >= 0);
+      ret = engine_->RegisterGlobalProperty("const float Pi",       (void*)&pi);  assert(ret >= 0);
 
       ret = engine_->RegisterEnum("NoiseInterpolation"); assert(ret >= 0);
       ret = engine_->RegisterEnumValue("NoiseInterpolation", "kLinear",  0); assert(ret >= 0);
@@ -707,6 +717,7 @@ namespace lambda
           assert(ret >= 0);
           break;
         }
+        default: break;
         }
       }
 

@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <stdio.h> // sprintf
 
-#include "scriptArray.h"
+#include "scripting/angel-script/addons/scriptarray.h"
 #include <containers/containers.h>
 
 using namespace lambda;

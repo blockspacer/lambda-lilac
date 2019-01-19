@@ -17,6 +17,7 @@ namespace lambda
     class AngelScriptContext : public IScriptContext
     {
     public:
+      virtual ~AngelScriptContext();
       virtual bool initialize(const Map<String, void*>& functions) override;
       virtual bool loadScripts(const Vector<String>& files) override;
       virtual bool terminate() override;

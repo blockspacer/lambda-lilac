@@ -1,4 +1,4 @@
-#include "scriptFileSystem.h"
+#include "scripting/angel-script/addons/scriptfilesystem.h"
 
 #if defined(_WIN32)
 #include <direct.h> // _getcwd
