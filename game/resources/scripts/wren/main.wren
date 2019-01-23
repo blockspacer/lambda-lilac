@@ -45,7 +45,7 @@ class World {
         _lighting = Lighting.new()
 
         _camera = GameObject.new()
-        _camera.addComponent(FreeLookCamera)
+				_camera.addComponent(FreeLookCamera)
 
         // Move the camera so you do not spawn under the ground.
         var new_position = _camera.transform.worldPosition

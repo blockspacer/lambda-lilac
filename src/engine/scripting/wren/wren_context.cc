@@ -43,9 +43,9 @@ namespace lambda
         foundation::Error(str + String(message) + "\n");
       };
       
-      /*configuration.reallocateFn = [](void* memory, size_t newSize) {
+      configuration.reallocateFn = [](void* memory, size_t newSize) {
         return foundation::Memory::reallocate(memory, newSize); 
-      };*/
+      };
 
       configuration.writeFn = [](WrenVM* vm, const char* str) {
         foundation::InfoNP(str); 
