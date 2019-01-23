@@ -4,6 +4,7 @@ import "Core/Vec3" for Vec3
 import "Core/Texture" for Texture
 import "Core/Shader" for Shader
 import "Core/Mesh" for Mesh
+import "Core/Console" for Console
 
 import "Core/GameObject" for GameObject
 

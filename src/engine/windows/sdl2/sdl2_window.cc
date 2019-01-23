@@ -150,12 +150,20 @@ namespace lambda
     {
       LMB_ASSERT(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) == 0 ? true : false, "SDL2: Failed to initialize GLFW");
 
-      window_ = SDL_CreateWindow("Hello World!", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, size.x, size.y, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+#if VIOLET_OSX
+      SDL_SetHint(SDL_HINT_RENDER_DRIVER, "metal");
+#else
+      SDL_SetHint(SDL_HINT_RENDER_DRIVER, "none");
+#endif
+
+      window_ = SDL_CreateWindow(title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, size.x, size.y, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
       LMB_ASSERT(window_ != nullptr, "SDL2: Failed to create window!");
       if (window_ == nullptr) {
         std::cout << "SDL_CreateWindow Error: " << SDL_GetError() << std::endl;
         SDL_Quit();
       }
+
+      pollMessage();
 
       focus_ = true;
       is_open_ = true;
@@ -165,7 +173,7 @@ namespace lambda
     {
       SDL_SysWMinfo wm_info;
       SDL_VERSION(&wm_info.version);
-      SDL_GetWindowWMInfo(window_,&wm_info);
+      SDL_GetWindowWMInfo(window_, &wm_info);
       
 #if VIOLET_WIN32
       return wm_info.info.win.window;

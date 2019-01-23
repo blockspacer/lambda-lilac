@@ -105,8 +105,13 @@ SET(NoRendererSources
   "renderers/no/no_renderer.cc"
 )
 SET(MetalRendererSources
-  "renderers/no/no_renderer.h"
-  "renderers/no/no_renderer.cc"
+  "renderers/metal/metal_renderer.h"
+  "renderers/metal/metal_renderer.cc"
+  "renderers/metal/metal_cpp.h"
+  "renderers/metal/metal_cpp.mm"
+  "renderers/metal/metal_window.h"
+	"renderers/metal/metal_window.mm"
+	"renderers/metal/shader.metal"
 )
 SET(ScriptingSources
   "scripting/script_class.h"
@@ -434,7 +439,7 @@ IF(${VIOLET_RENDERER_D3D11})
 	TARGET_COMPILE_DEFINITIONS(lambda-engine PRIVATE VIOLET_RENDERER_D3D11)
 ENDIF()
 IF(${VIOLET_RENDERER_METAL})
-  TARGET_LINK_LIBRARIES(lambda-engine PUBLIC "-framework Metal")
+  TARGET_LINK_LIBRARIES(lambda-engine PUBLIC "-framework Metal -framework MetalKit -framework Cocoa -framework AudioToolbox -framework CoreFoundation -framework AppKit -framework QuartzCore")
 	TARGET_COMPILE_DEFINITIONS(lambda-engine PRIVATE VIOLET_RENDERER_METAL)
 ENDIF()
 IF(${VIOLET_RENDERER_NO})

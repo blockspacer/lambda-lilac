@@ -2426,7 +2426,7 @@ foreign class Lod {
 
           entity::Entity e = GetForeign<LODHandle>(vm)->handle.entity();
           std::function<void(entity::Entity, const lambda::components::LOD&)> 
-            addLOD =  [e, lod, &addLOD]
+            addLOD =  [lod, &addLOD]
             (entity::Entity entity, const lambda::components::LOD& lod)->void {
             if (g_meshRenderSystem->hasComponent(entity) &&
               g_meshRenderSystem->getMesh(entity) != nullptr)

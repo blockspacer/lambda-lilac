@@ -1,8 +1,13 @@
 #include "glfw_window.h"
-#include <console.h>
-#include "keyboard.h"
+#include <utils/console.h>
+#include "input/keyboard.h"
 
+#if VIOLET_WIN32
 #define GLFW_EXPOSE_NATIVE_WIN32 1
+#endif
+#if VIOLET_OSX
+#define GLFW_EXPOSE_NATIVE_COCOA 1
+#endif
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
 
@@ -135,9 +140,17 @@ namespace lambda
       message.type = platform::WindowMessageType::kClose;
       getInstance(window)->sendMessage(message);
     }
+    void GLFWWindow::glfwSizeCallback(GLFWwindow* window, int width, int height)
+    {
+      platform::WindowMessage message;
+      message.type = platform::WindowMessageType::kResize;
+      message.data[0] = (uint32_t)width;
+      message.data[1] = (uint32_t)height;
+      getInstance(window)->sendMessage(message);
+    }
     void glfwErrorCallback(int error, const char* description)
     {
-      LMB_LOG_ERR("GLFW: %s\n", description);
+      LMB_LOG_ERR("GLFW: [%i] %s\n", error, description);
     }
 
     GLFWWindow::~GLFWWindow()
@@ -167,14 +180,17 @@ namespace lambda
       //glfwSetCharCallback(window_, glfwCharCallback);
       glfwSetCharModsCallback(window_, glfwCharCallbackMod);
       glfwSetWindowCloseCallback(window_, glfwCloseCallback);
+      glfwSetWindowSizeCallback(window_, glfwSizeCallback);
 
       is_open_ = true;
       GetWindows().insert(eastl::make_pair(window_, this));
     }
     void* GLFWWindow::getWindow() const
     {
-#ifdef WIN32
+#ifdef VIOLET_WIN32
       return glfwGetWin32Window(window_);
+#elif VIOLET_OSX
+      return glfwGetCocoaWindow(window_);
 #else
       return window_;
 #endif
@@ -185,6 +201,7 @@ namespace lambda
       {
         return false;
       }
+
       /*if (glfwWindowShouldClose(window_))
       {
         message.type = platform::WindowMessageType::kClose;

@@ -36,6 +36,7 @@ namespace lambda
       static void glfwCharCallback(GLFWwindow* window, unsigned int ch);
       static void glfwCharCallbackMod(GLFWwindow* window, unsigned int ch, int modifiers);
       static void glfwCloseCallback(GLFWwindow* window);
+      static void glfwSizeCallback(GLFWwindow* window, int width, int height);
 
     private:
       void pollMessage();
