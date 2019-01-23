@@ -2449,7 +2449,7 @@ foreign class Lod {
       /////////////////////////////////////////////////////////////////////////
       char* Load()
       {
-        String str = R"(
+				String str = R"(
 ///////////////////////////////////////////////////////////////////////////////
 ///// rigidBody.wren //////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -2458,22 +2458,46 @@ class RigidBody {
     }
     toString { "[%(gameObject.id): RigidBody]" }
 
-    foreign gameObject
+    gameObject { _go }
 
-    foreign goAdd(gameObject)
-    foreign static goGet(gameObject)
-    foreign goRemove(gameObject)
+		goAdd(gameObject) {
+			goAddForeign(gameObject)
+			goSet(gameObject)
+		}
 
-    foreign applyImpulse(impulse)
+		goSet(gameObject) {
+			_go = gameObject
+		}
 
-    foreign velocity
-    foreign velocity=(velocity)
-    foreign angularVelocity                           
-    foreign angularVelocity=(angularVelocity)         
-    foreign velocityConstraints                       
-    foreign velocityConstraints=(velocityConstraints) 
-    foreign angularConstraints                        
-    foreign angularConstraints=(angularConstraints)   
+    static goGet(gameObject) {
+			var v = RigidBody.new()
+			v.goSet(gameObject)
+			return v
+		}
+
+		foreign goAddForeign(gameObject)
+
+    goRemove(gameObject) {}
+
+    foreign priv_applyImpulse(go, impulse)
+    foreign priv_velocity(go)
+    foreign priv_velocity(go, velocity)
+    foreign priv_angularVelocity(go)
+    foreign priv_angularVelocity(go, angularVelocity)         
+    foreign priv_velocityConstraints(go)
+    foreign priv_velocityConstraints(go, velocityConstraints) 
+    foreign priv_angularConstraints(go)
+    foreign priv_angularConstraints(go, angularConstraints)   
+
+    applyImpulse(impulse)                     { priv_applyImpulse(_go, impulse) }
+    velocity                                  { priv_velocity(_go) }
+    velocity=(velocity)                       { priv_velocity(_go, velocity) }
+    angularVelocity                           { priv_angularVelocity(_go) }
+    angularVelocity=(angularVelocity)         { priv_angularVelocity(_go, angularVelocity) }
+    velocityConstraints                       { priv_velocityConstraints(_go) }
+    velocityConstraints=(velocityConstraints) { priv_velocityConstraints(_go, velocityConstraints) }
+    angularConstraints                        { priv_angularConstraints(_go) }
+    angularConstraints=(angularConstraints)   { priv_angularConstraints(_go, angularConstraints) }
 }
 )";
         char* data = (char*)WREN_ALLOC(str.size() + 1u);
@@ -2507,97 +2531,54 @@ class RigidBody {
             GetForeign<RigidBodyHandle>(vm)->handle.entity()
           );
         };
-        if (strcmp(signature, "goAdd(_)") == 0) return [](WrenVM* vm) {
-          RigidBodyHandle* handle = GetForeign<RigidBodyHandle>(vm);
-          entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
-          handle->handle = g_rigidBodySystem->addComponent(e);
-          handle->entity = e;
-          g_scriptingData.getData(handle->handle.entity()).rigid_body = 
-            wrenGetSlotHandle(vm, 0);
+        if (strcmp(signature, "goAddForeign(_)") == 0) return [](WrenVM* vm) {
+					entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
+          g_rigidBodySystem->addComponent(e);
         };
-        if (strcmp(signature, "goGet(_)") == 0) return [](WrenVM* vm) {
-          wrenSetSlotHandle(
-            vm, 
-            0, 
-            g_scriptingData.getData(
-              *GetForeign<entity::Entity>(vm, 1)
-            ).rigid_body
-          );
+        if (strcmp(signature, "priv_applyImpulse(_,_)") == 0) return [](WrenVM* vm) {
+					entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
+					glm::vec3 v = *GetForeign<glm::vec3>(vm, 2);
+					g_rigidBodySystem->applyImpulse(e, v);
+				};
+        if (strcmp(signature, "priv_velocity(_,_)") == 0) return [](WrenVM* vm) {
+					entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
+					glm::vec3 v = *GetForeign<glm::vec3>(vm, 2);
+					g_rigidBodySystem->setVelocity(e, v);
+				};
+        if (strcmp(signature, "priv_velocity(_)") == 0) return [](WrenVM* vm) {
+					entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
+					glm::vec3 v = g_rigidBodySystem->getVelocity(e);
+					Vec3::make(vm, v);
+				};
+        if (strcmp(signature, "priv_angularVelocity(_,_)") == 0) return [](WrenVM* vm) {
+					entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
+					glm::vec3 v = *GetForeign<glm::vec3>(vm, 2);
+					g_rigidBodySystem->setAngularVelocity(e, v);
+				};
+        if (strcmp(signature, "priv_angularVelocity(_)") == 0) return [](WrenVM* vm) {
+					entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
+					glm::vec3 v = g_rigidBodySystem->getAngularVelocity(e);
+					Vec3::make(vm, v);
         };
-        if (strcmp(signature, "goRemove(_)") == 0) return [](WrenVM* vm) {
-          RigidBodyHandle* handle = GetForeign<RigidBodyHandle>(vm);
-          g_rigidBodySystem->removeComponent(handle->handle.entity());
-          handle->handle = components::RigidBodyComponent();
-          handle->entity = entity::Entity();
-          wrenReleaseHandle(
-            vm, 
-            g_scriptingData.getData(handle->handle.entity()).rigid_body
-          );
-          g_scriptingData.getData(handle->handle.entity()).rigid_body = 
-            nullptr;
+        if (strcmp(signature, "priv_velocityConstraints(_,_)") == 0) return [](WrenVM* vm) {
+					entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
+					uint8_t v = (uint8_t)wrenGetSlotDouble(vm, 2);
+					g_rigidBodySystem->setVelocityConstraints(e, v);
         };
-        if (strcmp(signature, "applyImpulse(_)") == 0) return [](WrenVM* vm) {
-          GetForeign<RigidBodyHandle>(vm)->handle.applyImpulse(
-            *GetForeign<glm::vec3>(vm, 1)
-          );
-        };
-        if (strcmp(signature, "velocity=(_)") == 0) return [](WrenVM* vm) {
-          g_rigidBodySystem->setVelocity(
-            GetForeign<RigidBodyHandle>(vm)->handle.entity(), 
-            *GetForeign<glm::vec3>(vm, 1)
-          );
-        };
-        if (strcmp(signature, "velocity") == 0) return [](WrenVM* vm) {
-          Vec3::make(
-            vm, 
-            g_rigidBodySystem->getVelocity(
-              GetForeign<RigidBodyHandle>(vm)->handle.entity()
-            )
-          );
-        };
-        if (strcmp(signature, "angularVelocity=(_)") == 0) 
-          return [](WrenVM* vm) {
-          GetForeign<RigidBodyHandle>(vm)->handle.setAngularVelocity(
-            *GetForeign<glm::vec3>(vm, 1)
-          );
-        };
-        if (strcmp(signature, "angularVelocity") == 0) return [](WrenVM* vm) {
-          Vec3::make(
-            vm,
-            GetForeign<RigidBodyHandle>(vm)->handle.getAngularVelocity()
-          );
-        };
-        if (strcmp(signature, "velocityConstraints=(_)") == 0)
-          return [](WrenVM* vm) {
-          GetForeign<RigidBodyHandle>(vm)->handle.setVelocityConstraints(
-            (uint8_t)wrenGetSlotDouble(vm, 1)
-          );
-        };
-        if (strcmp(signature, "velocityConstraints") == 0) 
-          return [](WrenVM* vm) {
-          wrenSetSlotDouble(
-            vm, 
-            0, 
-            (double)GetForeign<RigidBodyHandle>(
-              vm
-              )->handle.getVelocityConstraints()
-          );
-        };
-        if (strcmp(signature, "angularConstraints=(_)") == 0)
-          return [](WrenVM* vm) {
-          g_rigidBodySystem->setAngularConstraints(
-            GetForeign<RigidBodyHandle>(vm)->handle.entity(), 
-            (uint8_t)wrenGetSlotDouble(vm, 1)
-          );
-        };
-        if (strcmp(signature, "angularConstraints") == 0) return [](WrenVM* vm) {
-          wrenSetSlotDouble(
-            vm, 
-            0, 
-            (double)GetForeign<RigidBodyHandle>(
-              vm
-              )->handle.getAngularConstraints()
-          );
+        if (strcmp(signature, "priv_velocityConstraints(_)") == 0) return [](WrenVM* vm) {
+					entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
+					uint8_t v = g_rigidBodySystem->getVelocityConstraints(e);
+					wrenSetSlotDouble(vm, 0, v);
+				};
+        if (strcmp(signature, "priv_angularConstraints(_,_)") == 0) return [](WrenVM* vm) {
+					entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
+					uint8_t v = (uint8_t)wrenGetSlotDouble(vm, 2);
+					g_rigidBodySystem->setAngularConstraints(e, v);
+				};
+        if (strcmp(signature, "priv_angularConstraints(_)") == 0) return [](WrenVM* vm) {
+					entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
+					uint8_t v = g_rigidBodySystem->getAngularConstraints(e);
+					wrenSetSlotDouble(vm, 0, v);
         };
         return nullptr;
       }

@@ -19,6 +19,7 @@ import "Core/Input" for Input, Keys, Buttons, Axes
 import "Core/Math" for Math
 
 import "Core/Time" for Time
+import "Core/Console" for Console
 
 import "resources/scripts/wren/input_controller" for InputController
 
@@ -73,9 +74,9 @@ class FreeLookCamera is MonoBehaviour {
         _temp_velocity = gameObject.getComponent(RigidBody).velocity
 
         // Free the player if its stuck.
-        if (InputController.FreeMe > 0.0) {
-            transform.worldPosition = transform.worldPosition + Vec3.new(0.0, 5.0, 0.0)
-        }
+        //if (InputController.FreeMe > 0.0) {
+        //    transform.worldPosition = transform.worldPosition + Vec3.new(0.0, 5.0, 0.0)
+        //}
 
         // Get the new rotation and movement based on the data provided.
         rotateCamera()
