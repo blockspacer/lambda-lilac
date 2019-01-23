@@ -91,7 +91,7 @@ namespace lambda
     void AngelScriptComponents::removeComponent(void* ptr, ASID asid)
     {
       ASID  id = asid & asTYPEID_MASK_SEQNBR;
-      auto& it = components_.find(id);
+      auto it = components_.find(id);
 
       if (it != components_.end() && it->second->get() != nullptr)
       {
@@ -106,7 +106,7 @@ namespace lambda
     void AngelScriptComponents::getComponent(void* ptr, ASID asid)
     {
       ASID  id = asid & asTYPEID_MASK_SEQNBR;
-      auto& it = components_.find(id);
+      auto it = components_.find(id);
 
       if (it != components_.end() && it->second->get() != nullptr)
       {

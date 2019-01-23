@@ -1,8 +1,8 @@
-#include <assert.h>
-#include "scriptlmbString.h"
-#include "scriptarray.h"
-#include <stdio.h>
+#include "scripting/angel-script/addons/scriptlmbstring.h"
+#include "scripting/angel-script/addons/scriptarray.h"
 #include <containers/containers.h>
+#include <assert.h>
+#include <stdio.h>
 
 using namespace lambda;
 

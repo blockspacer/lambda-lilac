@@ -1,7 +1,7 @@
 #include <assert.h>
-#include <String.h>
-#include "scriptDictionary.h"
-#include "scriptArray.h"
+#include <string.h>
+#include "scripting/angel-script/addons/scriptdictionary.h"
+#include "scripting/angel-script/addons/scriptarray.h"
 
 BEGIN_AS_NAMESPACE
 

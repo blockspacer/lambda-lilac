@@ -1,8 +1,8 @@
-#include "scriptlmbString.h"
+#include "scripting/angel-script/addons/scriptlmbstring.h"
+#include <containers/containers.h>
 #include <assert.h> // assert()
 #include <sstream>  // std::stringstream
-#include <String.h> // strstr()
-#include <containers/containers.h>
+#include <string.h> // strstr()
 #include <stdio.h>	// sprintf()
 #include <stdlib.h> // strtod()
 #ifndef __psp2__

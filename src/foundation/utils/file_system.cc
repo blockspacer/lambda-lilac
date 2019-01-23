@@ -9,10 +9,10 @@
 
 namespace lambda
 {
-  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
   String FileSystem::s_base_dir_;
 
-  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
   FILE* FileSystem::fopen(const String& file, const String& mode)
   {
     String path = FullFilePath(file);
@@ -32,15 +32,17 @@ namespace lambda
     return fp;
   }
 
-  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
   void FileSystem::fclose(FILE* file)
   {
     if (file)
       std::fclose(file);
   }
 
-  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  String FileSystem::FileToString(FILE* file, const char* header, const size_t& header_size)
+  //////////////////////////////////////////////////////////////////////////////
+  String FileSystem::FileToString(FILE* file,
+                           const char* header,
+                           const size_t& header_size)
   {
     if (!file)
     {
@@ -77,8 +79,10 @@ namespace lambda
     return buffer;
   }
 
-  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  String FileSystem::FileToString(const String& file, const char* header, const size_t& header_size)
+  //////////////////////////////////////////////////////////////////////////////
+  String FileSystem::FileToString(const String& file,
+                                  const char* header,
+                                  const size_t& header_size)
   {
     FILE* fp = fopen(file);
     String data = FileToString(fp, header, header_size);
@@ -86,8 +90,10 @@ namespace lambda
     return data;
   }
 
-  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  Vector<char> FileSystem::FileToVector(FILE* file, const char* header, const size_t& header_size)
+  //////////////////////////////////////////////////////////////////////////////
+  Vector<char> FileSystem::FileToVector(FILE* file,
+                                        const char* header,
+                                        const size_t& header_size)
   {
     if (!file)
     {
@@ -124,8 +130,10 @@ namespace lambda
     return eastl::move(buffer);
   }
 
-  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  Vector<char> FileSystem::FileToVector(const String& file, const char* header, const size_t& header_size)
+  //////////////////////////////////////////////////////////////////////////////
+  Vector<char> FileSystem::FileToVector(const String& file,
+                                        const char* header,
+                                        const size_t& header_size)
   {
     FILE* fp = fopen(file);
     Vector<char> data = FileToVector(fp, header, header_size);
@@ -133,7 +141,7 @@ namespace lambda
     return eastl::move(data);
   }
 
-  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
   void FileSystem::SetBaseDir(const String& base_dir)
   {
     s_base_dir_ = base_dir;
@@ -142,19 +150,19 @@ namespace lambda
       s_base_dir_ += '/';
   }
 
-  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
   String FileSystem::GetBaseDir()
   {
     return s_base_dir_;
   }
 
-  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
   String FileSystem::FullFilePath(const String& file)
   {
      return s_base_dir_ + file;
   }
 
-  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
   String FileSystem::MakeRelative(const String& file)
   {
     String f = file;
@@ -172,14 +180,20 @@ namespace lambda
     return f.substr(base_dir.size());
   }
 
-  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  void FileSystem::WriteFile(const String& file, const Vector<char>& data, const Vector<char>& header)
+  //////////////////////////////////////////////////////////////////////////////
+  void FileSystem::WriteFile(const String& file,
+                             const Vector<char>& data,
+                             const Vector<char>& header)
   {
     WriteFile(file, data.data(), data.size(), header.data(), header.size());
   }
 
-  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  void FileSystem::WriteFile(const String& file, const char* data, const size_t& data_size, const char* header, const size_t& header_size)
+  //////////////////////////////////////////////////////////////////////////////
+  void FileSystem::WriteFile(const String& file,
+                             const char* data,
+                             const size_t& data_size,
+                             const char* header,
+                             const size_t& header_size)
   {
     FILE* fp;
 #if VIOLET_OSX
@@ -201,76 +215,108 @@ namespace lambda
     foundation::Memory::deallocate(nullHeader);
   }
 
-  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#ifdef VIOLET_WIN32
+  //////////////////////////////////////////////////////////////////////////////
   uint64_t FileSystem::GetTimeStamp(const String& file)
   {
-#if VIOLET_WIN32
     String full_path = FullFilePath(file);
     std::experimental::filesystem::path file_path(lambda::stlString(full_path));
-    std::experimental::filesystem::file_time_type time_stamp = std::experimental::filesystem::last_write_time(file_path);
+    std::experimental::filesystem::file_time_type time_stamp =
+    std::experimental::filesystem::last_write_time(file_path);
     return (uint64_t)time_stamp.time_since_epoch().count();
-#else
-    return 0ul;
-#endif
   }
   
-  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  Vector<String> FileSystem::GetAllFilesInFolder(String folder, String extension)
+  //////////////////////////////////////////////////////////////////////////////
+  Vector<String> FileSystem::GetAllFilesInFolder(String folder,
+                                                 String extension)
   {
     Vector<String> files;
-#if VIOLET_WIN32
     std::string stl_extension = lambda::stlString(extension);
     
-    for (auto& p : std::experimental::filesystem::directory_iterator(FullFilePath(folder).c_str()))
+    for (auto& p : std::experimental::filesystem::directory_iterator(
+                   FullFilePath(folder).c_str()))
     {
       if (stl_extension.empty() || p.path().extension() == stl_extension)
       {
         files.push_back(lambda::lmbString(p.path().string()));
       }
     }
-#endif
     return files;
   }
-
-  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  Vector<String> FileSystem::GetAllFilesInFolderRecursive(String folder, String extension)
+  
+  //////////////////////////////////////////////////////////////////////////////
+  Vector<String> FileSystem::GetAllFilesInFolderRecursive(String folder,
+                                                          String extension)
   {
     Vector<String> files;
-#if VIOLET_WIN32
     std::string stl_extension = lambda::stlString(extension);
-
-    for (auto& p : std::experimental::filesystem::recursive_directory_iterator(FullFilePath(folder).c_str()))
+    
+    for (auto& p : std::experimental::filesystem::recursive_directory_iterator(
+                   FullFilePath(folder).c_str()))
     {
       if (stl_extension.empty() || p.path().extension() == stl_extension)
-      {
         files.push_back(lambda::lmbString(p.path().string()));
-      }
     }
-#endif
-      return files;
+    return files;
   }
-
-  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  
+  //////////////////////////////////////////////////////////////////////////////
   String FileSystem::GetExtension(const String& file)
   {
     if (file.find_last_of(".") != String::npos)
       return file.substr(file.find_last_of(".") + 1);
-    return ""; 
+    return "";
   }
   
-  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
   bool FileSystem::DoesFileExist(const String& file)
   {
-#if VIOLET_WIN32
     return std::experimental::filesystem::exists(FullFilePath(file).c_str());
-#else
-    return false;
-#endif
   }
+  
+  //////////////////////////////////////////////////////////////////////////////
   void FileSystem::RemoveFile(const String& file)
   {
-#if VIOLET_WIN32
-    std::experimental::filesystem::remove(std::experimental::filesystem::path(FullFilePath(file).c_str()));
-#endif
+    std::experimental::filesystem::remove(
+      std::experimental::filesystem::path(FullFilePath(file).c_str())
+    );
   }
+#else
+  //////////////////////////////////////////////////////////////////////////////
+  uint64_t FileSystem::GetTimeStamp(const String& /*file*/)
+  {
+    return 0ul;
+  }
+  
+  //////////////////////////////////////////////////////////////////////////////
+  Vector<String> FileSystem::GetAllFilesInFolder(String /*folder*/,
+                                                 String /*extension*/)
+  {
+    return Vector<String>();
+  }
+
+  //////////////////////////////////////////////////////////////////////////////
+  Vector<String> FileSystem::GetAllFilesInFolderRecursive(String /*folder*/,
+                                                          String /*extension*/)
+  {
+    return Vector<String>();
+  }
+
+  //////////////////////////////////////////////////////////////////////////////
+  String FileSystem::GetExtension(const String& /*file*/)
+  {
+    return "";
+  }
+  
+  //////////////////////////////////////////////////////////////////////////////
+  bool FileSystem::DoesFileExist(const String& /*file*/)
+  {
+    return false;
+  }
+
+  //////////////////////////////////////////////////////////////////////////////
+  void FileSystem::RemoveFile(const String& /*file*/)
+  {
+  }
+#endif
 }

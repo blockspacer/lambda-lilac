@@ -186,59 +186,59 @@ inline int toInt32F(float arg) { return int(arg); }
 inline int toInt32D(double arg) { return int(arg); }
 inline int toInt32B(bool arg) { return arg == true ? 1 : 0; }
 // Long long.
-inline long long toInt64I8(char arg) { return long long(arg); }
-inline long long toInt64I16(short arg) { return long long(arg); }
-inline long long toInt64I32(int arg) { return long long(arg); }
-inline long long toInt64U8(unsigned char arg) { return long long(arg); }
-inline long long toInt64U16(unsigned short arg) { return long long(arg); }
-inline long long toInt64U32(unsigned int arg) { return long long(arg); }
-inline long long toInt64U64(unsigned long long arg) { return long long(arg); }
-inline long long toInt64F(float arg) { return long long(arg); }
-inline long long toInt64D(double arg) { return long long(arg); }
+inline long long toInt64I8(char arg) { return (long long)(arg); }
+inline long long toInt64I16(short arg) { return (long long)(arg); }
+inline long long toInt64I32(int arg) { return (long long)(arg); }
+inline long long toInt64U8(unsigned char arg) { return (long long)(arg); }
+inline long long toInt64U16(unsigned short arg) { return (long long)(arg); }
+inline long long toInt64U32(unsigned int arg) { return (long long)(arg); }
+inline long long toInt64U64(unsigned long long arg) { return (long long)(arg); }
+inline long long toInt64F(float arg) { return (long long)(arg); }
+inline long long toInt64D(double arg) { return (long long)(arg); }
 inline long long toInt64B(bool arg) { return arg == true ? 1 : 0; }
 // Unsigned char.
-inline unsigned char toUint8I8(char arg) { return unsigned char(arg); }
-inline unsigned char toUint8I16(short arg) { return unsigned char(arg); }
-inline unsigned char toUint8I32(int arg) { return unsigned char(arg); }
-inline unsigned char toUint8I64(long long arg) { return unsigned char(arg); }
-inline unsigned char toUint8U16(unsigned short arg) { return unsigned char(arg); }
-inline unsigned char toUint8U32(unsigned int arg) { return unsigned char(arg); }
-inline unsigned char toUint8U64(unsigned long long arg) { return unsigned char(arg); }
-inline unsigned char toUint8F(float arg) { return unsigned char(arg); }
-inline unsigned char toUint8D(double arg) { return unsigned char(arg); }
+inline unsigned char toUint8I8(char arg) { return (unsigned char)(arg); }
+inline unsigned char toUint8I16(short arg) { return (unsigned char)(arg); }
+inline unsigned char toUint8I32(int arg) { return (unsigned char)(arg); }
+inline unsigned char toUint8I64(long long arg) { return (unsigned char)(arg); }
+inline unsigned char toUint8U16(unsigned short arg) { return (unsigned char)(arg); }
+inline unsigned char toUint8U32(unsigned int arg) { return (unsigned char)(arg); }
+inline unsigned char toUint8U64(unsigned long long arg) { return (unsigned char)(arg); }
+inline unsigned char toUint8F(float arg) { return (unsigned char)(arg); }
+inline unsigned char toUint8D(double arg) { return (unsigned char)(arg); }
 inline unsigned char toUint8B(bool arg) { return arg == true ? 1 : 0; }
 // Unsigned short.
-inline unsigned short toUint16I8(char arg) { return unsigned short(arg); }
-inline unsigned short toUint16I16(short arg) { return unsigned short(arg); }
-inline unsigned short toUint16I32(int arg) { return unsigned short(arg); }
-inline unsigned short toUint16I64(long long arg) { return unsigned short(arg); }
-inline unsigned short toUint16U8(unsigned char arg) { return unsigned short(arg); }
-inline unsigned short toUint16U32(unsigned int arg) { return unsigned short(arg); }
-inline unsigned short toUint16U64(unsigned long long arg) { return unsigned short(arg); }
-inline unsigned short toUint16F(float arg) { return unsigned short(arg); }
-inline unsigned short toUint16D(double arg) { return unsigned short(arg); }
+inline unsigned short toUint16I8(char arg) { return (unsigned short)(arg); }
+inline unsigned short toUint16I16(short arg) { return (unsigned short)(arg); }
+inline unsigned short toUint16I32(int arg) { return (unsigned short)(arg); }
+inline unsigned short toUint16I64(long long arg) { return (unsigned short)(arg); }
+inline unsigned short toUint16U8(unsigned char arg) { return (unsigned short)(arg); }
+inline unsigned short toUint16U32(unsigned int arg) { return (unsigned short)(arg); }
+inline unsigned short toUint16U64(unsigned long long arg) { return (unsigned short)(arg); }
+inline unsigned short toUint16F(float arg) { return (unsigned short)(arg); }
+inline unsigned short toUint16D(double arg) { return (unsigned short)(arg); }
 inline unsigned short toUint16B(bool arg) { return arg == true ? 1 : 0; }
 // Unsigned int.
-inline unsigned int toUint32I8(char arg) { return unsigned int(arg); }
-inline unsigned int toUint32I16(short arg) { return unsigned int(arg); }
-inline unsigned int toUint32I32(int arg) { return unsigned int(arg); }
-inline unsigned int toUint32I64(long long arg) { return unsigned int(arg); }
-inline unsigned int toUint32U8(unsigned char arg) { return unsigned int(arg); }
-inline unsigned int toUint32U16(unsigned short arg) { return unsigned int(arg); }
-inline unsigned int toUint32U64(unsigned long long arg) { return unsigned int(arg); }
-inline unsigned int toUint32F(float arg) { return unsigned int(arg); }
-inline unsigned int toUint32D(double arg) { return unsigned int(arg); }
+inline unsigned int toUint32I8(char arg) { return (unsigned int)(arg); }
+inline unsigned int toUint32I16(short arg) { return (unsigned int)(arg); }
+inline unsigned int toUint32I32(int arg) { return (unsigned int)(arg); }
+inline unsigned int toUint32I64(long long arg) { return (unsigned int)(arg); }
+inline unsigned int toUint32U8(unsigned char arg) { return (unsigned int)(arg); }
+inline unsigned int toUint32U16(unsigned short arg) { return (unsigned int)(arg); }
+inline unsigned int toUint32U64(unsigned long long arg) { return (unsigned int)(arg); }
+inline unsigned int toUint32F(float arg) { return (unsigned int)(arg); }
+inline unsigned int toUint32D(double arg) { return (unsigned int)(arg); }
 inline unsigned int toUint32B(bool arg) { return arg == true ? 1 : 0; }
 // Unsigned long long.
-inline unsigned long long toUint64I8(char arg) { return unsigned long long(arg); }
-inline unsigned long long toUint64I16(short arg) { return unsigned long long(arg); }
-inline unsigned long long toUint64I32(int arg) { return unsigned long long(arg); }
-inline unsigned long long toUint64I64(long long arg) { return unsigned long long(arg); }
-inline unsigned long long toUint64U8(unsigned char arg) { return unsigned long long(arg); }
-inline unsigned long long toUint64U16(unsigned short arg) { return unsigned long long(arg); }
-inline unsigned long long toUint64U32(unsigned int arg) { return unsigned long long(arg); }
-inline unsigned long long toUint64F(float arg) { return unsigned long long(arg); }
-inline unsigned long long toUint64D(double arg) { return unsigned long long(arg); }
+inline unsigned long long toUint64I8(char arg) { return (unsigned long long)(arg); }
+inline unsigned long long toUint64I16(short arg) { return (unsigned long long)(arg); }
+inline unsigned long long toUint64I32(int arg) { return (unsigned long long)(arg); }
+inline unsigned long long toUint64I64(long long arg) { return (unsigned long long)(arg); }
+inline unsigned long long toUint64U8(unsigned char arg) { return (unsigned long long)(arg); }
+inline unsigned long long toUint64U16(unsigned short arg) { return (unsigned long long)(arg); }
+inline unsigned long long toUint64U32(unsigned int arg) { return (unsigned long long)(arg); }
+inline unsigned long long toUint64F(float arg) { return (unsigned long long)(arg); }
+inline unsigned long long toUint64D(double arg) { return (unsigned long long)(arg); }
 inline unsigned long long toUint64B(bool arg) { return arg == true ? 1 : 0; }
 
 
@@ -247,7 +247,7 @@ void RegisterCasting(asIScriptEngine* engine)
   int r;
   
   // Float.
-  r = engine->RegisterGlobalFunction("float ToFloat(int8)",   asFUNCTIONPR(toFloatI8,  (char),               float), asCALL_CDECL); assert(r >= 0);
+  /*r = engine->RegisterGlobalFunction("float ToFloat(int8)",   asFUNCTIONPR(toFloatI8,  (char),               float), asCALL_CDECL); assert(r >= 0);
   r = engine->RegisterGlobalFunction("float ToFloat(int16)",  asFUNCTIONPR(toFloatI16, (short),              float), asCALL_CDECL); assert(r >= 0);
   r = engine->RegisterGlobalFunction("float ToFloat(int32)",  asFUNCTIONPR(toFloatI32, (int),                float), asCALL_CDECL); assert(r >= 0);
   r = engine->RegisterGlobalFunction("float ToFloat(int64)",  asFUNCTIONPR(toFloatI64, (long long),          float), asCALL_CDECL); assert(r >= 0);
@@ -355,7 +355,7 @@ void RegisterCasting(asIScriptEngine* engine)
   r = engine->RegisterGlobalFunction("uint64 ToUint64(uint32)", asFUNCTIONPR(toUint64U32, (unsigned int),       unsigned long long), asCALL_CDECL); assert(r >= 0);
   r = engine->RegisterGlobalFunction("uint64 ToUint64(float)",  asFUNCTIONPR(toUint64F,   (float),              unsigned long long), asCALL_CDECL); assert(r >= 0);
   r = engine->RegisterGlobalFunction("uint64 ToUint64(double)", asFUNCTIONPR(toUint64D,   (double),             unsigned long long), asCALL_CDECL); assert(r >= 0);
-  r = engine->RegisterGlobalFunction("uint64 ToUint64(bool)",   asFUNCTIONPR(toUint64B,   (bool),               unsigned long long), asCALL_CDECL); assert(r >= 0);
+  r = engine->RegisterGlobalFunction("uint64 ToUint64(bool)",   asFUNCTIONPR(toUint64B,   (bool),               unsigned long long), asCALL_CDECL); assert(r >= 0);*/
 }
 
 void RegisterScriptMath_Native(asIScriptEngine *engine)

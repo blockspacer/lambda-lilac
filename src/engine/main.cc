@@ -244,17 +244,11 @@ public:
     double frame_budget = frame_target_max / frame_fps;
     double frame_budget_h;
     if (frame_fps < frame_target_min)
-    {
       frame_budget_h = 0.0;
-    }
     else if (frame_fps > frame_target_max)
-    {
       frame_budget_h = 120.0;
-    }
     else
-    {
       frame_budget_h = 120.0 * ((frame_fps - frame_target_min) / (frame_target_max - frame_target_min));
-    }
 
     static bool open = true;
     if (imgui->imBegin("info", open, glm::vec2(0.0f, 0.0f), glm::vec2(170.0f, 600.0f)))
@@ -308,19 +302,16 @@ public:
 
       static float dynamic_resolution_scale = 1.0f;
       if (imgui->imFloat1("DRS", dynamic_resolution_scale))
-      {
         getRenderer()->setShaderVariable(platform::ShaderVariable(Name("dynamic_resolution_scale"), dynamic_resolution_scale));
-      }
+
       static float ambient_intensity = 1.0f;
       if (imgui->imFloat1("AI", ambient_intensity))
-      {
         getRenderer()->setShaderVariable(platform::ShaderVariable(Name("ambient_intensity"), ambient_intensity));
-      }
     }
 
     imgui->imEnd();
   }
-  void update(const double& delta_time) override
+  void update(const double& /*delta_time*/) override
   {
 #if USE_GUI
     gui_.update(delta_time);
@@ -346,9 +337,7 @@ public:
       {
         Vector<String> render_targets;
         for (const auto& it : getPostProcessManager().getAllTargets())
-        {
           render_targets.push_back(it.first.getName());
-        }
         std::sort(render_targets.begin(), render_targets.end());
 
         for (const String& render_target : render_targets)
@@ -362,9 +351,7 @@ public:
               selected_open    = true;
             }
             else
-            {
               selected_open = !selected_open;
-            }
           }
           imgui->imLabel(render_target);
         }
@@ -378,9 +365,8 @@ public:
         selected_size.x = floorf((selected_aspect > 1.0f) ? (selected_size.x * selected_aspect) : (selected_size.y * selected_aspect));
 
         if (imgui->imBegin("Selected", selected_open, glm::vec2(getWindow()->getSize().x - selected_size.x, getWindow()->getSize().y - selected_size.y), selected_size, platform::ImGUIFlags::kNoScrollbar))
-        {
           imgui->imImage(selected_texture, selected_size);
-        }
+
         imgui->imEnd();
       }
     }

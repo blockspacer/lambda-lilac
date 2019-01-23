@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <stdio.h> // sprintf
 
-#include "scriptGrid.h"
+#include "scripting/angel-script/addons/scriptgrid.h"
 
 BEGIN_AS_NAMESPACE
 

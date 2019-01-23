@@ -1212,7 +1212,7 @@ foreign class Mesh {
           asset::MeshHandle mesh = *GetForeign<asset::MeshHandle>(vm);
 
           Vector<glm::vec3> positions(wrenGetListCount(vm, 1));
-          for (int i = 0; i < positions.size(); ++i)
+          for (int i = 0; i < (int)positions.size(); ++i)
           {
             wrenGetListElement(vm, 1, i, 2);
             positions[i] = *GetForeign<glm::vec3>(vm, 2);
@@ -1246,7 +1246,7 @@ foreign class Mesh {
           asset::MeshHandle mesh = *GetForeign<asset::MeshHandle>(vm);
 
           Vector<glm::vec3> normals(wrenGetListCount(vm, 1));
-          for (int i = 0; i < normals.size(); ++i)
+          for (int i = 0; i < (int)normals.size(); ++i)
           {
             wrenGetListElement(vm, 1, i, 2);
             normals[i] = *GetForeign<glm::vec3>(vm, 2);
@@ -1266,7 +1266,7 @@ foreign class Mesh {
           asset::MeshHandle mesh = *GetForeign<asset::MeshHandle>(vm);
 
           Vector<glm::vec2> tex_coords(wrenGetListCount(vm, 1));
-          for (int i = 0; i < tex_coords.size(); ++i)
+          for (int i = 0; i < (int)tex_coords.size(); ++i)
           {
             wrenGetListElement(vm, 1, i, 2);
             tex_coords[i] = *GetForeign<glm::vec2>(vm, 2);
@@ -1286,7 +1286,7 @@ foreign class Mesh {
           asset::MeshHandle mesh = *GetForeign<asset::MeshHandle>(vm);
 
           Vector<glm::vec4> colours(wrenGetListCount(vm, 1));
-          for (int i = 0; i < colours.size(); ++i)
+          for (int i = 0; i < (int)colours.size(); ++i)
           {
             wrenGetListElement(vm, 1, i, 2);
             colours[i] = *GetForeign<glm::vec4>(vm, 2);
@@ -1306,7 +1306,7 @@ foreign class Mesh {
           asset::MeshHandle mesh = *GetForeign<asset::MeshHandle>(vm);
 
           Vector<glm::vec3> tangents(wrenGetListCount(vm, 1));
-          for (int i = 0; i < tangents.size(); ++i)
+          for (int i = 0; i < (int)tangents.size(); ++i)
           {
             wrenGetListElement(vm, 1, i, 2);
             tangents[i] = *GetForeign<glm::vec3>(vm, 2);
@@ -1326,7 +1326,7 @@ foreign class Mesh {
           asset::MeshHandle mesh = *GetForeign<asset::MeshHandle>(vm);
 
           Vector<glm::vec4> joints(wrenGetListCount(vm, 1));
-          for (int i = 0; i < joints.size(); ++i)
+          for (int i = 0; i < (int)joints.size(); ++i)
           {
             wrenGetListElement(vm, 1, i, 2);
             joints[i] = *GetForeign<glm::vec4>(vm, 2);
@@ -1346,7 +1346,7 @@ foreign class Mesh {
           asset::MeshHandle mesh = *GetForeign<asset::MeshHandle>(vm);
 
           Vector<glm::vec4> weights(wrenGetListCount(vm, 1));
-          for (int i = 0; i < weights.size(); ++i)
+          for (int i = 0; i < (int)weights.size(); ++i)
           {
             wrenGetListElement(vm, 1, i, 2);
             weights[i] = *GetForeign<glm::vec4>(vm, 2);
@@ -1366,7 +1366,7 @@ foreign class Mesh {
           asset::MeshHandle mesh = *GetForeign<asset::MeshHandle>(vm);
 
           Vector<uint32_t> indices(wrenGetListCount(vm, 1));
-          for (int i = 0; i < indices.size(); ++i)
+          for (int i = 0; i < (int)indices.size(); ++i)
           {
             wrenGetListElement(vm, 1, i, 2);
             indices[i] = (uint32_t)wrenGetSlotDouble(vm, 2);
@@ -2095,7 +2095,7 @@ foreign class Camera {
           Vector<platform::RenderTarget> inputs(wrenGetListCount(vm, 3));
           Vector<platform::RenderTarget> outputs(wrenGetListCount(vm, 4));
 
-          for (int i = 0; i < inputs.size(); ++i)
+          for (int i = 0; i < (int)inputs.size(); ++i)
           {
             wrenGetListElement(vm, 3, i, 0);
             inputs[i] = 
@@ -2103,7 +2103,7 @@ foreign class Camera {
                 Name(wrenGetSlotString(vm, 0))
               );
           }
-          for (int i = 0; i < outputs.size(); ++i)
+          for (int i = 0; i < (int)outputs.size(); ++i)
           {
             wrenGetListElement(vm, 4, i, 0);
             outputs[i] = 
@@ -3332,7 +3332,7 @@ class Graphics {
           const asset::ShaderHandle& generate = *GetForeign<asset::ShaderHandle>(vm, 1);
           Vector<asset::ShaderHandle> modify(wrenGetListCount(vm, 2));
           const asset::ShaderHandle& publish = *GetForeign<asset::ShaderHandle>(vm, 3);
-          for (int i = 0; i < modify.size(); ++i)
+          for (int i = 0; i < (int)modify.size(); ++i)
           {
             wrenGetListElement(vm, 2, i, 0);
             modify[i] = *GetForeign<asset::ShaderHandle>(vm, 0);
@@ -3344,7 +3344,7 @@ class Graphics {
           const asset::ShaderHandle& generate = *GetForeign<asset::ShaderHandle>(vm, 1);
           Vector<asset::ShaderHandle> modify(wrenGetListCount(vm, 2));
           const asset::ShaderHandle& publish = *GetForeign<asset::ShaderHandle>(vm, 3);
-          for (int i = 0; i < modify.size(); ++i)
+          for (int i = 0; i < (int)modify.size(); ++i)
           {
             wrenGetListElement(vm, 2, i, 0);
             modify[i] = *GetForeign<asset::ShaderHandle>(vm, 1);
@@ -3356,7 +3356,7 @@ class Graphics {
           const asset::ShaderHandle& generate = *GetForeign<asset::ShaderHandle>(vm, 1);
           Vector<asset::ShaderHandle> modify(wrenGetListCount(vm, 2));
           const asset::ShaderHandle& publish = *GetForeign<asset::ShaderHandle>(vm, 3);
-          for (int i = 0; i < modify.size(); ++i)
+          for (int i = 0; i < (int)modify.size(); ++i)
           {
             wrenGetListElement(vm, 2, i, 0);
             modify[i] = *GetForeign<asset::ShaderHandle>(vm, 1);
@@ -3368,7 +3368,7 @@ class Graphics {
           const asset::ShaderHandle& generate = *GetForeign<asset::ShaderHandle>(vm, 1);
           Vector<asset::ShaderHandle> modify(wrenGetListCount(vm, 2));
           const asset::ShaderHandle& publish = *GetForeign<asset::ShaderHandle>(vm, 3);
-          for (int i = 0; i < modify.size(); ++i)
+          for (int i = 0; i < (int)modify.size(); ++i)
           {
             wrenGetListElement(vm, 2, i, 0);
             modify[i] = *GetForeign<asset::ShaderHandle>(vm, 1);
@@ -3380,7 +3380,7 @@ class Graphics {
           const asset::ShaderHandle& generate = *GetForeign<asset::ShaderHandle>(vm, 1);
           Vector<asset::ShaderHandle> modify(wrenGetListCount(vm, 2));
           const asset::ShaderHandle& publish = *GetForeign<asset::ShaderHandle>(vm, 3);
-          for (int i = 0; i < modify.size(); ++i)
+          for (int i = 0; i < (int)modify.size(); ++i)
           {
             wrenGetListElement(vm, 2, i, 0);
             modify[i] = *GetForeign<asset::ShaderHandle>(vm, 1);
@@ -3392,7 +3392,7 @@ class Graphics {
           const asset::ShaderHandle& generate = *GetForeign<asset::ShaderHandle>(vm, 1);
           Vector<asset::ShaderHandle> modify(wrenGetListCount(vm, 2));
           const asset::ShaderHandle& publish = *GetForeign<asset::ShaderHandle>(vm, 3);
-          for (int i = 0; i < modify.size(); ++i)
+          for (int i = 0; i < (int)modify.size(); ++i)
           {
             wrenGetListElement(vm, 2, i, 0);
             modify[i] = *GetForeign<asset::ShaderHandle>(vm, 1);
@@ -3469,7 +3469,7 @@ class PostProcess {
           asset::ShaderHandle shader = *GetForeign<asset::ShaderHandle>(vm, 2);
           Vector<platform::RenderTarget> input(wrenGetListCount(vm, 3));
           Vector<platform::RenderTarget> output(wrenGetListCount(vm, 4));
-          for (int i = 0; i < input.size(); ++i)
+          for (int i = 0; i < (int)input.size(); ++i)
           {
             wrenGetListElement(vm, 3, i, 0);
             const char* target_cstr = wrenGetSlotString(vm, 0);
@@ -3477,7 +3477,7 @@ class PostProcess {
             const auto& target = g_world->getPostProcessManager().getTarget(target_name);
             input.at(i) = target;
           }
-          for (int i = 0; i < output.size(); ++i)
+          for (int i = 0; i < (int)output.size(); ++i)
           {
             wrenGetListElement(vm, 4, i, 0);
             output.at(i) = g_world->getPostProcessManager().getTarget(Name(wrenGetSlotString(vm, 0)));

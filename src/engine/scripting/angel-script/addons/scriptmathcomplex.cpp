@@ -1,8 +1,8 @@
+#include "scripting/angel-script/addons/scriptmathcomplex.h"
 #include <assert.h>
 #include <string.h> // strstr
 #include <new> // new()
 #include <math.h>
-#include "scriptmathComplex.h"
 
 #ifdef __BORLANDC__
 // C++Builder doesn't define a non-standard "sqrtf" function but rather an overload of "sqrt"

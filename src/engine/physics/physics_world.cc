@@ -18,7 +18,7 @@ namespace lambda
 
       virtual btScalar addSingleResult(
         btCollisionWorld::LocalRayResult& rayResult, 
-        bool normalInWorldSpace
+        bool /*normalInWorldSpace*/
       ) override
       {
         if (rayResult.m_collisionObject != nullptr)

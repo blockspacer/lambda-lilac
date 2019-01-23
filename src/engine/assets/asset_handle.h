@@ -34,7 +34,7 @@ namespace lambda
         data_ = other.data_;
         hash_ = other.hash_;
       }
-      void operator=(const std::nullptr_t& null)
+      void operator=(const std::nullptr_t& /*null*/)
       {
         data_ = nullptr;
       }
@@ -42,7 +42,7 @@ namespace lambda
       {
         return hash_ == other.hash_;
       }
-      bool operator==(const std::nullptr_t& null) const
+      bool operator==(const std::nullptr_t& /*null*/) const
       {
         return data_ == nullptr;
       }
@@ -50,7 +50,7 @@ namespace lambda
       {
         return hash_ != other.hash_;
       }
-      bool operator!=(const std::nullptr_t& null) const
+      bool operator!=(const std::nullptr_t& /*null*/) const
       {
         return data_ != nullptr;
       }

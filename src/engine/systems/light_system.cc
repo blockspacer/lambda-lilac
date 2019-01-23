@@ -308,7 +308,7 @@ namespace lambda
       data.view.resize(data.render_target.size(), glm::mat4x4(1.0f));
       data.depth.resize(data.render_target.size(), data.depth.back());
 
-      for (int i = 0; i < (data.rsm ? 1u : data.render_target.size()); ++i)
+      for (uint32_t i = 0u; i < (data.rsm ? 1u : data.render_target.size()); ++i)
       {
         Name name = Name("shadow_map_depth_" + toString(i) + "_" + toString(idx));
         data.depth_target.at(i) = platform::RenderTarget(name,

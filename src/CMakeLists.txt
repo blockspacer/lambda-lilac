@@ -2,7 +2,7 @@ Function(SetWarningAsErrors proj)
   if(MSVC)
 		target_compile_options(${proj} PRIVATE /WX)
 	else()
-		target_compile_options(${proj} PRIVATE -Wall -Wextra -pedantic -Werror)
+		target_compile_options(${proj} PRIVATE -Wall -Wextra -Werror -Wno-unused-variable -Wno-unused-parameter -Wno-ignored-qualifiers)
 	endif()
 EndFunction()
 

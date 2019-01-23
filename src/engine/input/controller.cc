@@ -10,33 +10,37 @@ namespace lambda
 {
   namespace io
   {
-    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     bool Controller::isConnected() const
     {
       return connected_;
     }
 
-    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+#if LAMBDA_WIN32
     void Controller::rumble(float lhs, float rhs) const
     {
-#if LAMBDA_WIN32
       XINPUT_VIBRATION rumble{};
       rumble.wLeftMotorSpeed = (int)(lhs * 65535.0f);
       rumble.wRightMotorSpeed = (int)(rhs * 65535.0f);
       XInputSetState(id_,&rumble);
-#endif
     }
+#else
+    void Controller::rumble(float /*lhs*/, float /*rhs*/) const
+    {
+    }
+#endif
 
-    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     unsigned char Controller::getId() const
     {
       return id_;
     }
 
-    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+#if LAMBDA_WIN32
     bool Controller::axesInDeadzone(const Axes& axis) const
     {
-#if LAMBDA_WIN32
       float value = axes_[(unsigned char)axis];
 
       switch (axis)
@@ -76,29 +80,32 @@ namespace lambda
         return !(value > XINPUT_GAMEPAD_TRIGGER_THRESHOLD) ? false : true;
         break;
       }
+#else
+    bool Controller::axesInDeadzone(const Axes& /*axis*/) const
+    {
 #endif
       return false;
     }
 
-    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     float Controller::getAxis(const Axes& axis) const
     {
       return axes_[(unsigned char)axis];
     }
 
-    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     bool Controller::getButton(const Buttons& button) const
     {
       return buttons_[(unsigned char)button];
     }
 
-    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     Controller::Controller(unsigned int id) :
       id_(id)
     {
     }
 
-    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     void Controller::update()
     {
 #if LAMBDA_WIN32
@@ -143,9 +150,9 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
+#if LAMBDA_WIN32
     unsigned short Controller::buttonToXInputButton(const Axes& axis) const
     {
-#if LAMBDA_WIN32
       static const WORD buttonToXInputButton[] = {
         XINPUT_GAMEPAD_A,
         XINPUT_GAMEPAD_B,
@@ -163,6 +170,9 @@ namespace lambda
         XINPUT_GAMEPAD_BACK
       };
       return buttonToXInputButton[(unsigned char)axis];
+#else
+    unsigned short Controller::buttonToXInputButton(const Axes& /*axis*/) const
+    {
 #endif
       return 0u;
     }

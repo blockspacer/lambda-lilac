@@ -18,12 +18,16 @@
 #include <assimp/postprocess.h>
 #endif
 
+#if VIOLET_WIN32
 #pragma warning(push, 0)
+#endif
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
 #define TINYGLTF_NO_STB_IMAGE_WRITE
 #include <tiny_gltf.h>
+#if VIOLET_WIN32
 #pragma warning(pop)
+#endif
 
 namespace lambda
 {
@@ -1079,7 +1083,7 @@ namespace lambda
             (float)position_accessor.maxValues.at(2u)
           );
 
-          if (primitive.material < model.materials.size())
+          if (primitive.material < (const int)model.materials.size())
           {
             tinygltf::Parameter param;
             const tinygltf::Material& material = model.materials.at(primitive.material);
@@ -1142,7 +1146,7 @@ namespace lambda
           insert(memory.wei, contains(primitive.attributes, "WEIGHTS_0"));
           insert(memory.idx, primitive.indices);
 
-          if (primitive.material < model.materials.size())
+          if (primitive.material < (const int)model.materials.size())
           {
             tinygltf::Parameter param;
             if (true == containsRaw(model.materials[primitive.material].values, "baseColorTexture", param)) {

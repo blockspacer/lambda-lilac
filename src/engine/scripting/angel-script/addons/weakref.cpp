@@ -1,7 +1,7 @@
 
 // The CScriptWeakRef class was originally implemented by vroad in March 2013
 
-#include "WeakRef.h"
+#include "scripting/angel-script/addons/weakref.h"
 #include <new>
 #include <assert.h>
 #include <string.h>

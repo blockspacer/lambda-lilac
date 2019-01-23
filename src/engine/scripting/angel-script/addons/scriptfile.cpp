@@ -1,7 +1,7 @@
-#include "scriptFile.h"
+#include "scripting/angel-script/addons/scriptfile.h"
 #include <new>
 #include <assert.h>
-#include <String.h>
+#include <string.h>
 #include <stdio.h>
 
 #ifdef _WIN32_WCE
@@ -318,7 +318,7 @@ int CScriptFile::Open(const String &Filename, const String &mode)
 	// Marmalade doesn't use these, even though it uses the MSVC compiler
 	fopen_s(&file, myFilename.c_str(), m.c_str());
 #else
-	File = fopen(myFilename.c_str(), m.c_str());
+	file = fopen(myFilename.c_str(), m.c_str());
 #endif
 	if(file == 0 )
 		return -1;
