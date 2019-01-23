@@ -36,8 +36,7 @@ namespace lambda
 {
   namespace scripting
   {
-//#define WREN_ALLOC foundation::Memory::allocate
-#define WREN_ALLOC malloc
+#define WREN_ALLOC foundation::Memory::allocate
 
     ///////////////////////////////////////////////////////////////////////////
     world::IWorld* g_world;
@@ -670,6 +669,8 @@ foreign class Quat {
               (float)wrenGetSlotDouble(vm, 2), 
               (float)wrenGetSlotDouble(vm, 3)
             ));
+					else
+						make(vm, glm::quat());
         },
           [](void* data) {}
         };
@@ -775,6 +776,7 @@ foreign class Texture {
     foreign static create(size, bytes, format) 
 
     foreign size
+    foreign format
 }
 
 class TextureFormat {
@@ -795,8 +797,6 @@ class TextureFormat {
     static BC6          { 14 }
     static BC7          { 15 }
 }
-
-
 )";
         char* data = (char*)WREN_ALLOC(str.size() + 1u);
         memcpy(data, str.data(), str.size() + 1u);
@@ -890,17 +890,22 @@ class TextureFormat {
             format
           ); // TODO (Hilze): Fix ASAP!
         };
-        if (strcmp(signature, "size") == 0) return [](WrenVM* vm) {
-          asset::VioletTextureHandle& handle = 
-            *GetForeign<asset::VioletTextureHandle>(vm);
-          Vec2::make(
-            vm, 
-            glm::vec2(
-              (float)handle->getLayer(0u).getWidth(),
-              (float)handle->getLayer(0u).getHeight()
-            )
-          );
-        };
+				if (strcmp(signature, "size") == 0) return [](WrenVM* vm) {
+					asset::VioletTextureHandle& handle =
+						*GetForeign<asset::VioletTextureHandle>(vm);
+					Vec2::make(
+						vm,
+						glm::vec2(
+						(float)handle->getLayer(0u).getWidth(),
+							(float)handle->getLayer(0u).getHeight()
+						)
+					);
+				};
+				if (strcmp(signature, "format") == 0) return [](WrenVM* vm) {
+					asset::VioletTextureHandle& handle =
+						*GetForeign<asset::VioletTextureHandle>(vm);
+					wrenSetSlotDouble(vm, 0, (double)handle->getLayer(0u).getFormat());
+				};
         return nullptr;
       }
     }
