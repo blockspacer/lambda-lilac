@@ -18,90 +18,90 @@ namespace lambda
         void SetShadersDirectional(const uint64_t& generate, const void* input_array, const uint64_t& publish)
         {
           scripting::ScriptArray input_values = g_script_context->scriptArray(input_array);
-          Vector<asset::ShaderHandle> modify(input_values.vec_uint64.size());
+          Vector<asset::VioletShaderHandle> modify(input_values.vec_uint64.size());
 
           for (uint32_t i = 0; i < input_values.vec_uint64.size(); ++i)
           {
             modify.at(i) = assets::shader::Get(input_values.vec_uint64.at(i));
           }
 
-          asset::ShaderHandle generate_shader = assets::shader::Get(generate);
-          asset::ShaderHandle publish_shader  = assets::shader::Get(publish);
+          asset::VioletShaderHandle generate_shader = assets::shader::Get(generate);
+          asset::VioletShaderHandle publish_shader  = assets::shader::Get(publish);
 
           g_light_system->setShadersDirectional(generate_shader, modify, publish_shader);
         }
         void SetShadersPoint(const uint64_t& generate, const void* input_array, const uint64_t& publish)
         {
           scripting::ScriptArray input_values = g_script_context->scriptArray(input_array);
-          Vector<asset::ShaderHandle> modify(input_values.vec_uint64.size());
+          Vector<asset::VioletShaderHandle> modify(input_values.vec_uint64.size());
 
           for (uint32_t i = 0; i < input_values.vec_uint64.size(); ++i)
           {
             modify.at(i) = assets::shader::Get(input_values.vec_uint64.at(i));
           }
 
-          asset::ShaderHandle generate_shader = assets::shader::Get(generate);
-          asset::ShaderHandle publish_shader  = assets::shader::Get(publish);
+          asset::VioletShaderHandle generate_shader = assets::shader::Get(generate);
+          asset::VioletShaderHandle publish_shader  = assets::shader::Get(publish);
 
           g_light_system->setShadersPoint(generate_shader, modify, publish_shader);
         }
         void SetShadersSpot(const uint64_t& generate, const void* input_array, const uint64_t& publish)
         {
           scripting::ScriptArray input_values = g_script_context->scriptArray(input_array);
-          Vector<asset::ShaderHandle> modify(input_values.vec_uint64.size());
+          Vector<asset::VioletShaderHandle> modify(input_values.vec_uint64.size());
 
           for (uint32_t i = 0; i < input_values.vec_uint64.size(); ++i)
           {
             modify.at(i) = assets::shader::Get(input_values.vec_uint64.at(i));
           }
 
-          asset::ShaderHandle generate_shader = assets::shader::Get(generate);
-          asset::ShaderHandle publish_shader  = assets::shader::Get(publish);
+          asset::VioletShaderHandle generate_shader = assets::shader::Get(generate);
+          asset::VioletShaderHandle publish_shader  = assets::shader::Get(publish);
 
           g_light_system->setShadersSpot(generate_shader, modify, publish_shader);
         }
         void SetShadersCascade(const uint64_t& generate, const void* input_array, const uint64_t& publish)
         {
           scripting::ScriptArray input_values = g_script_context->scriptArray(input_array);
-          Vector<asset::ShaderHandle> modify(input_values.vec_uint64.size());
+          Vector<asset::VioletShaderHandle> modify(input_values.vec_uint64.size());
 
           for (uint32_t i = 0; i < input_values.vec_uint64.size(); ++i)
           {
             modify.at(i) = assets::shader::Get(input_values.vec_uint64.at(i));
           }
 
-          asset::ShaderHandle generate_shader = assets::shader::Get(generate);
-          asset::ShaderHandle publish_shader  = assets::shader::Get(publish);
+          asset::VioletShaderHandle generate_shader = assets::shader::Get(generate);
+          asset::VioletShaderHandle publish_shader  = assets::shader::Get(publish);
 
           g_light_system->setShadersCascade(generate_shader, modify, publish_shader);
         }
         void SetShadersDirectionalRSM(const uint64_t& generate, const void* input_array, const uint64_t& publish)
         {
           scripting::ScriptArray input_values = g_script_context->scriptArray(input_array);
-          Vector<asset::ShaderHandle> modify(input_values.vec_uint64.size());
+          Vector<asset::VioletShaderHandle> modify(input_values.vec_uint64.size());
 
           for (uint32_t i = 0; i < input_values.vec_uint64.size(); ++i)
           {
             modify.at(i) = assets::shader::Get(input_values.vec_uint64.at(i));
           }
 
-          asset::ShaderHandle generate_shader = assets::shader::Get(generate);
-          asset::ShaderHandle publish_shader  = assets::shader::Get(publish);
+          asset::VioletShaderHandle generate_shader = assets::shader::Get(generate);
+          asset::VioletShaderHandle publish_shader  = assets::shader::Get(publish);
 
           g_light_system->setShadersDirectionalRSM(generate_shader, modify, publish_shader);
         }
         void SetShadersSpotRSM(const uint64_t& generate, const void* input_array, const uint64_t& publish)
         {
           scripting::ScriptArray input_values = g_script_context->scriptArray(input_array);
-          Vector<asset::ShaderHandle> modify(input_values.vec_uint64.size());
+          Vector<asset::VioletShaderHandle> modify(input_values.vec_uint64.size());
 
           for (uint32_t i = 0; i < input_values.vec_uint64.size(); ++i)
           {
             modify.at(i) = assets::shader::Get(input_values.vec_uint64.at(i));
           }
 
-          asset::ShaderHandle generate_shader = assets::shader::Get(generate);
-          asset::ShaderHandle publish_shader  = assets::shader::Get(publish);
+          asset::VioletShaderHandle generate_shader = assets::shader::Get(generate);
+          asset::VioletShaderHandle publish_shader  = assets::shader::Get(publish);
 
           g_light_system->setShadersSpotRSM(generate_shader, modify, publish_shader);
         }

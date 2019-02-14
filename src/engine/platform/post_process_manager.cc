@@ -116,7 +116,7 @@ namespace lambda
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ShaderPass::ShaderPass(Name name,
-      asset::ShaderHandle shader,
+      asset::VioletShaderHandle shader,
       Vector<RenderTarget> inputs,
       Vector<RenderTarget> outputs)
       : enabled_(true)
@@ -128,7 +128,7 @@ namespace lambda
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    asset::ShaderHandle ShaderPass::getShader() const
+    asset::VioletShaderHandle ShaderPass::getShader() const
     {
       return shader_;
     }

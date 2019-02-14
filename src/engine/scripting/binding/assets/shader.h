@@ -13,7 +13,7 @@ namespace lambda
     {
       namespace shader
       {
-        extern asset::ShaderHandle Get(const uint64_t& id);
+        extern asset::VioletShaderHandle Get(const uint64_t& id);
         extern Map<lambda::String, void*> Bind(world::IWorld* world);
         void Unbind();
       }

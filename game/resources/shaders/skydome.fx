@@ -1,5 +1,5 @@
-#include "resources/shaders/common.fx"
-#include "resources/shaders/atmosphere.fx"
+#include "common.fx"
+#include "atmosphere.fx"
 
 struct VSInput
 {
@@ -51,15 +51,6 @@ struct PSOutput
   float4 albedo   : SV_TARGET0;
   float4 position : SV_TARGET1;
 };
-
-static const float2 invAtan = float2(0.1591, 0.3183);
-float2 SampleSphericalMap(float3 v)
-{
-    float2 uv = float2(atan2(v.z, v.x), -asin(v.y));
-    uv *= invAtan;
-    uv += 0.5;
-    return uv;
-}
 
 PSOutput PS(VSOutput pIn)
 {

@@ -54,9 +54,22 @@ namespace lambda
       require(mesh_render_system_.get(), entity);
       require(transform_system_.get(), entity);
 
-      data_.push_back(LODData(entity));
-      data_to_entity_[(uint32_t)data_.size() - 1u] = entity;
-      entity_to_data_[entity] = (uint32_t)data_.size() - 1u;
+			if (!unused_data_entries_.empty())
+			{
+				uint32_t idx = unused_data_entries_.front();
+				unused_data_entries_.pop();
+
+				data_[idx] = LODData(entity);
+				data_to_entity_[idx] = entity;
+				entity_to_data_[entity] = idx;
+			}
+			else
+			{
+				data_.push_back(LODData(entity));
+				uint32_t idx = (uint32_t)data_.size() - 1u;
+				data_to_entity_[idx] = entity;
+				entity_to_data_[entity] = idx;
+			}
 
       auto& data =lookUpData(entity);
       data.base_lod.setDistance(0.0f);
@@ -74,21 +87,27 @@ namespace lambda
     }
     void LODSystem::removeComponent(const entity::Entity& entity)
     {
-      const auto& it = entity_to_data_.find(entity);
-      if (it != entity_to_data_.end())
-      {
-        uint32_t id = it->second;
-
-        for (auto i = data_to_entity_.find(id); i != data_to_entity_.end(); i++)
-        {
-          entity_to_data_.at(i->second)--;
-        }
-
-        data_.erase(data_.begin() + id);
-        entity_to_data_.erase(it);
-        data_to_entity_.erase(id);
-      }
+			marked_for_delete_.insert(entity);
     }
+		void LODSystem::collectGarbage()
+		{
+			if (!marked_for_delete_.empty())
+			{
+				for (entity::Entity entity : marked_for_delete_)
+				{
+					const auto& it = entity_to_data_.find(entity);
+					if (it != entity_to_data_.end())
+					{
+						uint32_t idx = it->second;
+						unused_data_entries_.push(idx);
+						data_to_entity_.erase(idx);
+						entity_to_data_.erase(entity);
+						data_[idx].valid = false;
+					}
+				}
+				marked_for_delete_.clear();
+			}
+		}
     void LODSystem::initialize(world::IWorld& world)
     {
       transform_system_   = world.getScene().getSystem<TransformSystem>();
@@ -151,24 +170,28 @@ namespace lambda
     LODData& LODSystem::lookUpData(const entity::Entity& entity)
     {
       LMB_ASSERT(entity_to_data_.find(entity) != entity_to_data_.end(), "LOD: could not find component");
-      return data_.at(entity_to_data_.at(entity));
+			assert(data_.at(entity_to_data_.at(entity)).valid);
+			return data_.at(entity_to_data_.at(entity));
     }
     const LODData& LODSystem::lookUpData(const entity::Entity& entity) const
     {
       LMB_ASSERT(entity_to_data_.find(entity) != entity_to_data_.end(), "LOD: could not find component");
-      return data_.at(entity_to_data_.at(entity));
+			assert(data_.at(entity_to_data_.at(entity)).valid);
+			return data_.at(entity_to_data_.at(entity));
     }
     LODData::LODData(const LODData & other)
     {
       lods     = other.lods;
       base_lod = other.base_lod;
       entity   = other.entity;
+			valid    = other.valid;
     }
     LODData & LODData::operator=(const LODData & other)
     {
       lods     = other.lods;
       base_lod = other.base_lod;
       entity   = other.entity;
+			valid    = other.valid;
       
       return *this;
     }

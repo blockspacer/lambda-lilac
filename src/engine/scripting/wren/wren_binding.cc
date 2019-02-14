@@ -4,8 +4,8 @@
 #include <assets/mesh_io.h>
 #include <assets/shader.h>
 #include <assets/shader_io.h>
-#include <systems/transform_system.h>
 #include <systems/entity_system.h>
+#include <systems/name_system.h>
 #include <systems/transform_system.h>
 #include <systems/camera_system.h>
 #include <systems/light_system.h>
@@ -41,7 +41,8 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     world::IWorld* g_world;
     entity::EntitySystem* g_entitySystem;
-    components::TransformSystem* g_transformSystem;
+		components::NameSystem* g_nameSystem;
+		components::TransformSystem* g_transformSystem;
     components::CameraSystem* g_cameraSystem;
     components::LightSystem* g_lightSystem;
     components::MeshRenderSystem* g_meshRenderSystem;
@@ -160,18 +161,24 @@ foreign class Vec2 {
       }
       WrenHandle* handle = nullptr;
 
+			/////////////////////////////////////////////////////////////////////////
+			glm::vec2* makeAt(WrenVM* vm, int slot, int class_slot, glm::vec2 val = glm::vec2())
+			{
+				if (handle == nullptr)
+				{
+					wrenGetVariable(vm, "Core/Vec2", "Vec2", class_slot);
+					handle = wrenGetSlotHandle(vm, class_slot);
+				}
+				wrenSetSlotHandle(vm, class_slot, handle);
+				glm::vec2* data = MakeForeign<glm::vec2>(vm, slot, class_slot);
+				memcpy(data, &val, sizeof(glm::vec2));
+				return data;
+			}
+
       /////////////////////////////////////////////////////////////////////////
       glm::vec2* make(WrenVM* vm, const glm::vec2 val = glm::vec2())
       {
-        if (handle == nullptr)
-        {
-          wrenGetVariable(vm, "Core/Vec2", "Vec2", 0);
-          handle = wrenGetSlotHandle(vm, 0);
-        }
-        wrenSetSlotHandle(vm, 1, handle);
-        glm::vec2* data = MakeForeign<glm::vec2>(vm, 0, 1);
-        memcpy(data, &val, sizeof(glm::vec2));
-        return data;
+				return makeAt(vm, 0, 1, val);
       }
 
       /////////////////////////////////////////////////////////////////////////
@@ -293,21 +300,27 @@ foreign class Vec3 {
         return data;
       }
       WrenHandle* handle = nullptr;
-      
-      /////////////////////////////////////////////////////////////////////////
-      glm::vec3* make(WrenVM* vm, const glm::vec3 val = glm::vec3())
-      {
-        if (handle == nullptr)
-        {
-          wrenGetVariable(vm, "Core/Vec3", "Vec3", 0);
-          handle = wrenGetSlotHandle(vm, 0);
-        }
-        wrenSetSlotHandle(vm, 1, handle);
-        glm::vec3* data = MakeForeign<glm::vec3>(vm, 0, 1);
-        memcpy(data, &val, sizeof(glm::vec3));
-        return data;
-      }
-      
+
+			/////////////////////////////////////////////////////////////////////////
+			glm::vec3* makeAt(WrenVM* vm, int slot, int class_slot, glm::vec3 val = glm::vec3())
+			{
+				if (handle == nullptr)
+				{
+					wrenGetVariable(vm, "Core/Vec3", "Vec3", class_slot);
+					handle = wrenGetSlotHandle(vm, class_slot);
+				}
+				wrenSetSlotHandle(vm, class_slot, handle);
+				glm::vec3* data = MakeForeign<glm::vec3>(vm, slot, class_slot);
+				memcpy(data, &val, sizeof(glm::vec3));
+				return data;
+			}
+
+			/////////////////////////////////////////////////////////////////////////
+			glm::vec3* make(WrenVM* vm, const glm::vec3 val = glm::vec3())
+			{
+				return makeAt(vm, 0, 1, val);
+			}
+
       /////////////////////////////////////////////////////////////////////////
       WrenForeignClassMethods Construct()
       {
@@ -473,19 +486,29 @@ foreign class Vec4 {
         return data;
       }
       WrenHandle* handle = nullptr;
-      glm::vec4* make(WrenVM* vm, const glm::vec4 val = glm::vec4())
-      {
-        if (handle == nullptr)
-        {
-          wrenGetVariable(vm, "Core/Vec4", "Vec4", 0);
-          handle = wrenGetSlotHandle(vm, 0);
-        }
-        wrenSetSlotHandle(vm, 1, handle);
-        glm::vec4* data = MakeForeign<glm::vec4>(vm, 0, 1);
-        memcpy(data, &val, sizeof(glm::vec4));
-        return data;
-      }
-      WrenForeignClassMethods Construct()
+
+			/////////////////////////////////////////////////////////////////////////
+			glm::vec4* makeAt(WrenVM* vm, int slot, int class_slot, glm::vec4 val = glm::vec4())
+			{
+				if (handle == nullptr)
+				{
+					wrenGetVariable(vm, "Core/Vec3", "Vec3", class_slot);
+					handle = wrenGetSlotHandle(vm, class_slot);
+				}
+				wrenSetSlotHandle(vm, class_slot, handle);
+				glm::vec4* data = MakeForeign<glm::vec4>(vm, slot, class_slot);
+				memcpy(data, &val, sizeof(glm::vec4));
+				return data;
+			}
+
+			/////////////////////////////////////////////////////////////////////////
+			glm::vec4* make(WrenVM* vm, const glm::vec4 val = glm::vec4())
+			{
+				return makeAt(vm, 0, 1, val);
+			}
+
+			/////////////////////////////////////////////////////////////////////////
+			WrenForeignClassMethods Construct()
       {
         return WrenForeignClassMethods{
           [](WrenVM* vm) {
@@ -934,9 +957,9 @@ foreign class Shader {
       WrenHandle* handle = nullptr;
      
       /////////////////////////////////////////////////////////////////////////
-      asset::ShaderHandle* make(
+      asset::VioletShaderHandle* make(
         WrenVM* vm, 
-        asset::ShaderHandle val = asset::ShaderHandle())
+        asset::VioletShaderHandle val = asset::VioletShaderHandle())
       {
         if (handle == nullptr)
         {
@@ -944,8 +967,8 @@ foreign class Shader {
           handle = wrenGetSlotHandle(vm, 0);
         }
         wrenSetSlotHandle(vm, 1, handle);
-        asset::ShaderHandle* data = MakeForeign<asset::ShaderHandle>(vm, 0, 1);
-        memcpy(data, &val, sizeof(asset::ShaderHandle));
+        asset::VioletShaderHandle* data = MakeForeign<asset::VioletShaderHandle>(vm, 0, 1);
+        memcpy(data, &val, sizeof(asset::VioletShaderHandle));
         return data;
       }
      
@@ -957,8 +980,8 @@ foreign class Shader {
           make(vm);
         },
           [](void* data) {
-          asset::ShaderHandle& handle = *((asset::ShaderHandle*)data);
-          handle.reset();
+          asset::VioletShaderHandle& handle = *((asset::VioletShaderHandle*)data);
+          handle = asset::VioletShaderHandle();
         }
         };
       }
@@ -972,23 +995,13 @@ foreign class Shader {
 					//memcpy((void*)str.c_str(), ch, strlen(ch));
 					String str = ch;
 					Name name(str);
-          asset::ShaderHandle& handle = *make(vm);
+          asset::VioletShaderHandle& handle = *make(vm);
           static uint32_t s_idx = 0u;
-          auto shader_01 = io::ShaderIO::load(name.getName());
-          auto shader_02 = io::ShaderIO::asAsset(shader_01);
-          auto shader = foundation::Memory::constructShared<asset::Shader>(
-            shader_02
-            );
-          auto shader_name = 
-            Name("__generated_shader_" + toString(s_idx++) + "__");
-          handle = 
-            asset::AssetManager::getInstance().createAsset<asset::Shader>(
-            shader_name, shader
-         );
+					handle = asset::ShaderManager::getInstance()->get(name.getName());
         };
         if (strcmp(signature, "setVariableFloat1(_,_)") == 0) 
           return [](WrenVM* vm) {
-          asset::ShaderHandle& handle = *GetForeign<asset::ShaderHandle>(vm);
+          asset::VioletShaderHandle& handle = *GetForeign<asset::VioletShaderHandle>(vm);
           handle->setShaderVariable(
             platform::ShaderVariable(
               Name(wrenGetSlotString(vm, 1)), 
@@ -998,7 +1011,7 @@ foreign class Shader {
         };
         if (strcmp(signature, "setVariableFloat2(_,_)") == 0) 
           return [](WrenVM* vm) {
-          asset::ShaderHandle& handle = *GetForeign<asset::ShaderHandle>(vm);
+          asset::VioletShaderHandle& handle = *GetForeign<asset::VioletShaderHandle>(vm);
           handle->setShaderVariable(
             platform::ShaderVariable(
               Name(wrenGetSlotString(vm, 1)), 
@@ -1008,7 +1021,7 @@ foreign class Shader {
         };
         if (strcmp(signature, "setVariableFloat3(_,_)") == 0) 
           return [](WrenVM* vm) {
-          asset::ShaderHandle& handle = *GetForeign<asset::ShaderHandle>(vm);
+          asset::VioletShaderHandle& handle = *GetForeign<asset::VioletShaderHandle>(vm);
           handle->setShaderVariable(
             platform::ShaderVariable(
               Name(wrenGetSlotString(vm, 1)), 
@@ -1018,7 +1031,7 @@ foreign class Shader {
         };
         if (strcmp(signature, "setVariableFloat4(_,_)") == 0) 
           return [](WrenVM* vm) {
-          asset::ShaderHandle& handle = *GetForeign<asset::ShaderHandle>(vm);
+          asset::VioletShaderHandle& handle = *GetForeign<asset::VioletShaderHandle>(vm);
           handle->setShaderVariable(
             platform::ShaderVariable(
               Name(wrenGetSlotString(vm, 1)),
@@ -1609,40 +1622,123 @@ foreign class Mesh {
     ///////////////////////////////////////////////////////////////////////////
     struct ScriptingComponentData
     {
+			ScriptingComponentData(entity::Entity entity)
+				: entity(entity)
+			{}
+
       entity::Entity entity;
-      WrenHandle* transform;
-      WrenHandle* camera;
-      WrenHandle* mesh_render;
-      WrenHandle* lod;
-      WrenHandle* rigid_body;
-      WrenHandle* wave_source;
-      WrenHandle* collider;
-      WrenHandle* light;
-      WrenHandle* mono_behaviour;
+      WrenHandle* transform      = nullptr;
+      WrenHandle* camera         = nullptr;
+      WrenHandle* mesh_render    = nullptr;
+      WrenHandle* lod            = nullptr;
+      WrenHandle* rigid_body     = nullptr;
+      WrenHandle* wave_source    = nullptr;
+      WrenHandle* collider       = nullptr;
+      WrenHandle* light          = nullptr;
+      WrenHandle* mono_behaviour = nullptr;
     };
+
+		void release(entity::Entity e)
+		{
+			if (g_transformSystem->hasComponent(e))     g_transformSystem->removeComponent(e);
+			if (g_cameraSystem->hasComponent(e))        g_cameraSystem->removeComponent(e);
+			if (g_meshRenderSystem->hasComponent(e))    g_meshRenderSystem->removeComponent(e);
+			if (g_lodSystem->hasComponent(e))           g_lodSystem->removeComponent(e);
+			if (g_rigidBodySystem->hasComponent(e))     g_rigidBodySystem->removeComponent(e);
+			if (g_waveSourceSystem->hasComponent(e))    g_waveSourceSystem->removeComponent(e);
+			if (g_colliderSystem->hasComponent(e))      g_colliderSystem->removeComponent(e);
+			if (g_lightSystem->hasComponent(e))         g_lightSystem->removeComponent(e);
+			if (g_monoBehaviourSystem->hasComponent(e)) g_monoBehaviourSystem->removeComponent(e);
+			//g_entitySystem->destroyEntity(e);
+		}
 
     ///////////////////////////////////////////////////////////////////////////
     struct ScriptingData
     {
-      ScriptingComponentData& getData(uint64_t id)
+      ScriptingComponentData& getData(entity::Entity id)
       {
-        auto it = entity_to_data.find(id);
-        if (it == entity_to_data.end())
+        auto it = entity_to_data_.find(id);
+        if (it == entity_to_data_.end())
         {
-          entity_to_data[id] = data.size();
-          data.push_back(ScriptingComponentData{});
-          return data.back();
+					if (!unused_data_entries_.empty())
+					{
+						uint32_t idx = unused_data_entries_.front();
+						unused_data_entries_.pop();
+
+						data_[idx] = ScriptingComponentData(id);
+						data_to_entity_[idx] = id;
+						entity_to_data_[id] = idx;
+						return data_[idx];
+					}
+					else
+					{
+						data_.push_back(ScriptingComponentData(id));
+						uint32_t idx = (uint32_t)data_.size() - 1u;
+						data_to_entity_[idx] = id;
+						entity_to_data_[id] = idx;
+						return data_[idx];
+					}
         }
-        else
-          return data[it->second];
+        return data_[it->second];
       }
 
+			void getAll(Vector<entity::Entity>& vec, entity::Entity e)
+			{
+				vec.push_back(e);
+				for (auto child : g_transformSystem->getChildren(e))
+					getAll(vec, child);
+			}
+
+			void free(WrenVM* vm, entity::Entity e)
+			{
+				Vector<entity::Entity> entities;
+				getAll(entities, e);
+
+				for (int i = (int)entities.size() - 1; i >= 0; --i)
+				{
+					entity::Entity entity = entities[i];
+					
+					// Destroy this entity.
+					release(entity);
+
+					// Release the scripting data.
+					const auto& it = entity_to_data_.find(entity);
+					if (it != entity_to_data_.end())
+					{
+						uint32_t idx = it->second;
+
+						{
+							// Free the resources.
+							auto& data = data_[idx];
+
+#define FREE(x) if (x) wrenReleaseHandle(vm, x), x = nullptr;
+							FREE(data.transform);
+							FREE(data.camera);
+							FREE(data.mesh_render);
+							FREE(data.lod);
+							FREE(data.rigid_body);
+							FREE(data.wave_source);
+							FREE(data.collider);
+							FREE(data.light);
+							FREE(data.mono_behaviour);
+#undef FREE
+						}
+
+						unused_data_entries_.push(idx);
+						data_to_entity_.erase(idx);
+						entity_to_data_.erase(entity);
+					}
+				}
+			}
+
     private:
-      Vector<ScriptingComponentData> data;
-      UnorderedMap<uint64_t, uint64_t> entity_to_data;
+			Vector<ScriptingComponentData> data_;
+			Map<entity::Entity, uint32_t> entity_to_data_;
+			Map<uint32_t, entity::Entity> data_to_entity_;
+			Queue<uint32_t> unused_data_entries_;
     };
 
-    ScriptingData g_scriptingData;
+    ScriptingData* g_scriptingData = nullptr;
 
     ///////////////////////////////////////////////////////////////////////////
     namespace GameObject
@@ -1660,6 +1756,7 @@ foreign class GameObject {
     construct new() {
       addComponent(Transform)
     }
+		foreign destroy()
 
     addComponent(component) { 
       var c = component.new()
@@ -1675,6 +1772,11 @@ foreign class GameObject {
 
     [component] { getComponent(component) }
 
+		foreign name
+		foreign name=(name)
+		foreign tags
+		foreign tags=(tags)
+
     transform { getComponent(Transform) }
     toString { "[%(id)]" }
     foreign id
@@ -1687,28 +1789,32 @@ foreign class GameObject {
       WrenHandle* handle = nullptr;
       
       /////////////////////////////////////////////////////////////////////////
-      entity::Entity* make(WrenVM* vm, entity::Entity val = {})
-      {
-        if (handle == nullptr)
-        {
-          wrenGetVariable(vm, "Core/GameObject", "GameObject", 0);
-          handle = wrenGetSlotHandle(vm, 0);
-        }
-        wrenSetSlotHandle(vm, 1, handle);
-        entity::Entity* data = MakeForeign<entity::Entity>(vm, 0, 1);
-        memcpy(data, &val, sizeof(entity::Entity));
-        return data;
-      }
+			entity::Entity* makeAt(WrenVM* vm, int slot, int class_slot, entity::Entity val = {})
+			{
+				if (handle == nullptr)
+				{
+					wrenGetVariable(vm, "Core/GameObject", "GameObject", class_slot);
+					handle = wrenGetSlotHandle(vm, class_slot);
+				}
+				wrenSetSlotHandle(vm, class_slot, handle);
+				entity::Entity* data = MakeForeign<entity::Entity>(vm, slot, class_slot);
+				memcpy(data, &val, sizeof(entity::Entity));
+				return data;
+			}
+			entity::Entity* make(WrenVM* vm, entity::Entity val = {})
+			{
+				return makeAt(vm, 0, 1, val);
+			}
       WrenForeignClassMethods Construct()
       {
         return WrenForeignClassMethods{
           [](WrenVM* vm) {
           entity::Entity& handle = *make(vm);
           handle = g_entitySystem->createEntity();
+					g_nameSystem->addComponent(handle);
         },
           [](void* data) {
           entity::Entity& handle = *((entity::Entity*)data);
-          g_entitySystem->destroyEntity(handle);
           handle = entity::Entity();
         }
         };
@@ -1717,13 +1823,74 @@ foreign class GameObject {
       /////////////////////////////////////////////////////////////////////////
       WrenForeignMethodFn Bind(const char* signature)
       {
-        if (strcmp(signature, "id") == 0) return [](WrenVM* vm) {
-          wrenSetSlotDouble(
-            vm, 
-            0, 
-            (double)*GetForeign<entity::Entity>(vm)
-          );
-        };
+				if (strcmp(signature, "id") == 0) return [](WrenVM* vm) {
+					wrenSetSlotDouble(
+						vm,
+						0,
+						(double)*GetForeign<entity::Entity>(vm)
+					);
+				};
+				if (strcmp(signature, "name") == 0) return [](WrenVM* vm) {
+					entity::Entity e = *GetForeign<entity::Entity>(vm);
+
+					if (!g_nameSystem->hasComponent(e))
+						g_nameSystem->addComponent(e);
+
+					String name = g_nameSystem->getName(e);
+					const size_t len = name.size() + 1;
+					const char* c_str = (const char*)WREN_ALLOC(len);
+					memcpy((char*)name.c_str(), c_str, len);
+					wrenSetSlotString(vm, 0, c_str);
+				};
+				if (strcmp(signature, "name=(_)") == 0) return [](WrenVM* vm) {
+					entity::Entity e = *GetForeign<entity::Entity>(vm);
+
+					if (!g_nameSystem->hasComponent(e))
+						g_nameSystem->addComponent(e);
+
+					String name = wrenGetSlotString(vm, 1);
+					g_nameSystem->setName(e, name);
+				};
+				if (strcmp(signature, "tags") == 0) return [](WrenVM* vm) {
+					entity::Entity e = *GetForeign<entity::Entity>(vm);
+
+					if (!g_nameSystem->hasComponent(e))
+						g_nameSystem->addComponent(e);
+
+					Vector<String> tags = g_nameSystem->getTags(e);
+
+					wrenSetSlotNewList(vm, 0);
+
+					for (String tag : tags)
+					{
+						const size_t len = tag.size() + 1;
+						const char* c_str = (const char*)WREN_ALLOC(len);
+						memcpy((char*)c_str, tag.c_str(), len);
+						wrenSetSlotString(vm, 1, c_str);
+						wrenInsertInList(vm, 0, -1, 1);
+					}
+				};
+				if (strcmp(signature, "tags=(_)") == 0) return [](WrenVM* vm) {
+					entity::Entity e = *GetForeign<entity::Entity>(vm);
+
+					if (!g_nameSystem->hasComponent(e))
+						g_nameSystem->addComponent(e);
+
+					Vector<String> tags((size_t)wrenGetListCount(vm, 1));
+
+					for (int i = 0; i < tags.size(); ++i)
+					{
+						wrenGetListElement(vm, 1, i, 2);
+						tags[i] = wrenGetSlotString(vm, 2);
+					}
+
+					g_nameSystem->setTags(e, tags);
+				};
+				if (strcmp(signature, "destroy()") == 0) return [](WrenVM* vm) {
+					entity::Entity e = *GetForeign<entity::Entity>(vm);
+					g_nameSystem->removeComponent(e);
+					g_scriptingData->free(vm, e);
+				};
         return nullptr;
       }
     }
@@ -1739,50 +1906,55 @@ foreign class GameObject {
 ///// Transform.wren //////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 foreign class Transform {
-    construct new() {
-    }
-    toString { "[%(gameObject.id): Transform]" }
+	construct new() {}
+	toString { "[%(gameObject.id): Transform]" }
 
-    foreign gameObject
+	foreign gameObject
 
-    foreign goAdd(gameObject)
-    foreign static goGet(gameObject)
-    foreign goRemove(gameObject)
+	foreign goAdd(gameObject)
+	foreign static goGet(gameObject)
+	foreign goRemove(gameObject)
 
-    moveLocal(movement) { localPosition = localPosition + movement }
-    moveWorld(movement) { worldPosition = worldPosition + movement }
-    scaleLocal(scale) { localScale = localScale * scale }
-    scaleWorld(scale) { worldScale = worldScale * scale }
-    rotateEulerLocal(euler) { localEuler = localEuler * euler }
-    rotateEulerWorld(euler) { worldEuler = worldEuler * euler }
-    
-    foreign parent
-    foreign parent=(parent)
+	moveLocal(movement) { localPosition = localPosition + movement }
+	moveWorld(movement) { worldPosition = worldPosition + movement }
+	scaleLocal(scale) { localScale = localScale * scale }
+	scaleWorld(scale) { worldScale = worldScale * scale }
+	rotateEulerLocal(euler) { localEuler = localEuler + euler }
+	rotateEulerWorld(euler) { worldEuler = worldEuler + euler }
+ 
+	foreign parent
+	foreign parent=(parent)
 
-    foreign worldPosition    
-    foreign worldPosition=(p)
-    foreign worldScale       
-    foreign worldScale=(s)   
-    foreign worldRotation
-    foreign worldRotation=(e)   
-    foreign worldEuler
-    foreign worldEuler=(e)   
-    
-    foreign localPosition    
-    foreign localPosition=(p)
-    foreign localScale       
-    foreign localScale=(s)   
-    foreign localRotation
-    foreign localRotation=(e)   
-    foreign localEuler       
-    foreign localEuler=(e)   
+	foreign worldPosition
+	foreign worldPosition=(p)
+	foreign worldScale
+	foreign worldScale=(s)
+	foreign worldRotation
+	foreign worldRotation=(e)
+	foreign worldEuler
+	foreign worldEuler=(e)
+	foreign worldForward
+	foreign worldRight
+	foreign worldUp
+ 
+	foreign localPosition
+	foreign localPosition=(p)
+	foreign localScale
+	foreign localScale=(s)
+	foreign localRotation
+	foreign localRotation=(e)
+	foreign localEuler
+	foreign localEuler=(e)
+	foreign localForward
+	foreign localRight
+	foreign localUp
 }
 )";
         char* data = (char*)WREN_ALLOC(str.size() + 1u);
         memcpy(data, str.data(), str.size() + 1u);
         return data;
       }
-  
+
       /////////////////////////////////////////////////////////////////////////
       WrenForeignClassMethods Construct()
       {
@@ -1812,7 +1984,7 @@ foreign class Transform {
         if (strcmp(signature, "goAdd(_)") == 0) return [](WrenVM* vm) {
           TransformHandle* handle = GetForeign<TransformHandle>(vm);
           entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
-          g_scriptingData.getData(e).transform = wrenGetSlotHandle(vm, 0);
+					g_scriptingData->getData(e).transform = wrenGetSlotHandle(vm, 0);
           handle->handle = g_transformSystem->addComponent(e);
           handle->entity = e;
         };
@@ -1820,7 +1992,7 @@ foreign class Transform {
           wrenSetSlotHandle(
             vm, 
             0, 
-            g_scriptingData.getData(
+            g_scriptingData->getData(
               *GetForeign<entity::Entity>(vm, 1)
             ).transform
           );
@@ -1830,9 +2002,9 @@ foreign class Transform {
           g_transformSystem->removeComponent(handle->handle.entity());
           wrenReleaseHandle(
             vm, 
-            g_scriptingData.getData(handle->handle.entity()).transform
+            g_scriptingData->getData(handle->handle.entity()).transform
           );
-          g_scriptingData.getData(handle->handle.entity()).transform = nullptr;
+          g_scriptingData->getData(handle->handle.entity()).transform = nullptr;
           handle->handle = components::TransformComponent();
           handle->entity = entity::Entity();
         };
@@ -1895,6 +2067,24 @@ foreign class Transform {
             *GetForeign<glm::vec3>(vm, 1)
           );
         };
+				if (strcmp(signature, "worldForward") == 0) return [](WrenVM* vm) {
+					Vec3::make(
+						vm,
+						GetForeign<TransformHandle>(vm)->handle.getWorldForward()
+					);
+				};
+				if (strcmp(signature, "worldRight") == 0) return [](WrenVM* vm) {
+					Vec3::make(
+						vm,
+						GetForeign<TransformHandle>(vm)->handle.getWorldRight()
+					);
+				};
+				if (strcmp(signature, "worldUp") == 0) return [](WrenVM* vm) {
+					Vec3::make(
+						vm,
+						GetForeign<TransformHandle>(vm)->handle.getWorldUp()
+					);
+				};
         if (strcmp(signature, "localPosition") == 0) return [](WrenVM* vm) {
           Vec3::make(
             vm, 
@@ -1943,6 +2133,24 @@ foreign class Transform {
             *GetForeign<glm::vec3>(vm, 1)
           );
         };
+				if (strcmp(signature, "localForward") == 0) return [](WrenVM* vm) {
+					Vec3::make(
+						vm,
+						GetForeign<TransformHandle>(vm)->handle.getLocalForward()
+					);
+				};
+				if (strcmp(signature, "localRight") == 0) return [](WrenVM* vm) {
+					Vec3::make(
+						vm,
+						GetForeign<TransformHandle>(vm)->handle.getLocalRight()
+					);
+				};
+				if (strcmp(signature, "localUp") == 0) return [](WrenVM* vm) {
+					Vec3::make(
+						vm,
+						GetForeign<TransformHandle>(vm)->handle.getLocalUp()
+					);
+				};
         return nullptr;
       }
     }
@@ -2014,14 +2222,14 @@ foreign class Camera {
           handle->handle = g_cameraSystem->addComponent(e);
           handle->entity = e;
           
-          g_scriptingData.getData(handle->handle.entity()).camera = 
+          g_scriptingData->getData(handle->handle.entity()).camera = 
             wrenGetSlotHandle(vm, 0);
         };
         if (strcmp(signature, "goGet(_)") == 0) return [](WrenVM* vm) {
           wrenSetSlotHandle(
             vm, 
             0, 
-            g_scriptingData.getData(
+            g_scriptingData->getData(
               *GetForeign<entity::Entity>(vm, 1)
             ).camera
           );
@@ -2030,9 +2238,9 @@ foreign class Camera {
           CameraHandle* handle = GetForeign<CameraHandle>(vm);
           /*Handle*/ wrenReleaseHandle(
             vm, 
-            g_scriptingData.getData(handle->handle.entity()).camera
+            g_scriptingData->getData(handle->handle.entity()).camera
           );
-          g_scriptingData.getData(handle->handle.entity()).camera = nullptr;
+          g_scriptingData->getData(handle->handle.entity()).camera = nullptr;
           g_cameraSystem->removeComponent(handle->handle.entity());
           handle->handle = components::CameraComponent();
           handle->entity = entity::Entity();
@@ -2096,7 +2304,7 @@ foreign class Camera {
             GetForeign<CameraHandle>(vm)->handle;
           
           Name name(wrenGetSlotString(vm, 1));
-          asset::ShaderHandle shader = *GetForeign<asset::ShaderHandle>(vm, 2);
+          asset::VioletShaderHandle shader = *GetForeign<asset::VioletShaderHandle>(vm, 2);
           Vector<platform::RenderTarget> inputs(wrenGetListCount(vm, 3));
           Vector<platform::RenderTarget> outputs(wrenGetListCount(vm, 4));
 
@@ -2223,14 +2431,14 @@ foreign class MeshRender {
           entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
           handle->handle = g_meshRenderSystem->addComponent(e);
           handle->entity = e;
-          g_scriptingData.getData(handle->handle.entity()).mesh_render = 
+          g_scriptingData->getData(handle->handle.entity()).mesh_render = 
             wrenGetSlotHandle(vm, 0);
         };
         if (strcmp(signature, "goGet(_)") == 0) return [](WrenVM* vm) {
           wrenSetSlotHandle(
             vm, 
             0, 
-            g_scriptingData.getData(
+            g_scriptingData->getData(
               *GetForeign<entity::Entity>(vm, 1)
             ).mesh_render
           );
@@ -2238,14 +2446,14 @@ foreign class MeshRender {
         if (strcmp(signature, "goRemove(_)") == 0) return [](WrenVM* vm) {
           MeshRenderHandle* handle = GetForeign<MeshRenderHandle>(vm);
           g_meshRenderSystem->removeComponent(handle->handle.entity());
-          handle->handle = components::MeshRenderComponent();
-          handle->entity = entity::Entity();
           wrenReleaseHandle(
             vm, 
-            g_scriptingData.getData(handle->handle.entity()).mesh_render
+            g_scriptingData->getData(handle->handle.entity()).mesh_render
           );
-          g_scriptingData.getData(handle->handle.entity()).mesh_render = 
+          g_scriptingData->getData(handle->handle.entity()).mesh_render = 
             nullptr;
+					handle->handle = components::MeshRenderComponent();
+					handle->entity = entity::Entity();
         };
         if (strcmp(signature, "attach(_)") == 0) return [](WrenVM* vm) {
           GetForeign<MeshRenderHandle>(vm)->handle.attachMesh(
@@ -2394,14 +2602,14 @@ foreign class Lod {
           entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
           handle->handle = g_lodSystem->addComponent(e);
           handle->entity = e;
-          g_scriptingData.getData(handle->handle.entity()).lod = 
+          g_scriptingData->getData(handle->handle.entity()).lod = 
             wrenGetSlotHandle(vm, 0);
         };
         if (strcmp(signature, "goGet(_)") == 0) return [](WrenVM* vm) {
           wrenSetSlotHandle(
             vm, 
             0, 
-            g_scriptingData.getData(
+            g_scriptingData->getData(
               *GetForeign<entity::Entity>(vm, 1)
             ).lod
           );
@@ -2409,13 +2617,13 @@ foreign class Lod {
         if (strcmp(signature, "goRemove(_)") == 0) return [](WrenVM* vm) {
           LODHandle* handle = GetForeign<LODHandle>(vm);
           g_lodSystem->removeComponent(handle->handle.entity());
-          handle->handle = components::LODComponent();
-          handle->entity = entity::Entity();
           wrenReleaseHandle(
             vm, 
-            g_scriptingData.getData(handle->handle.entity()).lod
+            g_scriptingData->getData(handle->handle.entity()).lod
           );
-          g_scriptingData.getData(handle->handle.entity()).lod = nullptr;
+          g_scriptingData->getData(handle->handle.entity()).lod = nullptr;
+					handle->handle = components::LODComponent();
+					handle->entity = entity::Entity();
         };
         if (strcmp(signature, "addLod(_,_)") == 0) return [](WrenVM* vm) {
           components::LOD lod;
@@ -2667,7 +2875,7 @@ foreign class WaveSource {
           entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
           handle->handle = g_waveSourceSystem->addComponent(e);
           handle->entity = e;
-          g_scriptingData.getData(
+          g_scriptingData->getData(
             handle->handle.entity()
           ).wave_source = wrenGetSlotHandle(vm, 0);
         };
@@ -2675,7 +2883,7 @@ foreign class WaveSource {
           wrenSetSlotHandle(
             vm, 
             0, 
-            g_scriptingData.getData(
+            g_scriptingData->getData(
               *GetForeign<entity::Entity>(vm, 1)
             ).wave_source
           );
@@ -2683,14 +2891,14 @@ foreign class WaveSource {
         if (strcmp(signature, "goRemove(_)") == 0) return [](WrenVM* vm) {
           WaveSourceHandle* handle = GetForeign<WaveSourceHandle>(vm);
           g_waveSourceSystem->removeComponent(handle->handle.entity());
-          handle->handle = components::WaveSourceComponent();
-          handle->entity = entity::Entity();
           wrenReleaseHandle(
             vm, 
-            g_scriptingData.getData(handle->handle.entity()).wave_source
+            g_scriptingData->getData(handle->handle.entity()).wave_source
           );
-          g_scriptingData.getData(handle->handle.entity()).wave_source = 
+          g_scriptingData->getData(handle->handle.entity()).wave_source = 
             nullptr;
+					handle->handle = components::WaveSourceComponent();
+					handle->entity = entity::Entity();
         };
         if (strcmp(signature, "buffer=(_)") == 0) return [](WrenVM* vm) {
           GetForeign<WaveSourceHandle>(vm)->handle.setBuffer(
@@ -2887,18 +3095,18 @@ foreign class Collider {
           entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
           handle->handle = g_colliderSystem->addComponent(e);
           handle->entity = e;
-          /*Handle*/ g_scriptingData.getData(handle->handle.entity()).collider = wrenGetSlotHandle(vm, 0);
+          /*Handle*/ g_scriptingData->getData(handle->handle.entity()).collider = wrenGetSlotHandle(vm, 0);
         };
         if (strcmp(signature, "goGet(_)") == 0) return [](WrenVM* vm) {
-          /*Handle*/ wrenSetSlotHandle(vm, 0, g_scriptingData.getData(*GetForeign<entity::Entity>(vm, 1)).collider);
+          /*Handle*/ wrenSetSlotHandle(vm, 0, g_scriptingData->getData(*GetForeign<entity::Entity>(vm, 1)).collider);
         };
         if (strcmp(signature, "goRemove(_)") == 0) return [](WrenVM* vm) {
-          ColliderHandle* handle = GetForeign<ColliderHandle>(vm);
-          g_colliderSystem->removeComponent(handle->handle.entity());
-          handle->handle = components::ColliderComponent();
-          handle->entity = entity::Entity();
-          /*Handle*/ wrenReleaseHandle(vm, g_scriptingData.getData(handle->handle.entity()).collider);
-          /*Handle*/ g_scriptingData.getData(handle->handle.entity()).collider = nullptr;
+					ColliderHandle* handle = GetForeign<ColliderHandle>(vm);
+					g_colliderSystem->removeComponent(handle->entity);
+					/*Handle*/ wrenReleaseHandle(vm, g_scriptingData->getData(handle->handle.entity()).collider);
+					/*Handle*/ g_scriptingData->getData(handle->handle.entity()).collider = nullptr;
+					handle->handle = components::ColliderComponent();
+					handle->entity = entity::Entity();
         };
         if (strcmp(signature, "makeBoxCollider()") == 0) return [](WrenVM* vm) {
           GetForeign<ColliderHandle>(vm)->handle.makeBoxCollider();
@@ -3010,18 +3218,18 @@ class ShadowTypes {
           entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
           handle->handle = g_lightSystem->addComponent(e);
           handle->entity = e;
-          /*Handle*/ g_scriptingData.getData(handle->handle.entity()).light = wrenGetSlotHandle(vm, 0);
+          /*Handle*/ g_scriptingData->getData(handle->handle.entity()).light = wrenGetSlotHandle(vm, 0);
         };
         if (strcmp(signature, "goGet(_)") == 0) return [](WrenVM* vm) {
-          /*Handle*/ wrenSetSlotHandle(vm, 0, g_scriptingData.getData(*GetForeign<entity::Entity>(vm, 1)).light);
+          /*Handle*/ wrenSetSlotHandle(vm, 0, g_scriptingData->getData(*GetForeign<entity::Entity>(vm, 1)).light);
         };
         if (strcmp(signature, "goRemove(_)") == 0) return [](WrenVM* vm) {
           LightHandle* handle = GetForeign<LightHandle>(vm);
           g_colliderSystem->removeComponent(handle->handle.entity());
-          handle->handle = components::BaseLightComponent();
-          handle->entity = entity::Entity();
-          /*Handle*/ wrenReleaseHandle(vm, g_scriptingData.getData(handle->handle.entity()).light);
-          /*Handle*/ g_scriptingData.getData(handle->handle.entity()).light = nullptr;
+          /*Handle*/ wrenReleaseHandle(vm, g_scriptingData->getData(handle->handle.entity()).light);
+          /*Handle*/ g_scriptingData->getData(handle->handle.entity()).light = nullptr;
+					handle->handle = components::BaseLightComponent();
+					handle->entity = entity::Entity();
         };
         if (strcmp(signature, "type") == 0) return [](WrenVM* vm) {
           uint32_t type;
@@ -3202,6 +3410,7 @@ class ShadowTypes {
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///// mono_behaviour.wren /////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+import "Core/Console" for Console
 
 class MonoBehaviour {
     construct new() {
@@ -3229,13 +3438,13 @@ class MonoBehaviour {
     update() {}
     fixedUpdate() {}
 
-    onCollisionEnter(other) {}
-    onCollisionStay(other) {}
-    onCollisionExit(other) {}
+    onCollisionEnter(other, normal) {}
+    onCollisionStay(other, normal)  {}
+    onCollisionExit(other, normal)  {}
 
-    onTriggerEnter(other) {}
-    onTriggerStay(other) {}
-    onTriggerExit(other) {}
+    onTriggerEnter(other, normal) {}
+    onTriggerStay(other, normal)  {}
+    onTriggerExit(other, normal)  {}
 
     foreign goAddPrivate(gameObject)
     foreign static goGet(gameObject)
@@ -3252,7 +3461,7 @@ class MonoBehaviour {
         if (strcmp(signature, "goAddPrivate(_)") == 0) return [](WrenVM* vm) {
           entity::Entity entity = *GetForeign<entity::Entity>(vm, 1);
           g_monoBehaviourSystem->addComponent(entity);
-          /*Handle*/ g_scriptingData.getData(entity).mono_behaviour = wrenGetSlotHandle(vm, 0);
+          /*Handle*/ g_scriptingData->getData(entity).mono_behaviour = wrenGetSlotHandle(vm, 0);
 
 
           g_monoBehaviourSystem->setObject          (entity, wrenGetSlotHandle (vm, 0));
@@ -3260,15 +3469,15 @@ class MonoBehaviour {
           g_monoBehaviourSystem->setDeinitialize    (entity, wrenMakeCallHandle(vm, "deinitialize()"));
           g_monoBehaviourSystem->setUpdate          (entity, wrenMakeCallHandle(vm, "update()"));
           g_monoBehaviourSystem->setFixedUpdate     (entity, wrenMakeCallHandle(vm, "fixedUpdate()"));
-          g_monoBehaviourSystem->setOnCollisionEnter(entity, wrenMakeCallHandle(vm, "onCollisionEnter(_)"));
-          g_monoBehaviourSystem->setOnCollisionEnter(entity, wrenMakeCallHandle(vm, "onCollisionStay(_)"));
-          g_monoBehaviourSystem->setOnCollisionExit (entity, wrenMakeCallHandle(vm, "onCollisionExit(_)"));
-          g_monoBehaviourSystem->setOnTriggerEnter  (entity, wrenMakeCallHandle(vm, "onTriggerEnter(_)"));
-          g_monoBehaviourSystem->setOnTriggerEnter  (entity, wrenMakeCallHandle(vm, "onTriggerStay(_)"));
-          g_monoBehaviourSystem->setOnTriggerExit   (entity, wrenMakeCallHandle(vm, "onTriggerExit(_)"));
+          g_monoBehaviourSystem->setOnCollisionEnter(entity, wrenMakeCallHandle(vm, "onCollisionEnter(_,_)"));
+					//g_monoBehaviourSystem->setOnCollisionStay (entity, wrenMakeCallHandle(vm, "onCollisionStay(_,_)"));
+          g_monoBehaviourSystem->setOnCollisionExit (entity, wrenMakeCallHandle(vm, "onCollisionExit(_,_)"));
+          g_monoBehaviourSystem->setOnTriggerEnter  (entity, wrenMakeCallHandle(vm, "onTriggerEnter(_,_)"));
+          //g_monoBehaviourSystem->setOnTriggerStay   (entity, wrenMakeCallHandle(vm, "onTriggerStay(_,_)"));
+          g_monoBehaviourSystem->setOnTriggerExit   (entity, wrenMakeCallHandle(vm, "onTriggerExit(_,_)"));
         };
         if (strcmp(signature, "goGet(_)") == 0) return [](WrenVM* vm) {
-          /*Handle*/ wrenSetSlotHandle(vm, 0, g_scriptingData.getData(*GetForeign<entity::Entity>(vm, 1)).mono_behaviour);
+          /*Handle*/ wrenSetSlotHandle(vm, 0, g_scriptingData->getData(*GetForeign<entity::Entity>(vm, 1)).mono_behaviour);
         };
         if (strcmp(signature, "goRemovePrivate(_)") == 0) return [](WrenVM* vm) {
           entity::Entity entity = *GetForeign<entity::Entity>(vm, 1);
@@ -3284,8 +3493,8 @@ class MonoBehaviour {
           FREE(OnTriggerEnter);
           FREE(OnTriggerExit);
 
-          /*Handle*/ wrenReleaseHandle(vm, g_scriptingData.getData(entity).mono_behaviour);
-          /*Handle*/ g_scriptingData.getData(entity).mono_behaviour = nullptr;
+          /*Handle*/ wrenReleaseHandle(vm, g_scriptingData->getData(entity).mono_behaviour);
+          /*Handle*/ g_scriptingData->getData(entity).mono_behaviour = nullptr;
         };
         return nullptr;
       }
@@ -3334,73 +3543,73 @@ class Graphics {
           wrenSetSlotDouble(vm, 0, (float)g_world->getRenderer()->getRenderScale());
         };
         if (strcmp(signature, "setDirectionalShaders(_,_,_)") == 0) return [](WrenVM* vm) {
-          const asset::ShaderHandle& generate = *GetForeign<asset::ShaderHandle>(vm, 1);
-          Vector<asset::ShaderHandle> modify(wrenGetListCount(vm, 2));
-          const asset::ShaderHandle& publish = *GetForeign<asset::ShaderHandle>(vm, 3);
+          const asset::VioletShaderHandle& generate = *GetForeign<asset::VioletShaderHandle>(vm, 1);
+          Vector<asset::VioletShaderHandle> modify(wrenGetListCount(vm, 2));
+          const asset::VioletShaderHandle& publish = *GetForeign<asset::VioletShaderHandle>(vm, 3);
           for (int i = 0; i < (int)modify.size(); ++i)
           {
             wrenGetListElement(vm, 2, i, 0);
-            modify[i] = *GetForeign<asset::ShaderHandle>(vm, 0);
+            modify[i] = *GetForeign<asset::VioletShaderHandle>(vm, 0);
           }
 
           g_lightSystem->setShadersDirectional(generate, modify, publish);
         };
         if (strcmp(signature, "setSpotLightShaders(_,_,_)") == 0) return [](WrenVM* vm) {
-          const asset::ShaderHandle& generate = *GetForeign<asset::ShaderHandle>(vm, 1);
-          Vector<asset::ShaderHandle> modify(wrenGetListCount(vm, 2));
-          const asset::ShaderHandle& publish = *GetForeign<asset::ShaderHandle>(vm, 3);
+          const asset::VioletShaderHandle& generate = *GetForeign<asset::VioletShaderHandle>(vm, 1);
+          Vector<asset::VioletShaderHandle> modify(wrenGetListCount(vm, 2));
+          const asset::VioletShaderHandle& publish = *GetForeign<asset::VioletShaderHandle>(vm, 3);
           for (int i = 0; i < (int)modify.size(); ++i)
           {
             wrenGetListElement(vm, 2, i, 0);
-            modify[i] = *GetForeign<asset::ShaderHandle>(vm, 1);
+            modify[i] = *GetForeign<asset::VioletShaderHandle>(vm, 1);
           }
 
           g_lightSystem->setShadersSpot(generate, modify, publish);
         };
         if (strcmp(signature, "setPointLightShaders(_,_,_)") == 0) return [](WrenVM* vm) {
-          const asset::ShaderHandle& generate = *GetForeign<asset::ShaderHandle>(vm, 1);
-          Vector<asset::ShaderHandle> modify(wrenGetListCount(vm, 2));
-          const asset::ShaderHandle& publish = *GetForeign<asset::ShaderHandle>(vm, 3);
+          const asset::VioletShaderHandle& generate = *GetForeign<asset::VioletShaderHandle>(vm, 1);
+          Vector<asset::VioletShaderHandle> modify(wrenGetListCount(vm, 2));
+          const asset::VioletShaderHandle& publish = *GetForeign<asset::VioletShaderHandle>(vm, 3);
           for (int i = 0; i < (int)modify.size(); ++i)
           {
             wrenGetListElement(vm, 2, i, 0);
-            modify[i] = *GetForeign<asset::ShaderHandle>(vm, 1);
+            modify[i] = *GetForeign<asset::VioletShaderHandle>(vm, 1);
           }
 
           g_lightSystem->setShadersPoint(generate, modify, publish);
         };
         if (strcmp(signature, "setCascadeShaders(_,_,_)") == 0) return [](WrenVM* vm) {
-          const asset::ShaderHandle& generate = *GetForeign<asset::ShaderHandle>(vm, 1);
-          Vector<asset::ShaderHandle> modify(wrenGetListCount(vm, 2));
-          const asset::ShaderHandle& publish = *GetForeign<asset::ShaderHandle>(vm, 3);
+          const asset::VioletShaderHandle& generate = *GetForeign<asset::VioletShaderHandle>(vm, 1);
+          Vector<asset::VioletShaderHandle> modify(wrenGetListCount(vm, 2));
+          const asset::VioletShaderHandle& publish = *GetForeign<asset::VioletShaderHandle>(vm, 3);
           for (int i = 0; i < (int)modify.size(); ++i)
           {
             wrenGetListElement(vm, 2, i, 0);
-            modify[i] = *GetForeign<asset::ShaderHandle>(vm, 1);
+            modify[i] = *GetForeign<asset::VioletShaderHandle>(vm, 1);
           }
 
           g_lightSystem->setShadersCascade(generate, modify, publish);
         };
         if (strcmp(signature, "setDirectionalShadersRSM(_,_,_)") == 0) return [](WrenVM* vm) {
-          const asset::ShaderHandle& generate = *GetForeign<asset::ShaderHandle>(vm, 1);
-          Vector<asset::ShaderHandle> modify(wrenGetListCount(vm, 2));
-          const asset::ShaderHandle& publish = *GetForeign<asset::ShaderHandle>(vm, 3);
+          const asset::VioletShaderHandle& generate = *GetForeign<asset::VioletShaderHandle>(vm, 1);
+          Vector<asset::VioletShaderHandle> modify(wrenGetListCount(vm, 2));
+          const asset::VioletShaderHandle& publish = *GetForeign<asset::VioletShaderHandle>(vm, 3);
           for (int i = 0; i < (int)modify.size(); ++i)
           {
             wrenGetListElement(vm, 2, i, 0);
-            modify[i] = *GetForeign<asset::ShaderHandle>(vm, 1);
+            modify[i] = *GetForeign<asset::VioletShaderHandle>(vm, 1);
           }
 
           g_lightSystem->setShadersDirectionalRSM(generate, modify, publish);
         };
         if (strcmp(signature, "setSpotLightShadersRSM(_,_,_)") == 0) return [](WrenVM* vm) {
-          const asset::ShaderHandle& generate = *GetForeign<asset::ShaderHandle>(vm, 1);
-          Vector<asset::ShaderHandle> modify(wrenGetListCount(vm, 2));
-          const asset::ShaderHandle& publish = *GetForeign<asset::ShaderHandle>(vm, 3);
+          const asset::VioletShaderHandle& generate = *GetForeign<asset::VioletShaderHandle>(vm, 1);
+          Vector<asset::VioletShaderHandle> modify(wrenGetListCount(vm, 2));
+          const asset::VioletShaderHandle& publish = *GetForeign<asset::VioletShaderHandle>(vm, 3);
           for (int i = 0; i < (int)modify.size(); ++i)
           {
             wrenGetListElement(vm, 2, i, 0);
-            modify[i] = *GetForeign<asset::ShaderHandle>(vm, 1);
+            modify[i] = *GetForeign<asset::VioletShaderHandle>(vm, 1);
           }
 
           g_lightSystem->setShadersSpotRSM(generate, modify, publish);
@@ -3471,7 +3680,7 @@ class PostProcess {
         };
         if (strcmp(signature, "addShaderPass(_,_,_,_)") == 0) return [](WrenVM* vm) {
           Name name(wrenGetSlotString(vm, 1));
-          asset::ShaderHandle shader = *GetForeign<asset::ShaderHandle>(vm, 2);
+          asset::VioletShaderHandle shader = *GetForeign<asset::VioletShaderHandle>(vm, 2);
           Vector<platform::RenderTarget> input(wrenGetListCount(vm, 3));
           Vector<platform::RenderTarget> output(wrenGetListCount(vm, 4));
           for (int i = 0; i < (int)input.size(); ++i)
@@ -3518,11 +3727,7 @@ class PostProcess {
           String output = wrenGetSlotString(vm, 2);
 
           platform::RenderTarget& rt_input = g_world->getPostProcessManager().getTarget(input);
-          asset::ShaderHandle shader = asset::AssetManager::getInstance().createAsset(Name(output + "_IrradianceConvolution"),
-            foundation::Memory::constructShared<asset::Shader>(
-              io::ShaderIO::asAsset(io::ShaderIO::load("resources/shaders/irradiance_convolution.fx"))
-              )
-          );
+					asset::VioletShaderHandle shader = asset::ShaderManager::getInstance()->get(Name("resources/shaders/irradiance_convolution.fx"));
 
           float as = (float)rt_input.getTexture()->getLayer(0u).getHeight() / (float)rt_input.getTexture()->getLayer(0u).getWidth();
 
@@ -3561,11 +3766,7 @@ class PostProcess {
           String output = wrenGetSlotString(vm, 2);
 
           platform::RenderTarget& rt_input = g_world->getPostProcessManager().getTarget(input);
-          asset::ShaderHandle shader = asset::AssetManager::getInstance().createAsset(Name(output + "_Hammerhead"),
-            foundation::Memory::constructShared<asset::Shader>(
-              io::ShaderIO::asAsset(io::ShaderIO::load("resources/shaders/hammerhead.fx"))
-              )
-          );
+					asset::VioletShaderHandle shader = asset::ShaderManager::getInstance()->get(Name("resources/shaders/hammerhead.fx"));
 
           float as = (float)rt_input.getTexture()->getLayer(0u).getHeight() / (float)rt_input.getTexture()->getLayer(0u).getWidth();
           VioletTexture violet_texture;
@@ -3996,11 +4197,11 @@ class Math {
         return nullptr;
       }
     }
-    namespace Time
-    {
-      char* Load()
-      {
-        String str = R"(
+		namespace Time
+		{
+			char* Load()
+			{
+				String str = R"(
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///// time.wren ///////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -4009,18 +4210,59 @@ class Time {
     foreign static deltaTime
 }
 )";
-        char* data = (char*)WREN_ALLOC(str.size() + 1u);
-        memcpy(data, str.data(), str.size() + 1u);
-        return data;
-      }
-      WrenForeignMethodFn Bind(const char* signature)
-      {
-        if (strcmp(signature, "deltaTime") == 0) return [](WrenVM* vm) {
-          wrenSetSlotDouble(vm, 0, g_world->getDeltaTime());
-        };
-        return nullptr;
-      }
-    }
+				char* data = (char*)WREN_ALLOC(str.size() + 1u);
+				memcpy(data, str.data(), str.size() + 1u);
+				return data;
+			}
+			WrenForeignMethodFn Bind(const char* signature)
+			{
+				if (strcmp(signature, "deltaTime") == 0) return [](WrenVM* vm) {
+					wrenSetSlotDouble(vm, 0, g_world->getDeltaTime());
+				};
+				return nullptr;
+			}
+		}
+		namespace Physics
+		{
+			char* Load()
+			{
+				String str = R"(
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///// physics.wren ////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+class Physics {
+    foreign static gravity
+    foreign static raycast(from, to)
+}
+)";
+				char* data = (char*)WREN_ALLOC(str.size() + 1u);
+				memcpy(data, str.data(), str.size() + 1u);
+				return data;
+			}
+			WrenForeignMethodFn Bind(const char* signature)
+			{
+				if (strcmp(signature, "gravity") == 0) return [](WrenVM* vm) {
+					Vec3::make(vm, glm::vec3(0.0f, 9.81f, 0.0f)); // TODO (Hilze): Make dynamic.
+				};
+				if (strcmp(signature, "castRay(_,_)") == 0) return [](WrenVM* vm) {
+					glm::vec3 from = *GetForeign<glm::vec3>(vm, 1);
+					glm::vec3 to   = *GetForeign<glm::vec3>(vm, 2);
+
+					Vector<entity::Entity> result = g_rigidBodySystem->GetPhysicsWorld().raycast(from, to);
+					wrenSetSlotNewList(vm, 0);
+
+					for (entity::Entity res : result)
+					{
+						GameObject::makeAt(vm, 1, 2, res);
+						wrenInsertInList(vm, 0, -1, 1);
+					}
+				};
+				if (strcmp(signature, "normal") == 0) return [](WrenVM* vm) {
+					Vec3::make(vm, glm::vec3(0.0f, 9.81f, 0.0f)); // TODO (Hilze): Make dynamic.
+				};
+				return nullptr;
+			}
+		}
     namespace File
     {
       char* Load()
@@ -4030,15 +4272,15 @@ class Time {
 ///// file.wren ///////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 foreign class File {
-    construct Open(file) {}
-    construct Open(file, writeMode) {}
-    foreign Close()
-    foreign Read()
-    foreign Write(text)
+    construct open(file) {}
+    construct open(file, writeMode) {}
+    foreign close()
+    foreign read()
+    foreign write(text)
 
-    static ReadOnly  { 1 }
-    static WriteOnly { 2 }
-    static ReadWrite { 3 }
+    static readOnly  { 1 }
+    static writeOnly { 2 }
+    static readWrite { 3 }
 }
 )";
         char* data = (char*)WREN_ALLOC(str.size() + 1u);
@@ -4088,13 +4330,13 @@ foreign class File {
       }
       WrenForeignMethodFn Bind(const char* signature)
       {
-        if (strcmp(signature, "Close()") == 0) return [](WrenVM* vm) {
+        if (strcmp(signature, "close()") == 0) return [](WrenVM* vm) {
           File* file = GetForeign<File>(vm);
           LMB_ASSERT(file->fp != nullptr, "WREN: File was already closed");
           FileSystem::fclose(file->fp);
           file->fp = nullptr;
         };
-        if (strcmp(signature, "Read()") == 0) return [](WrenVM* vm) {
+        if (strcmp(signature, "read()") == 0) return [](WrenVM* vm) {
           File* file = GetForeign<File>(vm);
           LMB_ASSERT(file->fp != nullptr, "WREN: No file was opened");
           fseek(file->fp, 0, SEEK_END);
@@ -4104,7 +4346,7 @@ foreign class File {
           fread((void*)buffer.data(), 1u, ret, file->fp);
           wrenSetSlotString(vm, 0, buffer.c_str());
         };
-        if (strcmp(signature, "Write(_)") == 0) return [](WrenVM* vm) {
+        if (strcmp(signature, "write(_)") == 0) return [](WrenVM* vm) {
           File* file = GetForeign<File>(vm);
           LMB_ASSERT(file->fp != nullptr, "WREN: No file was opened");
           String str = wrenGetSlotString(vm, 1);
@@ -4260,14 +4502,17 @@ foreign class NoiseInterpolation {
         return nullptr;
       }
     }
+
+		///////////////////////////////////////////////////////////////////////////
     namespace Assert
     {
+			/////////////////////////////////////////////////////////////////////////
       char* Load()
       {
         String str = R"(
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///// assert.wren /////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+///// assert.wren /////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 class Assert {
     foreign static isTrue(expr)
     foreign static isTrue(expr, msg)
@@ -4280,6 +4525,8 @@ class Assert {
         memcpy(data, str.data(), str.size() + 1u);
         return data;
       }
+
+			/////////////////////////////////////////////////////////////////////////
       WrenForeignMethodFn Bind(const char* signature)
       {
         if (strcmp(signature, "isTrue(_)") == 0) return [](WrenVM* vm) {
@@ -4301,106 +4548,195 @@ class Assert {
       }
     }
 
+		///////////////////////////////////////////////////////////////////////////
     bool hashEqual(const char* lhs, const char* rhs)
     {
       return (hash(lhs) == hash(rhs));
     }
 
-    WrenForeignClassMethods wrenBindForeignClass(WrenVM* vm, const char* module, const char* className)
+		///////////////////////////////////////////////////////////////////////////
+    WrenForeignClassMethods wrenBindForeignClass(
+			WrenVM* vm, 
+			const char* module, 
+			const char* className)
     {
       if (strstr(module, "Core") != 0)
       {
-        if (hashEqual(className, "Vec2"))       return Vec2::Construct();
-        if (hashEqual(className, "Vec3"))       return Vec3::Construct();
-        if (hashEqual(className, "Vec4"))       return Vec4::Construct();
-        if (hashEqual(className, "Quat"))       return Quat::Construct();
-        if (hashEqual(className, "Texture"))    return Texture::Construct();
-        if (hashEqual(className, "Shader"))     return Shader::Construct();
-        if (hashEqual(className, "Wave"))       return Wave::Construct();
-        if (hashEqual(className, "Mesh"))       return Mesh::Construct();
-        if (hashEqual(className, "GameObject")) return GameObject::Construct();
-        if (hashEqual(className, "Transform"))  return Transform::Construct();
-        if (hashEqual(className, "Camera"))     return Camera::Construct();
-        if (hashEqual(className, "MeshRender")) return MeshRender::Construct();
-        if (hashEqual(className, "Lod"))        return LOD::Construct();
-        if (hashEqual(className, "RigidBody"))  return RigidBody::Construct();
-        if (hashEqual(className, "WaveSource")) return WaveSource::Construct();
-        if (hashEqual(className, "Collider"))   return Collider::Construct();
-        if (hashEqual(className, "Light"))      return Light::Construct();
-        if (hashEqual(className, "File"))       return File::Construct();
-        if (hashEqual(className, "Noise"))      return Noise::Construct();
+        if (hashEqual(className, "Vec2"))     
+					return Vec2::Construct();
+        if (hashEqual(className, "Vec3"))     
+					return Vec3::Construct();
+        if (hashEqual(className, "Vec4"))     
+					return Vec4::Construct();
+        if (hashEqual(className, "Quat"))      
+					return Quat::Construct();
+        if (hashEqual(className, "Texture"))   
+					return Texture::Construct();
+        if (hashEqual(className, "Shader"))    
+					return Shader::Construct();
+        if (hashEqual(className, "Wave"))      
+					return Wave::Construct();
+        if (hashEqual(className, "Mesh"))      
+					return Mesh::Construct();
+        if (hashEqual(className, "GameObject")) 
+					return GameObject::Construct();
+        if (hashEqual(className, "Transform")) 
+					return Transform::Construct();
+        if (hashEqual(className, "Camera"))    
+					return Camera::Construct();
+        if (hashEqual(className, "MeshRender")) 
+					return MeshRender::Construct();
+        if (hashEqual(className, "Lod"))       
+					return LOD::Construct();
+        if (hashEqual(className, "RigidBody"))
+					return RigidBody::Construct();
+        if (hashEqual(className, "WaveSource")) 
+					return WaveSource::Construct();
+        if (hashEqual(className, "Collider"))  
+					return Collider::Construct();
+        if (hashEqual(className, "Light"))     
+					return Light::Construct();
+				if (hashEqual(className, "File"))    
+					return File::Construct();
+        if (hashEqual(className, "Noise"))  
+					return Noise::Construct();
       }
 
       return WrenForeignClassMethods{};
     }
 
-    WrenForeignMethodFn wrenBindForeignMethod(WrenVM* vm, const char* module, const char* className, bool isStatic, const char* signature)
+		///////////////////////////////////////////////////////////////////////////
+    WrenForeignMethodFn wrenBindForeignMethod(
+			WrenVM* vm, 
+			const char* module, 
+			const char* className, 
+			bool isStatic, 
+			const char* signature)
     {
       if (strstr(module, "Core") != 0)
       {
-        if (hashEqual(className, "Console"))     return Console::Bind(signature);
-        if (hashEqual(className, "Vec2"))        return Vec2::Bind(signature);
-        if (hashEqual(className, "Vec3"))        return Vec3::Bind(signature);
-        if (hashEqual(className, "Vec4"))        return Vec4::Bind(signature);
-        if (hashEqual(className, "Quat"))        return Quat::Bind(signature);
-        if (hashEqual(className, "Texture"))     return Texture::Bind(signature);
-        if (hashEqual(className, "Shader"))      return Shader::Bind(signature);
-        if (hashEqual(className, "Wave"))        return Wave::Bind(signature);
-        if (hashEqual(className, "Mesh"))        return Mesh::Bind(signature);
-        if (hashEqual(className, "GameObject"))  return GameObject::Bind(signature);
-        if (hashEqual(className, "Transform"))   return Transform::Bind(signature);
-        if (hashEqual(className, "Camera"))      return Camera::Bind(signature);
-        if (hashEqual(className, "MeshRender"))  return MeshRender::Bind(signature);
-        if (hashEqual(className, "Lod"))         return LOD::Bind(signature);
-        if (hashEqual(className, "RigidBody"))   return RigidBody::Bind(signature);
-        if (hashEqual(className, "WaveSource"))  return WaveSource::Bind(signature);
-        if (hashEqual(className, "Collider"))    return Collider::Bind(signature);
-        if (hashEqual(className, "Light"))       return Light::Bind(signature);
-        if (hashEqual(className, "MonoBehaviour")) return MonoBehaviour::Bind(signature);
-        if (hashEqual(className, "Graphics"))    return Graphics::Bind(signature);
-        if (hashEqual(className, "PostProcess")) return PostProcess::Bind(signature);
-        if (hashEqual(className, "Input"))       return Input::Bind(signature);
-        if (hashEqual(className, "Math"))        return Math::Bind(signature);
-        if (hashEqual(className, "Time"))        return Time::Bind(signature);
-        if (hashEqual(className, "File"))        return File::Bind(signature);
-        if (hashEqual(className, "Noise"))       return Noise::Bind(signature);
-        if (hashEqual(className, "Assert"))      return Assert::Bind(signature);
+        if (hashEqual(className, "Console"))
+					return Console::Bind(signature);
+        if (hashEqual(className, "Vec2")) 
+					return Vec2::Bind(signature);
+        if (hashEqual(className, "Vec3"))    
+					return Vec3::Bind(signature);
+        if (hashEqual(className, "Vec4"))     
+					return Vec4::Bind(signature);
+        if (hashEqual(className, "Quat"))      
+					return Quat::Bind(signature);
+        if (hashEqual(className, "Texture"))   
+					return Texture::Bind(signature);
+        if (hashEqual(className, "Shader"))      
+					return Shader::Bind(signature);
+        if (hashEqual(className, "Wave"))        
+					return Wave::Bind(signature);
+        if (hashEqual(className, "Mesh"))        
+					return Mesh::Bind(signature);
+        if (hashEqual(className, "GameObject"))  
+					return GameObject::Bind(signature);
+        if (hashEqual(className, "Transform"))  
+					return Transform::Bind(signature);
+        if (hashEqual(className, "Camera"))     
+					return Camera::Bind(signature);
+        if (hashEqual(className, "MeshRender"))  
+					return MeshRender::Bind(signature);
+        if (hashEqual(className, "Lod"))         
+					return LOD::Bind(signature);
+        if (hashEqual(className, "RigidBody"))   
+					return RigidBody::Bind(signature);
+        if (hashEqual(className, "WaveSource"))  
+					return WaveSource::Bind(signature);
+        if (hashEqual(className, "Collider"))   
+					return Collider::Bind(signature);
+        if (hashEqual(className, "Light"))      
+					return Light::Bind(signature);
+        if (hashEqual(className, "MonoBehaviour")) 
+					return MonoBehaviour::Bind(signature);
+        if (hashEqual(className, "Graphics"))     
+					return Graphics::Bind(signature);
+        if (hashEqual(className, "PostProcess"))  
+					return PostProcess::Bind(signature);
+        if (hashEqual(className, "Input"))       
+					return Input::Bind(signature);
+        if (hashEqual(className, "Math"))        
+					return Math::Bind(signature);
+				if (hashEqual(className, "Time"))        
+					return Time::Bind(signature);
+				if (hashEqual(className, "Physics"))   
+					return Physics::Bind(signature);
+        if (hashEqual(className, "File"))         
+					return File::Bind(signature);
+        if (hashEqual(className, "Noise"))      
+					return Noise::Bind(signature);
+        if (hashEqual(className, "Assert"))      
+					return Assert::Bind(signature);
       }
 
       return nullptr;
     }
 
+		///////////////////////////////////////////////////////////////////////////
     char* wrenLoadModule(WrenVM* vm, const char* name_cstr)
     {
       if (strstr(name_cstr, "Core") != 0)
       {
-        if (hashEqual(name_cstr + 5u, "Console"))     return Console::Load();
-        if (hashEqual(name_cstr + 5u, "Vec2"))        return Vec2::Load();
-        if (hashEqual(name_cstr + 5u, "Vec3"))        return Vec3::Load();
-        if (hashEqual(name_cstr + 5u, "Vec4"))        return Vec4::Load();
-        if (hashEqual(name_cstr + 5u, "Quat"))        return Quat::Load();
-        if (hashEqual(name_cstr + 5u, "Texture"))     return Texture::Load();
-        if (hashEqual(name_cstr + 5u, "Shader"))      return Shader::Load();
-        if (hashEqual(name_cstr + 5u, "Wave"))        return Wave::Load();
-        if (hashEqual(name_cstr + 5u, "Mesh"))        return Mesh::Load();
-        if (hashEqual(name_cstr + 5u, "GameObject"))  return GameObject::Load();
-        if (hashEqual(name_cstr + 5u, "Transform"))   return Transform::Load();
-        if (hashEqual(name_cstr + 5u, "Camera"))      return Camera::Load();
-        if (hashEqual(name_cstr + 5u, "MeshRender"))  return MeshRender::Load();
-        if (hashEqual(name_cstr + 5u, "Lod"))         return LOD::Load();
-        if (hashEqual(name_cstr + 5u, "RigidBody"))   return RigidBody::Load();
-        if (hashEqual(name_cstr + 5u, "WaveSource"))  return WaveSource::Load();
-        if (hashEqual(name_cstr + 5u, "Collider"))    return Collider::Load();
-        if (hashEqual(name_cstr + 5u, "Light"))       return Light::Load();
-        if (hashEqual(name_cstr + 5u, "MonoBehaviour")) return MonoBehaviour::Load();
-        if (hashEqual(name_cstr + 5u, "Graphics"))    return Graphics::Load();
-        if (hashEqual(name_cstr + 5u, "PostProcess")) return PostProcess::Load();
-        if (hashEqual(name_cstr + 5u, "Input"))       return Input::Load();
-        if (hashEqual(name_cstr + 5u, "Math"))        return Math::Load();
-        if (hashEqual(name_cstr + 5u, "Time"))        return Time::Load();
-        if (hashEqual(name_cstr + 5u, "File"))        return File::Load();
-        if (hashEqual(name_cstr + 5u, "Noise"))       return Noise::Load();
-        if (hashEqual(name_cstr + 5u, "Assert"))      return Assert::Load();
+        if (hashEqual(name_cstr + 5u, "Console"))     
+					return Console::Load();
+        if (hashEqual(name_cstr + 5u, "Vec2"))        
+					return Vec2::Load();
+        if (hashEqual(name_cstr + 5u, "Vec3"))        
+					return Vec3::Load();
+        if (hashEqual(name_cstr + 5u, "Vec4"))        
+					return Vec4::Load();
+        if (hashEqual(name_cstr + 5u, "Quat"))        
+					return Quat::Load();
+        if (hashEqual(name_cstr + 5u, "Texture"))      
+					return Texture::Load();
+        if (hashEqual(name_cstr + 5u, "Shader"))       
+					return Shader::Load();
+        if (hashEqual(name_cstr + 5u, "Wave"))        
+					return Wave::Load();
+        if (hashEqual(name_cstr + 5u, "Mesh"))        
+					return Mesh::Load();
+        if (hashEqual(name_cstr + 5u, "GameObject"))   
+					return GameObject::Load();
+        if (hashEqual(name_cstr + 5u, "Transform"))   
+					return Transform::Load();
+        if (hashEqual(name_cstr + 5u, "Camera"))      
+					return Camera::Load();
+        if (hashEqual(name_cstr + 5u, "MeshRender"))  
+					return MeshRender::Load();
+        if (hashEqual(name_cstr + 5u, "Lod"))         
+					return LOD::Load();
+        if (hashEqual(name_cstr + 5u, "RigidBody"))    
+					return RigidBody::Load();
+        if (hashEqual(name_cstr + 5u, "WaveSource"))  
+					return WaveSource::Load();
+        if (hashEqual(name_cstr + 5u, "Collider"))     
+					return Collider::Load();
+        if (hashEqual(name_cstr + 5u, "Light"))        
+					return Light::Load();
+        if (hashEqual(name_cstr + 5u, "MonoBehaviour"))
+					return MonoBehaviour::Load();
+        if (hashEqual(name_cstr + 5u, "Graphics"))     
+					return Graphics::Load();
+        if (hashEqual(name_cstr + 5u, "PostProcess")) 
+					return PostProcess::Load();
+        if (hashEqual(name_cstr + 5u, "Input"))        
+					return Input::Load();
+        if (hashEqual(name_cstr + 5u, "Math"))       
+					return Math::Load();
+				if (hashEqual(name_cstr + 5u, "Time"))        
+					return Time::Load();
+				if (hashEqual(name_cstr + 5u, "Physics"))     
+					return Physics::Load();
+        if (hashEqual(name_cstr + 5u, "File"))        
+					return File::Load();
+        if (hashEqual(name_cstr + 5u, "Noise"))      
+					return Noise::Load();
+        if (hashEqual(name_cstr + 5u, "Assert"))    
+					return Assert::Load();
       }
       else
       {
@@ -4413,6 +4749,7 @@ class Assert {
       return nullptr;
     };
 
+		///////////////////////////////////////////////////////////////////////////
     extern void WrenBind(void* config)
     {
       WrenConfiguration* configuration = (WrenConfiguration*)config;
@@ -4422,22 +4759,86 @@ class Assert {
 
     }
 
+		///////////////////////////////////////////////////////////////////////////
     extern void WrenSetWorld(world::IWorld* world)
     {
+			g_scriptingData = foundation::Memory::construct<ScriptingData>();
       g_world               = world;
-      g_entitySystem        = world->getScene().getSystem<entity::EntitySystem>().get();
-      g_transformSystem     = world->getScene().getSystem<components::TransformSystem>().get();
-      g_cameraSystem        = world->getScene().getSystem<components::CameraSystem>().get();
-      g_lightSystem         = world->getScene().getSystem<components::LightSystem>().get();
-      g_meshRenderSystem    = world->getScene().getSystem<components::MeshRenderSystem>().get();
-      g_rigidBodySystem     = world->getScene().getSystem<components::RigidBodySystem>().get();
-      g_waveSourceSystem    = world->getScene().getSystem<components::WaveSourceSystem>().get();
-      g_colliderSystem      = world->getScene().getSystem<components::ColliderSystem>().get();
-      g_monoBehaviourSystem = world->getScene().getSystem<components::MonoBehaviourSystem>().get();
+      g_entitySystem        =
+				world->getScene().getSystem<entity::EntitySystem>().get();
+			g_nameSystem          =
+				world->getScene().getSystem<components::NameSystem>().get();
+      g_transformSystem     = 
+				world->getScene().getSystem<components::TransformSystem>().get();
+      g_cameraSystem        = 
+				world->getScene().getSystem<components::CameraSystem>().get();
+			g_lodSystem           = 
+				world->getScene().getSystem<components::LODSystem>().get();
+      g_lightSystem         = 
+				world->getScene().getSystem<components::LightSystem>().get();
+      g_meshRenderSystem    = 
+				world->getScene().getSystem<components::MeshRenderSystem>().get();
+      g_rigidBodySystem     =
+				world->getScene().getSystem<components::RigidBodySystem>().get();
+      g_waveSourceSystem    = 
+				world->getScene().getSystem<components::WaveSourceSystem>().get();
+      g_colliderSystem      =
+				world->getScene().getSystem<components::ColliderSystem>().get();
+      g_monoBehaviourSystem = 
+				world->getScene().getSystem<components::MonoBehaviourSystem>().get();
     }
 
+		///////////////////////////////////////////////////////////////////////////
+		extern void WrenHandleValue(WrenVM* vm, const ScriptValue& value, int slot)
+		{
+			switch (value.getType())
+			{
+			case ScriptValue::kBoolean:
+				wrenSetSlotBool(vm, slot, value.getBool()); break;
+			case ScriptValue::kInt8:
+				wrenSetSlotDouble(vm, slot, (double)value.getInt8()); break;
+			case ScriptValue::kUint8:
+				wrenSetSlotDouble(vm, slot, (double)value.getUint8()); break;
+			case ScriptValue::kInt16:
+				wrenSetSlotDouble(vm, slot, (double)value.getInt16()); break;
+			case ScriptValue::kUint16:
+				wrenSetSlotDouble(vm, slot, (double)value.getUint16()); break;
+			case ScriptValue::kInt32:
+				wrenSetSlotDouble(vm, slot, (double)value.getInt32()); break;
+			case ScriptValue::kUint32:
+				wrenSetSlotDouble(vm, slot, (double)value.getUint32()); break;
+			case ScriptValue::kInt64:
+				wrenSetSlotDouble(vm, slot, (double)value.getInt64()); break;
+			case ScriptValue::kUint64:
+				wrenSetSlotDouble(vm, slot, (double)value.getUint64()); break;
+			case ScriptValue::kFloat:
+				wrenSetSlotDouble(vm, slot, (double)value.getFloat()); break;
+			case ScriptValue::kDouble:
+				wrenSetSlotDouble(vm, slot, value.getDouble()); break;
+			case ScriptValue::kVec2:    
+				Vec2::makeAt(vm, slot, slot + 1, (glm::vec2)value.getVec2()); break;
+			case ScriptValue::kVec3:    
+				Vec3::makeAt(vm, slot, slot + 1, (glm::vec3)value.getVec3()); break;
+			case ScriptValue::kVec4:
+				Vec4::makeAt(vm, slot, slot + 1, (glm::vec4)value.getVec4()); break;
+			case ScriptValue::kEntity:
+				GameObject::makeAt(vm, slot, slot + 1, value.getEntity()); break;
+			case ScriptValue::kString:
+			{
+				size_t len = value.getString().size() + 1;
+				const char* c_str = (const char*)WREN_ALLOC(len);
+				memcpy((char*)c_str, value.getString().c_str(), len);
+				wrenSetSlotString(vm, slot, c_str);
+				break;
+			}
+			default: case ScriptValue::kNull: wrenSetSlotNull(vm, slot); break;
+			}
+		}
+
+		///////////////////////////////////////////////////////////////////////////
     extern void WrenRelease(WrenVM* vm)
     {
+			foundation::Memory::destruct(g_scriptingData);
       wrenReleaseHandle(vm, Vec2::handle);
       wrenReleaseHandle(vm, Vec3::handle);
       wrenReleaseHandle(vm, Vec4::handle);
@@ -4460,7 +4861,9 @@ class Assert {
       
       g_world            = nullptr;
       g_entitySystem     = nullptr;
+			g_nameSystem       = nullptr;
       g_transformSystem  = nullptr;
+			g_lodSystem        = nullptr;
       g_cameraSystem     = nullptr;
       g_lightSystem      = nullptr;
       g_meshRenderSystem = nullptr;

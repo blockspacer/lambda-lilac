@@ -57,6 +57,13 @@ namespace lambda
           ClampMode::kWrap
         );
       }
+			static SamplerState AnisotrophicWrap()
+			{
+				return SamplerState(
+					SampleMode::kAnisotropic,
+					ClampMode::kWrap
+				);
+			}
 
       static SamplerState PointClamp()
       {
@@ -72,6 +79,13 @@ namespace lambda
           ClampMode::kClamp
         );
       }
+			static SamplerState AnisotrophicClamp()
+			{
+				return SamplerState(
+					SampleMode::kAnisotropic,
+					ClampMode::kClamp
+				);
+			}
 
       static SamplerState PointBorder()
       {
@@ -80,13 +94,20 @@ namespace lambda
           ClampMode::kBorder
         );
       }
-      static SamplerState LinearBorder()
-      {
-        return SamplerState(
-          SampleMode::kLinear,
-          ClampMode::kBorder
-        );
-      }
+			static SamplerState LinearBorder()
+			{
+				return SamplerState(
+					SampleMode::kLinear,
+					ClampMode::kBorder
+				);
+			}
+			static SamplerState AnisotrophicBorder()
+			{
+				return SamplerState(
+					SampleMode::kAnisotropic,
+					ClampMode::kBorder
+				);
+			}
       
       inline SampleMode getSampleMode() const { return sample_mode_; }
       inline ClampMode getClampMode() const { return clamp_mode_; }

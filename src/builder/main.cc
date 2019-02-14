@@ -3,6 +3,7 @@
 #include <utils/file_system.h>
 #include <compilers/texture_compiler.h>
 #include <compilers/wave_compiler.h>
+#include <compilers/shader_compiler.h>
 #include <thread>
 
 enum class Type : uint32_t
@@ -209,6 +210,8 @@ void SendMessage()
 
 
 
+
+
 class TimeStampManager
 {
 public:
@@ -342,7 +345,11 @@ private:
   lambda::Vector<uint64_t>       time_stamps_;
 };
 
-void removeFile(const lambda::String& file, lambda::VioletTextureCompiler texture_compiler, lambda::VioletWaveCompiler wave_compiler)
+void removeFile(
+	const lambda::String& file, 
+	lambda::VioletTextureCompiler texture_compiler, 
+	lambda::VioletWaveCompiler wave_compiler,
+	lambda::VioletShaderCompiler shader_compiler)
 {
   lambda::String extension = lambda::FileSystem::GetExtension(file);
   if (extension == "png" || extension == "jpg" || extension == "jpeg" || extension == "hdr")
@@ -350,13 +357,16 @@ void removeFile(const lambda::String& file, lambda::VioletTextureCompiler textur
     texture_compiler.RemoveTexture(texture_compiler.GetHash(file));
     lambda::foundation::Info("[TEX] " + file + " removed!\n");
   }
-  else if (extension == "wav")
-  {
-    wave_compiler.RemoveWave(wave_compiler.GetHash(file));
-    lambda::foundation::Info("[WAV] " + file + " removed!\n");
-  }
-  else if (extension == "fx")
-    Warning("[SHA] " + file + " removed!\n");
+	else if (extension == "wav")
+	{
+		wave_compiler.RemoveWave(wave_compiler.GetHash(file));
+		lambda::foundation::Info("[WAV] " + file + " removed!\n");
+	}
+	else if (extension == "fx")
+	{
+		shader_compiler.RemoveShader(shader_compiler.GetHash(file));
+		lambda::foundation::Info("[SHA] " + file + " removed!\n");
+	}
   else if (extension == "as")
     Warning("[AS-] " + file + " removed!\n");
   else if (extension == "wren")
@@ -373,7 +383,11 @@ void removeFile(const lambda::String& file, lambda::VioletTextureCompiler textur
     Error("[---] " + file + " removed!\n");
 }
 
-void updateFile(const lambda::String& file, lambda::VioletTextureCompiler texture_compiler, lambda::VioletWaveCompiler wave_compiler)
+void updateFile(
+	const lambda::String& file, 
+	lambda::VioletTextureCompiler texture_compiler, 
+	lambda::VioletWaveCompiler wave_compiler,
+	lambda::VioletShaderCompiler shader_compiler)
 {
   lambda::String extension = lambda::FileSystem::GetExtension(file);
   if (extension == "png" || extension == "jpg" || extension == "jpeg" || extension == "hdr")
@@ -389,22 +403,34 @@ void updateFile(const lambda::String& file, lambda::VioletTextureCompiler textur
     texture_compiler.Save();
     lambda::foundation::Info("\tSaved!\n");
   }
-  else if (extension == "wav")
-  {
-    lambda::foundation::Info("[WAV] " + file + "\n");
-    wave_compiler.RemoveWave(wave_compiler.GetHash(file));
-    lambda::foundation::Info("\tCompiling...\n");
+	else if (extension == "wav")
+	{
+		lambda::foundation::Info("[WAV] " + file + "\n");
+		wave_compiler.RemoveWave(wave_compiler.GetHash(file));
+		lambda::foundation::Info("\tCompiling...\n");
 
-    lambda::WaveCompileInfo compile_info{};
-    compile_info.file = file;
-    wave_compiler.Compile(compile_info);
-    lambda::foundation::Info("\tCompiled!\n");
+		lambda::WaveCompileInfo compile_info{};
+		compile_info.file = file;
+		wave_compiler.Compile(compile_info);
+		lambda::foundation::Info("\tCompiled!\n");
 
-    wave_compiler.Save();
-    lambda::foundation::Info("\tSaved!\n");
-  }
-  else if (extension == "fx")
-    Warning("[SHA] " + file + " changed!\n");
+		wave_compiler.Save();
+		lambda::foundation::Info("\tSaved!\n");
+	}
+	else if (extension == "fx")
+	{
+		lambda::foundation::Info("[SHA] " + file + "\n");
+		shader_compiler.RemoveShader(shader_compiler.GetHash(file));
+		lambda::foundation::Info("\tCompiling...\n");
+
+		lambda::ShaderCompileInfo compile_info{};
+		compile_info.file = file;
+		shader_compiler.Compile(compile_info);
+		lambda::foundation::Info("\tCompiled!\n");
+
+		shader_compiler.Save();
+		lambda::foundation::Info("\tSaved!\n");
+	}
   else if (extension == "as")
     Warning("[AS-] " + file + " changed!\n");
   else if (extension == "chai")
@@ -430,7 +456,8 @@ int main(int argc, char** argv)
   lambda::FileSystem::SetBaseDir(argv[1]);
   TimeStampManager time_stamp_manager;
   lambda::VioletTextureCompiler texture_compiler;
-  lambda::VioletWaveCompiler wave_compiler;
+	lambda::VioletWaveCompiler wave_compiler;
+	lambda::VioletShaderCompiler shader_compiler;
 
   while (true)
   {
@@ -457,7 +484,7 @@ int main(int argc, char** argv)
 
       // Update the file.
       if (time_stamp_manager.hasFileChanged(file))
-        updateFile(file, texture_compiler, wave_compiler);
+        updateFile(file, texture_compiler, wave_compiler, shader_compiler);
 
       time_stamp_manager.updateTimeStap(file);
     }
@@ -466,7 +493,7 @@ int main(int argc, char** argv)
     for (const lambda::String& file : previous_files)
     {
       time_stamp_manager.removeFile(file);
-      removeFile(file, texture_compiler, wave_compiler);
+      removeFile(file, texture_compiler, wave_compiler, shader_compiler);
     }
 
     // Sleep if we should.

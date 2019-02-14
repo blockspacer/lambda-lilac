@@ -53,6 +53,7 @@ namespace lambda
       btDefaultMotionState* motion_state = nullptr;
       btRigidBody*          rigid_body = nullptr;
       bool                  is_trigger = false;
+			bool                  valid = true;
 
       entity::Entity entity;
     };
@@ -69,7 +70,8 @@ namespace lambda
       void removeComponent(const entity::Entity& entity);
       virtual void initialize(world::IWorld& world) override;
       virtual void deinitialize() override;
-      virtual ~ColliderSystem() override {};
+			virtual void collectGarbage() override;
+			virtual ~ColliderSystem() override {};
       void make(const entity::Entity& entity, btCollisionShape* shape);
       void makeBox(const entity::Entity& entity);
       void makeSphere(const entity::Entity& entity);
@@ -82,8 +84,11 @@ namespace lambda
 
     private:
       Vector<ColliderData> data_;
-      Map<uint64_t, uint32_t> entity_to_data_;
-      Map<uint32_t, uint64_t> data_to_entity_;
+			Map<entity::Entity, uint32_t> entity_to_data_;
+			Map<uint32_t, entity::Entity> data_to_entity_;
+			Set<entity::Entity> marked_for_delete_;
+			Queue<uint32_t> unused_data_entries_;
+
       Map<size_t, Map<uint64_t, btTriangleIndexVertexArray*>> mesh_colliders_;
 
       foundation::SharedPointer<TransformSystem> transform_system_;

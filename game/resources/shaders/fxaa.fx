@@ -1,4 +1,4 @@
-#include "resources/shaders/common.fx"
+#include "common.fx"
 
 cbuffer cbPostProcess
 {

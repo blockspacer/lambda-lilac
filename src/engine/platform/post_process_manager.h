@@ -22,7 +22,7 @@ namespace lambda
       {
         uint16_t priority : 15u;
         bool     enabled  : 1u;
-        asset::ShaderHandle shader;
+        asset::VioletShaderHandle shader;
       };
     
       /////////////////////////////////////////////////////////////////////////

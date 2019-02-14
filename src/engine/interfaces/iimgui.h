@@ -29,7 +29,7 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     struct ImGUICommandList
     {
-      asset::ShaderHandle shader;
+      asset::VioletShaderHandle shader;
       asset::MeshHandle mesh;
       Vector<ImGUICommand> commands;
       glm::mat4 projection;

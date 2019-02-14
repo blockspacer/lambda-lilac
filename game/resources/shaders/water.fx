@@ -1,4 +1,4 @@
-#include "resources/shaders/common.fx"
+#include "common.fx"
 
 struct VSOutput
 {
@@ -14,7 +14,7 @@ VSOutput VS(uint id: SV_VertexID)
   return vOut;
 }
 
-cbuffer ConstantBuffer : register(b0)
+cbuffer CBUFFER
 {
   float total_time;
   float water_height;

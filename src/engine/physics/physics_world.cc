@@ -5,11 +5,92 @@
 #include "systems/transform_system.h"
 #include "systems/rigid_body_system.h"
 #include "systems/entity_system.h"
+#include "systems/mono_behaviour_system.h"
 
 namespace lambda
 {
   namespace physics
   {
+		components::MonoBehaviourSystem* g_monoBehaviourSystem;
+
+		///////////////////////////////////////////////////////////////////////////
+		void ContactStarted(btPersistentManifold*const& manifold)
+		{
+			const auto* body0 = manifold->getBody0();
+			const auto* body1 = manifold->getBody1();
+
+			const auto& bt_normal = 
+				(manifold->getNumContacts() <= 0) ? btVector3(0.0f, 0.0f, 0.0f) : 
+				manifold->getContactPoint(0).m_normalWorldOnB;
+			const glm::vec3& normal =
+				glm::vec3(bt_normal.x(), bt_normal.y(), bt_normal.z());
+
+			const entity::Entity lhs = body0->getUserIndex();
+			const entity::Entity rhs = body1->getUserIndex();
+
+			bool is_trigger = 
+				(body0->getCollisionFlags() & 
+					btCollisionObject::CF_NO_CONTACT_RESPONSE +
+				body1->getCollisionFlags() & 
+					btCollisionObject::CF_NO_CONTACT_RESPONSE) != 0 ? true : false;
+
+			if (is_trigger)
+				g_monoBehaviourSystem->onTriggerEnter(lhs, rhs, normal);
+			else
+				g_monoBehaviourSystem->onCollisionEnter(lhs, rhs, normal);
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		void ContactEnded(btPersistentManifold*const& manifold)
+		{
+			const auto* body0 = manifold->getBody0();
+			const auto* body1 = manifold->getBody1();
+
+			const auto& bt_normal = 
+				(manifold->getNumContacts() <= 0) ? btVector3(0.0f, 0.0f, 0.0f) : 
+				manifold->getContactPoint(0).m_normalWorldOnB;
+			const glm::vec3& normal = 
+				glm::vec3(bt_normal.x(), bt_normal.y(), bt_normal.z());
+
+			const entity::Entity lhs = body0->getUserIndex();
+			const entity::Entity rhs = body1->getUserIndex();
+
+			bool is_trigger =
+				(body0->getCollisionFlags() &
+					btCollisionObject::CF_NO_CONTACT_RESPONSE +
+					body1->getCollisionFlags() &
+					btCollisionObject::CF_NO_CONTACT_RESPONSE) != 0 ? true : false;
+
+			if (is_trigger)
+				g_monoBehaviourSystem->onTriggerExit(lhs, rhs, normal);
+			else
+				g_monoBehaviourSystem->onCollisionExit(lhs, rhs, normal);
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		bool ContactProcessed(btManifoldPoint& cp, void* body0, void* body1)
+		{
+			const auto* _body0 = (btCollisionObject*)body0;
+			const auto* _body1 = (btCollisionObject*)body1;
+
+			const auto& bt_normal = cp.m_normalWorldOnB;
+			const glm::vec3& normal =
+				glm::vec3(bt_normal.x(), bt_normal.y(), bt_normal.z());
+
+			const entity::Entity lhs = _body0->getUserIndex();
+			const entity::Entity rhs = _body1->getUserIndex();
+
+			bool is_trigger =
+				(_body0->getCollisionFlags() &
+					btCollisionObject::CF_NO_CONTACT_RESPONSE +
+					_body1->getCollisionFlags() &
+					btCollisionObject::CF_NO_CONTACT_RESPONSE) != 0 ? true : false;
+
+			//Scripting::ScriptBinding::get()->ContactProcessed(lhs, rhs, normal, is_trigger);
+			return false;
+		}
+
+
     ///////////////////////////////////////////////////////////////////////////
     struct PersonalRayCallback : public btCollisionWorld::RayResultCallback
     {
@@ -46,18 +127,21 @@ namespace lambda
       platform::DebugRenderer* debug_renderer, 
       foundation::SharedPointer<entity::EntitySystem> entity_system, 
       foundation::SharedPointer<components::TransformSystem> transform_system,
-      foundation::SharedPointer<components::RigidBodySystem> rigid_body_system)
+      foundation::SharedPointer<components::RigidBodySystem> rigid_body_system,
+			foundation::SharedPointer<components::MonoBehaviourSystem> mono_behaviour_system)
     {
       physic_visualizer_.initialize(debug_renderer);
       entity_system_ = entity_system;
       transform_system_ = transform_system;
       rigid_body_system_ = rigid_body_system;
+			g_monoBehaviourSystem = mono_behaviour_system.get();
       initialize();
     }
 
     ///////////////////////////////////////////////////////////////////////////
     void PhysicsWorld::deinitialize()
     {
+			g_monoBehaviourSystem = nullptr;
       destroy();
     }
 
@@ -116,14 +200,24 @@ namespace lambda
             std::isnan(pos.y) || 
             std::isnan(pos.z)))
           {
-            transform.setOrigin(btVector3(pos.x, pos.y, pos.z));
+						const btVector3 bt_pos(pos.x, pos.y, pos.z);
+						if (transform.getOrigin() != bt_pos)
+						{
+							transform.setOrigin(bt_pos);
+							object->activate();
+						}
           }
           if (false == (std::isnan(rot.x) || 
             std::isnan(rot.y) || 
             std::isnan(rot.z) || 
             std::isnan(rot.w)))
           {
-            transform.setRotation(btQuaternion(rot.x, rot.y, rot.z, rot.w));
+						const btQuaternion bt_rot(rot.x, rot.y, rot.z, rot.w);
+						if (transform.getRotation() != bt_rot)
+						{
+							transform.setRotation(bt_rot);
+							object->activate();
+						}
           }
           object->setWorldTransform(transform);
 
@@ -291,15 +385,15 @@ namespace lambda
       dynamics_world_->setDebugDrawer(&physic_visualizer_);
 
 //#define RWSDEBUG // TODO (Hilze): Remove this!
-#if defined(DEBUG) || defined(RWSDEBUG)
+#if (defined(_DEBUG) || defined(DEBUG)) && false
       physic_visualizer_.setDebugMode(btIDebugDraw::DBG_DrawWireframe);
 #endif
 
       // TODO (Hilze): Add Physics callbacks. 
       // Might require a rewrite of the scripting ecs.
-      //gContactStartedCallback   = ContactStarted;
-      //gContactEndedCallback     = ContactEnded;
-      //gContactProcessedCallback = ContactProcessed;
+      gContactStartedCallback   = ContactStarted;
+      gContactEndedCallback     = ContactEnded;
+      gContactProcessedCallback = ContactProcessed;
     }
 
     ///////////////////////////////////////////////////////////////////////////

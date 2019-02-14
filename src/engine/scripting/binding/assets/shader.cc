@@ -15,7 +15,7 @@ namespace lambda
       {
         Map<uint64_t, int16_t> g_ref_counts;
         UnorderedMap<String, uint64_t> g_shader_ids;
-        Vector<asset::ShaderHandle> g_shaders;
+        Vector<asset::VioletShaderHandle> g_shaders;
 
         uint64_t Load(const String& file_path)
         {
@@ -26,12 +26,7 @@ namespace lambda
             {
               String name = "__script_generated_shader_" + toString(g_shaders.size()) + "__";
               g_shader_ids.insert(eastl::make_pair(name, g_shaders.size()));
-              g_shaders.push_back(
-                asset::AssetManager::getInstance().createAsset(
-                  name,
-                  foundation::Memory::constructShared<asset::Shader>(io::ShaderIO::asAsset(io::ShaderIO::load(file_path.c_str())))
-                )
-              );
+							g_shaders.push_back(asset::ShaderManager::getInstance()->get(Name(name)));
             }
 
             //return g_shader_ids.at(file_path);
@@ -77,11 +72,11 @@ namespace lambda
           if (it->second <= 0)
           {
             g_ref_counts.erase(it);
-            g_shaders[id] = asset::ShaderHandle();
+            g_shaders[id] = asset::VioletShaderHandle();
           }
         }
 
-        asset::ShaderHandle Get(const uint64_t& id)
+        asset::VioletShaderHandle Get(const uint64_t& id)
         {
           return g_shaders[id];
         }

@@ -1,4 +1,6 @@
-#include "resources/shaders/common.fx"
+#ifndef __VSM_PUBLISH__
+#define __VSM_PUBLISH__
+#include "common.fx"
 
 float linearStep(float min, float max, float val)
 {
@@ -31,3 +33,4 @@ float calcShadow(float3 moments, float compare, float light_far)
   return min(max(p, p_max), 1.0f);// * when_gt(moments.z, compare - OFFSET);
 #endif
 }
+#endif // __VSM_PUBLISH__

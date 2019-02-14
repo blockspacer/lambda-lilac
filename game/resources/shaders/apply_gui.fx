@@ -1,4 +1,4 @@
-#include "resources/shaders/common.fx"
+#include "common.fx"
 
 struct VSInput
 {
@@ -26,5 +26,5 @@ Texture2D    tex_gui    : register(t1);
 float4 PS(VSOutput pIn) : SV_TARGET0
 {
   float4 gui = tex_gui.Sample(SamLinearClamp, pIn.tex);
-  return lerp(tex_albedo.Sample(SamLinearClamp, pIn.tex), gui, gui.a);
+  return lerp(Sample(tex_albedo, SamLinearClamp, pIn.tex), gui, gui.a);
 }

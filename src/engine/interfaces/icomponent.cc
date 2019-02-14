@@ -7,7 +7,7 @@ namespace lambda
   {
     ///////////////////////////////////////////////////////////////////////////
     IComponent::IComponent(const entity::Entity& entity) 
-      : entity_(entity)
+	      : entity_(entity)
     {
     }
 

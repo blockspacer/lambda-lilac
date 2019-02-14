@@ -1,4 +1,4 @@
-#include "resources/shaders/common.fx"
+#include "common.fx"
 
 struct VSOutput
 {
@@ -11,18 +11,6 @@ cbuffer cbPostProcess
   float roughness;
 };
 
-static const float2 invAtan = float2(0.1591, 0.3183);
-float2 SampleSphericalMap(float3 v)
-{
-  float2 uv = float2(atan2(v.z, v.x), -asin(v.y));
-  return uv * invAtan + 0.5f;
-}
-float3 SampleSphericalMap(float2 uv)
-{
-  float2 thetaphi = ((uv * 2.0f) - 1.0f) * float2(3.1415926535897932384626433832795f, 1.5707963267948966192313216916398f);
-  return float3(cos(thetaphi.y) * cos(thetaphi.x), -sin(thetaphi.y), cos(thetaphi.y) * sin(thetaphi.x));
-}
-
 VSOutput VS(uint id: SV_VertexID)
 {
   VSOutput vOut;
@@ -32,7 +20,6 @@ VSOutput VS(uint id: SV_VertexID)
 }
 
 Texture2D tex_hammerhead : register(t0);
-static const float PI = 3.14159265359f;
 static const uint SAMPLE_COUNT = 512u;
 
 float RadicalInverse_VdC(uint bits)
@@ -54,7 +41,7 @@ float3 ImportanceSampleGGX(float2 Xi, float3 N, float roughness)
 {
   float a = roughness * roughness;
 
-  float phi = 2.0f * PI * Xi.x;
+  float phi = TAU * Xi.x;
   float cosTheta = sqrt((1.0f - Xi.y) / (1.0f + (a * a - 1.0f) * Xi.y));
   float sinTheta = sqrt(1.0f - cosTheta * cosTheta);
 

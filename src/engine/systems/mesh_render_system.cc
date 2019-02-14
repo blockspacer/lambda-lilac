@@ -354,8 +354,6 @@ namespace lambda
     }
     void MeshRenderSystem::onRender()
     {
-			//while (!dynamic_renderables_.empty())
-			//	makeStatic(dynamic_renderables_.back());
     }
 
     void MeshRenderSystem::createRenderList(utilities::Culler& culler, const utilities::Frustum & frustum)
@@ -371,13 +369,9 @@ namespace lambda
         utilities::Renderable* renderable = (utilities::Renderable*)node->data;
         // TODO (Hilze): Implement.
         if (renderable->albedo_texture && renderable->albedo_texture->getLayer(0u).containsAlpha())
-        {
           alpha.push_back(renderable);
-        }
         else
-        {
           opaque.push_back(renderable);
-        }
       }
 
       for (utilities::LinkedNode* node = dynamics->next; node != nullptr; node = node->next)
@@ -479,14 +473,24 @@ namespace lambda
     }
     MeshRenderComponent MeshRenderSystem::addComponent(const entity::Entity& entity)
     {
-      if (transform_system_->hasComponent(entity) == false)
-      {
-        transform_system_->addComponent(entity);
-      }
+			require(transform_system_.get(), entity);
 
-      data_.push_back(MeshRenderData(entity));
-      data_to_entity_[(uint32_t)data_.size() - 1u] = entity;
-      entity_to_data_[entity] = (uint32_t)data_.size() - 1u;
+			if (!unused_data_entries_.empty())
+			{
+				uint32_t idx = unused_data_entries_.front();
+				unused_data_entries_.pop();
+
+				data_[idx] = MeshRenderData(entity);
+				data_to_entity_[idx] = entity;
+				entity_to_data_[entity] = idx;
+			}
+			else
+			{
+				data_.push_back(MeshRenderData(entity));
+				uint32_t idx = (uint32_t)data_.size() - 1u;
+				data_to_entity_[idx] = entity;
+				entity_to_data_[entity] = idx;
+			}
       
       dynamic_renderables_.push_back(entity);
 
@@ -502,21 +506,39 @@ namespace lambda
     }
     void MeshRenderSystem::removeComponent(const entity::Entity& entity)
     {
-      const auto& it = entity_to_data_.find(entity);
-      if (it != entity_to_data_.end())
-      {
-        uint32_t id = it->second;
-
-        for (auto i = data_to_entity_.find(id); i != data_to_entity_.end(); i++)
-        {
-          entity_to_data_.at(i->second)--;
-        }
-
-        data_.erase(data_.begin() + id);
-        entity_to_data_.erase(it);
-        data_to_entity_.erase(id);
-      }
+			marked_for_delete_.insert(entity);
     }
+		void MeshRenderSystem::collectGarbage()
+		{
+			if (!marked_for_delete_.empty())
+			{
+				for (entity::Entity entity : marked_for_delete_)
+				{
+					const auto& it = entity_to_data_.find(entity);
+					if (it != entity_to_data_.end())
+					{
+						auto dit = eastl::find(dynamic_renderables_.begin(), dynamic_renderables_.end(), entity);
+						if (dit != dynamic_renderables_.end())
+							dynamic_renderables_.erase(dit);
+						auto sit = eastl::find_if(
+							static_renderables_.begin(), static_renderables_.end(),
+							[&entity](const utilities::Renderable* x) { return x->entity == entity; });
+						if (sit != static_renderables_.end())
+						{
+							foundation::Memory::destruct(*sit);
+							static_renderables_.erase(sit);
+						}
+
+						uint32_t idx = it->second;
+						unused_data_entries_.push(idx);
+						data_to_entity_.erase(idx);
+						entity_to_data_.erase(entity);
+						data_[idx].valid = false;
+					}
+				}
+				marked_for_delete_.clear();
+			}
+		}
 		String MeshRenderSystem::profilerInfo() const
 		{
 			return "Dynamics: " + toString(dynamic_renderables_.size()) + "\nStatics: " + toString(static_renderables_.size());
@@ -524,12 +546,14 @@ namespace lambda
     MeshRenderData& MeshRenderSystem::lookUpData(const entity::Entity& entity)
     {
       assert(entity_to_data_.find(entity) != entity_to_data_.end());
-      return data_.at(entity_to_data_.at(entity));
+			assert(data_.at(entity_to_data_.at(entity)).valid);
+			return data_.at(entity_to_data_.at(entity));
     }
     const MeshRenderData& MeshRenderSystem::lookUpData(const entity::Entity& entity) const
     {
       assert(entity_to_data_.find(entity) != entity_to_data_.end());
-      return data_.at(entity_to_data_.at(entity));
+			assert(data_.at(entity_to_data_.at(entity)).valid);
+			return data_.at(entity_to_data_.at(entity));
     }
     MeshRenderComponent::MeshRenderComponent(const entity::Entity& entity, MeshRenderSystem* system) :
       IComponent(entity), system_(system)
@@ -631,6 +655,7 @@ namespace lambda
       visible                    = other.visible;
       cast_shadows               = other.cast_shadows;
       entity                     = other.entity;
+			valid                      = other.valid;
     }
     MeshRenderData & MeshRenderData::operator=(const MeshRenderData & other)
     {
@@ -644,6 +669,7 @@ namespace lambda
       visible                    = other.visible;
       cast_shadows               = other.cast_shadows;
       entity                     = other.entity;
+			valid                      = other.valid;
 
       return *this;
     }

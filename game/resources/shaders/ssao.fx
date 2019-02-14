@@ -1,4 +1,4 @@
-#include "resources/shaders/common.fx"
+#include "common.fx"
 
 cbuffer cbPostProcess
 {
@@ -11,7 +11,7 @@ cbuffer cbPostProcess
   float sample_radius = 0.0025f;
 };
 
-float3 kernels[64] = {
+static const float3 kernels[64] = {
   float3(-0.0315447f, -0.0232464f, 0.0238357f),
   float3(0.00785198f, -0.0673455f, 0.00563663f),
   float3(0.0185005f, 0.0448534f, 0.0197856f),
@@ -137,7 +137,7 @@ float4 PS(VSOutput pIn) : SV_Target0
       offset.x = 1.0f - offset.x;
 
       // get sample depth:
-      float sampleDepth = Sample(tex_depth, sam_linear, offset.xy).r;
+      float sampleDepth = Sample(tex_depth, SamLinearClamp, offset.xy).r;
 
       return abs(sampleDepth - z) * 100.0f;
 

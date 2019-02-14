@@ -11,6 +11,7 @@ namespace lambda
     
     static String FullFilePath(const String& file);
     static String MakeRelative(const String& file);
+		static String RemoveName(const String& file);
 
     static FILE* fopen(const String& file, const String& mode = "rb");
     static void fclose(FILE* file);

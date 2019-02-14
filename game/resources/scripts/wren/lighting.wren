@@ -23,6 +23,7 @@ import "Core/Math" for Math
 import "Core/Time" for Time
 
 import "Core/PostProcess" for PostProcess
+import "resources/scripts/wren/ini" for Ini
 
 class Lighting {
   construct new() {
@@ -38,7 +39,6 @@ class Lighting {
 
   createSun() {
     //--------------------SUN-FRONT--------------------
-
     // Create all required things.
     PostProcess.addRenderTarget("sun_front_rt1", 512.0  / 4.0, 512.0  / 4.0, TextureFormat.R32G32B32A32)
     PostProcess.addRenderTarget("sun_front_rt2", 1024.0 / 4.0, 1024.0 / 4.0, TextureFormat.R32G32B32A32)
@@ -116,13 +116,15 @@ class Lighting {
   createReflectiveShadowMap() {
     _rsm = GameObject.new()
 
+    var size = Ini.new("resources/settings.ini")["Lighting", "ShadowMapSize"]    
+
     var trans_rsm = _rsm.getComponent(Transform)
     trans_rsm.worldRotation = Math.lookRotation(Vec3.new(0.0, 1.0, 1.0).normalized, Vec3.new(0.0, 1.0, 0.0))
 
-    PostProcess.addRenderTarget("rsm_shad", 2048.0, 2048.0, TextureFormat.R16G16B16A16)
-    PostProcess.addRenderTarget("rsm_posi", 2048.0, 2048.0, TextureFormat.R16G16B16A16)
-    PostProcess.addRenderTarget("rsm_norm", 2048.0, 2048.0, TextureFormat.R8G8B8A8)
-    PostProcess.addRenderTarget("rsm_flux", 2048.0, 2048.0, TextureFormat.R16G16B16A16)
+    PostProcess.addRenderTarget("rsm_shad", size, size, TextureFormat.R16G16B16A16)
+    //PostProcess.addRenderTarget("rsm_posi", size, size, TextureFormat.R16G16B16A16)
+    //PostProcess.addRenderTarget("rsm_norm", size, size, TextureFormat.R8G8B8A8)
+    //PostProcess.addRenderTarget("rsm_flux", size, size, TextureFormat.R16G16B16A16)
 
     // Add a RSM light.
     var light_rsm = _rsm.addComponent(Light)

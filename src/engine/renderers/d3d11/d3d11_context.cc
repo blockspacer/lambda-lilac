@@ -354,7 +354,7 @@ namespace lambda
         textures_[i] = nullptr;
       }
       mesh_ = asset::MeshHandle();
-      shader_ = asset::ShaderHandle();
+      shader_ = asset::VioletShaderHandle();
       
       asset::AssetManager::getInstance().destroyAllGPUAssets();
       asset_manager_ = D3D11AssetManager();
@@ -533,44 +533,7 @@ namespace lambda
           )
       );
 
-      String bc_fs = R"(
-struct VSOutput
-{
-  float4 position : SV_POSITION0;
-  float2 tex      : TEX_COORD;
-};
-
-VSOutput VS(uint id: SV_VertexID)
-{
-  VSOutput vOut;
-  vOut.tex      = float2((id << 1)& 2, id& 2);
-	vOut.position = float4(vOut.tex * float2(2, -2) + float2(-1, 1), 0, 1);
-  return vOut;
-}
-
-cbuffer cbDynamicResolution
-{
-  float dynamic_resolution_scale;
-};
-
-Texture2D tex_to_screen : register(t0);
-SamplerState sam_point  : register(s0);
-
-float4 PS(VSOutput pIn) : SV_TARGET0
-{
-    return tex_to_screen.Sample(sam_point, pIn.tex * dynamic_resolution_scale);
-}
-)";
-      Vector<char> bc_fs_vec(bc_fs.begin(), bc_fs.end());
-
-      full_screen_quad_.shader = 
-        asset::AssetManager::getInstance().createAsset<asset::Shader>(
-          Name("__full_screen_quad_shader__"),
-          foundation::Memory::constructShared<asset::Shader>(
-            Name("__full_screen_quad_shader__"),
-            bc_fs_vec
-          )
-      );
+			full_screen_quad_.shader = asset::ShaderManager::getInstance()->get(Name("resources/shaders/full_screen_quad.fx"));
     }
     void D3D11Context::deinitialize()
     {
@@ -702,7 +665,7 @@ float4 PS(VSOutput pIn) : SV_TARGET0
       setRasterizerState(platform::RasterizerState::SolidFront());
 
       setMesh(asset::MeshHandle());
-      setShader(asset::ShaderHandle());
+      setShader(asset::VioletShaderHandle());
       setSubMesh(0);
       for (unsigned char i = 0u; i < 8u; ++i)
       {
@@ -742,12 +705,15 @@ float4 PS(VSOutput pIn) : SV_TARGET0
     {
       setMesh(full_screen_quad_.mesh);
       setSubMesh(0u);
-      setSamplerState(platform::SamplerState::PointClamp(),   10u);
-      setSamplerState(platform::SamplerState::LinearClamp(),  11u);
-      setSamplerState(platform::SamplerState::PointBorder(),  12u);
-      setSamplerState(platform::SamplerState::LinearBorder(), 13u);
-      setSamplerState(platform::SamplerState::PointWrap(),    14u);
-      setSamplerState(platform::SamplerState::LinearWrap(),   15u);
+      setSamplerState(platform::SamplerState::PointClamp(),         6u);
+      setSamplerState(platform::SamplerState::LinearClamp(),        7u);
+      setSamplerState(platform::SamplerState::AnisotrophicClamp(),  8u);
+      setSamplerState(platform::SamplerState::PointBorder(),        9u);
+			setSamplerState(platform::SamplerState::LinearBorder(),       10u);
+			setSamplerState(platform::SamplerState::AnisotrophicBorder(), 11u);
+      setSamplerState(platform::SamplerState::PointWrap(),          12u);
+			setSamplerState(platform::SamplerState::LinearWrap(),         13u);
+			setSamplerState(platform::SamplerState::AnisotrophicWrap(),   14u);
       setRasterizerState(platform::RasterizerState::SolidBack());
       setBlendState(platform::BlendState::Default());
       setDepthStencilState(platform::DepthStencilState::Default());
@@ -1194,50 +1160,29 @@ float4 PS(VSOutput pIn) : SV_TARGET0
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    void D3D11Context::setShader(asset::ShaderHandle shader)
+    void D3D11Context::setShader(asset::VioletShaderHandle shader)
     {
       if (shader_ == shader)
         return;
+			
+			if (shader_)
+				asset_manager_.getShader(shader_)->unbind();
+			
+			shader_ = shader;
 
-      if (shader_ != nullptr&& shader_->gpuData() != nullptr)
-      {
-        D3D11Shader* d3d11_shader = 
-          static_cast<D3D11Shader*>(shader_.data().gpuData().get());
-        d3d11_shader->unbind();
-      }
+			if (!shader)
+				return;
 
-      shader_ = shader;
+			D3D11Shader* d3d11_shader = asset_manager_.getShader(shader);
 
-      if (shader_ && !shader_.data())
-      {
-        shader_.data().gpuData().reset();
-        shader_.data().gpuData() = 
-          (foundation::Memory::constructShared<D3D11Shader>(
-            shader_.data(), 
-            this
-          ));
-        //shader_->clear();
-      }
-
-      // Only bind the shader if it is not nullptr.
-      D3D11Shader* d3d11_shader = nullptr;
-      if (shader_)
-      {
-        d3d11_shader = 
-          static_cast<D3D11Shader*>(shader_.data().gpuData().get());
-
-        for (const auto& variable : shader->getQueuedShaderVariables())
-        {
-          d3d11_shader->updateShaderVariable(variable);
-        }
-      }
+      for (const auto& variable : shader->getQueuedShaderVariables())
+        d3d11_shader->updateShaderVariable(variable);
 
       // Bind the shader.
       bound_.shader = d3d11_shader;
-      if (d3d11_shader)
-      {
+      
+			if (d3d11_shader)
         d3d11_shader->bind();
-      }
     }
    
     ///////////////////////////////////////////////////////////////////////////
@@ -1499,26 +1444,28 @@ float4 PS(VSOutput pIn) : SV_TARGET0
         mesh_->updated();
       }
 
-      D3D11Shader* shader = 
-        static_cast<D3D11Shader*>(shader_.data().gpuData().get());
+			if (shader_)
+			{
+				D3D11Shader* shader = asset_manager_.getShader(shader_);
 
-      for (auto& buffer : shader->getPsBuffers())
-        world_->getShaderVariableManager().updateBuffer(buffer);
-      for (auto& buffer : shader->getVsBuffers())
-        world_->getShaderVariableManager().updateBuffer(buffer);
-      for (auto& buffer : shader->getGsBuffers())
-        world_->getShaderVariableManager().updateBuffer(buffer);
+				for (auto& buffer : shader->getPsBuffers())
+					world_->getShaderVariableManager().updateBuffer(buffer);
+				for (auto& buffer : shader->getVsBuffers())
+					world_->getShaderVariableManager().updateBuffer(buffer);
+				for (auto& buffer : shader->getGsBuffers())
+					world_->getShaderVariableManager().updateBuffer(buffer);
 
-      if (buffer == nullptr)
-      {
-        shader->bindBuffers();
-        mesh->draw(mesh_.data(), sub_mesh_idx_);
-      }
-      else
-      {
-        shader->bindBuffers();
-        mesh->draw(mesh_.data(), sub_mesh_idx_);
-      }
+				if (buffer == nullptr)
+				{
+					shader->bindBuffers();
+					mesh->draw(mesh_.data(), sub_mesh_idx_);
+				}
+				else
+				{
+					shader->bindBuffers();
+					mesh->draw(mesh_.data(), sub_mesh_idx_);
+				}
+			}
     }
  
     ///////////////////////////////////////////////////////////////////////////
@@ -1681,6 +1628,48 @@ float4 PS(VSOutput pIn) : SV_TARGET0
         meshes_.erase(it);
       }
     }
+
+		///////////////////////////////////////////////////////////////////////////
+		D3D11Shader* D3D11Context::D3D11AssetManager::getShader(
+			asset::VioletShaderHandle shader)
+		{
+			auto it = shaders_.find(shader.getHash());
+
+			if (it == shaders_.end())
+			{
+				D3D11Shader* d3d11_shader =
+					foundation::Memory::construct<D3D11Shader>(shader, d3d11_context_);
+				shaders_.insert(
+					eastl::make_pair(
+						shader.getHash(),
+						RefType<D3D11Shader>{ d3d11_shader, 0u, 0.0f }
+				)
+				);
+				it = shaders_.find(shader.getHash());
+			}
+
+			it->second.ref++;
+			return it->second.t;
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		void D3D11Context::D3D11AssetManager::removeShader(
+			asset::VioletShaderHandle shader)
+		{
+			removeShader(shader.getHash());
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		void D3D11Context::D3D11AssetManager::removeShader(size_t shader)
+		{
+			auto it = shaders_.find(shader);
+			if (it != shaders_.end())
+			{
+				D3D11Shader* shad = it->second.t;
+				foundation::Memory::destruct(shad);
+				shaders_.erase(it);
+			}
+		}
     
     ///////////////////////////////////////////////////////////////////////////
     void D3D11Context::D3D11AssetManager::setD3D11Context(
@@ -1746,6 +1735,26 @@ float4 PS(VSOutput pIn) : SV_TARGET0
         for (const auto& to_delete : marked_for_delete)
           removeMesh(to_delete);
       }
+			// Shaders.
+			{
+				Vector<uint64_t> marked_for_delete;
+				for (auto& it : shaders_)
+				{
+					if (it.second.ref == 0u)
+					{
+						it.second.time += dt;
+						if (it.second.time >= kMaxTime)
+							marked_for_delete.push_back(it.first);
+					}
+					else
+					{
+						it.second.time = 0.0f;
+						it.second.ref = 0u;
+					}
+				}
+				for (const auto& to_delete : marked_for_delete)
+					removeShader(to_delete);
+			}
     }
   }
 }

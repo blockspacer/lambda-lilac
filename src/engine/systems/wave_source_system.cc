@@ -80,13 +80,24 @@ namespace lambda
     WaveSourceComponent WaveSourceSystem::addComponent(const entity::Entity& entity)
     {
       if (false == transform_system_->hasComponent(entity))
-      {
         transform_system_->addComponent(entity);
-      }
 
-      data_.push_back(WaveSourceData(entity));
-      data_to_entity_[(uint32_t)data_.size() - 1u] = entity;
-      entity_to_data_[entity] = (uint32_t)data_.size() - 1u;
+			if (!unused_data_entries_.empty())
+			{
+				uint32_t idx = unused_data_entries_.front();
+				unused_data_entries_.pop();
+
+				data_[idx] = WaveSourceData(entity);
+				data_to_entity_[idx] = entity;
+				entity_to_data_[entity] = idx;
+			}
+			else
+			{
+				data_.push_back(WaveSourceData(entity));
+				uint32_t idx = (uint32_t)data_.size() - 1u;
+				data_to_entity_[idx] = entity;
+				entity_to_data_[entity] = idx;
+			}
 
       return WaveSourceComponent(entity, this);
     }
@@ -106,23 +117,29 @@ namespace lambda
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void WaveSourceSystem::removeComponent(const entity::Entity& entity)
     {
-      const auto& it = entity_to_data_.find(entity);
-
-      getComponent(entity).stop();
-
-      if (it != entity_to_data_.end())
-      {
-        uint32_t id = it->second;
-
-        for (auto i = data_to_entity_.find(id); i != data_to_entity_.end(); i++)
-          entity_to_data_.at(i->second)--;
-
-        data_.erase(data_.begin() + id);
-        entity_to_data_.erase(it);
-        data_to_entity_.erase(id);
-      }
+			getComponent(entity).stop();
+			marked_for_delete_.insert(entity);
     }
 
+		void WaveSourceSystem::collectGarbage()
+		{
+			if (!marked_for_delete_.empty())
+			{
+				for (entity::Entity entity : marked_for_delete_)
+				{
+					const auto& it = entity_to_data_.find(entity);
+					if (it != entity_to_data_.end())
+					{
+						uint32_t idx = it->second;
+						unused_data_entries_.push(idx);
+						data_to_entity_.erase(idx);
+						entity_to_data_.erase(entity);
+						data_[idx].valid = false;
+					}
+				}
+				marked_for_delete_.clear();
+			}
+		}
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void WaveSourceSystem::setBuffer(const entity::Entity& entity, const asset::VioletWaveHandle& buffer)
     {
@@ -268,14 +285,16 @@ namespace lambda
     WaveSourceData& WaveSourceSystem::lookUpData(const entity::Entity& entity)
     {
       assert(entity_to_data_.find(entity) != entity_to_data_.end());
-      return data_.at(entity_to_data_.at(entity));
+			assert(data_.at(entity_to_data_.at(entity)).valid);
+			return data_.at(entity_to_data_.at(entity));
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     const WaveSourceData& WaveSourceSystem::lookUpData(const entity::Entity& entity) const
     {
       assert(entity_to_data_.find(entity) != entity_to_data_.end());
-      return data_.at(entity_to_data_.at(entity));
+			assert(data_.at(entity_to_data_.at(entity)).valid);
+			return data_.at(entity_to_data_.at(entity));
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -473,6 +492,7 @@ namespace lambda
       pitch         = other.pitch;
       radius        = other.radius;
       last_position = other.last_position;
+			valid         = other.valid;
     }
     WaveSourceData & WaveSourceData::operator=(const WaveSourceData & other)
     {
@@ -486,6 +506,7 @@ namespace lambda
       pitch         = other.pitch;
       radius        = other.radius;
       last_position = other.last_position;
+			valid         = other.valid;
       
       return *this;
     }

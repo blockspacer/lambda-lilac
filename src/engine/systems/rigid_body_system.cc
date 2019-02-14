@@ -1,8 +1,10 @@
-#include "rigid_body_system.h"
-#include "transform_system.h"
-#include "collider_system.h"
-#include "entity_system.h"
+#include "systems/rigid_body_system.h"
+#include "systems/transform_system.h"
+#include "systems/collider_system.h"
+#include "systems/mono_behaviour_system.h"
+#include "systems/entity_system.h"
 #include "interfaces/iworld.h"
+
 #include <btBulletDynamicsCommon.h>
 #include <glm/gtx/functions.hpp>
 
@@ -15,9 +17,22 @@ namespace lambda
       require(transform_system_.get(), entity);
       require(collider_system_, entity);
 
-      data_.push_back(RigidBodyData(entity));
-      data_to_entity_[(uint32_t)data_.size() - 1u] = entity;
-      entity_to_data_[entity] = (uint32_t)data_.size() - 1u;
+			if (!unused_data_entries_.empty())
+			{
+				uint32_t idx = unused_data_entries_.front();
+				unused_data_entries_.pop();
+
+				data_[idx] = RigidBodyData(entity);
+				data_to_entity_[idx] = entity;
+				entity_to_data_[entity] = idx;
+			}
+			else
+			{
+				data_.push_back(RigidBodyData(entity));
+				uint32_t idx = (uint32_t)data_.size() - 1u;
+				data_to_entity_[idx] = entity;
+				entity_to_data_[entity] = idx;
+			}
 
       /** Init start */
       RigidBodyData& data = lookUpData(entity);
@@ -47,27 +62,30 @@ namespace lambda
     }
     void RigidBodySystem::removeComponent(const entity::Entity& entity)
     {
-      const auto& it = entity_to_data_.find(entity);
-      if (it != entity_to_data_.end())
-      {
-        {
-          RigidBodyData& data = data_.at(it->second);
-          physics_world_.dynamicsWorld()->removeRigidBody(data.rigid_body);
-          physics_world_.dynamicsWorld()->addCollisionObject(data.rigid_body);
-        }
-
-        uint32_t id = it->second;
-
-        for (auto i = data_to_entity_.find(id); i != data_to_entity_.end(); i++)
-        {
-          entity_to_data_.at(i->second)--;
-        }
-
-        data_.erase(data_.begin() + id);
-        entity_to_data_.erase(it);
-        data_to_entity_.erase(id);
-      }
     }
+		void RigidBodySystem::collectGarbage()
+		{
+			if (!marked_for_delete_.empty())
+			{
+				for (entity::Entity entity : marked_for_delete_)
+				{
+					const auto& it = entity_to_data_.find(entity);
+					if (it != entity_to_data_.end())
+					{
+						RigidBodyData& data = data_.at(it->second);
+						physics_world_.dynamicsWorld()->removeRigidBody(data.rigid_body);
+						physics_world_.dynamicsWorld()->addCollisionObject(data.rigid_body);
+
+						uint32_t idx = it->second;
+						unused_data_entries_.push(idx);
+						data_to_entity_.erase(idx);
+						entity_to_data_.erase(entity);
+						data_[idx].valid = false;
+					}
+				}
+				marked_for_delete_.clear();
+			}
+		}
     physics::PhysicsWorld& RigidBodySystem::GetPhysicsWorld()
     {
       return physics_world_;
@@ -80,7 +98,8 @@ namespace lambda
         &world.getDebugRenderer(),
         world.getScene().getSystem<entity::EntitySystem>(),
         transform_system_,
-        world.getScene().getSystem<RigidBodySystem>()
+				world.getScene().getSystem<RigidBodySystem>(),
+				world.getScene().getSystem<MonoBehaviourSystem>()
       );
     }
     void RigidBodySystem::deinitialize()
@@ -202,12 +221,14 @@ namespace lambda
     RigidBodyData& RigidBodySystem::lookUpData(const entity::Entity& entity)
     {
       LMB_ASSERT(entity_to_data_.find(entity) != entity_to_data_.end(), ("RigidBody: could not find component: " + toString(entity)).c_str());
-      return data_.at(entity_to_data_.at(entity));
+			assert(data_.at(entity_to_data_.at(entity)).valid);
+			return data_.at(entity_to_data_.at(entity));
     }
     const RigidBodyData& RigidBodySystem::lookUpData(const entity::Entity& entity) const
     {
       LMB_ASSERT(entity_to_data_.find(entity) != entity_to_data_.end(), ("RigidBody: could not find component: " + toString(entity)).c_str());
-      return data_.at(entity_to_data_.at(entity));
+			assert(data_.at(entity_to_data_.at(entity)).valid);
+			return data_.at(entity_to_data_.at(entity));
     }
     RigidBodyComponent::RigidBodyComponent(const entity::Entity& entity, RigidBodySystem* system) :
       IComponent(entity), system_(system)
@@ -273,6 +294,7 @@ namespace lambda
       velocity_constraints = other.velocity_constraints;
       angular_constraints  = other.angular_constraints;
       entity               = other.entity;
+			valid                = other.valid;
     }
     RigidBodyData & RigidBodyData::operator=(const RigidBodyData & other)
     {
@@ -282,6 +304,7 @@ namespace lambda
       velocity_constraints = other.velocity_constraints;
       angular_constraints  = other.angular_constraints;
       entity               = other.entity;
+			valid                = other.valid;
       return *this;
     }
   }

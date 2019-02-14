@@ -26,9 +26,9 @@
 //
 //      struct ShaderPass
 //      {
-//        asset::ShaderHandle         shader_generate;
-//        Vector<asset::ShaderHandle> shader_modify;
-//        asset::ShaderHandle         shader_publish;
+//        asset::VioletShaderHandle         shader_generate;
+//        Vector<asset::VioletShaderHandle> shader_modify;
+//        asset::VioletShaderHandle         shader_publish;
 //      };
 //      ShaderPass shaders_directional;
 //      ShaderPass shaders_directional_rsm;

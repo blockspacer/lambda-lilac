@@ -67,6 +67,7 @@ namespace lambda
       float roughness = 1.0f;
       bool visible = true;
       bool cast_shadows = true;
+			bool valid = true;
 
       entity::Entity entity;
     };
@@ -100,7 +101,8 @@ namespace lambda
       virtual void initialize(world::IWorld& world) override;
       virtual void deinitialize() override;
       virtual void onRender() override;
-      void createRenderList(utilities::Culler& culler, const utilities::Frustum& frustum);
+			virtual void collectGarbage() override;
+			void createRenderList(utilities::Culler& culler, const utilities::Frustum& frustum);
       void createSortedRenderList(utilities::LinkedNode* statics, utilities::LinkedNode* dynamics, Vector<utilities::Renderable*>& opaque, Vector<utilities::Renderable*>& alpha);
       void renderAll(utilities::Culler& culler, const utilities::Frustum& frustum);
       void renderAll(utilities::LinkedNode* statics, utilities::LinkedNode* dynamics);
@@ -118,8 +120,10 @@ namespace lambda
       const MeshRenderData& lookUpData(const entity::Entity& entity) const;
 
       Vector<MeshRenderData> data_;
-      Map<uint64_t, uint32_t> entity_to_data_;
-      Map<uint32_t, uint64_t> data_to_entity_;
+			Map<entity::Entity, uint32_t> entity_to_data_;
+			Map<uint32_t, entity::Entity> data_to_entity_;
+			Set<entity::Entity> marked_for_delete_;
+			Queue<uint32_t> unused_data_entries_;
 
     private:
       foundation::SharedPointer<entity::EntitySystem> entity_system_;

@@ -247,7 +247,7 @@ void RegisterCasting(asIScriptEngine* engine)
   int r;
   
   // Float.
-  /*r = engine->RegisterGlobalFunction("float ToFloat(int8)",   asFUNCTIONPR(toFloatI8,  (char),               float), asCALL_CDECL); assert(r >= 0);
+  r = engine->RegisterGlobalFunction("float ToFloat(int8)",   asFUNCTIONPR(toFloatI8,  (char),               float), asCALL_CDECL); assert(r >= 0);
   r = engine->RegisterGlobalFunction("float ToFloat(int16)",  asFUNCTIONPR(toFloatI16, (short),              float), asCALL_CDECL); assert(r >= 0);
   r = engine->RegisterGlobalFunction("float ToFloat(int32)",  asFUNCTIONPR(toFloatI32, (int),                float), asCALL_CDECL); assert(r >= 0);
   r = engine->RegisterGlobalFunction("float ToFloat(int64)",  asFUNCTIONPR(toFloatI64, (long long),          float), asCALL_CDECL); assert(r >= 0);
@@ -355,7 +355,7 @@ void RegisterCasting(asIScriptEngine* engine)
   r = engine->RegisterGlobalFunction("uint64 ToUint64(uint32)", asFUNCTIONPR(toUint64U32, (unsigned int),       unsigned long long), asCALL_CDECL); assert(r >= 0);
   r = engine->RegisterGlobalFunction("uint64 ToUint64(float)",  asFUNCTIONPR(toUint64F,   (float),              unsigned long long), asCALL_CDECL); assert(r >= 0);
   r = engine->RegisterGlobalFunction("uint64 ToUint64(double)", asFUNCTIONPR(toUint64D,   (double),             unsigned long long), asCALL_CDECL); assert(r >= 0);
-  r = engine->RegisterGlobalFunction("uint64 ToUint64(bool)",   asFUNCTIONPR(toUint64B,   (bool),               unsigned long long), asCALL_CDECL); assert(r >= 0);*/
+  r = engine->RegisterGlobalFunction("uint64 ToUint64(bool)",   asFUNCTIONPR(toUint64B,   (bool),               unsigned long long), asCALL_CDECL); assert(r >= 0);
 }
 
 void RegisterScriptMath_Native(asIScriptEngine *engine)

@@ -40,7 +40,7 @@ SET(InputSources
   "input/keyboard.h"
   "input/mouse.h"
 )
-SET(CefGuiSources
+SET(UltralightGuiSources
   "gui/gui.h"
   "gui/gui.cc"
 )
@@ -267,6 +267,8 @@ SET(SystemsSources
   "systems/mono_behaviour_system.cc"
   "systems/mesh_render_system.h"
   "systems/mesh_render_system.cc"
+  "systems/name_system.h"
+  "systems/name_system.cc"
   "systems/rigid_body_system.h"
   "systems/rigid_body_system.cc"
   "systems/skeleton_system.h"
@@ -311,7 +313,7 @@ SOURCE_GROUP("imgui\\imgui" FILES ${ImGuiSources})
 SOURCE_GROUP("imgui\\nuklear" FILES ${NuklearImGuiSources})
 SOURCE_GROUP("imgui\\no" FILES ${NoImGuiSources})
 SOURCE_GROUP("input" FILES ${InputSources})
-SOURCE_GROUP("gui\\gui" FILES ${CefGuiSources})
+SOURCE_GROUP("gui\\gui" FILES ${UltralightGuiSources})
 SOURCE_GROUP("interfaces" FILES ${InterfacesSources})
 SOURCE_GROUP("physics" FILES ${PhysicsSources})
 SOURCE_GROUP("platform" FILES ${PlatformSources})
@@ -393,8 +395,8 @@ IF(${VIOLET_IMGUI_NO})
 	SET(Sources ${Sources} ${NoImGuiSources})
 ENDIF()
 
-IF(${VIOLET_GUI_CEF})
-	SET(Sources ${Sources} ${CefGuiSources})
+IF(${VIOLET_GUI_ULTRALIGHT})
+	SET(Sources ${Sources} ${UltralightGuiSources})
 ENDIF()
 
 IF(NOT ${VIOLET_CONFIG_FOUNDATION})
@@ -421,9 +423,8 @@ IF(${VIOLET_WIN32})
   TARGET_LINK_LIBRARIES(lambda-engine PUBLIC Shcore.lib Xinput.lib winmm.lib imm32.lib version.lib)
 ENDIF()
 
-IF(${VIOLET_GUI_CEF})
-  TARGET_LINK_LIBRARIES(lambda-engine PUBLIC "../../cef-project/third_party/cef/cef_binary_3.3538.1852.gcb937fc_windows64/Release/libcef.lib")
-  TARGET_LINK_LIBRARIES(lambda-engine PUBLIC comctl32.lib shlwapi.lib rpcrt4.lib libcef_dll_wrapper)
+IF(${VIOLET_GUI_ULTRALIGHT})
+  TARGET_LINK_LIBRARIES(lambda-engine PUBLIC ultralight)
 ENDIF()
 
 TARGET_INCLUDE_DIRECTORIES(lambda-engine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
@@ -483,10 +484,7 @@ IF(${VIOLET_IMGUI_NO})
 	TARGET_COMPILE_DEFINITIONS(lambda-engine PRIVATE VIOLET_IMGUI_NO)
 ENDIF()
 
-# /// CEF ///////////////////////////////////////////////////////
-IF(${VIOLET_GUI_CEF})
-  ADD_EXECUTABLE(cef-helper "cef-helper.cc")
-  TARGET_LINK_LIBRARIES(cef-helper PUBLIC "C:/github/lambda-engine/cef-project/third_party/cef/cef_binary_3.3538.1852.gcb937fc_windows64/Release/libcef.lib")
-  TARGET_LINK_LIBRARIES(cef-helper PUBLIC comctl32.lib shlwapi.lib rpcrt4.lib libcef_dll_wrapper)
-	TARGET_COMPILE_DEFINITIONS(lambda-engine PRIVATE VIOLET_GUI_CEF)
+# /// ULTRALIGHT ////////////////////////////////////////////////
+IF(${VIOLET_GUI_ULTRALIGHT})
+  TARGET_COMPILE_DEFINITIONS(lambda-engine PRIVATE VIOLET_GUI_ULTRALIGHT)
 ENDIF()

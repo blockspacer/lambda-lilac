@@ -46,7 +46,7 @@ namespace lambda
     struct D3D11FullScreenQuad
     {
       asset::MeshHandle mesh;
-      asset::ShaderHandle shader;
+      asset::VioletShaderHandle shader;
     };
 
     ///////////////////////////////////////////////////////////////////////////
@@ -147,10 +147,10 @@ namespace lambda
         void* data = nullptr
       );
       void freeRenderBuffer(platform::IRenderBuffer*& buffer);
-      platform::IRenderTexture* allocRenderTexture(
-        asset::VioletTextureHandle texture
-      );
-      void freeRenderTexture(platform::IRenderTexture*& texture);
+			platform::IRenderTexture* allocRenderTexture(
+				asset::VioletTextureHandle texture
+			);
+			void freeRenderTexture(platform::IRenderTexture*& texture);
 
       ID3D11DeviceContext* getD3D11Context() const;
       ID3D11Device* getD3D11Device() const;
@@ -205,7 +205,7 @@ namespace lambda
 
       virtual void setMesh(asset::MeshHandle mesh) override;
       virtual void setSubMesh(const uint32_t& sub_mesh_idx) override;
-      virtual void setShader(asset::ShaderHandle shader) override;
+      virtual void setShader(asset::VioletShaderHandle shader) override;
       virtual void setTexture(
         asset::VioletTextureHandle texture, 
         uint8_t slot
@@ -271,7 +271,7 @@ namespace lambda
 
       asset::MeshHandle mesh_;
       uint32_t sub_mesh_idx_;
-      asset::ShaderHandle shader_;
+      asset::VioletShaderHandle shader_;
       unsigned char highest_bound_texture_;
       static const unsigned char MAX_TEXTURE_COUNT = 16u;
       ID3D11ShaderResourceView* textures_[MAX_TEXTURE_COUNT];
@@ -296,9 +296,12 @@ namespace lambda
         D3D11RenderTexture* getTexture(asset::VioletTextureHandle texture);
         void removeTexture(asset::VioletTextureHandle texture);
         void removeTexture(size_t texture);
-        D3D11Mesh* getMesh(asset::MeshHandle mesh);
-        void removeMesh(asset::MeshHandle mesh);
-        void removeMesh(size_t mesh);
+				D3D11Mesh* getMesh(asset::MeshHandle mesh);
+				void removeMesh(asset::MeshHandle mesh);
+				void removeMesh(size_t mesh);
+				D3D11Shader* getShader(asset::VioletShaderHandle shader);
+				void removeShader(asset::VioletShaderHandle shader);
+				void removeShader(size_t shader);
         void setD3D11Context(D3D11Context* context);
         void setDevice(ID3D11Device* device);
         void setContext(ID3D11DeviceContext* context);
@@ -314,7 +317,8 @@ namespace lambda
         };
         static constexpr float kMaxTime = 2.0f;
         UnorderedMap<uint64_t, RefType<D3D11RenderTexture>> textures_;
-        UnorderedMap<uint64_t, RefType<D3D11Mesh>> meshes_;
+				UnorderedMap<uint64_t, RefType<D3D11Mesh>> meshes_;
+				UnorderedMap<uint64_t, RefType<D3D11Shader>> shaders_;
         D3D11Context* d3d11_context_;
         ID3D11Device* device_;
         ID3D11DeviceContext* context_;

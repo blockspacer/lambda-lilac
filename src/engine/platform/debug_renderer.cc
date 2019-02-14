@@ -31,13 +31,8 @@ namespace lambda
         if (!initialized)
         {
           initialized = true;
-          lambda::asset::ShaderHandle shader = 
-            asset::AssetManager::getInstance().createAsset(
-              Name("debug_shader"),
-              lambda::foundation::Memory::constructShared<lambda::asset::Shader>(
-                io::ShaderIO::asAsset(io::ShaderIO::load("resources/shaders/debug.fx"))
-              )
-          );
+					lambda::asset::VioletShaderHandle shader =
+						asset::ShaderManager::getInstance()->get(Name("resources/shaders/debug.fx"));
           mesh_ = asset::AssetManager::getInstance().createAsset(
             Name("debug_mesh"),
             lambda::foundation::Memory::constructShared<lambda::asset::Mesh>()

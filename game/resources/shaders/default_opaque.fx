@@ -1,5 +1,5 @@
-#include "resources/shaders/common.fx"
-#include "resources/shaders/tbn.fx"
+#include "common.fx"
+#include "tbn.fx"
 
 struct VSInput
 {
@@ -31,8 +31,6 @@ VSOutput VS(VSInput vIn)
   vOut.colour    = float4(1.0f, 1.0f, 1.0f, 1.0f);
   vOut.normal    = normalize(mul((float3x3)model_matrix, vIn.normal));
   vOut.tex       = vIn.tex;
-  //vOut.position.z = 1.0f - vOut.position.z / vOut.position.w;
-  //vOut.position.w = 1.0f;
   return vOut;
 }
 
@@ -54,28 +52,30 @@ cbuffer cbPerMesh
   float3 camera_position;
 }
 
-#define TEST_ALBEDO 0
+#define VIOLET_GRID_ALBEDO 0
+#define VIOLET_DYNAMIC_GRID_SIZE 0
 
 PSOutput PS(VSOutput pIn)
 {
   PSOutput pOut;
-  pOut.albedo   = tex_albedo.Sample(SamLinearWarp, pIn.tex) * pIn.colour;
+  pOut.albedo = tex_albedo.Sample(SamLinearWarp, pIn.tex) * pIn.colour;
   if (tex_albedo.Sample(SamLinearWarp, pIn.tex).a < 0.25f)
     discard;
   pOut.albedo.a = 1.0f;
 
-#if TEST_ALBEDO
-	float ex = abs(floor(pIn.hPosition.x));
-	float ey = abs(floor(pIn.hPosition.y));
-	float ez = abs(floor(pIn.hPosition.z));
-	float sex = abs(floor(pIn.hPosition.x * 10.0f));
-	float sey = abs(floor(pIn.hPosition.y * 10.0f));
-	float sez = abs(floor(pIn.hPosition.z * 10.0f));
+#if VIOLET_GRID_ALBEDO
+#if VIOLET_DYNAMIC_GRID_SIZE
+  const float scale = PI * ((length(pIn.hPosition - camera_position) < 100.0f) ? (length(pIn.hPosition - camera_position) < 10.0f) ? 10.0f : 1.0f : 0.1f);
+#else
+  const float scale = PI;
+#endif
+  const float3 pl = pIn.hPosition * scale;
+  const float3 ps = pIn.hPosition * (scale * 10.0f);
 
-	float even = fmod(ey + ez + ex, 2.0f);
-	float sub_even = fmod(sey + sez + sex, 2.0f);
-	
-	pOut.albedo.rgb = lerp(lerp(0.4, 0.5, sub_even), lerp(0.9, 1.0, sub_even), even);
+  float el = sin(pl.x) * sin(pl.y) * sin(pl.z);
+  float es = sin(ps.x) * sin(ps.y) * sin(ps.z);
+
+	pOut.albedo.rgb = lerp(lerp(0.4, 0.5, when_ge(es, 0.0f)), lerp(0.9, 1.0, when_ge(es, 0.0f)), when_ge(el, 0.0f));
 #endif
 
   float3 N      = normalize(pIn.normal);

@@ -38,8 +38,8 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     void IWorld::run()
     {
-      scripting_->executeFunction("Game::Initialize", {});
       initialize();
+      scripting_->executeFunction("Game::Initialize", {});
       renderer_->resize();
 
       const double time_step = 1.0 / 60.0;
@@ -59,10 +59,6 @@ namespace lambda
         if (window_->getSize().x == 0.0f || window_->getSize().y == 0.0f)
           continue;
 
-				utilities::Profiler::getInstance().startTimer("Scripting: CollectGarbage");
-				scripting_->collectGarbage();
-				utilities::Profiler::getInstance().endTimer("Scripting: CollectGarbage");
-
         scripting_->executeFunction("Input::InputHelper::UpdateAxes", {});
 
 				static unsigned char max_step_count_count = 8u;
@@ -71,6 +67,7 @@ namespace lambda
         while (time_step_remainer >= time_step && 
           time_step_count++ < max_step_count_count)
         {
+					fixedUpdate();
 					utilities::Profiler::getInstance().startTimer("Scripting: FixedUpdate");
 					time_step_remainer -= time_step;
           scripting_->executeFunction(
@@ -83,12 +80,13 @@ namespace lambda
 
 					utilities::Profiler::getInstance().startTimer("Systems: FixedUpdate");
 					for (auto& system : getScene().getAllSystems())
-          {
             system->fixedUpdate(time_step);
-          }
 					utilities::Profiler::getInstance().endTimer("Systems: FixedUpdate");
 
-          fixedUpdate();
+					utilities::Profiler::getInstance().startTimer("Systems: FixedCollectGarbage");
+					for (auto& system : getScene().getAllSystems())
+						system->collectGarbage();
+					utilities::Profiler::getInstance().endTimer("Systems: FixedCollectGarbage");
         }
         if (time_step_remainer >= time_step)
         {
@@ -96,6 +94,8 @@ namespace lambda
             std::floor(time_step_remainer / time_step) * time_step;
         }
 
+				update(delta_time_);
+				
 				utilities::Profiler::getInstance().startTimer("Scripting: Update");
 				scripting_->executeFunction(
           "Game::Update", 
@@ -105,8 +105,6 @@ namespace lambda
         );
 				utilities::Profiler::getInstance().endTimer("Scripting: Update");
 
-				update(delta_time_);
-      
 				utilities::Profiler::getInstance().startTimer("Systems: Update");
 				for (auto& system : getScene().getAllSystems())
           system->update(delta_time_);
@@ -119,6 +117,15 @@ namespace lambda
 				utilities::Profiler::getInstance().startTimer("Renderer: Update");
 				renderer_->update(delta_time_);
 				utilities::Profiler::getInstance().endTimer("Renderer: Update");
+
+				utilities::Profiler::getInstance().startTimer("Scripting: CollectGarbage");
+				scripting_->collectGarbage();
+				utilities::Profiler::getInstance().endTimer("Scripting: CollectGarbage");
+
+				utilities::Profiler::getInstance().startTimer("Systems: CollectGarbage");
+				for (auto& system : getScene().getAllSystems())
+					system->collectGarbage();
+				utilities::Profiler::getInstance().endTimer("Systems: CollectGarbage");
 
 				utilities::Profiler::getInstance().startTimer("Renderer: StartFrame");
 				renderer_->startFrame();
@@ -173,7 +180,7 @@ namespace lambda
         case platform::WindowMessageType::kMouseScroll:
           mouse_state.setAxis(
             io::MouseAxes::kScroll, 
-            (float)message.data[0] / 120.0f
+            (float)(short)message.data[0] / 120.0f
           );
           break;
         case platform::WindowMessageType::kMouseButton:

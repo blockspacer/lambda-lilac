@@ -1,5 +1,8 @@
-#include "resources/shaders/common.fx"
-#include "resources/shaders/pbr.fx"
+#include "common.fx"
+#include "pbr.fx"
+
+// TODO (Hilze): Remove ASAP!
+#include "vsm_publish.fx"
 
 struct VSInput
 {
@@ -58,9 +61,9 @@ float3 linearizePerspective(float3 depth)
 
 float4 PS(VSOutput pIn) : SV_TARGET0
 {
-#ifdef CAST_SHADOWS
   float4 position = float4(Sample(tex_position, SamLinearClamp, pIn.tex).xyz, 1.0f);
 
+#ifdef CAST_SHADOWS
   float4 trans_position = mul(light_view_projection_matrix, position);
   trans_position.xyz /= trans_position.w;
   float2 coords = trans_position.xy * float2(0.5f, -0.5f) + 0.5f;
@@ -70,20 +73,20 @@ float4 PS(VSOutput pIn) : SV_TARGET0
 
   float hide_shadows = clamp(when_le(coords.x, 0.0f) + when_ge(coords.x, 1.0f) + when_le(coords.y, 0.0f) + when_ge(coords.y, 1.0f) + when_le(trans_position.z, 0.0f) + when_ge(trans_position.z, 1.0f), 0.0f, 1.0f);
 
-  float3 shadow_map_depth = linearizePerspective(tex_shadow_map.Sample(SamLinearClamp, coords).xyz);
+  float3 shadow_map_depth = linearizePerspective(tex_shadow_map.Sample(SamAnisotrophicClamp, coords).xyz);
 
   float cs = calcShadow(shadow_map_depth, position_depth, light_far);
 
   float3 in_shadow = lerp(float3(cs, cs, cs) * (overlay.xyz * overlay.w), float3(1.0f, 1.0f, 1.0f), hide_shadows);
+#else
+  float in_shadow = 1.0f;
+#endif
 
   float3 normal = normalize(Sample(tex_normal, SamLinearClamp, pIn.tex).rgb * 2.0f - 1.0f);
 
   float2 metallic_roughness = Sample(tex_metallic_roughness, SamLinearClamp, pIn.tex).rg;
   float  metallic  = metallic_roughness.r;
   float  roughness = metallic_roughness.g;
-#else
-  float in_shadow = 1.0f;
-#endif
 
   float3 light = light_colour * in_shadow;
 

@@ -19,6 +19,7 @@ namespace lambda
     private:
       virtual void initialize(world::IWorld&) override {};
       virtual void deinitialize() override {};
+			virtual void collectGarbage() override {};
 
     private:
       static const uint32_t kFreeIdIncrement = 64u;

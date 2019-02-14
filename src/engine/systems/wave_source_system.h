@@ -71,6 +71,7 @@ namespace lambda
       float gain     = 1.0f;
       float pitch    = 1.0f;
       float radius   = 100.0f;
+			bool  valid    = true;
       glm::vec3 last_position;
     };
 
@@ -80,6 +81,7 @@ namespace lambda
       virtual void initialize(world::IWorld& world) override;
       virtual void deinitialize() override;
       virtual void update(const double& delta_time) override;
+			virtual void collectGarbage() override;
       ~WaveSourceSystem();
 
       static size_t systemId() { return (size_t)SystemIds::kWaveSourceSystem; };
@@ -116,13 +118,16 @@ namespace lambda
       void updateState(WaveSourceData& data, float delta_time);
 
     private:
-      entity::Entity listener_;
+			Vector<WaveSourceData> data_;
+			Map<entity::Entity, uint32_t> entity_to_data_;
+			Map<uint32_t, entity::Entity> data_to_entity_;
+			Set<entity::Entity> marked_for_delete_;
+			Queue<uint32_t> unused_data_entries_;
+			
+			entity::Entity listener_;
       glm::vec3 last_listener_position_;
       SoLoud::Soloud* engine_;
 
-      Vector<WaveSourceData> data_;
-      Map<uint64_t, uint32_t> entity_to_data_;
-      Map<uint32_t, uint64_t> data_to_entity_;
       foundation::SharedPointer<TransformSystem> transform_system_;
     };
   }

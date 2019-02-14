@@ -1,31 +1,54 @@
 #pragma once
-#include "asset.h"
+#include "assets/asset_handle.h"
 #include <containers/containers.h>
-#include "platform/shader_variable.h"
+#include <assets/shader_manager.h>
+#include <platform/shader_variable.h>
 
 namespace lambda
 {
-  namespace asset
-  {
-    class Shader : public IAsset
-    {
-    public:
-      Shader();
-      Shader(const Name& file, const Vector<char>& shader_bytecode);
-      ~Shader();
+	namespace asset
+	{
+		///////////////////////////////////////////////////////////////////////////
+		class Shader
+		{
+		public:
+			Shader();
+			Shader(const Shader& Shader);
+			Shader(VioletShader Shader);
+			~Shader();
 
-      void setShaderVariable(const platform::ShaderVariable& variable);
+			String getFilePath() const;
+			Vector<uint32_t> getByteCode(ShaderStages stage, int type) const;
 
-      Vector<char> getBytecode() const;
-      Name getFile() const;
-      void clear();
-      Vector<platform::ShaderVariable> getQueuedShaderVariables();
+			void setShaderVariable(const platform::ShaderVariable& variable);
+			Vector<platform::ShaderVariable> getQueuedShaderVariables();
 
-    private:
-      Vector<platform::ShaderVariable> queued_shader_variables_;
-      Vector<char> shader_bytecode_;
-      Name file_;
-    };
-    typedef AssetHandle<Shader> ShaderHandle;
-  }
+		private:
+			VioletShader shader_;
+			Vector<platform::ShaderVariable> queued_shader_variables_;
+		};
+		typedef VioletHandle<Shader> VioletShaderHandle;
+
+		///////////////////////////////////////////////////////////////////////////
+		class ShaderManager
+		{
+		public:
+			VioletShaderHandle create(Name name);
+			VioletShaderHandle create(Name name, Shader Shader);
+			VioletShaderHandle create(Name name, VioletShader Shader);
+			VioletShaderHandle get(Name name);
+			VioletShaderHandle get(uint64_t hash);
+			void destroy(VioletShaderHandle Shader);
+
+		public:
+			static ShaderManager* getInstance();
+
+		protected:
+			VioletShaderManager& getManager();
+			const VioletShaderManager& getManager() const;
+
+		private:
+			VioletShaderManager manager_;
+		};
+	}
 }

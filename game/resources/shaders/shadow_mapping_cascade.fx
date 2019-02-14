@@ -1,4 +1,4 @@
-#include "resources/shaders/common.fx"
+#include "common.fx"
 
 Texture2D tex_shadow_map_01 : register(t0);
 Texture2D tex_shadow_map_02 : register(t1);
@@ -8,7 +8,10 @@ Texture2D tex_position      : register(t4);
 Texture2D tex_normal        : register(t5);
 Texture2D tex_metallic_roughness : register(t6);
 
-#include "resources/shaders/pbr.fx"
+#include "pbr.fx"
+
+// TODO (Hilze): Remove ASAP!
+#include "vsm_publish.fx"
 
 struct VSInput
 {
@@ -110,15 +113,15 @@ float4 PS(VSOutput pIn) : SV_TARGET0
 
   if (InFrustum(position, light_view_projection_matrix_01))
   {
-    shadow_map_depth = tex_shadow_map_01.Sample(SamLinearClamp, coords).xyz;
+    shadow_map_depth = tex_shadow_map_01.Sample(SamAnisotrophicClamp, coords).xyz;
   }
   else if (InFrustum(position, light_view_projection_matrix_02))
   {
-    shadow_map_depth = tex_shadow_map_02.Sample(SamLinearClamp, coords).xyz;
+    shadow_map_depth = tex_shadow_map_02.Sample(SamAnisotrophicClamp, coords).xyz;
   }
   else if (InFrustum(position, light_view_projection_matrix_03))
   {
-    shadow_map_depth = tex_shadow_map_03.Sample(SamLinearClamp, coords).xyz;
+    shadow_map_depth = tex_shadow_map_03.Sample(SamAnisotrophicClamp, coords).xyz;
   }
 
   shadow_map_depth = linearizeOrtho(shadow_map_depth);

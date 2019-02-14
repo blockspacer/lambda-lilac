@@ -52,6 +52,7 @@ namespace lambda
       Vector<platform::ShaderPass> shader_passes;
 
       entity::Entity entity;
+			bool valid = true;
     };
 
     class CameraSystem : public ISystem
@@ -62,6 +63,7 @@ namespace lambda
       virtual void initialize(world::IWorld& world) override;
       virtual void deinitialize() override;
       virtual void onRender() override;
+			virtual void collectGarbage() override;
 
       static size_t systemId() { return (size_t)SystemIds::kCameraSystem; };
       CameraComponent addComponent(const entity::Entity& entity);
@@ -86,8 +88,10 @@ namespace lambda
 
     private:
       Vector<CameraData> data_;
-      Map<uint64_t, uint32_t> entity_to_data_;
-      Map<uint32_t, uint64_t> data_to_entity_;
+			Map<entity::Entity, uint32_t> entity_to_data_;
+			Map<uint32_t, entity::Entity> data_to_entity_;
+			Set<entity::Entity> marked_for_delete_;
+			Queue<uint32_t> unused_data_entries_;
 
       CameraData& lookUpData(const entity::Entity& entity);
       const CameraData& lookUpData(const entity::Entity& entity) const;

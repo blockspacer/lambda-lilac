@@ -36,13 +36,12 @@ class Trees {
     construct new(ground) {
         _enabled = true
         _trees = []
-
-        initialize(ground)
+        _ground = ground
     }
     enabled=(v) { _enabled = v }
 
 
-    initialize(ground) {
+    initialize() {
         if (!_enabled) return
 
         // Get all of the models.
@@ -70,9 +69,9 @@ class Trees {
                 for (z in (-num_z / 2)..(num_z / 2)) { 
                     var position = Vec3.new((x + Math.random(0.2, 0.8)) * scale, 0.0, (z + Math.random(0.2, 0.8)) * scale)
                 
-                    position.y = ground.heightOnPosition(position)
+                    position.y = _ground.heightOnPosition(position)
 
-                    if (Math.random() < rarity && position.y > ground.waterHeight) {
+                    if (Math.random() < rarity && position.y > _ground.waterHeight) {
                         actual_count = actual_count + 1
                         var tree = GameObject.new()
                         var transform = tree.transform

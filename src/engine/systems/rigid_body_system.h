@@ -59,6 +59,7 @@ namespace lambda
       uint8_t   velocity_constraints = 0u;
       uint8_t   angular_constraints  = 0u;
       
+			bool valid = true;
       entity::Entity entity;
     };
 
@@ -77,7 +78,8 @@ namespace lambda
       virtual void deinitialize() override;
       virtual void update(const double& delta_time) override;
       virtual void fixedUpdate(const double& time_step) override;
-      virtual ~RigidBodySystem() override {};
+			virtual void collectGarbage() override;
+			virtual ~RigidBodySystem() override {};
 
       float getMass(const entity::Entity& entity) const;
       void setMass(const entity::Entity& entity, const float& mass);
@@ -97,9 +99,11 @@ namespace lambda
 
     private:
       Vector<RigidBodyData> data_;
-      Map<uint64_t, uint32_t> entity_to_data_;
-      Map<uint32_t, uint64_t> data_to_entity_;
-      
+			Map<entity::Entity, uint32_t> entity_to_data_;
+			Map<uint32_t, entity::Entity> data_to_entity_;
+			Set<entity::Entity> marked_for_delete_;
+			Queue<uint32_t> unused_data_entries_;
+
       foundation::SharedPointer<TransformSystem> transform_system_;
       ColliderSystem* collider_system_; // This should be a shared pointer. But the engine would not compile with this as a shared pointer.
       physics::PhysicsWorld physics_world_;

@@ -1,22 +1,10 @@
-#include "resources/shaders/common.fx"
+#include "common.fx"
 
 struct VSOutput
 {
   float4 position : SV_POSITION0;
   float2 tex      : TEX_COORD;
 };
-
-static const float2 invAtan = float2(0.1591, 0.3183);
-float2 SampleSphericalMap(float3 v)
-{
-  float2 uv = float2(atan2(v.z, v.x), -asin(v.y));
-  return uv * invAtan + 0.5f;
-}
-float3 SampleSphericalMap(float2 uv)
-{
-  float2 thetaphi = ((uv * 2.0f) - 1.0f) * float2(3.1415926535897932384626433832795f, 1.5707963267948966192313216916398f);
-  return float3(cos(thetaphi.y) * cos(thetaphi.x), -sin(thetaphi.y), cos(thetaphi.y) * sin(thetaphi.x));
-}
 
 VSOutput VS(uint id: SV_VertexID)
 {
@@ -27,7 +15,6 @@ VSOutput VS(uint id: SV_VertexID)
 }
 
 Texture2D tex_environment : register(t0);
-static const float PI = 3.14159265359f;
 
 float4 PS(VSOutput pIn) : SV_TARGET0
 {
@@ -41,7 +28,7 @@ float4 PS(VSOutput pIn) : SV_TARGET0
 
   float sampleDelta = 0.025f;
   float nrSamples   = 0.0f;
-  for(float phi = 0.0f; phi < 2.0f * PI; phi += sampleDelta)
+  for(float phi = 0.0f; phi < TAU; phi += sampleDelta)
   {
     for(float theta = 0.0f; theta < 0.5f * PI; theta += sampleDelta)
     {

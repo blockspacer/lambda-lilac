@@ -1,5 +1,8 @@
-#include "resources/shaders/common.fx"
-#include "resources/shaders/pbr.fx"
+#include "common.fx"
+#include "pbr.fx"
+
+// TODO (Hilze): Remove ASAP!
+#include "vsm_publish.fx"
 
 struct VSInput
 {
@@ -53,15 +56,15 @@ float linearize(float depth, float type)
 
 float2 linearize(float2 depth, float type)
 {
-  float perspective = LINEARIZE(light_near, light_far, depth);
-  float ortho       = depth * light_far;
+  float2 perspective = LINEARIZE(light_near, light_far, depth);
+  float2 ortho       = depth * light_far;
   return lerp(ortho, perspective, when_neq(type, 0.0f));
 }
 
 float3 linearize(float3 depth, float type)
 {
-  float perspective = LINEARIZE(light_near, light_far, depth);
-  float ortho       = depth * light_far;
+  float3 perspective = LINEARIZE(light_near, light_far, depth);
+  float3 ortho       = depth * light_far;
   return lerp(ortho, perspective, when_neq(type, 0.0f));
 }
 
@@ -78,7 +81,7 @@ float4 PS(VSOutput pIn) : SV_TARGET0
 
   float hide_shadows = clamp(when_le(coords.x, 0.0f) + when_ge(coords.x, 1.0f) + when_le(coords.y, 0.0f) + when_ge(coords.y, 1.0f) + when_le(trans_position.z, 0.0f) + when_ge(trans_position.z, 1.0f), 0.0f, 1.0f);
 
-  float3 shadow_map_depth = linearize(tex_shadow_map.Sample(SamLinearClamp, coords).xyz, light_type);
+  float3 shadow_map_depth = linearize(tex_shadow_map.Sample(SamAnisotrophicClamp, coords).xyz, light_type);
 
   float cs = calcShadow(shadow_map_depth, position_depth, light_far);
 
@@ -99,7 +102,7 @@ float4 PS(VSOutput pIn) : SV_TARGET0
     col = PBRDirectional(
       light_direction, light_camera_position,
       position.xyz, normal, metallic,
-      roughness, light, light_ambient
+      roughness, light
     );
   }
   else if (light_type == 1)

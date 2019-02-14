@@ -29,6 +29,13 @@ class InputController {
         return Math.clamp(val, -1.0, 1.0)
     }
     
+    static CameraAttack { // TODO (Hilze): Add mouse support.
+        var val = 0.0
+        if (Input.getButton(Buttons.LeftMouseButton)) val = val + 1.0
+        if (Input.getKey(Keys.Q)) val = val + 1.0
+        return Math.clamp(val, -1.0, 1.0)
+    }
+    
     static CameraVertical { // TODO (Hilze): Add mouse support.
         var val = 0.0
         //val = Input.getAxis(Axes.RightStickY)
@@ -50,8 +57,8 @@ class InputController {
         var val = 0.0
         //if (Input.getButton(Buttons.Y)) val = val - 1.0
         //if (Input.getButton(Buttons.A)) val = val + 1.0
-        if (Input.getKey(Keys.Q)) val = val - 1.0
-        if (Input.getKey(Keys.E)) val = val + 1.0
+        //if (Input.getKey(Keys.Q)) val = val - 1.0
+        if (Input.getKey(Keys.Space)) val = val + 1.0
 
         return Math.clamp(val, -1.0, 1.0)
     }

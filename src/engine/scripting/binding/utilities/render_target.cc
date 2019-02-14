@@ -52,11 +52,7 @@ namespace lambda
         void Hammerhead(const String& input, const String& output)
         {
           platform::RenderTarget& rt_input = g_world->getPostProcessManager().getTarget(input);
-          asset::ShaderHandle shader = asset::AssetManager::getInstance().createAsset(Name(output + "_Hammerhead"),
-            foundation::Memory::constructShared<asset::Shader>(
-              io::ShaderIO::asAsset(io::ShaderIO::load("resources/shaders/hammerhead.fx"))
-              )
-          );
+          asset::VioletShaderHandle shader = asset::ShaderManager::getInstance()->get(Name("resources/shaders/hammerhead.fx"));
 
           float as = (float)rt_input.getTexture()->getLayer(0u).getHeight() / (float)rt_input.getTexture()->getLayer(0u).getWidth();
           VioletTexture violet_texture;
@@ -99,11 +95,7 @@ namespace lambda
         void IrradianceConvolution(const String& input, const String& output)
         {
           platform::RenderTarget& rt_input = g_world->getPostProcessManager().getTarget(input);
-          asset::ShaderHandle shader = asset::AssetManager::getInstance().createAsset(Name(output + "_IrradianceConvolution"),
-            foundation::Memory::constructShared<asset::Shader>(
-              io::ShaderIO::asAsset(io::ShaderIO::load("resources/shaders/irradiance_convolution.fx"))
-              )
-          );
+					asset::VioletShaderHandle shader = asset::ShaderManager::getInstance()->get(Name("resources/shaders/irradiance_convolution.fx"));
 
           float as = (float)rt_input.getTexture()->getLayer(0u).getHeight() / (float)rt_input.getTexture()->getLayer(0u).getWidth();
           

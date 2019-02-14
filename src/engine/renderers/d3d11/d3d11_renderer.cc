@@ -318,7 +318,7 @@ namespace lambda
       {
         context->setShader(shader);
       }
-      asset::ShaderHandle shader;
+      asset::VioletShaderHandle shader;
     };
 
     ///////////////////////////////////////////////////////////////////////////
@@ -568,7 +568,7 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::setShader(asset::ShaderHandle shader)
+    void D3D11Renderer::setShader(asset::VioletShaderHandle shader)
     {
       RenderActionSetShader* action = 
         foundation::GetFrameHeap()->construct<RenderActionSetShader>();
@@ -781,7 +781,7 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::setShader(asset::ShaderHandle shader)
+    void D3D11Renderer::setShader(asset::VioletShaderHandle shader)
     {
       context_->setShader(shader);
     }

@@ -1,12 +1,19 @@
 #ifndef __COMMON__
 #define __COMMON__
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-SamplerState SamPointClamp   : register(s10);
-SamplerState SamLinearClamp  : register(s11);
-SamplerState SamPointBorder  : register(s12);
-SamplerState SamLinearBorder : register(s13);
-SamplerState SamPointWarp    : register(s14);
-SamplerState SamLinearWarp   : register(s15);
+static const float PI  = 3.14159265359f;
+static const float TAU = 6.28318530718f;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+SamplerState SamPointClamp         : register(s6);
+SamplerState SamLinearClamp        : register(s7);
+SamplerState SamAnisotrophicClamp  : register(s8);
+SamplerState SamPointBorder        : register(s9);
+SamplerState SamLinearBorder       : register(s10);
+SamplerState SamAnisotrophicBorder : register(s11);
+SamplerState SamPointWarp          : register(s12);
+SamplerState SamLinearWarp         : register(s13);
+SamplerState SamAnisotrophicWarp   : register(s14);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 cbuffer cbDynamicResolution
@@ -17,6 +24,19 @@ cbuffer cbDynamicResolution
 float4 Sample(Texture2D t, SamplerState s, float2 tex)
 {
   return t.Sample(s, tex * dynamic_resolution_scale);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+static const float2 invAtan = float2(0.1591, 0.3183);
+float2 SampleSphericalMap(float3 v)
+{
+  float2 uv = float2(atan2(v.z, v.x), -asin(v.y));
+  return uv * invAtan + 0.5f;
+}
+float3 SampleSphericalMap(float2 uv)
+{
+  float2 thetaphi = ((uv * 2.0f) - 1.0f) * float2(3.1415926535897932384626433832795f, 1.5707963267948966192313216916398f);
+  return float3(cos(thetaphi.y) * cos(thetaphi.x), -sin(thetaphi.y), cos(thetaphi.y) * sin(thetaphi.x));
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

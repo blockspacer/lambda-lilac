@@ -38,6 +38,10 @@ class World {
     initialize() {
         _ground = Ground.new()
         _trees = Trees.new(_ground)
+        _ground.disable()
+        _trees.enabled = false
+        _ground.initialize()
+        _trees.initialize()
 
         PostProcess.setShaderVariableFloat1("water_height", _ground.waterHeight)
 
@@ -52,13 +56,24 @@ class World {
         new_position.y = _ground.heightOnPosition(new_position) + 2.0
         _camera.transform.worldPosition = new_position
 
-        /*{
-            var model = GameObject.new()
-            var mesh = Mesh.load("resources/gltf/sponza.glb")
-            model.addComponent(MeshRender).attach(mesh)
-            var collider = model.addComponent(Collider)
-            collider.makeMeshColliderRecursive(mesh)
-        }*/
+        {
+          var model = GameObject.new()
+          model.transform.worldScale = Vec3.new(0.5)
+          var mesh = Mesh.load("resources/gltf/map.glb")
+          model.addComponent(MeshRender).attach(mesh)
+          var collider = model.addComponent(Collider)
+          collider.makeMeshColliderRecursive(mesh)
+
+          new_position.y = _ground.heightOnPosition(new_position) + 10.0
+          _camera.transform.worldPosition = new_position
+
+          // {
+          //   var model2 = GameObject.new()
+          //   model2.transform.worldScale = Vec3.new(10.0)
+          //   var mesh2 = Mesh.load("resources/gltf/camera.glb")
+          //   model2.addComponent(MeshRender).attach(mesh2)
+          // }
+        }
 
         _init_once = true
     }

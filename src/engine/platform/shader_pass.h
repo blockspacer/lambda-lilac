@@ -13,12 +13,12 @@ namespace lambda
       ShaderPass();
       ShaderPass(
         Name name,
-        asset::ShaderHandle shader,
+        asset::VioletShaderHandle shader,
         Vector<RenderTarget> inputs,
         Vector<RenderTarget> outputs
       );
 
-      asset::ShaderHandle getShader() const;
+      asset::VioletShaderHandle getShader() const;
       const Vector<RenderTarget>& getInputs() const;
       const Vector<RenderTarget>& getOutputs() const;
 
@@ -29,7 +29,7 @@ namespace lambda
     private:
       bool enabled_;
       Name name_;
-      asset::ShaderHandle shader_;
+      asset::VioletShaderHandle shader_;
       Vector<RenderTarget> inputs_;
       Vector<RenderTarget> outputs_;
     };

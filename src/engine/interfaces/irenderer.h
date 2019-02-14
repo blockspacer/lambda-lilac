@@ -100,7 +100,7 @@ namespace lambda
 
       virtual void setMesh(asset::MeshHandle mesh) = 0;
       virtual void setSubMesh(const uint32_t& sub_mesh_idx) = 0;
-      virtual void setShader(asset::ShaderHandle shader) = 0;
+      virtual void setShader(asset::VioletShaderHandle shader) = 0;
       virtual void setTexture(
         asset::VioletTextureHandle texture, 
         uint8_t slot = 0

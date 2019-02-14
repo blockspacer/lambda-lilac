@@ -63,9 +63,13 @@ namespace lambda
       glm::vec3 inverseTransformPoint(const glm::vec3& point) const;
       glm::vec3 inverseTransformVector(const glm::vec3& vector) const;
 
-      glm::vec3 getWorldForward() const;
-      glm::vec3 getWorldUp() const;
-      glm::vec3 getWorldRight() const;
+			glm::vec3 getWorldForward() const;
+			glm::vec3 getWorldUp() const;
+			glm::vec3 getWorldRight() const;
+
+			glm::vec3 getLocalForward() const;
+			glm::vec3 getLocalUp() const;
+			glm::vec3 getLocalRight() const;
 
       void lookAt(const glm::vec3& target, glm::vec3 up);
       void lookAtLocal(const glm::vec3& target, glm::vec3 up);
@@ -90,6 +94,7 @@ namespace lambda
       glm::mat4 local       = glm::mat4(1.0f);
       glm::mat4 world       = glm::mat4(1.0f);
       bool dirty            = true;
+			bool valid            = true;
 
       entity::Entity getParent() const { return parent; }
       void setParent(entity::Entity p) { parent = p; }
@@ -98,6 +103,16 @@ namespace lambda
       entity::Entity parent = entity::InvalidEntity;
     };
 
+		struct TransformSystemData
+		{
+			Vector<TransformData> data_;
+			Map<entity::Entity, uint32_t> entity_to_data_;
+			Map<uint32_t, entity::Entity> data_to_entity_;
+			Set<entity::Entity> marked_for_delete_;
+			Queue<uint32_t> unused_data_entries_;
+
+			void releaseUnused();
+		};
 
     class TransformSystem : public ISystem
     {
@@ -142,19 +157,20 @@ namespace lambda
       static glm::quat lookRotation(const glm::vec3& forward, const glm::vec3& up);
 
     private:
-      Vector<TransformData> data_;
-      Map<uint64_t, uint32_t> entity_to_data_;
-      Map<uint32_t, uint64_t> data_to_entity_;
 
       static entity::Entity root_;
       const TransformData& lookUpData(const entity::Entity& entity) const;
       TransformData& lookUpData(const entity::Entity& entity);
       void cleanIfDirty(TransformData& data);
       void makeDirtyRecursive(TransformData& data);
+			bool isChildOf(const entity::Entity& parent, const entity::Entity& child) const;
       
     private:
       virtual void initialize(world::IWorld& world) override;
       virtual void deinitialize() override;
-    };
+			virtual void collectGarbage() override;
+
+			TransformSystemData data_;
+		};
   }
 }

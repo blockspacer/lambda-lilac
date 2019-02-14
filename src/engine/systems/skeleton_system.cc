@@ -23,20 +23,7 @@ namespace lambda
     }
     void SkeletonSystem::removeComponent(const entity::Entity& entity)
     {
-      const auto& it = entity_to_data_.find(entity);
-      if (it != entity_to_data_.end())
-      {
-        uint32_t id = it->second;
-
-        for (auto i = data_to_entity_.find(id); i != data_to_entity_.end(); i++)
-        {
-          entity_to_data_.at(i->second)--;
-        }
-
-        data_.erase(data_.begin() + id);
-        entity_to_data_.erase(it);
-        data_to_entity_.erase(id);
-      }
+			marked_for_delete_.insert(entity);
     }
     void SkeletonSystem::initialize(world::IWorld& world)
     {
@@ -50,6 +37,30 @@ namespace lambda
     void SkeletonSystem::fixedUpdate(const double& time_step)
     {
     }
+		void SkeletonSystem::collectGarbage()
+		{
+			if (!marked_for_delete_.empty())
+			{
+				for (entity::Entity entity : marked_for_delete_)
+				{
+					const auto& it = entity_to_data_.find(entity);
+					if (it != entity_to_data_.end())
+					{
+						uint32_t id = it->second;
+
+						for (auto i = data_to_entity_.find(id); i != data_to_entity_.end(); i++)
+						{
+							entity_to_data_.at(i->second)--;
+						}
+
+						data_.erase(data_.begin() + id);
+						entity_to_data_.erase(it);
+						data_to_entity_.erase(id);
+					}
+				}
+				marked_for_delete_.clear();
+			}
+		}
     SkeletonData& SkeletonSystem::lookUpData(const entity::Entity& entity)
     {
       LMB_ASSERT(entity_to_data_.find(entity) != entity_to_data_.end(), "Skeleton: could not find component");

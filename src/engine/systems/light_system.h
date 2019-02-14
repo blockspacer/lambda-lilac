@@ -120,6 +120,7 @@ namespace lambda
       bool rsm = false;
       uint8_t dynamic_frequency = 3u;
       uint8_t dynamic_index = 255u;
+			bool valid = true;
 
       Vector<float>       depth;
       Vector<glm::mat4x4> projection;
@@ -154,17 +155,18 @@ namespace lambda
       * Modify:   [Input] Shadow map [Output] Shadow map.
       * Publish:  [Input] Shadow map | Position | Normal | Metallic_Roughness [Output] Light map.
       */
-      void setShadersDirectional(asset::ShaderHandle generate, Vector<asset::ShaderHandle> modify, asset::ShaderHandle publish);
-      void setShadersSpot(asset::ShaderHandle generate, Vector<asset::ShaderHandle> modify, asset::ShaderHandle publish);
-      void setShadersPoint(asset::ShaderHandle generate, Vector<asset::ShaderHandle> modify, asset::ShaderHandle publish);
-      void setShadersCascade(asset::ShaderHandle generate, Vector<asset::ShaderHandle> modify, asset::ShaderHandle publish);
+      void setShadersDirectional(asset::VioletShaderHandle generate, Vector<asset::VioletShaderHandle> modify, asset::VioletShaderHandle publish);
+      void setShadersSpot(asset::VioletShaderHandle generate, Vector<asset::VioletShaderHandle> modify, asset::VioletShaderHandle publish);
+      void setShadersPoint(asset::VioletShaderHandle generate, Vector<asset::VioletShaderHandle> modify, asset::VioletShaderHandle publish);
+      void setShadersCascade(asset::VioletShaderHandle generate, Vector<asset::VioletShaderHandle> modify, asset::VioletShaderHandle publish);
       
-      void setShadersDirectionalRSM(asset::ShaderHandle generate, Vector<asset::ShaderHandle> modify, asset::ShaderHandle publish);
-      void setShadersSpotRSM(asset::ShaderHandle generate, Vector<asset::ShaderHandle> modify, asset::ShaderHandle publish);
+      void setShadersDirectionalRSM(asset::VioletShaderHandle generate, Vector<asset::VioletShaderHandle> modify, asset::VioletShaderHandle publish);
+      void setShadersSpotRSM(asset::VioletShaderHandle generate, Vector<asset::VioletShaderHandle> modify, asset::VioletShaderHandle publish);
 
       virtual void initialize(world::IWorld& world) override;
       virtual void deinitialize() override;
       virtual void onRender() override;
+			virtual void collectGarbage() override;
 
       void setColour(const entity::Entity& entity, const glm::vec3& colour);
       glm::vec3 getColour(const entity::Entity& entity) const;
@@ -207,16 +209,18 @@ namespace lambda
 
     private:
       Vector<LightData> data_;
-      Map<uint64_t, uint32_t> entity_to_data_;
-      Map<uint32_t, uint64_t> data_to_entity_;
+			Map<entity::Entity, uint32_t> entity_to_data_;
+			Map<uint32_t, entity::Entity> data_to_entity_;
+			Set<entity::Entity> marked_for_delete_;
+			Queue<uint32_t> unused_data_entries_;
 
       asset::MeshHandle full_screen_mesh_;
 
       struct ShaderPass
       {
-        asset::ShaderHandle         shader_generate;
-        Vector<asset::ShaderHandle> shader_modify;
-        asset::ShaderHandle         shader_publish;
+        asset::VioletShaderHandle         shader_generate;
+        Vector<asset::VioletShaderHandle> shader_modify;
+        asset::VioletShaderHandle         shader_publish;
       };
       ShaderPass shaders_directional_;
       ShaderPass shaders_directional_rsm_;

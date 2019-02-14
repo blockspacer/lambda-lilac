@@ -14,7 +14,8 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     enum class SystemIds : size_t
     {
-      kEntitySystem,
+			kEntitySystem,
+			kNameSystem,
       kTransformSystem,
       kCameraSystem,
       kLightSystem,
@@ -40,6 +41,7 @@ namespace lambda
       virtual void onRender() {};
       static size_t systemId() { return 0; };
 			virtual String profilerInfo() const { return ""; }
+			virtual void collectGarbage() = 0;
 
     protected:
       template<typename T>

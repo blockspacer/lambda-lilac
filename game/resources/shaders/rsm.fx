@@ -1,6 +1,6 @@
 #define PD_MEDIUM
-#include "resources/shaders/poisson_disc.fx"
-#include "resources/shaders/common.fx"
+#include "poisson_disc.fx"
+#include "common.fx"
 
 static const float rsm_intensity = 1.0f;
 static const float rsm_r_max = 0.05f;

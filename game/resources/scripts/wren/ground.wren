@@ -44,8 +44,6 @@ class Ground {
         _scale = Vec3.new(5.0, 50.0, 5.0)
         _size = Vec2.new(250, 250)
         _water_height = -10.0
-
-        initialize()
     }
 
     enable() { _enabled = GroundEnabledType.Enabled }

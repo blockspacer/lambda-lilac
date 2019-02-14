@@ -19,9 +19,22 @@ namespace lambda
     {
       require(transform_system_.get(), entity);
 
-      data_.push_back(ColliderData(entity));
-      data_to_entity_[(uint32_t)data_.size() - 1u] = entity;
-      entity_to_data_[entity] = (uint32_t)data_.size() - 1u;
+			if (!unused_data_entries_.empty())
+			{
+				uint32_t idx = unused_data_entries_.front();
+				unused_data_entries_.pop();
+
+				data_[idx] = ColliderData(entity);
+				data_to_entity_[idx] = entity;
+				entity_to_data_[entity] = idx;
+			}
+			else
+			{
+				data_.push_back(ColliderData(entity));
+				uint32_t idx = (uint32_t)data_.size() - 1u;
+				data_to_entity_[idx] = entity;
+				entity_to_data_[entity] = idx;
+			}
 
       /** Init start */
       ColliderData& data = lookUpData(entity);
@@ -60,33 +73,36 @@ namespace lambda
     void ColliderSystem::removeComponent(const entity::Entity& entity)
     {
       if (true == rigid_body_system_->hasComponent(entity))
-      {
         rigid_body_system_->removeComponent(entity);
-      }
-
-      const auto& it = entity_to_data_.find(entity);
-      if (it != entity_to_data_.end())
-      {
-        {
-          ColliderData& data = data_.at(it->second);
-          rigid_body_system_->GetPhysicsWorld().dynamicsWorld()->removeCollisionObject(data.rigid_body);
-          foundation::Memory::destruct(data.collision_shape);
-          foundation::Memory::destruct(data.motion_state);
-          foundation::Memory::destruct(data.rigid_body);
-        }
-
-        uint32_t id = it->second;
-
-        for (auto i = data_to_entity_.find(id); i != data_to_entity_.end(); i++)
-        {
-          entity_to_data_.at(i->second)--;
-        }
-
-        data_.erase(data_.begin() + id);
-        entity_to_data_.erase(it);
-        data_to_entity_.erase(id);
-      }
+			marked_for_delete_.insert(entity);
     }
+		void ColliderSystem::collectGarbage()
+		{
+			if (!marked_for_delete_.empty())
+			{
+				for (entity::Entity entity : marked_for_delete_)
+				{
+					const auto& it = entity_to_data_.find(entity);
+					if (it != entity_to_data_.end())
+					{
+						{
+							ColliderData& data = data_.at(it->second);
+							rigid_body_system_->GetPhysicsWorld().dynamicsWorld()->removeCollisionObject(data.rigid_body);
+							foundation::Memory::destruct(data.collision_shape);
+							foundation::Memory::destruct(data.motion_state);
+							foundation::Memory::destruct(data.rigid_body);
+						}
+
+						uint32_t idx = it->second;
+						unused_data_entries_.push(idx);
+						data_to_entity_.erase(idx);
+						entity_to_data_.erase(entity);
+						data_[idx].valid = false;
+					}
+				}
+				marked_for_delete_.clear();
+			}
+		}
     void ColliderSystem::initialize(world::IWorld& world)
     {
       transform_system_  = world.getScene().getSystem<TransformSystem>();
@@ -248,12 +264,14 @@ namespace lambda
     ColliderData& ColliderSystem::lookUpData(const entity::Entity& entity)
     {
       assert(entity_to_data_.find(entity) != entity_to_data_.end());
-      return data_.at(entity_to_data_.at(entity));
+			assert(data_.at(entity_to_data_.at(entity)).valid);
+			return data_.at(entity_to_data_.at(entity));
     }
     const ColliderData& ColliderSystem::lookUpData(const entity::Entity& entity) const
     {
       assert(entity_to_data_.find(entity) != entity_to_data_.end());
-      return data_.at(entity_to_data_.at(entity));
+			assert(data_.at(entity_to_data_.at(entity)).valid);
+			return data_.at(entity_to_data_.at(entity));
     }
     ColliderComponent::ColliderComponent(const entity::Entity& entity, ColliderSystem* system) :
       IComponent(entity), system_(system)
@@ -291,6 +309,7 @@ namespace lambda
       rigid_body      = other.rigid_body;
       is_trigger      = other.is_trigger;
       entity          = other.entity;
+			valid           = other.valid;
     }
     ColliderData & ColliderData::operator=(const ColliderData & other)
     {
@@ -300,7 +319,8 @@ namespace lambda
       rigid_body      = other.rigid_body;
       is_trigger      = other.is_trigger;
       entity          = other.entity;
-      return *this;
+			valid           = other.valid;
+			return *this;
     }
 }
 }

@@ -92,15 +92,21 @@ function(LinkDependencies)
       SetSolutionFolder("deps/asset"      assimp IrrXML UpdateAssimpLibsDebugSymbolsAndDLLs zlib zlibstatic)
     ENDIF()
     
-  # /// CHROMIUM EMBEDDED FRAMEWORK ///////////////////////////////
-    # Add this project's cmake/ directory to the module path.
-      IF(${VIOLET_GUI_CEF})
-      SET(CEF_RUNTIME_LIBRARY_FLAG "/MD" CACHE STRING "" FORCE)
-
-      include(IncludeCEF)
-      IncludeCEF()
+  # /// ULTRALIGHT ////////////////////////////////////////////////
+    IF (${VIOLET_GUI_ULTRALIGHT})
+      ADD_LIBRARY(ultralight INTERFACE)
+      TARGET_INCLUDE_DIRECTORIES(ultralight INTERFACE "deps/ultralight/include")
       
-      SetSolutionFolder("deps/gui" libcef_dll_wrapper)
+      IF(VIOLET_WIN32)
+        TARGET_LINK_LIBRARIES(ultralight INTERFACE 
+          "${CMAKE_SOURCE_DIR}/deps/ultralight/lib/win/x64/Ultralight.lib"
+          "${CMAKE_SOURCE_DIR}/deps/ultralight/lib/win/x64/UltralightCore.lib"
+          "${CMAKE_SOURCE_DIR}/deps/ultralight/lib/win/x64/WebCore.lib")
+      ELSEIF(VIOLET_LINUX)
+        # TODO (Hilze): Implement.
+      ELSEIF(VIOLET_OSX)
+        TARGET_LINK_LIBRARIES(ultralight INTERFACE "-lUltralightCore -framework Ultralight -framework WebCore")
+      ENDIF()
     ENDIF()
 
   # /// BULLET 3 //////////////////////////////////////////////////
@@ -268,18 +274,24 @@ function(LinkDependencies)
   # /// TOOLS /////////////////////////////////////////////////////
   # ///////////////////////////////////////////////////////////////
   IF(${VIOLET_CONFIG_TOOLS})
-  # /// GLSLANG ///////////////////////////////////////////////////
-    ADD_SUBDIRECTORY("deps/glslang")
-    TARGET_INCLUDE_DIRECTORIES(glslang INTERFACE "deps/glslang/spirv")
-    TARGET_INCLUDE_DIRECTORIES(glslang INTERFACE "deps/glslang/glslang")
-    SetSolutionFolder("deps/tools"      glslang glslang-default-resource-limits OGLCompiler OSDependent SPIRV SPVRemapper glslangValidator spirv-remap HLSL)
+  # /// HLSLCC ////////////////////////////////////////////////////
+    SET(HLSLCC_LIBRARY_SHARED OFF CACHE BOOL "" FORCE)
+    ADD_SUBDIRECTORY("deps/HLSLcc")
+    SetSolutionFolder("deps/asset" hlslcc)
+    SET(VIOLET_USE_HLSLCC ON CACHE BOOL "" FORCE)
 
-  # /// SPIRV CROSS ///////////////////////////////////////////////
-    ADD_SUBDIRECTORY("deps/SPIRV-Cross")
-    TARGET_INCLUDE_DIRECTORIES(SPIRV INTERFACE "deps/SPIRV-Cross/include")
-    SetSolutionFolder("deps/tools"      spirv-cross spirv-cross-core spirv-cross-cpp spirv-cross-glsl spirv-cross-hlsl spirv-cross-msl spirv-cross-reflect spirv-cross-util)
+  # /// DIRECTX SHADER COMPILER ///////////////////////////////////
+    ADD_SUBDIRECTORY("deps/ShaderConductor")
+    TARGET_INCLUDE_DIRECTORIES(ShaderConductor INTERFACE "deps/ShaderConductor/Include")
+    #include(DownloadDXC)
+    #DownloadDXC("${CMAKE_SOURCE_DIR}/deps/DXC")
+    
+    #ADD_LIBRARY(dxc INTERFACE)
+    #TARGET_INCLUDE_DIRECTORIES(dxc INTERFACE "deps/DXC/include")
 
-
+    #ADD_SUBDIRECTORY("deps/DirectXShaderCompiler")
+    #SetSolutionFolder("deps/asset" hlslcc)
+    
   # /// DIRECTX TEX ///////////////////////////////////////////////
     SET(DirectXTexSources
     "deps/DirectXTex/DirectXTex/BC.h"
@@ -314,7 +326,10 @@ function(LinkDependencies)
     )
     ADD_LIBRARY(directxtex ${DirectXTexSources})
     TARGET_INCLUDE_DIRECTORIES(directxtex INTERFACE "deps/DirectXTex/DirectXTex")
-    SetSolutionFolder("deps/assets" directxtex)
+    SetSolutionFolder("deps/asset" directxtex)
+  ELSE()
+      SET(VIOLET_USE_HLSLCC OFF CACHE BOOL "" FORCE)
+
   ENDIF()
 
   # /// LZ4 ///////////////////////////////////////////////////////

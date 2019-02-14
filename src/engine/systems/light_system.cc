@@ -26,13 +26,24 @@ namespace lambda
     BaseLightComponent LightSystem::addComponent(const entity::Entity& entity)
     {
       if (false == transform_system_->hasComponent(entity))
-      {
         transform_system_->addComponent(entity);
-      }
 
-      data_.push_back(LightData(entity));
-      data_to_entity_[(uint32_t)data_.size() - 1u] = entity;
-      entity_to_data_[entity] = (uint32_t)data_.size() - 1u;
+			if (!unused_data_entries_.empty())
+			{
+				uint32_t idx = unused_data_entries_.front();
+				unused_data_entries_.pop();
+
+				data_[idx] = LightData(entity);
+				data_to_entity_[idx] = entity;
+				entity_to_data_[entity] = idx;
+			}
+			else
+			{
+				data_.push_back(LightData(entity));
+				uint32_t idx = (uint32_t)data_.size() - 1u;
+				data_to_entity_[idx] = entity;
+				entity_to_data_[entity] = idx;
+			}
       
       auto& data = lookUpData(entity);
       data.type  = LightType::kUnknown;
@@ -58,21 +69,27 @@ namespace lambda
     }
     void LightSystem::removeComponent(const entity::Entity& entity)
     {
-      const auto& it = entity_to_data_.find(entity);
-      if (it != entity_to_data_.end())
-      {
-        uint32_t id = it->second;
-
-        for (auto i = data_to_entity_.find(id); i != data_to_entity_.end(); i++)
-        {
-          entity_to_data_.at(i->second)--;
-        }
-
-        data_.erase(data_.begin() + id);
-        entity_to_data_.erase(it);
-        data_to_entity_.erase(id);
-      }
+			marked_for_delete_.insert(entity);
     }
+		void LightSystem::collectGarbage()
+		{
+			if (!marked_for_delete_.empty())
+			{
+				for (entity::Entity entity : marked_for_delete_)
+				{
+					const auto& it = entity_to_data_.find(entity);
+					if (it != entity_to_data_.end())
+					{
+						uint32_t idx = it->second;
+						unused_data_entries_.push(idx);
+						data_to_entity_.erase(idx);
+						entity_to_data_.erase(entity);
+						data_[idx].valid = false;
+					}
+				}
+				marked_for_delete_.clear();
+			}
+		}
     DirectionalLightComponent LightSystem::addDirectionalLight(const entity::Entity& entity)
     {
       addComponent(entity);
@@ -113,37 +130,37 @@ namespace lambda
     {
       return SpotLightComponent(entity, this);
     }
-    void LightSystem::setShadersDirectional(asset::ShaderHandle generate, Vector<asset::ShaderHandle> modify, asset::ShaderHandle publish)
+    void LightSystem::setShadersDirectional(asset::VioletShaderHandle generate, Vector<asset::VioletShaderHandle> modify, asset::VioletShaderHandle publish)
     {
       shaders_directional_.shader_generate = generate;
       shaders_directional_.shader_modify   = modify;
       shaders_directional_.shader_publish  = publish;
     }
-    void LightSystem::setShadersSpot(asset::ShaderHandle generate, Vector<asset::ShaderHandle> modify, asset::ShaderHandle publish)
+    void LightSystem::setShadersSpot(asset::VioletShaderHandle generate, Vector<asset::VioletShaderHandle> modify, asset::VioletShaderHandle publish)
     {
       shaders_spot_.shader_generate = generate;
       shaders_spot_.shader_modify   = modify;
       shaders_spot_.shader_publish  = publish;
     }
-    void LightSystem::setShadersPoint(asset::ShaderHandle generate, Vector<asset::ShaderHandle> modify, asset::ShaderHandle publish)
+    void LightSystem::setShadersPoint(asset::VioletShaderHandle generate, Vector<asset::VioletShaderHandle> modify, asset::VioletShaderHandle publish)
     {
       shaders_point_.shader_generate = generate;
       shaders_point_.shader_modify   = modify;
       shaders_point_.shader_publish  = publish;
     }
-    void LightSystem::setShadersCascade(asset::ShaderHandle generate, Vector<asset::ShaderHandle> modify, asset::ShaderHandle publish)
+    void LightSystem::setShadersCascade(asset::VioletShaderHandle generate, Vector<asset::VioletShaderHandle> modify, asset::VioletShaderHandle publish)
     {
       shaders_cascade_.shader_generate = generate;
       shaders_cascade_.shader_modify   = modify;
       shaders_cascade_.shader_publish  = publish;
     }
-    void LightSystem::setShadersDirectionalRSM(asset::ShaderHandle generate, Vector<asset::ShaderHandle> modify, asset::ShaderHandle publish)
+    void LightSystem::setShadersDirectionalRSM(asset::VioletShaderHandle generate, Vector<asset::VioletShaderHandle> modify, asset::VioletShaderHandle publish)
     {
       shaders_directional_rsm_.shader_generate = generate;
       shaders_directional_rsm_.shader_modify   = modify;
       shaders_directional_rsm_.shader_publish  = publish;
     }
-    void LightSystem::setShadersSpotRSM(asset::ShaderHandle generate, Vector<asset::ShaderHandle> modify, asset::ShaderHandle publish)
+    void LightSystem::setShadersSpotRSM(asset::VioletShaderHandle generate, Vector<asset::VioletShaderHandle> modify, asset::VioletShaderHandle publish)
     {
       shaders_spot_rsm_.shader_generate = generate;
       shaders_spot_rsm_.shader_modify   = modify;
@@ -403,12 +420,14 @@ namespace lambda
     LightData& LightSystem::lookUpData(const entity::Entity& entity)
     {
       assert(entity_to_data_.find(entity) != entity_to_data_.end());
-      return data_.at(entity_to_data_.at(entity));
+			assert(data_.at(entity_to_data_.at(entity)).valid);
+			return data_.at(entity_to_data_.at(entity));
     }
     const LightData& LightSystem::lookUpData(const entity::Entity& entity) const
     {
       assert(entity_to_data_.find(entity) != entity_to_data_.end());
-      return data_.at(entity_to_data_.at(entity));
+			assert(data_.at(entity_to_data_.at(entity)).valid);
+			return data_.at(entity_to_data_.at(entity));
     }
     void LightSystem::renderDirectional(const entity::Entity& entity)
     {
@@ -518,7 +537,7 @@ namespace lambda
         renderer->setBlendState(platform::BlendState::Alpha());
 
         // Draw all modify shaders.
-        for (const asset::ShaderHandle& it : shader_pack.shader_modify)
+        for (const asset::VioletShaderHandle& it : shader_pack.shader_modify)
         {
           renderer->bindShaderPass(
             platform::ShaderPass(
@@ -682,7 +701,7 @@ namespace lambda
         renderer->setRasterizerState(platform::RasterizerState::SolidBack());
         renderer->setBlendState(platform::BlendState::Alpha());
 
-        for (const asset::ShaderHandle& it : shader_pack.shader_modify)
+        for (const asset::VioletShaderHandle& it : shader_pack.shader_modify)
         {
           renderer->bindShaderPass(
             platform::ShaderPass(
@@ -830,7 +849,7 @@ namespace lambda
         renderer->setRasterizerState(platform::RasterizerState::SolidBack());
         renderer->setBlendState(platform::BlendState::Alpha());
 
-        for (const asset::ShaderHandle& it : shaders_point_.shader_modify)
+        for (const asset::VioletShaderHandle& it : shaders_point_.shader_modify)
         {
           renderer->bindShaderPass(
             platform::ShaderPass(
@@ -1014,7 +1033,7 @@ namespace lambda
           renderer->setRasterizerState(platform::RasterizerState::SolidBack());
           renderer->setBlendState(platform::BlendState::Alpha());
 
-          for (const asset::ShaderHandle& it : shaders_cascade_.shader_modify)
+          for (const asset::VioletShaderHandle& it : shaders_cascade_.shader_modify)
           {
             renderer->bindShaderPass(
               platform::ShaderPass(
@@ -1265,6 +1284,7 @@ namespace lambda
       projection        = other.projection;
       view              = other.view;
       view_position     = other.view_position;
+			valid             = other.valid;
     }
     LightData & LightData::operator=(const LightData & other)
     {
@@ -1289,6 +1309,7 @@ namespace lambda
       projection        = other.projection;
       view              = other.view;
       view_position     = other.view_position;
+			valid             = other.valid;
 
       return *this;
     }

@@ -145,58 +145,7 @@ namespace lambda
     {
       wrenEnsureSlots(vm_, (int16_t)args.size() + 1);
       for (int16_t i = 0; i < (int16_t)args.size(); ++i)
-      {
-        switch (args.at(i).getType())
-        {
-        case ScriptValue::kBoolean: 
-          wrenSetSlotBool  (vm_, i + 1, args.at(i).getBool());           break;
-        case ScriptValue::kInt8:    
-          wrenSetSlotDouble(vm_, i + 1, (double)args.at(i).getInt8());   break;
-        case ScriptValue::kUint8:   
-          wrenSetSlotDouble(vm_, i + 1, (double)args.at(i).getInt16());  break;
-        case ScriptValue::kInt16:   
-          wrenSetSlotDouble(vm_, i + 1, (double)args.at(i).getInt32());  break;
-        case ScriptValue::kUint16:  
-          wrenSetSlotDouble(vm_, i + 1, (double)args.at(i).getInt64());  break;
-        case ScriptValue::kInt32:   
-          wrenSetSlotDouble(vm_, i + 1, (double)args.at(i).getUint8());  break;
-        case ScriptValue::kUint32:  
-          wrenSetSlotDouble(vm_, i + 1, (double)args.at(i).getUint16()); break;
-        case ScriptValue::kInt64:   
-          wrenSetSlotDouble(vm_, i + 1, (double)args.at(i).getUint32()); break;
-        case ScriptValue::kUint64:  
-          wrenSetSlotDouble(vm_, i + 1, (double)args.at(i).getUint64()); break;
-        case ScriptValue::kFloat:   
-          wrenSetSlotDouble(vm_, i + 1, (double)args.at(i).getFloat());  break;
-        case ScriptValue::kDouble:  
-          wrenSetSlotDouble(vm_, i + 1, (double)args.at(i).getDouble()); break;
-        case ScriptValue::kString:  
-          wrenSetSlotString(vm_, i + 1, args.at(i).getString().c_str()); break;
-          //case ScriptValue::kVec2:    
-          //  { 
-          //    Vec2::make(vm_, (glm::vec2)args.at(i).getVec2()); 
-          //    WrenHandle* handle = wrenGetSlotHandle(vm_, 1); 
-          //    wrenSetSlotHandle(vm_, i + 1, handle); 
-          //    wrenReleaseHandle(vm_, handle); break; 
-          //  }
-          //case ScriptValue::kVec3:    
-          //  { 
-          //    Vec3::make(vm_, (glm::vec3)args.at(i).getVec3()); 
-          //    WrenHandle* handle = wrenGetSlotHandle(vm_, 1); 
-          //    wrenSetSlotHandle(vm_, i + 1, handle); 
-          //    wrenReleaseHandle(vm_, handle); break; 
-          //  }
-          //case ScriptValue::kVec4:    
-          //  { 
-          //    Vec4::make(vm_, (glm::vec4)args.at(i).getVec4()); 
-          //    WrenHandle* handle = wrenGetSlotHandle(vm_, 1); 
-          //    wrenSetSlotHandle(vm_, i + 1, handle); 
-          //    wrenReleaseHandle(vm_, handle); break; 
-          //  }
-        default:
-        case ScriptValue::kNull:    wrenSetSlotNull(vm_, i + 1); break;
-        }
-      }
+				WrenHandleValue(vm_, args[i], i + 1);
 
       try
       {

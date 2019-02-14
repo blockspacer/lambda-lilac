@@ -61,12 +61,19 @@
 [submodule "cef-project"]
 	path = cef-project
 	url = https://github.com/chromiumembedded/cef-project.git
-[submodule "deps/glslang"]
-	path = deps/glslang
-	url = https://github.com/KhronosGroup/glslang.git
-[submodule "deps/SPIRV-Cross"]
-	path = deps/SPIRV-Cross
-	url = https://github.com/KhronosGroup/SPIRV-Cross.git
 [submodule "deps/lz4"]
 	path = deps/lz4
 	url = https://github.com/lz4/lz4.git
+[submodule "deps/HLSLcc"]
+	path = deps/HLSLcc
+	url = https://github.com/Unity-Technologies/HLSLcc.git
+[submodule "deps/DirectXShaderCompiler"]
+	path = deps/DirectXShaderCompiler
+	url = https://github.com/Microsoft/DirectXShaderCompiler.git
+  branch = dxil-2018-09-10
+[submodule "deps/ShaderConductor"]
+	path = deps/ShaderConductor
+	url = https://github.com/Microsoft/ShaderConductor.git
+[submodule "deps/ultralight"]
+	path = deps/ultralight
+	url = https://github.com/ultralight-ux/ultralight.git

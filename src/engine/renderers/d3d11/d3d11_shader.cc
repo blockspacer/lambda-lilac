@@ -4,101 +4,162 @@
 #include <utils/file_system.h>
 #include <renderers/d3d11/d3d11_context.h>
 
+#include <D3Dcompiler.h>
+#pragma comment(lib,"D3dcompiler.lib")
+
 namespace lambda
 {
   namespace windows
   {
+		///////////////////////////////////////////////////////////////////////////
+		class IncludeHandler : public ID3DInclude
+		{
+		public:
+			IncludeHandler(String file_path)
+				: file_path_(file_path)
+			{
+				file_path_ = FileSystem::RemoveName(file_path_);
+			}
+
+			// Inherited via ID3DInclude
+			virtual HRESULT Open(
+				D3D_INCLUDE_TYPE IncludeType,
+				LPCSTR pFileName,
+				LPCVOID pParentData,
+				LPCVOID* ppData,
+				UINT* pBytes) override
+			{
+				Vector<char> bytes = FileSystem::FileToVector(file_path_ + '/' + pFileName);
+				UINT size = (UINT)bytes.size();
+
+				*ppData = foundation::Memory::allocate(size);
+				memcpy((void*)*ppData, bytes.data(), size);
+				*pBytes = size;
+				return S_OK;
+			}
+
+			virtual HRESULT Close(LPCVOID pData) override
+			{
+				foundation::Memory::deallocate((void*)pData);
+				return S_OK;
+			}
+
+			String file_path_;
+		};
+
+		///////////////////////////////////////////////////////////////////////////
+		ID3D10Blob* compile(
+			const String& file,
+			const Vector<uint32_t>& source,
+			const String& entry,
+			const String& target)
+		{
+			if (source.empty())
+				return nullptr;
+
+			ID3D10Blob* blob;
+			ID3D10Blob* error;
+
+			IncludeHandler include_handler(file);
+
+			HRESULT result = D3DCompile(
+				(void*)source.data(),
+				source.size() * sizeof(uint32_t),
+				file.c_str(), 0,
+				&include_handler,
+				entry.c_str(),
+				target.c_str(),
+				0,
+				0,
+				&blob,
+				&error
+			);
+
+			if (FAILED(result))
+			{
+				if (error)
+				{
+					String err = 
+						"D3D11Shader: Failed to compile shader with message:\n" + 
+						String((char*)error->GetBufferPointer());
+					LMB_ASSERT(false, err.c_str());
+					error->Release();
+				}
+
+				if (blob)
+					blob->Release();
+			}
+
+			return blob;
+		}
+
     ///////////////////////////////////////////////////////////////////////////
     D3D11Shader::D3D11Shader(
-      const asset::Shader& shader, 
+			asset::VioletShaderHandle shader,
       D3D11Context* context)
       : context_(context)
-    { 
-      Vector<char> bytecode = shader.getBytecode();
-      ID3D10Blob* vertex   = compile(
-        shader.getFile().getName(), 
-        bytecode, 
-        "VS", 
-        "vs_5_0"
-      );
+    {
+			ID3D10Blob* vs_blob = compile(
+				shader->getFilePath(),
+				shader->getByteCode(ShaderStages::kVertex, VIOLET_HLSL),
+				"VS",
+				"vs_5_0"
+			);;
+			ID3D10Blob* ps_blob = compile(
+				shader->getFilePath(),
+				shader->getByteCode(ShaderStages::kPixel, VIOLET_HLSL),
+				"PS",
+				"ps_5_0"
+			);;
+			ID3D10Blob* gs_blob = compile(
+				shader->getFilePath(),
+				shader->getByteCode(ShaderStages::kGeometry, VIOLET_HLSL),
+				"GS",
+				"gs_5_0"
+			);;
 
-      ID3D10Blob* pixel    = compile(
-        shader.getFile().getName(), 
-        bytecode, 
-        "PS", 
-        "ps_5_0"
-      );
+			if (vs_blob)
+			{
+				if (FAILED(context_->getD3D11Device()->CreateVertexShader(
+					vs_blob->GetBufferPointer(),
+					vs_blob->GetBufferSize(),
+					NULL,
+					&vs_
+				)))
+					vs_ = nullptr;
 
-      ID3D10Blob* geometry = compile(
-        shader.getFile().getName(),
-        bytecode, 
-        "GS", 
-        "gs_5_0"
-      );
+				reflect(vs_blob, vs_buffers_, vs_d3d11_buffers_);
+				reflectInputLayout(vs_blob, context_->getD3D11Device());
+				vs_blob->Release();
+			}
 
-      ID3D11VertexShader*   vs = nullptr;
-      ID3D11PixelShader*    ps = nullptr;
-      ID3D11GeometryShader* gs = nullptr;
+			if (ps_blob)
+			{
+				if (FAILED(context_->getD3D11Device()->CreatePixelShader(
+					ps_blob->GetBufferPointer(),
+					ps_blob->GetBufferSize(),
+					NULL,
+					&ps_
+				)))
+					ps_ = nullptr;
 
-      if (vertex   != nullptr) 
-      { 
-        HRESULT vs_res = context_->getD3D11Device()->CreateVertexShader(
-          vertex->GetBufferPointer(),   
-          vertex->GetBufferSize(),   
-          NULL, 
-          &vs
-        ); 
-        
-        if (!FAILED(vs_res)) 
-          vs_ = vs; 
-      }
-      
-      if (pixel    != nullptr) 
-      { 
-        HRESULT ps_res = context_->getD3D11Device()->CreatePixelShader(
-          pixel->GetBufferPointer(),    
-          pixel->GetBufferSize(),    
-          NULL, 
-          &ps
-        ); 
+				reflect(ps_blob, ps_buffers_, ps_d3d11_buffers_);
+				ps_blob->Release();
+			}
 
-        if (!FAILED(ps_res)) 
-          ps_ = ps; 
-      }
-      
-      if (geometry != nullptr) 
-      { 
-        HRESULT gs_res = context_->getD3D11Device()->CreateGeometryShader(
-          geometry->GetBufferPointer(), 
-          geometry->GetBufferSize(),
-          NULL, 
-          &gs
-        ); 
-        
-        if (!FAILED(gs_res)) 
-          gs_ = gs; 
-      }
-      
-      if (vs == nullptr) // Required stages.
-      {
-        String err = "D3D11Shader: Failed to create shader \"" + 
-          shader.getFile().getName() + "\"";
-        LMB_ASSERT(false, err.c_str());
-        return;
-      }
-      
-      if (vertex != nullptr) 
-        reflect(vertex, vs_buffers_, vs_d3d11_buffers_);
-      if (pixel != nullptr) 
-        reflect(pixel, ps_buffers_, ps_d3d11_buffers_);
-      if (geometry != nullptr) 
-        reflect(geometry, gs_buffers_, gs_d3d11_buffers_);
-      
-      reflectInputLayout(vertex, context_->getD3D11Device());
-      
-      if (vertex   != nullptr) vertex->Release();
-      if (pixel    != nullptr) pixel->Release();
-      if (geometry != nullptr) geometry->Release();
+			if (gs_blob)
+			{
+				if (FAILED(context_->getD3D11Device()->CreateGeometryShader(
+					gs_blob->GetBufferPointer(),
+					gs_blob->GetBufferSize(),
+					NULL,
+					&gs_
+				)))
+					gs_ = nullptr;
+
+				reflect(gs_blob, gs_buffers_, gs_d3d11_buffers_);
+				gs_blob->Release();
+			}
     }
     
     ///////////////////////////////////////////////////////////////////////////
@@ -314,80 +375,6 @@ namespace lambda
     Vector<platform::ShaderBuffer>& D3D11Shader::getGsBuffers()
     {
       return gs_buffers_;
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    class IncludeHandler : public ID3DInclude
-    {
-      // Inherited via ID3DInclude
-      virtual HRESULT Open(
-        D3D_INCLUDE_TYPE IncludeType, 
-        LPCSTR pFileName, 
-        LPCVOID pParentData, 
-        LPCVOID* ppData, 
-        UINT* pBytes) override
-      {
-        Vector<char> bytes = FileSystem::FileToVector(pFileName);
-        UINT size = (UINT)bytes.size();
-
-        *ppData = foundation::Memory::allocate(size);
-        memcpy((void*)*ppData, bytes.data(), size);
-        *pBytes = size;
-        return S_OK;
-      }
-
-      virtual HRESULT Close(LPCVOID pData) override
-      {
-        foundation::Memory::deallocate((void*)pData);
-        return S_OK;
-      }
-    };
-
-    ///////////////////////////////////////////////////////////////////////////
-    ID3D10Blob* D3D11Shader::compile(
-      const String& file, 
-      const Vector<char>& source, 
-      const String& entry, 
-      const String& target)
-    {
-      String src(source.begin(), source.end());
-      if (src.find(entry + "(") == String::npos)
-        return nullptr;
-
-      ID3D10Blob* blob;
-      ID3D10Blob* error;
-
-      IncludeHandler include_handler;
-
-      HRESULT result = D3DCompile(
-        (void*)source.data(),
-        source.size(),
-        NULL,
-        0,
-        &include_handler,
-        entry.c_str(),
-        target.c_str(),
-        0,
-        0,
-        &blob,
-        &error
-      );
-
-      if (FAILED(result))
-      {
-        if (error)
-        {
-          String err = "D3D11Shader: Failed to compile shader \"" + file + 
-            "\" with message:\n" + String((char*)error->GetBufferPointer());
-          LMB_ASSERT(false, err.c_str());
-          error->Release();
-        }
-
-        if (blob)
-          blob->Release();
-      }
-
-      return blob;
     }
 
     ///////////////////////////////////////////////////////////////////////////

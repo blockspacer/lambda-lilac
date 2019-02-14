@@ -50,7 +50,7 @@ namespace lambda
           scripting::ScriptArray output_values = g_script_context->scriptArray(output_array);
           Vector<platform::RenderTarget> input(input_values.vec_string.size());
           Vector<platform::RenderTarget> output(output_values.vec_string.size());
-          asset::ShaderHandle shader = assets::shader::Get(shader_id);
+          asset::VioletShaderHandle shader = assets::shader::Get(shader_id);
 
           for (uint32_t i = 0; i < input_values.vec_string.size(); ++i)
             input.at(i) = g_world->getPostProcessManager().getTarget(input_values.vec_string.at(i));

@@ -1,4 +1,4 @@
-#include "resources/shaders/common.fx"
+#include "common.fx"
 
 struct VSOutput
 {
@@ -34,7 +34,7 @@ float3 HSVtoRGB(in float3 HSV)
   float3 RGB = HUEtoRGB(HSV.x);
   return ((RGB - 1) * HSV.y + 1) * HSV.z;
 }
-float Epsilon = 1e-10;
+static const float Epsilon = 1e-10;
 float3 RGBtoHCV(in float3 RGB)
 {
   // Based on work by Sam Hocevar and Emil Persson

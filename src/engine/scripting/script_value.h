@@ -1,6 +1,7 @@
 #pragma once
 #include <containers/containers.h>
 #include "script_vector.h"
+#include "systems/entity.h"
 
 namespace lambda
 {
@@ -27,8 +28,9 @@ namespace lambda
         kString,
         kVec2,
         kVec3,
-        kVec4,
-        kNull,
+				kVec4,
+				kNull,
+				kEntity,
       };
 
       ScriptValue()           {                     type_ = kNull;    }
@@ -47,6 +49,7 @@ namespace lambda
       ScriptValue(ScriptVec2 v) { vec2_        = v; type_ = kVec2;    }
       ScriptValue(ScriptVec3 v) { vec3_        = v; type_ = kVec3;    }
       ScriptValue(ScriptVec4 v) { vec4_        = v; type_ = kVec4;    }
+			ScriptValue(entity::Entity v, bool entity) { data_.entity = v; type_ = kEntity; }
 
       Type     getType()   const { return type_;          }
       bool     getBool()   const { return data_.boolean;  }
@@ -64,6 +67,7 @@ namespace lambda
       ScriptVec2 getVec2() const { return vec2_;          }
       ScriptVec3 getVec3() const { return vec3_;          }
       ScriptVec4 getVec4() const { return vec4_;          }
+      entity::Entity getEntity() const { return data_.entity;   }
 
     private:
       /////////////////////////////////////////////////////////////////////////
@@ -77,7 +81,8 @@ namespace lambda
         uint8_t uint8;
         uint16_t uint16;
         uint32_t uint32;
-        uint64_t uint64;
+				uint64_t uint64;
+				entity::Entity entity;
         float s_float;
         double s_double;
       } data_;
@@ -105,7 +110,8 @@ namespace lambda
       Vector<ScriptVec2> vec_vec2;
       Vector<ScriptVec3> vec_vec3;
       Vector<ScriptVec4> vec_vec4;
-      Vector<String>     vec_string;
+			Vector<String>     vec_string;
+			Vector<entity::Entity> vec_entity;
     };
   }
 }

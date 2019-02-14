@@ -1,4 +1,4 @@
-#include "resources/shaders/common.fx"
+#include "common.fx"
 
 Texture2D tex_shadow_map   : register(t0);
 Texture2D tex_overlay      : register(t1);
@@ -6,10 +6,13 @@ Texture2D tex_position     : register(t2);
 Texture2D tex_normal       : register(t3);
 Texture2D tex_metallic_roughness : register(t4);
 
-#include "resources/shaders/pbr.fx"
+#include "pbr.fx"
+
+// TODO (Hilze): Remove ASAP!
+#include "vsm_publish.fx"
 
 #ifdef RSM_ENABLED
-#include "resources/shaders/rsm.fx"
+#include "rsm.fx"
 #endif
 
 struct VSInput
@@ -70,7 +73,7 @@ float4 PS(VSOutput pIn) : SV_TARGET0
 
   float hide_shadows = clamp(when_le(coords.x, 0.0f) + when_ge(coords.x, 1.0f) + when_le(coords.y, 0.0f) + when_ge(coords.y, 1.0f) + when_le(trans_position.z, 0.0f) + when_ge(trans_position.z, 1.0f), 0.0f, 1.0f);
 
-  float3 shadow_map_depth = linearizeOrtho(tex_shadow_map.Sample(SamLinearClamp, coords).xyz);
+  float3 shadow_map_depth = linearizeOrtho(tex_shadow_map.Sample(SamAnisotrophicClamp, coords).xyz);
 
   float cs = calcShadow(shadow_map_depth, position_depth, light_far);
 
@@ -91,7 +94,7 @@ float4 PS(VSOutput pIn) : SV_TARGET0
   );
   
 #ifdef RSM_ENABLED
-  col += RSM(coords, normal, position);
+  col += RSM(coords, normal, position.xyz);
 #endif  
 
   return float4(col, 1.0f);

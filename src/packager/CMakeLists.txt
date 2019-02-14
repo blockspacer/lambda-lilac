@@ -22,7 +22,11 @@ IF(NOT ${VIOLET_CONFIG_FOUNDATION})
 ENDIF()
 
 ADD_LIBRARY(lambda-packager ${Sources})
-TARGET_LINK_LIBRARIES(lambda-packager PUBLIC lambda-foundation soloud stb glslang SPIRV spirv-cross-core spirv-cross-hlsl spirv-cross-cpp directxtex)
+TARGET_LINK_LIBRARIES(lambda-packager PUBLIC lambda-foundation soloud stb hlslcc ShaderConductor directxtex)
+#TARGET_LINK_LIBRARIES(lambda-packager PUBLIC ${CMAKE_SOURCE_DIR}/deps/DXC/lib/dxcompiler.lib)
 
+IF(${VIOLET_USE_HLSLCC})
+  TARGET_INCLUDE_DIRECTORIES(lambda-packager PUBLIC "../../deps/HLSLcc/include" "../../deps/HLSLcc/src/internal_includes" "../../deps/HLSLcc/src/cbstring" "../../deps/HLSLcc/src")
+ENDIF()
 
 TARGET_INCLUDE_DIRECTORIES(lambda-packager PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

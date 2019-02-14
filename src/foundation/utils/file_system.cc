@@ -180,6 +180,15 @@ namespace lambda
     return f.substr(base_dir.size());
   }
 
+	//////////////////////////////////////////////////////////////////////////////
+	String FileSystem::RemoveName(const String& file)
+	{
+		String f = file;
+		eastl::replace(f.begin(), f.end(), '\\', '/');
+		
+		return f.substr(0, f.find_last_of('/'));
+	}
+
   //////////////////////////////////////////////////////////////////////////////
   void FileSystem::WriteFile(const String& file,
                              const Vector<char>& data,

@@ -1,4 +1,4 @@
-#include "resources/shaders/tbn.fx"
+#include "tbn.fx"
 
 struct VSInput
 {

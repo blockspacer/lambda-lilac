@@ -6,8 +6,8 @@
 namespace lambda
 {
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  VioletWaveCompiler::VioletWaveCompiler() :
-    VioletWaveManager()
+  VioletWaveCompiler::VioletWaveCompiler()
+		: VioletWaveManager()
   {
   }
   

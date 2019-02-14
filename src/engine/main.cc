@@ -16,6 +16,7 @@
 #include <INIReader.h>
 #include "utils/mt_manager.h"
 #include <utils/file_system.h>
+#include <utils/utilities.h>
 #include <algorithm>
 #include "utils/profiler.h"
 
@@ -27,11 +28,7 @@
 #include <windows.h>
 #endif
 
-#define USE_GUI 0
-#if USE_GUI && !VIOLET_GUI_CEF
-#undef USE_GUI
 #define USE_GUI 1
-#endif
 
 #if defined VIOLET_RENDERER_D3D11
 #include "renderers/d3d11/d3d11_renderer.h"
@@ -76,6 +73,132 @@ using namespace lambda;
 #if USE_GUI
 asset::VioletTextureHandle g_gui_texture;
 #endif
+
+
+#include <Ultralight/Ultralight.h>
+
+static bool finished = false;
+
+class LoadListenerImpl : public ultralight::LoadListener {
+public:
+	virtual ~LoadListenerImpl() {}
+
+	virtual void OnFinishLoading(ultralight::View* caller) {
+		finished = true;
+	}
+};
+
+class UltraLighter
+{
+public:
+	struct RW { ultralight::Ref<ultralight::Renderer> ptr; }*renderer_;
+	struct RV { ultralight::Ref<ultralight::View> ptr; }*view_;
+	LoadListenerImpl* load_listener_;
+
+	void init()
+	{
+		renderer_ = new RW{ ultralight::Renderer::Create() };
+		view_ = new RV{ renderer_->ptr->CreateView(1280u, 720u, true) };
+
+		load_listener_ = new LoadListenerImpl();
+		view_->ptr->set_load_listener(load_listener_);
+
+		view_->ptr->LoadHTML(R"(
+  <!DOCTYPE html>
+<html>
+<head>
+<style> 
+div {
+  width: 100px;
+  height: 100px;
+  background-color: red;
+  position: relative;
+  -webkit-animation-name: example; /* Safari 4.0 - 8.0 */
+  -webkit-animation-duration: 4s; /* Safari 4.0 - 8.0 */
+  -webkit-animation-iteration-count: 3; /* Safari 4.0 - 8.0 */
+  animation-name: example;
+  animation-duration: 4s;
+  animation-iteration-count: 100000;
+}
+
+/* Safari 4.0 - 8.0 */
+@-webkit-keyframes example {
+  0%   {background-color:red; left:0px; top:0px;}
+  25%  {background-color:yellow; left:200px; top:0px;}
+  50%  {background-color:blue; left:200px; top:200px;}
+  75%  {background-color:green; left:0px; top:200px;}
+  100% {background-color:red; left:0px; top:0px;}
+}
+
+/* Standard syntax */
+@keyframes example {
+  0%   {background-color:red; left:0px; top:0px;}
+  25%  {background-color:yellow; left:200px; top:0px;}
+  50%  {background-color:blue; left:200px; top:200px;}
+  75%  {background-color:green; left:0px; top:200px;}
+  100% {background-color:red; left:0px; top:0px;}
+}
+</style>
+</head>
+<body>
+
+<p><b>Note:</b> This example does not work in Internet Explorer 9 and earlier versions.</p>
+
+<div></div>
+
+</body>
+</html>
+  )");
+
+		while (!finished)
+			renderer_->ptr->Update();
+
+		{
+			auto bitmap = view_->ptr->bitmap();
+			auto width = bitmap->width();
+			auto height = bitmap->height();
+			auto bpp = bitmap->bpp();
+
+			g_gui_texture = asset::TextureManager::getInstance()->create(Name("Back Buffer GUI"));
+
+
+			VioletTexture texture;
+			texture.flags     = kTextureFlagDynamicData;
+			texture.format    = TextureFormat::kB8G8R8A8;
+			texture.width     = width;
+			texture.height    = height;
+			texture.mip_count = 1;
+			g_gui_texture->addLayer(asset::TextureLayer(texture));
+		}
+	}
+
+	~UltraLighter()
+	{
+		view_->ptr->set_load_listener(nullptr);
+		delete load_listener_;
+	}
+
+	void update()
+	{
+		renderer_->ptr->Update();
+		renderer_->ptr->Render();
+
+		if (view_->ptr->is_bitmap_dirty())
+		{
+			auto bitmap = view_->ptr->bitmap();
+			auto width = bitmap->width();
+			auto height = bitmap->height();
+			auto pixels = bitmap->raw_pixels();
+			auto bpp = bitmap->bpp();
+			auto size = width * height * bpp;
+
+			Vector<char> data(size);
+			memcpy(data.data(), pixels, size);
+
+			g_gui_texture->getLayer(0).setData(data);
+		}
+	}
+};
 
 glm::vec4 RGBtoHSV(const glm::vec4& rgb) {
   glm::vec4 hsv = rgb;
@@ -200,11 +323,13 @@ public:
   void initialize() override
   {
 #if USE_GUI
-    gui_.initialize(g_gui_texture);
-    getRenderer()->getPostProcessManager().addTarget(platform::RenderTarget(Name("gui"), g_gui_texture));
+		//gui_.initialize(g_gui_texture);
     //gui_.loadURL("C:/github/lambda-engine/test.html");
 #endif
-  }
+		ultralighter_.init();
+	
+		getPostProcessManager().addTarget(platform::RenderTarget(Name("gui"), g_gui_texture));
+	}
   void deinitialize() override
   {
   }
@@ -313,8 +438,9 @@ public:
   }
   void update(const double& /*delta_time*/) override
   {
+		ultralighter_.update();
 #if USE_GUI
-    gui_.update(delta_time);
+		//gui_.update(delta_time);
 #endif
 
     foundation::SharedPointer<platform::IImGUI> imgui = getImGUI();
@@ -377,8 +503,8 @@ public:
   virtual void handleWindowMessage(const platform::WindowMessage& message) override
   {
 #if USE_GUI
-    if (gui_.handleWindowMessage(message))
-      return;
+		//if (gui_.handleWindowMessage(message))
+		//  return;
 #endif
 
     switch (message.type)
@@ -394,7 +520,8 @@ public:
 private:
   FrameCounter frame_counter;
 #if USE_GUI
-  gui::GUI gui_;
+	UltraLighter ultralighter_;
+  //gui::GUI gui_;
 #endif
 };
 
@@ -455,26 +582,9 @@ int main(int argc, char** argv)
       window->create(glm::uvec2(1280u, 720u), "Engine");
       asset_manager->initialize(renderer);
 
-#if USE_GUI
-      {
-        g_gui_texture = asset::TextureManager::getInstance()->create(Name("Back Buffer GUI"));
-        asset::VioletTextureHandle tex = g_gui_texture;
-        if (tex->getLayerCount() == 0u)
-          tex->addLayer(asset::TextureLayer());
-
-        asset::TextureLayer& layer = tex->getLayer(0u);
-        layer.setFormat(TextureFormat::kB8G8R8A8);
-        layer.setFlags(kTextureFlagDynamicData | kTextureFlagResize);
-
-        layer.resize(1u, 1u);
-        Vector<char> data = { (char)255, (char)255, (char)255, (char)255 };
-        layer.setData(data);
-      }
-#endif
-
       MyWorld world(window, renderer, asset_manager, scripting, imgui);
       imgui->setFont("resources/fonts/DroidSans.ttf", 16.0f);
-      
+
       scripting::ScriptBinding(&world);
       scripting->loadScripts({ script });
 

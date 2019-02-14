@@ -578,7 +578,8 @@ namespace lambda
       {
         return -1;
       }
-      const auto& it = m.find(stlString(v));
+			std::string std_str = stlString(v);
+      auto it = m.find(std_str);
       if (it != m.end())
       {
         return it->second;
@@ -595,7 +596,8 @@ namespace lambda
       {
         return false;
       }
-      const auto& it = m.find(stlString(v));
+			std::string std_str = stlString(v);
+      auto it = m.find(std_str);
       if (it != m.end())
       {
         ret = it->second;

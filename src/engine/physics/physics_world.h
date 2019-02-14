@@ -17,6 +17,7 @@ namespace lambda
   {
     class TransformSystem;
     class RigidBodySystem;
+		class MonoBehaviourSystem;
   }
 
   namespace physics
@@ -29,10 +30,11 @@ namespace lambda
       ~PhysicsWorld();
       
       void initialize(
-       platform::DebugRenderer* debug_renderer,
-       foundation::SharedPointer<entity::EntitySystem> entity_system,
-       foundation::SharedPointer<components::TransformSystem> transform_system,
-       foundation::SharedPointer<components::RigidBodySystem> rigid_body_system
+				platform::DebugRenderer* debug_renderer,
+				foundation::SharedPointer<entity::EntitySystem> entity_system,
+				foundation::SharedPointer<components::TransformSystem> transform_system,
+				foundation::SharedPointer<components::RigidBodySystem> rigid_body_system,
+				foundation::SharedPointer<components::MonoBehaviourSystem> mono_behaviour_system
       );
       void deinitialize();
       void render();

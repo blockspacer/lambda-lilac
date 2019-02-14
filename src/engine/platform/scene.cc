@@ -1,5 +1,6 @@
 #include "scene.h"
 #include "systems/entity_system.h"
+#include "systems/name_system.h"
 #include "systems/transform_system.h"
 #include "systems/camera_system.h"
 #include "systems/mesh_render_system.h"
@@ -32,28 +33,30 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
     void Scene::initialize(IWorld* world)
     {
-      systems_.resize((size_t)components::SystemIds::kCount);
-      systems_.at((size_t)components::SystemIds::kEntitySystem)        = 
-        foundation::Memory::constructShared<entity::EntitySystem>();
-      systems_.at((size_t)components::SystemIds::kTransformSystem)     = 
+			systems_.resize((size_t)components::SystemIds::kCount);
+			systems_.at((size_t)components::SystemIds::kEntitySystem) =
+				foundation::Memory::constructShared<entity::EntitySystem>();
+			systems_.at((size_t)components::SystemIds::kNameSystem) =
+        foundation::Memory::constructShared<components::NameSystem>();
+      systems_.at((size_t)components::SystemIds::kTransformSystem) = 
         foundation::Memory::constructShared<components::TransformSystem>();
-      systems_.at((size_t)components::SystemIds::kCameraSystem)        = 
+      systems_.at((size_t)components::SystemIds::kCameraSystem) = 
         foundation::Memory::constructShared<components::CameraSystem>();
-      systems_.at((size_t)components::SystemIds::kLightSystem)         =
+      systems_.at((size_t)components::SystemIds::kLightSystem) =
         foundation::Memory::constructShared<components::LightSystem>();
-      systems_.at((size_t)components::SystemIds::kMeshRenderSystem)    = 
+      systems_.at((size_t)components::SystemIds::kMeshRenderSystem) = 
         foundation::Memory::constructShared<components::MeshRenderSystem>();
-      systems_.at((size_t)components::SystemIds::kColliderSystem)      = 
+      systems_.at((size_t)components::SystemIds::kColliderSystem) = 
         foundation::Memory::constructShared<components::ColliderSystem>();
-      systems_.at((size_t)components::SystemIds::kRigidBodySystem)     = 
+      systems_.at((size_t)components::SystemIds::kRigidBodySystem) = 
         foundation::Memory::constructShared<components::RigidBodySystem>();
       systems_.at((size_t)components::SystemIds::kMonoBehaviourSystem) = 
         foundation::Memory::constructShared<components::MonoBehaviourSystem>();
-      systems_.at((size_t)components::SystemIds::kSkeletonSystem)      = 
+      systems_.at((size_t)components::SystemIds::kSkeletonSystem) = 
         foundation::Memory::constructShared<components::SkeletonSystem>();
-      systems_.at((size_t)components::SystemIds::kWaveSourceSystem)    = 
+      systems_.at((size_t)components::SystemIds::kWaveSourceSystem) = 
         foundation::Memory::constructShared<components::WaveSourceSystem>();
-      systems_.at((size_t)components::SystemIds::kLODSystem)           =
+      systems_.at((size_t)components::SystemIds::kLODSystem) =
         foundation::Memory::constructShared<components::LODSystem>();
 
       for (foundation::SharedPointer<components::ISystem> system : systems_)

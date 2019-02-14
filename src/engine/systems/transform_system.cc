@@ -71,13 +71,15 @@ namespace lambda
 
     const TransformData& TransformSystem::lookUpData(const entity::Entity& entity) const
     {
-      assert(entity_to_data_.find(entity) != entity_to_data_.end());
-      return data_.at(entity_to_data_.at(entity));
+      assert(data_.entity_to_data_.find(entity) != data_.entity_to_data_.end());
+			assert(data_.data_.at(data_.entity_to_data_.at(entity)).valid);
+			return data_.data_.at(data_.entity_to_data_.at(entity));
     }
     TransformData& TransformSystem::lookUpData(const entity::Entity& entity)
     {
-      assert(entity_to_data_.find(entity) != entity_to_data_.end());
-      return data_.at(entity_to_data_.at(entity));
+      assert(data_.entity_to_data_.find(entity) != data_.entity_to_data_.end());
+			assert(data_.data_.at(data_.entity_to_data_.at(entity)).valid);
+      return data_.data_.at(data_.entity_to_data_.at(entity));
     }
 
     void TransformSystem::cleanIfDirty(TransformData& data)
@@ -111,6 +113,15 @@ namespace lambda
         makeDirtyRecursive(lookUpData(child));
       }
     }
+
+		bool TransformSystem::isChildOf(const entity::Entity& parent, const entity::Entity& child) const
+		{
+			for (const entity::Entity& ch : lookUpData(parent).children)
+				if (ch == child || isChildOf(ch, child))
+					return true;
+
+			return false;
+		}
     
     void TransformSystem::initialize(world::IWorld& world)
     {
@@ -126,9 +137,22 @@ namespace lambda
 
     TransformComponent TransformSystem::addComponent(const entity::Entity& entity)
     {
-      data_.push_back(TransformData(entity));
-      data_to_entity_[(uint32_t)data_.size() - 1u] = entity;
-      entity_to_data_[entity] = (uint32_t)data_.size() - 1u;
+			if (!data_.unused_data_entries_.empty())
+			{
+				uint32_t idx = data_.unused_data_entries_.front();
+				data_.unused_data_entries_.pop();
+
+				data_.data_[idx]              = TransformData(entity);
+				data_.data_to_entity_[idx]    = entity;
+				data_.entity_to_data_[entity] = idx;
+			}
+			else
+			{
+				data_.data_.push_back(TransformData(entity));
+				uint32_t idx = (uint32_t)data_.data_.size() - 1u;
+				data_.data_to_entity_[idx]    = entity;
+				data_.entity_to_data_[entity] = idx;
+			}
 
       return TransformComponent(entity, this);
     }
@@ -140,26 +164,20 @@ namespace lambda
 
     bool TransformSystem::hasComponent(const entity::Entity& entity)
     {
-      return entity_to_data_.find(entity) != entity_to_data_.end();
+      return data_.entity_to_data_.find(entity) != data_.entity_to_data_.end();
     }
 
     void TransformSystem::removeComponent(const entity::Entity& entity)
     {
-      const auto& it = entity_to_data_.find(entity);
-      if (it != entity_to_data_.end())
-      {
-        uint32_t id = it->second;
-
-        for (auto i = data_to_entity_.find(id); i != data_to_entity_.end(); i++)
-        {
-          entity_to_data_.at(i->second)--;
-        }
-
-        data_.erase(data_.begin() + id);
-        entity_to_data_.erase(it);
-        data_to_entity_.erase(id);
-      }
+			/*for (entity::Entity child : getChildren(entity))
+				unsetParent(child);*/
+			unsetParent(entity);
+			data_.marked_for_delete_.insert(entity);
     }
+
+		void TransformSystem::collectGarbage()
+		{
+		}
 
     glm::mat4 TransformSystem::getLocal(const entity::Entity& entity)
     {
@@ -193,6 +211,15 @@ namespace lambda
 
     void TransformSystem::setParent(const entity::Entity& entity, const entity::Entity& parent)
     {
+			// You cannot parent yourself to yourself
+			// You cannot parent yourself to something that is your child.
+			if (entity == parent || isChildOf(entity, parent))
+				return;
+
+			// You cannot parent yourself to something else recursively.
+			if (parent != root_ && entity == lookUpData(parent).getParent())
+				return;
+
       TransformData& data = lookUpData(entity);
       //entity::Entity was  = data.getParent();
       if (data.getParent() != root_)
@@ -200,12 +227,17 @@ namespace lambda
         TransformData& p_data = lookUpData(data.getParent());
         eastl::remove(p_data.children.begin(), p_data.children.end(), entity);
       }
-      
-      data.setParent(parent);
+
+      data.setParent(parent);	
       
       makeDirtyRecursive(data);
       
-      lookUpData(parent).children.push_back(entity);
+			if (parent != root_)
+			{
+				auto& parent_data = lookUpData(parent);
+				if (eastl::find(parent_data.children.begin(), parent_data.children.end(), entity) == parent_data.children.end())
+					parent_data.children.push_back(entity);
+			}
     }
 
     void TransformSystem::unsetParent(const entity::Entity& entity)
@@ -217,9 +249,7 @@ namespace lambda
     {
       Vector<entity::Entity> children;
       for (const auto& child : lookUpData(entity).children)
-      {
         children.push_back(child);
-      }
       return children;
     }
 
@@ -348,26 +378,18 @@ namespace lambda
     {
       const TransformData& data = lookUpData(entity);
       if (data.getParent() != 0u && entity != data.getParent())
-      {
         return data.rotation * getWorldRotation(data.getParent());
-      }
       else
-      {
         return data.rotation;
-      }
     }
 
     glm::vec3 TransformSystem::getWorldScale(const entity::Entity& entity)
     {
       const TransformData& data = lookUpData(entity);
       if (data.getParent() != 0u && entity != data.getParent())
-      {
         return data.scale * getWorldScale(data.getParent());
-      }
       else
-      {
         return data.scale;
-      }
     }
 
 
@@ -448,9 +470,7 @@ namespace lambda
     {
       Vector<TransformComponent> children;
       for (const entity::Entity& entity : system_->getChildren(entity_))
-      {
         children.push_back(system_->getComponent(entity));
-      }
       return children;
     }
     void TransformComponent::setLocalTranslation(const glm::vec3& translation)
@@ -577,6 +597,18 @@ namespace lambda
     {
       return ((glm::mat3x3)getWorld()) * glm::vec3(1.0f, 0.0f, 0.0f);
     }
+		glm::vec3 TransformComponent::getLocalForward() const
+		{
+			return ((glm::mat3x3)getLocal()) * glm::vec3(0.0f, 0.0f, -1.0f);
+		}
+		glm::vec3 TransformComponent::getLocalUp() const
+		{
+			return ((glm::mat3x3)getLocal()) * glm::vec3(0.0f, 1.0f, 0.0f);
+		}
+		glm::vec3 TransformComponent::getLocalRight() const
+		{
+			return ((glm::mat3x3)getLocal()) * glm::vec3(0.0f, 0.0f, -1.0f);
+		}
     void TransformComponent::lookAt(const glm::vec3& target, glm::vec3 up)
     {
       const glm::vec3 direction = glm::normalize(target - getWorldTranslation());
@@ -597,6 +629,7 @@ namespace lambda
       local       = other.local;
       world       = other.world;
       dirty       = other.dirty;
+			valid       = other.valid;
     }
     TransformData& TransformData::operator=(const TransformData& other)
     {
@@ -609,7 +642,28 @@ namespace lambda
       local       = other.local;
       world       = other.world;
       dirty       = other.dirty;
+			valid       = other.valid;
       return *this;
     }
-}
+
+		void TransformSystemData::releaseUnused()
+		{
+			if (!marked_for_delete_.empty())
+			{
+				for (entity::Entity entity : marked_for_delete_)
+				{
+					const auto& it = entity_to_data_.find(entity);
+					if (it != entity_to_data_.end())
+					{
+						uint32_t idx = it->second;
+						unused_data_entries_.push(idx);
+						data_to_entity_.erase(idx);
+						entity_to_data_.erase(entity);
+						data_[idx].valid = false;
+					}
+				}
+				marked_for_delete_.clear();
+			}
+		}
+	}
 }

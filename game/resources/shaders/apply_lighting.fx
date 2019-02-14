@@ -1,17 +1,8 @@
-#include "resources/shaders/common.fx"
+#include "common.fx"
 
 ///////////////////////////////////////////////////////////////////////////
 // Functions //////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
-static const float2 invAtan = float2(0.1591, 0.3183);
-float2 SampleSphericalMap(float3 v)
-{
-    float2 uv = float2(atan2(v.z, v.x), -asin(v.y));
-    uv *= invAtan;
-    uv += 0.5;
-    return uv;
-}
-
 float3 FresnelSchlickRoughness(float cosTheta, float3 F0, float roughness)
 {
     return F0 + (max((1.0f - roughness), F0) - F0) * pow(1.0f - cosTheta, 5.0f);

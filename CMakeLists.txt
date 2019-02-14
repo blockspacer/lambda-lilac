@@ -20,6 +20,13 @@ ELSEIF (APPLE)
 	ADD_DEFINITIONS (-DVIOLET_OSX)
 ENDIF (WIN32)
 
+# Disable RTTI
+if (VIOLET_WIN32)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR-")
+elseif (VIOLET_LINUX || VIOLET_OSX)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
+endif()
+
 # Do required things.
 IF (VIOLET_WIN32)
 #  SET (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /WX")
@@ -61,13 +68,13 @@ SET(VIOLET_CONFIG_ENGINE TRUE CACHE BOOL "[CORE] Should Engine be build?")
 IF(${VIOLET_WIN32})
   SET(VIOLET_CONFIG_TOOLS TRUE CACHE BOOL "[CORE] Should Tools be build?")
 ELSE()
-  SET(VIOLET_CONFIG_TOOLS FALSE CACHE INTERNAL "[RENDERER] Not available on this platform.")
+  SET(VIOLET_CONFIG_TOOLS FALSE CACHE INTERNAL "[CORE] Tools not available on this platform.")
 ENDIF()
 
 IF(${VIOLET_WIN32})
   SET(VIOLET_CONFIG_NETWORKING TRUE CACHE BOOL "[CORE] Should Networking be build?")
 ELSE()
-  SET(VIOLET_CONFIG_NETWORKING FALSE CACHE INTERNAL "[RENDERER] Not available on this platform.")
+  SET(VIOLET_CONFIG_NETWORKING FALSE CACHE INTERNAL "[CORE] Networking not available on this platform.")
 ENDIF()
 
 # /// FOUNDATION ////////////////////////////////////////////////
@@ -87,13 +94,13 @@ IF(${VIOLET_CONFIG_ENGINE})
   IF(${VIOLET_WIN32})
 	  SET(VIOLET_RENDERER_D3D11 TRUE CACHE BOOL "[RENDERER] Should D3D11 Renderer be used?")
   ELSE()
-	  SET(VIOLET_RENDERER_D3D11 FALSE CACHE INTERNAL "[RENDERER] Not available on this platform.")
+	  SET(VIOLET_RENDERER_D3D11 FALSE CACHE INTERNAL "[RENDERER] D3D11 Renderer not available on this platform.")
   ENDIF()
 
   IF(${VIOLET_OSX})
 	  SET(VIOLET_RENDERER_METAL TRUE CACHE BOOL "[RENDERER] Should Metal Renderer be used?")
   ELSE()
-	  SET(VIOLET_RENDERER_METAL FALSE CACHE INTERNAL "[RENDERER] Not available on this platform.")
+	  SET(VIOLET_RENDERER_METAL FALSE CACHE INTERNAL "[RENDERER] Metal Renderer not available on this platform.")
   ENDIF()
 
   IF(NOT ${VIOLET_RENDERER_D3D11} AND NOT ${VIOLET_RENDERER_METAL})
@@ -107,7 +114,7 @@ IF(${VIOLET_CONFIG_ENGINE})
   IF(${VIOLET_WIN32})
     SET(VIOLET_WINDOW_WIN32 TRUE CACHE BOOL "[WINDOW] Should Win32 Window be used?")
   ELSE()
-    SET(VIOLET_WINDOW_WIN32 FALSE CACHE INTERNAL "[WINDOW] Not available on this platform.")
+    SET(VIOLET_WINDOW_WIN32 FALSE CACHE INTERNAL "[WINDOW] Win32 Window not available on this platform.")
   ENDIF()
 
 # /// SCRIPTING /////////////////////////////////////////////////
@@ -123,7 +130,7 @@ IF(${VIOLET_CONFIG_ENGINE})
   ENDIF()
   
 # /// GUI ///////////////////////////////////////////////////////
-  SET(VIOLET_GUI_CEF FALSE CACHE BOOL "[GUI] Should CEF be used?")
+  SET(VIOLET_GUI_ULTRALIGHT TRUE CACHE BOOL "[GUI] Should Ultralight be used?")
 ENDIF()
 
 

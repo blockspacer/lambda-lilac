@@ -83,7 +83,7 @@ namespace lambda
 
       virtual void setMesh(asset::MeshHandle mesh) override;
       virtual void setSubMesh(const uint32_t& sub_mesh_idx) override;
-      virtual void setShader(asset::ShaderHandle shader) override;
+      virtual void setShader(asset::VioletShaderHandle shader) override;
       virtual void setTexture(
         asset::VioletTextureHandle texture, 
         uint8_t slot

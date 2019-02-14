@@ -42,7 +42,8 @@ namespace lambda
       virtual void deinitialize() override;
       virtual void update(const double& delta_time) override;
       virtual void fixedUpdate(const double& time_step) override;
-      virtual ~SkeletonSystem() override {};
+			virtual void collectGarbage() override;
+			virtual ~SkeletonSystem() override {};
 
     protected:
       SkeletonData& lookUpData(const entity::Entity& entity);
@@ -50,8 +51,9 @@ namespace lambda
 
     private:
       Vector<SkeletonData> data_;
-      Map<uint64_t, uint32_t> entity_to_data_;
-      Map<uint32_t, uint64_t> data_to_entity_;
+			Map<entity::Entity, uint32_t> entity_to_data_;
+			Map<uint32_t, entity::Entity> data_to_entity_;
+			Set<entity::Entity> marked_for_delete_;
     };
   }
 }

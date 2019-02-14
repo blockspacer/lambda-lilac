@@ -33,7 +33,7 @@ namespace lambda
     class D3D11Shader : public asset::IGPUAsset
     {
     public:
-      D3D11Shader(const asset::Shader& shader, D3D11Context* context);
+      D3D11Shader(asset::VioletShaderHandle shader, D3D11Context* context);
       virtual ~D3D11Shader() override;
       void bind();
       void unbind();
@@ -47,12 +47,6 @@ namespace lambda
       Vector<platform::ShaderBuffer>& getGsBuffers();
 
     private:
-      ID3D10Blob* compile(
-        const String& file, 
-        const Vector<char>& source, 
-        const String& entry, 
-        const String& target
-      );
       void reflect(
         ID3D10Blob* blob, 
         Vector<platform::ShaderBuffer>& buffers, 

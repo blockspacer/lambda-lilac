@@ -1,9 +1,12 @@
-#include "resources/shaders/common.fx"
-#include "resources/shaders/pbr.fx"
+#include "common.fx"
+#include "pbr.fx"
+
+// TODO (Hilze): Remove ASAP!
+#include "vsm_publish.fx"
 
 #ifdef RSM_ENABLED
 #define RSM_SPOT
-#include "resources/shaders/rsm.fx"
+#include "rsm.fx"
 #endif
 
 struct VSInput
@@ -78,7 +81,7 @@ float4 PS(VSOutput pIn) : SV_TARGET0
 
   if(hide_shadows) return 0.0f;
 
-  float3 shadow_map_depth = linearizePerspective(tex_shadow_map.Sample(SamLinearClamp, coords).xyz);
+  float3 shadow_map_depth = linearizePerspective(tex_shadow_map.Sample(SamAnisotrophicClamp, coords).xyz);
 
   float cs = calcShadow(shadow_map_depth, position_depth - 100.0f, light_far);
 

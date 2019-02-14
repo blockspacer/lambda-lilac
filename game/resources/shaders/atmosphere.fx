@@ -1,9 +1,8 @@
-#define PI 3.141592f
 #define iSteps 16
 #define jSteps 8
 #define iStepsMul iSteps * 3
 #define jStepsMul jSteps
-#include "resources/shaders/common.fx"
+#include "common.fx"
 
 float2 rsi(float3 r0, float3 rd, float sr)
 {

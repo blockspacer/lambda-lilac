@@ -43,7 +43,7 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     void Culler::cullDynamics(
       const Vector<entity::Entity>& dynamic_entities,
-      const Map<uint64_t, uint32_t>& entity_to_data,
+      const Map<entity::Entity, uint32_t>& entity_to_data,
       const Vector<components::MeshRenderData>& mesh_render_data,
       foundation::SharedPointer<components::TransformSystem> transform_system,
       const Frustum& frustum

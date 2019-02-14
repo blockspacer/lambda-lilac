@@ -5,81 +5,32 @@
 
 namespace lambda
 {
-  struct VioletShaderReflection
-  {
-    enum Types : uint8_t
-    {
-      kAtomicCounter,
-      kBoolean,
-      kChar,
-      kDouble,
-      kFloat,
-      kImage,
-      kInt,
-      kInt64,
-      kSampledImage,
-      kSampler,
-      kStruct,
-      kUInt,
-      kUInt64,
-      kVoid,
-      kUnknown
-    };
-    struct Variable
-    {
-      String   name;
-      Types    type;
-      uint32_t size;
-      uint32_t offset;
-      uint8_t  rows;
-      uint8_t  cols;
-    };
-    struct Buffer
-    {
-      String   name;
-      uint32_t size;
-      uint8_t  slot;
-      Vector<Variable> variables;
-    };
-    struct Texture
-    {
-      String  name;
-      uint8_t slot;
-    };
-    struct Sampler
-    {
-      String  name;
-      uint8_t slot;
-    };
-    Vector<Variable> inputs;
-    Vector<Variable> outputs;
-    Vector<Buffer>   buffers;
-    Vector<Texture>  textures;
-    Vector<Sampler>  samplers;
-  };
+#define VIOLET_HLSL 0
+#define VIOLET_DXIL 1
+#define VIOLET_SPIRV 2
+#define VIOLET_METAL 3
+#define VIOLET_LANG_COUNT 4
 
-  struct VioletShaderProgram
-  {
-    uint64_t hash;
-    String file_path;
-    ShaderStages stage;
-    UnorderedMap<String, Vector<uint32_t>> blobs;
-    Vector<String> defines;
-    VioletShaderReflection reflection;
-  };
+	struct VioletShader
+	{
+		uint64_t hash;
+		String file_path;
+		Vector<Vector<Vector<uint32_t>>> blobs;
+	};
 
-  class VioletShaderManager : public VioletBaseAssetManager
-  {
-  public:
-    VioletShaderManager();
-    
-    uint64_t GetHash(String file_path, Vector<String> defines, ShaderStages stage);
+	class VioletShaderManager : public VioletBaseAssetManager
+	{
+	public:
+		VioletShaderManager();
 
-    void AddShaderProgram(VioletShaderProgram shader_program);
-    VioletShaderProgram GetShaderProgram(uint64_t hash);
+		uint64_t GetHash(String file_path);
 
-  private:
-    Vector<char> ShaderProgramToJSon(VioletShaderProgram shader_program);
-    VioletShaderProgram JSonToShaderProgram(Vector<char> json);
-  };
+		void AddShader(VioletShader shader_program);
+		VioletShader GetShader(uint64_t hash);
+		void RemoveShader(uint64_t hash);
+
+	private:
+		Vector<char> ShaderToJSon(VioletShader shader_program);
+		VioletShader JSonToShader(Vector<char> json);
+	};
 }

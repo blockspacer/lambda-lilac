@@ -59,6 +59,7 @@ namespace lambda
       Vector<LOD> lods;
       LOD base_lod;
       entity::Entity entity;
+			bool valid = true;
     };
 
     class LODSystem : public ISystem
@@ -72,7 +73,8 @@ namespace lambda
       virtual void initialize(world::IWorld& world) override;
       virtual void deinitialize() override;
       virtual void update(const double& delta_time) override;
-      virtual ~LODSystem() override {};
+			virtual void collectGarbage() override;
+			virtual ~LODSystem() override {};
 
       void setBaseLOD(const entity::Entity& entity, const LOD& lod);
       void addLOD(const entity::Entity& entity, const LOD& lod);
@@ -85,8 +87,11 @@ namespace lambda
 
     private:
       Vector<LODData> data_;
-      Map<uint64_t, uint32_t> entity_to_data_;
-      Map<uint32_t, uint64_t> data_to_entity_;
+			Map<entity::Entity, uint32_t> entity_to_data_;
+			Map<uint32_t, entity::Entity> data_to_entity_;
+			Set<entity::Entity> marked_for_delete_;
+			Queue<uint32_t> unused_data_entries_;
+
       foundation::SharedPointer<TransformSystem> transform_system_;
       foundation::SharedPointer<MeshRenderSystem> mesh_render_system_;
       foundation::SharedPointer<CameraSystem> camera_system_;
