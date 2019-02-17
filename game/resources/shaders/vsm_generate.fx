@@ -2,8 +2,8 @@
 
 struct VSInput
 {
-  float3 position : POSITION;
-  float2 tex      : TEX_COORD;
+  float3 position : Positions;
+  float2 tex      : TexCoords;
 };
 
 struct VSOutput

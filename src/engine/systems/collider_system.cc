@@ -177,9 +177,9 @@ namespace lambda
       if (it_sub_mesh == mesh_colliders_[mesh.id].end())
       {
         // Get the indices.
-        const asset::SubMesh& sub_mesh = mesh->getSubMeshes().at(sub_mesh_id);
-        auto index_offset  = sub_mesh.offset.at(asset::MeshElements::kIndices);
-        auto vertex_offset = sub_mesh.offset.at(asset::MeshElements::kPositions);
+        asset::SubMesh sub_mesh = mesh->getSubMeshes().at(sub_mesh_id);
+        auto index_offset  = sub_mesh.offsets[asset::MeshElements::kIndices];
+        auto vertex_offset = sub_mesh.offsets[asset::MeshElements::kPositions];
         int* indices = (int*)foundation::Memory::allocate(index_offset.count * sizeof(int));
         glm::vec3* vertices = (glm::vec3*)foundation::Memory::allocate(vertex_offset.count * sizeof(glm::vec3));
 

@@ -4,18 +4,13 @@
 // TODO (Hilze): Remove ASAP!
 #include "vsm_publish.fx"
 
-struct VSInput
-{
-  float3 position : POSITION;
-};
-
 struct VSOutput
 {
   float2 tex      : TEX_COORD;
   float4 position : SV_POSITION;
 };
 
-VSOutput VS(VSInput vIn, uint id : SV_VertexID)
+VSOutput VS(uint id : SV_VertexID)
 {
   VSOutput vOut;
   vOut.tex = float2((id << 1) & 2, id & 2);

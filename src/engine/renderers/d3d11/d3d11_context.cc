@@ -1439,8 +1439,8 @@ namespace lambda
 
         bound_.mesh = mesh;
         bound_.sub_mesh_idx = sub_mesh_idx_;
-        uint16_t stages = bound_.shader->getStages();
-        mesh->bind(stages, mesh_.data(), sub_mesh_idx_);
+        Vector<uint32_t> stages = bound_.shader->getStages();
+        mesh->bind(stages, mesh_, sub_mesh_idx_);
         mesh_->updated();
       }
 
@@ -1458,12 +1458,12 @@ namespace lambda
 				if (buffer == nullptr)
 				{
 					shader->bindBuffers();
-					mesh->draw(mesh_.data(), sub_mesh_idx_);
+					mesh->draw(mesh_, sub_mesh_idx_);
 				}
 				else
 				{
 					shader->bindBuffers();
-					mesh->draw(mesh_.data(), sub_mesh_idx_);
+					mesh->draw(mesh_, sub_mesh_idx_);
 				}
 			}
     }
@@ -1541,12 +1541,7 @@ namespace lambda
     D3D11RenderTexture* D3D11Context::D3D11AssetManager::getTexture(
       asset::VioletTextureHandle texture)
     {
-      // TODO (Hilze): Find a better way to handle dirty state.
-      if (texture->isDirty())
-      {
-        removeTexture(texture);
-        texture->clean();
-      }
+			// TODO (Hilze): Have some sort of check to make sure that the size and format still match.
 
       auto it = textures_.find(texture.getHash());
       
@@ -1563,7 +1558,16 @@ namespace lambda
           )
         );
         it = textures_.find(texture.getHash());
+				texture->clean();
       }
+			else if (texture->isDirty())
+			{
+				it->second.t->getTexture()->update(
+					texture,
+					device_,
+					context_
+				);
+			}
         
       it->second.ref++;
       return it->second.t;

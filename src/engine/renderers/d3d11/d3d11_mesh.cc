@@ -11,56 +11,41 @@ namespace lambda
     D3D11Mesh::D3D11Mesh(D3D11Context* context) 
       : context_(context)
     {
-      for (D3D11RenderBuffer*& buffer : buffer_)
-        buffer = nullptr;
     }
 
     ///////////////////////////////////////////////////////////////////////////
     D3D11Mesh::~D3D11Mesh()
     {
-      for (D3D11RenderBuffer*& buffer : buffer_)
-        if (buffer != nullptr)
-          context_->freeRenderBuffer((platform::IRenderBuffer*&)buffer);
+      for (auto& it : buffer_)
+        if (it.second != nullptr)
+          context_->freeRenderBuffer((platform::IRenderBuffer*&)it.second);
     }
 
     ///////////////////////////////////////////////////////////////////////////
     void D3D11Mesh::bind(
-      const uint16_t& stages, 
-      const asset::Mesh& mesh, 
+      const Vector<uint32_t>& stages,
+      asset::MeshHandle mesh,
       const uint32_t& sub_mesh_idx)
     {
       Vector<UINT> strides;
       Vector<ID3D11Buffer*> buffers;
       Vector<UINT> offsets;
 
-      const asset::SubMesh& sub_mesh = mesh.getSubMeshes().at(sub_mesh_idx);
+      asset::SubMesh& sub_mesh = mesh->getSubMeshes().at(sub_mesh_idx);
 
-      auto size = mesh.get(asset::MeshElements::kPositions).count;
+      auto size = mesh->get(asset::MeshElements::kPositions).count;
 
-      static Array<uint16_t, (uint16_t)MeshStages::kCount> mesh_stages = {
-        (uint16_t)MeshStages::kTranslation,
-        (uint16_t)MeshStages::kNormal,
-        (uint16_t)MeshStages::kTexCoord,
-        (uint16_t)MeshStages::kColour,
-        (uint16_t)MeshStages::kTangent,
-        (uint16_t)MeshStages::kJoint,
-        (uint16_t)MeshStages::kWeights
-      };
-
-      for (uint8_t i = 0u; i < asset::MeshElements::kCount - 1u; ++i)
+			for(const auto& stage : stages)
       {
-        if ((stages& mesh_stages.at(i)) > 0)
-        {
-          D3D11RenderBuffer*& d3d11_buffer = buffer_.at(i);
-          const asset::Mesh::Buffer& mesh_buffer = mesh.get(i);
-          if (d3d11_buffer == nullptr || mesh.changed(i))
-            update(mesh_buffer, d3d11_buffer, true);
-          buffers.push_back(
-            d3d11_buffer ? d3d11_buffer->getBuffer() : nullptr
-          );
-          strides.push_back((UINT)sub_mesh.offset.at(i).stride);
-          offsets.push_back((UINT)sub_mesh.offset.at(i).offset);
-        }
+        D3D11RenderBuffer*& d3d11_buffer = buffer_[stage];
+        const asset::Mesh::Buffer& mesh_buffer = mesh->get(stage);
+        if (d3d11_buffer == nullptr || mesh->changed(stage))
+          update(mesh_buffer, d3d11_buffer, true);
+        buffers.push_back(
+          d3d11_buffer ? d3d11_buffer->getBuffer() : nullptr
+        );
+        strides.push_back((UINT)sub_mesh.offsets[stage].stride);
+        offsets.push_back((UINT)sub_mesh.offsets[stage].offset);
       }
 
       context_->getD3D11Context()->IASetVertexBuffers(
@@ -72,11 +57,11 @@ namespace lambda
       );
 
       const asset::Mesh::Buffer& indices = 
-        mesh.get(asset::MeshElements::kIndices);
+        mesh->get(asset::MeshElements::kIndices);
       if (indices.count > 0u)
       {
-        if (buffer_.at(asset::MeshElements::kIndices) == nullptr || 
-          mesh.changed(asset::MeshElements::kIndices))
+        if (buffer_[asset::MeshElements::kIndices] == nullptr || 
+          mesh->changed(asset::MeshElements::kIndices))
           update(indices, buffer_.at(asset::MeshElements::kIndices), false);
         
         DXGI_FORMAT format = DXGI_FORMAT::DXGI_FORMAT_R32_UINT;
@@ -96,21 +81,21 @@ namespace lambda
         context_->getD3D11Context()->IASetIndexBuffer(
           buffer_.at(asset::MeshElements::kIndices)->getBuffer(),
           format,
-          (UINT)sub_mesh.offset.at(asset::MeshElements::kIndices).offset
+          (UINT)sub_mesh.offsets[asset::MeshElements::kIndices].offset
         );
       }
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    void D3D11Mesh::draw(const asset::Mesh& mesh, const uint32_t& sub_mesh_idx)
+    void D3D11Mesh::draw(asset::MeshHandle mesh, const uint32_t& sub_mesh_idx)
     {
-      const asset::SubMesh& sub_mesh = mesh.getSubMeshes().at(sub_mesh_idx);
+      asset::SubMesh& sub_mesh = mesh->getSubMeshes().at(sub_mesh_idx);
      
       if (buffer_.at(asset::MeshElements::kIndices) && 
         buffer_.at(asset::MeshElements::kIndices)->getSize() > 0)
       {
         const asset::SubMesh::Offset& idx = 
-          sub_mesh.offset.at(asset::MeshElements::kIndices);
+          sub_mesh.offsets[asset::MeshElements::kIndices];
         context_->getD3D11Context()->DrawIndexed(
           (UINT)idx.count, 
           (UINT)sub_mesh.index_offset, 
@@ -119,7 +104,7 @@ namespace lambda
       }
       else
         context_->getD3D11Context()->Draw(
-          (UINT)sub_mesh.offset.at(asset::MeshElements::kPositions).count, 
+          (UINT)sub_mesh.offsets[asset::MeshElements::kPositions].count,
           0
         );
     }

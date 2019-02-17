@@ -80,8 +80,8 @@ namespace lambda
 
           Vector<asset::SubMesh> sub_meshes = g_meshes[id]->getSubMeshes();
           if (sub_meshes.empty()) sub_meshes.push_back(asset::SubMesh());
-          sub_meshes.back().offset.at(asset::MeshElements::kPositions).count = script_array.vec_vec3.size();
-          sub_meshes.back().offset.at(asset::MeshElements::kPositions).stride = sizeof(float) * 3u;
+          sub_meshes.back().offsets[asset::MeshElements::kPositions].count = script_array.vec_vec3.size();
+          sub_meshes.back().offsets[asset::MeshElements::kPositions].stride = sizeof(float) * 3u;
 
           glm::vec3 min(FLT_MAX);
           glm::vec3 max(FLT_MIN);
@@ -105,8 +105,8 @@ namespace lambda
 
           Vector<asset::SubMesh> sub_meshes = g_meshes[id]->getSubMeshes();
           if (sub_meshes.empty()) sub_meshes.push_back(asset::SubMesh());
-          sub_meshes.back().offset.at(asset::MeshElements::kNormals).count = script_array.vec_vec3.size();
-          sub_meshes.back().offset.at(asset::MeshElements::kNormals).stride = sizeof(float) * 3u;
+          sub_meshes.back().offsets[asset::MeshElements::kNormals].count = script_array.vec_vec3.size();
+          sub_meshes.back().offsets[asset::MeshElements::kNormals].stride = sizeof(float) * 3u;
           g_meshes[id]->setSubMeshes(sub_meshes);
         }
         void SetTexCoords(const uint64_t& id, const void* raw_bytes)
@@ -116,8 +116,8 @@ namespace lambda
 
           Vector<asset::SubMesh> sub_meshes = g_meshes[id]->getSubMeshes();
           if (sub_meshes.empty()) sub_meshes.push_back(asset::SubMesh());
-          sub_meshes.back().offset.at(asset::MeshElements::kTexCoords).count = script_array.vec_vec2.size();
-          sub_meshes.back().offset.at(asset::MeshElements::kTexCoords).stride = sizeof(float) * 2u;
+          sub_meshes.back().offsets[asset::MeshElements::kTexCoords].count = script_array.vec_vec2.size();
+          sub_meshes.back().offsets[asset::MeshElements::kTexCoords].stride = sizeof(float) * 2u;
           g_meshes[id]->setSubMeshes(sub_meshes);
         }
         void SetColours(const uint64_t& id, const void* raw_bytes)
@@ -151,8 +151,8 @@ namespace lambda
 
           Vector<asset::SubMesh> sub_meshes = g_meshes[id]->getSubMeshes();
           if (sub_meshes.empty()) sub_meshes.push_back(asset::SubMesh());
-          sub_meshes.back().offset.at(asset::MeshElements::kIndices).count = script_array.vec_uint32.size();
-          sub_meshes.back().offset.at(asset::MeshElements::kIndices).stride = sizeof(uint32_t);
+          sub_meshes.back().offsets[asset::MeshElements::kIndices].count = script_array.vec_uint32.size();
+          sub_meshes.back().offsets[asset::MeshElements::kIndices].stride = sizeof(uint32_t);
           g_meshes[id]->setSubMeshes(sub_meshes);
         }
         uint64_t Decimate(const uint64_t& in_id, const float& reduction, const float& target_error)

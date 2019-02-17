@@ -119,7 +119,7 @@ class Lighting {
     var size = Ini.new("resources/settings.ini")["Lighting", "ShadowMapSize"]    
 
     var trans_rsm = _rsm.getComponent(Transform)
-    trans_rsm.worldRotation = Math.lookRotation(Vec3.new(0.0, 1.0, 1.0).normalized, Vec3.new(0.0, 1.0, 0.0))
+    trans_rsm.worldRotation = Math.lookRotation(Vec3.new(0.5, 1.0, 1.0).normalized, Vec3.new(0.0, 1.0, 0.0))
 
     PostProcess.addRenderTarget("rsm_shad", size, size, TextureFormat.R16G16B16A16)
     //PostProcess.addRenderTarget("rsm_posi", size, size, TextureFormat.R16G16B16A16)

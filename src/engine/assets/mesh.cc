@@ -9,33 +9,21 @@ namespace lambda
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     Mesh::Mesh()
     {
-      for (uint32_t i = 0u; i < MeshElements::kCount; ++i)
-      {
-        buffer_.at(i).count = 0u;
-        buffer_.at(i).size  = 0u;
-        buffer_.at(i).data  = nullptr;
-        changed_.at(i) = false;
-      }
-      sub_meshes_ = Vector<SubMesh>();
     }
     
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    Mesh::Mesh(const Array<Buffer, MeshElements::kCount>& buffer, const Vector<SubMesh>& sub_meshes)
+    Mesh::Mesh(const UnorderedMap<uint32_t, Buffer>& buffers, const Vector<SubMesh>& sub_meshes)
     {
-      for (uint32_t i = 0u; i < MeshElements::kCount; ++i)
-      {
-        set(i, buffer.at(i));
-      }
+			for (const auto& it : buffers)
+				set(it.first, it.second);
       setSubMeshes(sub_meshes);
     }
     
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     Mesh::Mesh(const Mesh& mesh)
     {
-      for (uint8_t i = 0u; i < MeshElements::kCount; ++i)
-      {
-        set(i, mesh.get(i));
-      }
+			for (const auto& it : mesh.buffer_)
+				set(it.first, it.second);
       setSubMeshes(mesh.sub_meshes_);
 
       textures_      = mesh.textures_;
@@ -47,10 +35,8 @@ namespace lambda
     {
       textures_.resize(0u);
       Buffer null_buffer;
-      for (uint8_t i = 0u; i < MeshElements::kCount; ++i)
-      {
-        set(i, null_buffer);
-      }
+			for (const auto& it : buffer_)
+				set(it.first, null_buffer);
       sub_meshes_.resize(0u);
     }
     
@@ -60,23 +46,29 @@ namespace lambda
       sub_meshes_.clear();
       sub_meshes_ = sub_meshes;
     }
-    
+
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		const Vector<SubMesh>& Mesh::getSubMeshes() const
+		{
+			return sub_meshes_;
+		}
+
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		Vector<SubMesh>& Mesh::getSubMeshes()
+		{
+			return sub_meshes_;
+		}
+
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    const Vector<SubMesh>& Mesh::getSubMeshes() const
+    Mesh::Buffer Mesh::get(const uint32_t& hash)
     {
-      return sub_meshes_;
+			return buffer_[hash];
     }
     
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    Mesh::Buffer Mesh::get(const uint8_t& index) const
+    void Mesh::set(const uint32_t& hash, const Buffer& buffer)
     {
-      return buffer_.at(index);
-    }
-    
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void Mesh::set(const uint8_t& index, const Buffer& buffer)
-    {
-      Buffer& b = buffer_.at(index);
+      Buffer& b = buffer_[hash];
       if (b.data != nullptr)
       {
         foundation::Memory::deallocate(b.data);
@@ -89,21 +81,18 @@ namespace lambda
         b.data = foundation::Memory::allocate(buffer.count * buffer.size);
         memcpy(b.data, buffer.data, buffer.count * buffer.size);
       }
-      changed_.at(index) = true;
+      changed_[hash] = true;
     }
     
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void Mesh::clear(bool has_changed)
     {
       Buffer null_buffer;
-      for (uint8_t i = 0u; i < MeshElements::kCount; ++i)
-      {
-        if (buffer_.at(i).count > 0u) 
-        { 
-          set(i, null_buffer); 
-          changed_.at(i) = has_changed; 
-        }
-      }
+			for (auto& it : buffer_)
+			{
+				set(it.first, null_buffer);
+				markAsChanged(it.first);
+			}
     }
     
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -159,24 +148,22 @@ namespace lambda
     }
     
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    bool Mesh::changed(const uint8_t& index) const
+    bool Mesh::changed(const uint32_t& hash) const
     {
-      return changed_.at(index);
+      return changed_.at(hash);
     }
     
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void Mesh::markAsChanged(const uint8_t& index)
+    void Mesh::markAsChanged(const uint32_t& hash)
     {
-      changed_.at(index) = true;
+      changed_.at(hash) = true;
     }
     
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void Mesh::updated()
     {
-      for (uint8_t i = 0u; i < MeshElements::kCount; ++i)
-      {
-        changed_.at(i) = false;
-      }
+			for (auto& it : changed_)
+				it.second = false;
     }
     
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -272,22 +259,31 @@ namespace lambda
       };
 
       Vector<SubMesh> sub_meshes = {
-        SubMesh{ {
-        SubMesh::Offset(0, 3, sizeof(glm::vec3)),
-        SubMesh::Offset(0, 3, sizeof(glm::vec3)),
-        SubMesh::Offset(0, 3, sizeof(glm::vec3)),
-        SubMesh::Offset(0, 3, sizeof(glm::vec4)),
-        SubMesh::Offset(0, 3, sizeof(glm::vec2)),
-        SubMesh::Offset(0, 0, sizeof(glm::vec4)),
-        SubMesh::Offset(0, 0, sizeof(glm::vec4)),
-        SubMesh::Offset(0, 3, sizeof(uint32_t)) },
+				SubMesh{ {
+				{ kPositions, SubMesh::Offset(0, 3, sizeof(glm::vec3)) },
+				{ kNormals,   SubMesh::Offset(0, 3, sizeof(glm::vec3)) },
+				{ kTexCoords, SubMesh::Offset(0, 3, sizeof(glm::vec3)) },
+				{ kColours,   SubMesh::Offset(0, 3, sizeof(glm::vec4)) },
+				{ kTangents,  SubMesh::Offset(0, 3, sizeof(glm::vec2)) },
+				{ kJoints,    SubMesh::Offset(0, 0, sizeof(glm::vec4)) },
+				{ kWeights,   SubMesh::Offset(0, 0, sizeof(glm::vec4)) },
+				{ kIndices,   SubMesh::Offset(0, 3, sizeof(uint32_t)) } },
         glm::vec3(0.0f),
         glm::vec3(0.0f)
       }
       };
       sub_meshes.at(0u).io.double_sided = true;
 
-      return Mesh({ positions, normals, tex_coords, colours, tangents, Buffer(), Buffer(), indices }, sub_meshes);
+      return Mesh({ 
+				{ kPositions, positions  },
+				{ kNormals,   normals    },
+				{ kTexCoords, tex_coords },
+				{ kColours,   colours    },
+				{ kTangents,  tangents   },
+				{ kJoints,    Buffer()   },
+				{ kWeights,   Buffer()   },
+				{ kIndices,   indices    }
+			}, sub_meshes);
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -295,11 +291,11 @@ namespace lambda
     {
       for (const glm::vec3& pos : positions)
       {
-        if (pos.x < min.x) min.x = pos.x;
+        if      (pos.x < min.x) min.x = pos.x;
         else if (pos.x > max.x) max.x = pos.x;
-        if (pos.y < min.y) min.y = pos.y;
+        if      (pos.y < min.y) min.y = pos.y;
         else if (pos.y > max.y) max.y = pos.y;
-        if (pos.z < min.z) min.z = pos.z;
+        if      (pos.z < min.z) min.z = pos.z;
         else if (pos.z > max.z) max.z = pos.z;
       }
     }
@@ -315,39 +311,39 @@ namespace lambda
 
       //FRONT
       vertices.emplace_back(-0.5f, -0.5f, -0.5f); uvs.emplace_back(0.0f, 1.0f);
-      vertices.emplace_back(-0.5f, 0.5f, -0.5f); uvs.emplace_back(0.0f, 0.0f);
-      vertices.emplace_back(0.5f, 0.5f, -0.5f); uvs.emplace_back(1.0f, 0.0f);
-      vertices.emplace_back(0.5f, -0.5f, -0.5f); uvs.emplace_back(1.0f, 1.0f);
+      vertices.emplace_back(-0.5f,  0.5f, -0.5f); uvs.emplace_back(0.0f, 0.0f);
+      vertices.emplace_back( 0.5f,  0.5f, -0.5f); uvs.emplace_back(1.0f, 0.0f);
+      vertices.emplace_back( 0.5f, -0.5f, -0.5f); uvs.emplace_back(1.0f, 1.0f);
 
       //BACK
       vertices.emplace_back(-0.5f, -0.5f, 0.5f); uvs.emplace_back(1.0f, 1.0f);
-      vertices.emplace_back(0.5f, -0.5f, 0.5f); uvs.emplace_back(0.0f, 1.0f);
-      vertices.emplace_back(0.5f, 0.5f, 0.5f); uvs.emplace_back(0.0f, 0.0f);
-      vertices.emplace_back(-0.5f, 0.5f, 0.5f); uvs.emplace_back(1.0f, 0.0f);
+      vertices.emplace_back( 0.5f, -0.5f, 0.5f); uvs.emplace_back(0.0f, 1.0f);
+      vertices.emplace_back( 0.5f,  0.5f, 0.5f); uvs.emplace_back(0.0f, 0.0f);
+      vertices.emplace_back(-0.5f,  0.5f, 0.5f); uvs.emplace_back(1.0f, 0.0f);
 
       //LEFT
-      vertices.emplace_back(-0.5f, -0.5f, 0.5f); uvs.emplace_back(0.0f, 1.0f);
-      vertices.emplace_back(-0.5f, 0.5f, 0.5f); uvs.emplace_back(0.0f, 0.0f);
-      vertices.emplace_back(-0.5f, 0.5f, -0.5f); uvs.emplace_back(1.0f, 0.0f);
+      vertices.emplace_back(-0.5f, -0.5f,  0.5f); uvs.emplace_back(0.0f, 1.0f);
+      vertices.emplace_back(-0.5f,  0.5f,  0.5f); uvs.emplace_back(0.0f, 0.0f);
+      vertices.emplace_back(-0.5f,  0.5f, -0.5f); uvs.emplace_back(1.0f, 0.0f);
       vertices.emplace_back(-0.5f, -0.5f, -0.5f); uvs.emplace_back(1.0f, 1.0f);
 
       //RIGHT
       vertices.emplace_back(0.5f, -0.5f, -0.5f); uvs.emplace_back(0.0f, 1.0f);
-      vertices.emplace_back(0.5f, 0.5f, -0.5f); uvs.emplace_back(0.0f, 0.0f);
-      vertices.emplace_back(0.5f, 0.5f, 0.5f); uvs.emplace_back(1.0f, 0.0f);
-      vertices.emplace_back(0.5f, -0.5f, 0.5f); uvs.emplace_back(1.0f, 1.0f);
+      vertices.emplace_back(0.5f,  0.5f, -0.5f); uvs.emplace_back(0.0f, 0.0f);
+      vertices.emplace_back(0.5f,  0.5f,  0.5f); uvs.emplace_back(1.0f, 0.0f);
+      vertices.emplace_back(0.5f, -0.5f,  0.5f); uvs.emplace_back(1.0f, 1.0f);
 
       //TOP
       vertices.emplace_back(-0.5f, 0.5f, -0.5f); uvs.emplace_back(0.0f, 1.0f);
-      vertices.emplace_back(-0.5f, 0.5f, 0.5f); uvs.emplace_back(0.0f, 0.0f);
-      vertices.emplace_back(0.5f, 0.5f, 0.5f); uvs.emplace_back(1.0f, 0.0f);
-      vertices.emplace_back(0.5f, 0.5f, -0.5f); uvs.emplace_back(1.0f, 1.0f);
+      vertices.emplace_back(-0.5f, 0.5f,  0.5f); uvs.emplace_back(0.0f, 0.0f);
+      vertices.emplace_back( 0.5f, 0.5f,  0.5f); uvs.emplace_back(1.0f, 0.0f);
+      vertices.emplace_back( 0.5f, 0.5f, -0.5f); uvs.emplace_back(1.0f, 1.0f);
 
       //BOTTOM
       vertices.emplace_back(-0.5f, -0.5f, -0.5f); uvs.emplace_back(1.0f, 1.0f);
-      vertices.emplace_back(0.5f, -0.5f, -0.5f); uvs.emplace_back(0.0f, 1.0f);
-      vertices.emplace_back(0.5f, -0.5f, 0.5f); uvs.emplace_back(0.0f, 0.0f);
-      vertices.emplace_back(-0.5f, -0.5f, 0.5f); uvs.emplace_back(1.0f, 0.0f);
+      vertices.emplace_back( 0.5f, -0.5f, -0.5f); uvs.emplace_back(0.0f, 1.0f);
+      vertices.emplace_back( 0.5f, -0.5f,  0.5f); uvs.emplace_back(0.0f, 0.0f);
+      vertices.emplace_back(-0.5f, -0.5f,  0.5f); uvs.emplace_back(1.0f, 0.0f);
 
       //Generate normals
       for (int i = 0; i < 4; ++i)
@@ -367,11 +363,11 @@ namespace lambda
       uint32_t index = 0;
       uint32_t faceCount = (uint32_t)vertices.size() / 4;
       for (uint32_t i = 0; i < faceCount; i++) {
-        indices.emplace_back(index); //0
-        indices.emplace_back(++index); //1
-        indices.emplace_back(++index); //2
-        indices.emplace_back(index); //2
-        indices.emplace_back(++index); //3
+        indices.emplace_back(index);     //0
+        indices.emplace_back(++index);   //1
+        indices.emplace_back(++index);   //2
+        indices.emplace_back(index);     //2
+        indices.emplace_back(++index);   //3
         indices.emplace_back(index - 3); //0
         index++;
       }
@@ -382,16 +378,27 @@ namespace lambda
 
       glm::vec3 min(FLT_MAX), max(FLT_MIN);
       getMinMax(vertices, min, max);
-      Mesh cube({ vertices, normals, uvs, colors, Buffer(), Buffer(), Buffer(), indices },
+      Mesh cube({
+				{ kPositions, vertices },
+				{ kNormals,   normals  },
+				{ kTexCoords, uvs      },
+				{ kColours,   colors   },
+				{ kTangents,  Buffer() },
+				{ kJoints,    Buffer() },
+				{ kWeights,   Buffer() },
+				{ kIndices,   indices  }
+			},
         Vector<SubMesh>{ SubMesh{
-        { SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)),
-        SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)),
-        SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)),
-        SubMesh::Offset(0, vertices.size(), sizeof(glm::vec4)),
-        SubMesh::Offset(0, vertices.size(), sizeof(glm::vec2)),
-        SubMesh::Offset(0, 0, sizeof(glm::vec4)),
-        SubMesh::Offset(0, 0, sizeof(glm::vec4)),
-        SubMesh::Offset(0, indices.size(), sizeof(uint32_t)) },
+        { 
+					{ kPositions, SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
+					{ kNormals,   SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
+					{ kTexCoords, SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
+					{ kColours,   SubMesh::Offset(0, vertices.size(), sizeof(glm::vec4)) },
+					{ kTangents,  SubMesh::Offset(0, vertices.size(), sizeof(glm::vec2)) },
+					{ kJoints,    SubMesh::Offset(0, 0, sizeof(glm::vec4))               },
+					{ kWeights,   SubMesh::Offset(0, 0, sizeof(glm::vec4))               },
+					{ kIndices,   SubMesh::Offset(0, indices.size(), sizeof(uint32_t))   }
+					},
         min, max }}
       );
 
@@ -459,16 +466,26 @@ namespace lambda
 
       glm::vec3 mmin(FLT_MAX), mmax(FLT_MIN);
       getMinMax(vertices, mmin, mmax);
-      Mesh quad({ vertices, normals, uvs, colors, Buffer(), Buffer(), Buffer(), indices },
+      Mesh quad({ 
+				{ kPositions, vertices },
+				{ kNormals,   normals  },
+				{ kTexCoords, uvs      },
+				{ kColours,   colors   },
+				{ kTangents,  Buffer() },
+				{ kJoints,    Buffer() },
+				{ kWeights,   Buffer() },
+				{ kIndices,   indices  }
+			},
         Vector<SubMesh>{ SubMesh{
-        { SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)),
-        SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)),
-        SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)),
-        SubMesh::Offset(0, vertices.size(), sizeof(glm::vec4)),
-        SubMesh::Offset(0, vertices.size(), sizeof(glm::vec2)),
-        SubMesh::Offset(0, 0, sizeof(glm::vec4)),
-        SubMesh::Offset(0, 0, sizeof(glm::vec4)),
-        SubMesh::Offset(0, indices.size(), sizeof(uint32_t)) },
+        { 
+					{ kPositions, SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
+					{ kNormals,   SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
+					{ kTexCoords, SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
+					{ kColours,   SubMesh::Offset(0, vertices.size(), sizeof(glm::vec4)) },
+					{ kTangents,  SubMesh::Offset(0, vertices.size(), sizeof(glm::vec2)) },
+					{ kJoints,    SubMesh::Offset(0, 0, sizeof(glm::vec4))               },
+					{ kWeights,   SubMesh::Offset(0, 0, sizeof(glm::vec4))               },
+					{ kIndices,   SubMesh::Offset(0, indices.size(), sizeof(uint32_t))   } },
         mmin, mmax }}
       );
 
@@ -520,16 +537,26 @@ namespace lambda
 
       glm::vec3 min(FLT_MAX), max(FLT_MIN);
       getMinMax(vertices, min, max);
-      Mesh plane({ vertices, normals, uvs, colors, Buffer(), Buffer(), Buffer(), indices },
+      Mesh plane({ 
+				{ kPositions, vertices },
+				{ kNormals,   normals  },
+				{ kTexCoords, uvs      },
+				{ kColours,   colors   },
+				{ kTangents,  Buffer() },
+				{ kJoints,    Buffer() },
+				{ kWeights,   Buffer() },
+				{ kIndices,   indices  }
+			},
         Vector<SubMesh>{ SubMesh{
-        { SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)),
-        SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)),
-        SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)),
-        SubMesh::Offset(0, vertices.size(), sizeof(glm::vec4)),
-        SubMesh::Offset(0, vertices.size(), sizeof(glm::vec2)),
-        SubMesh::Offset(0, 0, sizeof(glm::vec4)),
-        SubMesh::Offset(0, 0, sizeof(glm::vec4)),
-        SubMesh::Offset(0, indices.size(), sizeof(uint32_t)) },
+        {
+					{ kPositions, SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
+					{ kNormals,   SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
+					{ kTexCoords, SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
+					{ kColours,   SubMesh::Offset(0, vertices.size(), sizeof(glm::vec4)) },
+					{ kTangents,  SubMesh::Offset(0, vertices.size(), sizeof(glm::vec2)) },
+					{ kJoints,    SubMesh::Offset(0, 0, sizeof(glm::vec4))               },
+					{ kWeights,   SubMesh::Offset(0, 0, sizeof(glm::vec4))               },
+					{ kIndices,   SubMesh::Offset(0, indices.size(), sizeof(uint32_t))   } },
         min, max }}
       );
 
@@ -677,16 +704,26 @@ namespace lambda
 
       glm::vec3 min(FLT_MAX), max(FLT_MIN);
       getMinMax(vertices, min, max);
-      Mesh cylinder({ vertices, normals, uvs, colors, Buffer(), Buffer(), Buffer(), indices },
+      Mesh cylinder({ 
+				{ kPositions, vertices },
+				{ kNormals,   normals  },
+				{ kTexCoords, uvs      },
+				{ kColours,   colors   },
+				{ kTangents,  Buffer() },
+				{ kJoints,    Buffer() },
+				{ kWeights,   Buffer() },
+				{ kIndices,   indices  }
+			},
         Vector<SubMesh>{ SubMesh{
-        { SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)),
-        SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)),
-        SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)),
-        SubMesh::Offset(0, vertices.size(), sizeof(glm::vec4)),
-        SubMesh::Offset(0, vertices.size(), sizeof(glm::vec2)),
-        SubMesh::Offset(0, 0, sizeof(glm::vec4)),
-        SubMesh::Offset(0, 0, sizeof(glm::vec4)),
-        SubMesh::Offset(0, indices.size(), sizeof(uint32_t)) },
+        {
+					{ kPositions, SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
+					{ kNormals,   SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
+					{ kTexCoords, SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
+					{ kColours,   SubMesh::Offset(0, vertices.size(), sizeof(glm::vec4)) },
+					{ kTangents,  SubMesh::Offset(0, vertices.size(), sizeof(glm::vec2)) },
+					{ kJoints,    SubMesh::Offset(0, 0, sizeof(glm::vec4))               },
+					{ kWeights,   SubMesh::Offset(0, 0, sizeof(glm::vec4))               },
+					{ kIndices,   SubMesh::Offset(0, indices.size(), sizeof(uint32_t))   } },
         min, max }}
       );
 
@@ -735,16 +772,26 @@ namespace lambda
 
       glm::vec3 min(FLT_MAX), max(FLT_MIN);
       getMinMax(vertices, min, max);
-      Mesh circle({ vertices, normals, uvs, colors, Buffer(), Buffer(), Buffer(), indices },
+      Mesh circle({ 
+				{ kPositions, vertices },
+				{ kNormals,   normals  },
+				{ kTexCoords, uvs      },
+				{ kColours,   colors   },
+				{ kTangents,  Buffer() },
+				{ kJoints,    Buffer() },
+				{ kWeights,   Buffer() },
+				{ kIndices,   indices  }
+			},
         Vector<SubMesh>{ SubMesh{
-          { SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)),
-        SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)),
-        SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)),
-        SubMesh::Offset(0, vertices.size(), sizeof(glm::vec4)),
-        SubMesh::Offset(0, vertices.size(), sizeof(glm::vec2)),
-        SubMesh::Offset(0, 0, sizeof(glm::vec4)),
-        SubMesh::Offset(0, 0, sizeof(glm::vec4)),
-        SubMesh::Offset(0, indices.size(), sizeof(uint32_t)) },
+          { 
+						{ kPositions, SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
+						{ kNormals,   SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
+						{ kTexCoords, SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
+						{ kColours,   SubMesh::Offset(0, vertices.size(), sizeof(glm::vec4)) },
+						{ kTangents,  SubMesh::Offset(0, vertices.size(), sizeof(glm::vec2)) },
+						{ kJoints,    SubMesh::Offset(0, 0, sizeof(glm::vec4))               },
+						{ kWeights,   SubMesh::Offset(0, 0, sizeof(glm::vec4))               },
+						{ kIndices,   SubMesh::Offset(0, indices.size(), sizeof(uint32_t))   } },
         min, max }}
       );
 
@@ -839,16 +886,26 @@ namespace lambda
       //! Combine.
       glm::vec3 min(FLT_MAX), max(FLT_MIN);
       getMinMax(vertices, min, max);
-      Mesh sphere({ vertices, normals, uvs, colors, Buffer(), Buffer(), Buffer(), indices },
+      Mesh sphere({ 
+				{ kPositions, vertices },
+				{ kNormals,   normals },
+				{ kTexCoords, uvs },
+				{ kColours,   colors },
+				{ kTangents,  Buffer() },
+				{ kJoints,    Buffer() },
+				{ kWeights,   Buffer() },
+				{ kIndices,   indices }
+			},
         Vector<SubMesh>{ SubMesh{
-        { SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)),
-        SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)),
-        SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)),
-        SubMesh::Offset(0, vertices.size(), sizeof(glm::vec4)),
-        SubMesh::Offset(0, vertices.size(), sizeof(glm::vec2)),
-        SubMesh::Offset(0, 0, sizeof(glm::vec4)),
-        SubMesh::Offset(0, 0, sizeof(glm::vec4)),
-        SubMesh::Offset(0, indices.size(), sizeof(uint32_t)) },
+        { 
+					{ kPositions, SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
+					{ kNormals,   SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
+					{ kTexCoords, SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
+					{ kColours,   SubMesh::Offset(0, vertices.size(), sizeof(glm::vec4)) },
+					{ kTangents,  SubMesh::Offset(0, vertices.size(), sizeof(glm::vec2)) },
+					{ kJoints,    SubMesh::Offset(0, 0, sizeof(glm::vec4))               },
+					{ kWeights,   SubMesh::Offset(0, 0, sizeof(glm::vec4))               },
+					{ kIndices,   SubMesh::Offset(0, indices.size(), sizeof(uint32_t))   } },
         min, max }}
       );
 

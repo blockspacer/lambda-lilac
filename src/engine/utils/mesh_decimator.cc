@@ -82,12 +82,12 @@ namespace lambda
       {
         asset::SubMesh& sub_mesh = sub_meshes.at(sid);
         // Get the correct counts and vertices.
-        size_t vertex_count = sub_mesh.offset.at(asset::MeshElements::kPositions).count;
-        size_t index_count  = sub_mesh.offset.at(asset::MeshElements::kIndices).count / 3u;
+        size_t vertex_count = sub_mesh.offsets[asset::MeshElements::kPositions].count;
+        size_t index_count  = sub_mesh.offsets[asset::MeshElements::kIndices].count / 3u;
         if(vertex_count != 0u&& index_count != 0u)
         {
           Vector<glm::vec3> vertices = input->get<glm::vec3>(asset::MeshElements::kPositions, sid);
-          char* i_data = (char*)input->get(asset::MeshElements::kIndices).data + sub_mesh.offset.at(asset::MeshElements::kIndices).offset;
+          char* i_data = (char*)input->get(asset::MeshElements::kIndices).data + sub_mesh.offsets[asset::MeshElements::kIndices].offset;
         
           // Convert the indices.
           Vector<int> indices;
@@ -186,37 +186,37 @@ namespace lambda
           }
 
           // Set output.
-          sub_mesh.offset.at(asset::MeshElements::kIndices).count = new_indices.size();
+          sub_mesh.offsets[asset::MeshElements::kIndices].count = new_indices.size();
 
           if (sizeof(uint16_t) == input->get(asset::MeshElements::kIndices).size)
           {
-            sub_mesh.offset.at(asset::MeshElements::kIndices).offset = new_idx16.size() * sizeof(uint16_t);
+            sub_mesh.offsets[asset::MeshElements::kIndices].offset = new_idx16.size() * sizeof(uint16_t);
             Vector<uint16_t> i = convert<int, uint16_t>(new_indices);
             new_idx16.insert(new_idx16.end(), i.begin(), i.end());
           }
           else
           {
-            sub_mesh.offset.at(asset::MeshElements::kIndices).offset = new_idx32.size() * sizeof(uint32_t);
+            sub_mesh.offsets[asset::MeshElements::kIndices].offset = new_idx32.size() * sizeof(uint32_t);
             Vector<uint32_t> i = convert<int, uint32_t>(new_indices);
             new_idx32.insert(new_idx32.end(), i.begin(), i.end());
           }
 
           // Sub meshes.
-          sub_mesh.offset.at(asset::MeshElements::kPositions).offset = size_pos * sub_mesh.offset.at(asset::MeshElements::kPositions).stride;
-          sub_mesh.offset.at(asset::MeshElements::kNormals).offset   = size_nor * sub_mesh.offset.at(asset::MeshElements::kNormals).stride;
-          sub_mesh.offset.at(asset::MeshElements::kTexCoords).offset = size_tex * sub_mesh.offset.at(asset::MeshElements::kTexCoords).stride;
-          sub_mesh.offset.at(asset::MeshElements::kColours).offset   = size_col * sub_mesh.offset.at(asset::MeshElements::kColours).stride;
-          sub_mesh.offset.at(asset::MeshElements::kTangents).offset  = size_tan * sub_mesh.offset.at(asset::MeshElements::kTangents).stride;
-          sub_mesh.offset.at(asset::MeshElements::kJoints).offset    = size_joi * sub_mesh.offset.at(asset::MeshElements::kJoints).stride;
-          sub_mesh.offset.at(asset::MeshElements::kWeights).offset   = size_wei * sub_mesh.offset.at(asset::MeshElements::kWeights).stride;
-
-          sub_mesh.offset.at(asset::MeshElements::kPositions).count = new_pos.size() - size_pos;
-          sub_mesh.offset.at(asset::MeshElements::kNormals).count   = new_nor.size() - size_nor;
-          sub_mesh.offset.at(asset::MeshElements::kTexCoords).count = new_tex.size() - size_tex;
-          sub_mesh.offset.at(asset::MeshElements::kColours).count   = new_col.size() - size_col;
-          sub_mesh.offset.at(asset::MeshElements::kTangents).count  = new_tan.size() - size_tan;
-          sub_mesh.offset.at(asset::MeshElements::kJoints).count    = new_joi.size() - size_joi;
-          sub_mesh.offset.at(asset::MeshElements::kWeights).count   = new_wei.size() - size_wei;
+          sub_mesh.offsets[asset::MeshElements::kPositions].offset = size_pos * sub_mesh.offsets[asset::MeshElements::kPositions].stride;
+          sub_mesh.offsets[asset::MeshElements::kNormals].offset   = size_nor * sub_mesh.offsets[asset::MeshElements::kNormals].stride;
+          sub_mesh.offsets[asset::MeshElements::kTexCoords].offset = size_tex * sub_mesh.offsets[asset::MeshElements::kTexCoords].stride;
+          sub_mesh.offsets[asset::MeshElements::kColours].offset   = size_col * sub_mesh.offsets[asset::MeshElements::kColours].stride;
+          sub_mesh.offsets[asset::MeshElements::kTangents].offset  = size_tan * sub_mesh.offsets[asset::MeshElements::kTangents].stride;
+          sub_mesh.offsets[asset::MeshElements::kJoints].offset    = size_joi * sub_mesh.offsets[asset::MeshElements::kJoints].stride;
+          sub_mesh.offsets[asset::MeshElements::kWeights].offset   = size_wei * sub_mesh.offsets[asset::MeshElements::kWeights].stride;
+					
+          sub_mesh.offsets[asset::MeshElements::kPositions].count = new_pos.size() - size_pos;
+          sub_mesh.offsets[asset::MeshElements::kNormals].count   = new_nor.size() - size_nor;
+          sub_mesh.offsets[asset::MeshElements::kTexCoords].count = new_tex.size() - size_tex;
+          sub_mesh.offsets[asset::MeshElements::kColours].count   = new_col.size() - size_col;
+          sub_mesh.offsets[asset::MeshElements::kTangents].count  = new_tan.size() - size_tan;
+          sub_mesh.offsets[asset::MeshElements::kJoints].count    = new_joi.size() - size_joi;
+          sub_mesh.offsets[asset::MeshElements::kWeights].count   = new_wei.size() - size_wei;
         }
       }
       
@@ -341,15 +341,15 @@ namespace lambda
       Vector<asset::SubMesh> sub_meshes = input->getSubMeshes();
       for (asset::SubMesh& sub_mesh : sub_meshes)
       {
-        for (size_t j = 0u; j < asset::MeshElements::kCount; ++j)
+        for (auto& offset : sub_mesh.offsets)
         {
-          if (sub_mesh.offset.at(j).count > 0u)
+          if (offset.second.count > 0u)
           {
             size_t new_count = 0u;
             size_t new_offset = 0u;
-            size_t ods = sub_mesh.offset.at(j).offset / sub_mesh.offset.at(j).stride;
+            size_t ods = offset.second.offset / offset.second.stride;
 
-            if (j == asset::MeshElements::kIndices)
+            if (offset.first == asset::MeshElements::kIndices)
             {
               for (size_t i = 0u; i < ods; ++i)
               {
@@ -360,7 +360,7 @@ namespace lambda
                   new_offset++;
                 }
               }
-              for (size_t i = 0u; i < sub_mesh.offset.at(j).count; ++i)
+              for (size_t i = 0u; i < offset.second.count; ++i)
               {
                 size_t idx = (ods + i) / 3u;
                 LMB_ASSERT(idx < index_tags.size(), "Decimator: Tried to access index tag out of range!");
@@ -380,7 +380,7 @@ namespace lambda
                   new_offset++;
                 }
               }
-              for (size_t i = 0u; i < sub_mesh.offset.at(j).count; ++i)
+              for (size_t i = 0u; i < offset.second.count; ++i)
               {
                 LMB_ASSERT(i < vertex_tags.size(), "Decimator: Tried to access vertex tag out of range!");
                 if (vertex_tags.at(ods + i))
@@ -390,8 +390,8 @@ namespace lambda
               }
             }
 
-            sub_mesh.offset.at(j).count  = new_count;
-            sub_mesh.offset.at(j).offset = new_offset * sub_mesh.offset.at(j).stride;
+            offset.second.count  = new_count;
+            offset.second.offset = new_offset * offset.second.stride;
           }
         }
       }

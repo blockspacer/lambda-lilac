@@ -216,43 +216,43 @@ namespace lambda
         sm.io.roughness = m.roughness;
         sm.io.colour = m.colour;
 
-        if (m.pos >= 0) sm.offset[asset::MeshElements::kPositions] = asset::SubMesh::Offset{
+        if (m.pos >= 0) sm.offsets[asset::MeshElements::kPositions] = asset::SubMesh::Offset{
             mesh.data.pos.segments.at(m.pos).offset,
             mesh.data.pos.segments.at(m.pos).count,
             mesh.data.pos.segments.at(m.pos).stride
         };
-        if (m.nor >= 0) sm.offset[asset::MeshElements::kNormals] = asset::SubMesh::Offset{
+        if (m.nor >= 0) sm.offsets[asset::MeshElements::kNormals] = asset::SubMesh::Offset{
           mesh.data.nor.segments.at(m.nor).offset,
           mesh.data.nor.segments.at(m.nor).count,
           mesh.data.nor.segments.at(m.nor).stride
         };
-        if (m.col >= 0) sm.offset[asset::MeshElements::kColours] = asset::SubMesh::Offset{
+        if (m.col >= 0) sm.offsets[asset::MeshElements::kColours] = asset::SubMesh::Offset{
           mesh.data.col.segments.at(m.col).offset,
           mesh.data.col.segments.at(m.col).count,
           mesh.data.col.segments.at(m.col).stride
         };
-        if (m.tan >= 0) sm.offset[asset::MeshElements::kTangents] = asset::SubMesh::Offset{
+        if (m.tan >= 0) sm.offsets[asset::MeshElements::kTangents] = asset::SubMesh::Offset{
           mesh.data.tan.segments.at(m.tan).offset / mesh.data.tan.segments.at(m.tan).stride * sizeof(glm::vec3),
-          //mesh.data.tan.segments.at(m.tan).offset,
+          //mesh.data.tan.segments.at(m.tan].offset,
           mesh.data.tan.segments.at(m.tan).count,
           sizeof(glm::vec3) // mesh.data.tan.segments.at(m.tan).stride
         };
-        if (m.tex >= 0) sm.offset[asset::MeshElements::kTexCoords] = asset::SubMesh::Offset{
+        if (m.tex >= 0) sm.offsets[asset::MeshElements::kTexCoords] = asset::SubMesh::Offset{
           mesh.data.tex.segments.at(m.tex).offset,
           mesh.data.tex.segments.at(m.tex).count,
           mesh.data.tex.segments.at(m.tex).stride
         };
-        if (m.joi >= 0) sm.offset[asset::MeshElements::kJoints] = asset::SubMesh::Offset{
+        if (m.joi >= 0) sm.offsets[asset::MeshElements::kJoints] = asset::SubMesh::Offset{
           mesh.data.joi.segments.at(m.joi).offset,
           mesh.data.joi.segments.at(m.joi).count,
           mesh.data.joi.segments.at(m.joi).stride
         };
-        if (m.wei >= 0) sm.offset[asset::MeshElements::kWeights] = asset::SubMesh::Offset{
+        if (m.wei >= 0) sm.offsets[asset::MeshElements::kWeights] = asset::SubMesh::Offset{
           mesh.data.wei.segments.at(m.wei).offset,
           mesh.data.wei.segments.at(m.wei).count,
           mesh.data.wei.segments.at(m.wei).stride
         };
-        if (m.idx >= 0) sm.offset[asset::MeshElements::kIndices] = asset::SubMesh::Offset{
+        if (m.idx >= 0) sm.offsets[asset::MeshElements::kIndices] = asset::SubMesh::Offset{
           mesh.data.idx.segments.at(m.idx).offset,
           mesh.data.idx.segments.at(m.idx).count,
           mesh.data.idx.segments.at(m.idx).stride

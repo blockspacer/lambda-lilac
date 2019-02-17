@@ -2,8 +2,8 @@
 
 struct VSInput
 {
-  float3 position : POSITION;
-  float4 colour   : COLOUR;
+  float3 position : Positions;
+  float4 colour   : Colours;
 };
 
 struct VSOutput

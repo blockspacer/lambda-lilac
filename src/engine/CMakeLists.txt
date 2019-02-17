@@ -43,6 +43,12 @@ SET(InputSources
 SET(UltralightGuiSources
   "gui/gui.h"
   "gui/gui.cc"
+  "gui/file_system.h"
+  "gui/file_system.cc"
+  "gui/font_handler.h"
+  "gui/font_handler.cc"
+  "gui/gpu_driver.h"
+  "gui/gpu_driver.cc"
 )
 SET(InterfacesSources
   "interfaces/icomponent.h"

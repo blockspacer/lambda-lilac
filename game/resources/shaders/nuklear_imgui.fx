@@ -8,9 +8,9 @@ SamplerState sam : register(s0);
 
 struct VS_INPUT
 {
-	float3 pos : INL_POSITION;
-	float2 uv  : INL_TxEX_COORD;
-	float4 col : INL_CxOLOUR;
+	float3 pos : inl_Positions;
+	float2 uv  : inl_TexCoords;
+	float4 col : inl_Colour;
 };
 
 struct PS_INPUT

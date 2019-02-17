@@ -1240,9 +1240,9 @@ foreign class Mesh {
 
           Vector<asset::SubMesh> sub_meshes = mesh->getSubMeshes();
           if (sub_meshes.empty()) sub_meshes.push_back(asset::SubMesh());
-          sub_meshes.back().offset.at(asset::MeshElements::kPositions).count = 
+          sub_meshes.back().offsets[asset::MeshElements::kPositions].count =
             positions.size();
-          sub_meshes.back().offset.at(asset::MeshElements::kPositions).stride =
+          sub_meshes.back().offsets[asset::MeshElements::kPositions].stride =
             sizeof(float) * 3u;
 
           glm::vec3 min(FLT_MAX);
@@ -1274,9 +1274,9 @@ foreign class Mesh {
 
           Vector<asset::SubMesh> sub_meshes = mesh->getSubMeshes();
           if (sub_meshes.empty()) sub_meshes.push_back(asset::SubMesh());
-          sub_meshes.back().offset.at(asset::MeshElements::kNormals).count =
+          sub_meshes.back().offsets[asset::MeshElements::kNormals].count =
             normals.size();
-          sub_meshes.back().offset.at(asset::MeshElements::kNormals).stride = 
+          sub_meshes.back().offsets[asset::MeshElements::kNormals].stride =
             sizeof(float) * 3u;
           mesh->setSubMeshes(sub_meshes);
         };
@@ -1294,9 +1294,9 @@ foreign class Mesh {
 
           Vector<asset::SubMesh> sub_meshes = mesh->getSubMeshes();
           if (sub_meshes.empty()) sub_meshes.push_back(asset::SubMesh());
-          sub_meshes.back().offset.at(asset::MeshElements::kTexCoords).count = 
+          sub_meshes.back().offsets[asset::MeshElements::kTexCoords].count =
             tex_coords.size();
-          sub_meshes.back().offset.at(asset::MeshElements::kTexCoords).stride = 
+          sub_meshes.back().offsets[asset::MeshElements::kTexCoords].stride =
             sizeof(float) * 2u;
           mesh->setSubMeshes(sub_meshes);
         };
@@ -1314,9 +1314,9 @@ foreign class Mesh {
 
           Vector<asset::SubMesh> sub_meshes = mesh->getSubMeshes();
           if (sub_meshes.empty()) sub_meshes.push_back(asset::SubMesh());
-          sub_meshes.back().offset.at(asset::MeshElements::kColours).count = 
+          sub_meshes.back().offsets[asset::MeshElements::kColours].count =
             colours.size();
-          sub_meshes.back().offset.at(asset::MeshElements::kColours).stride = 
+          sub_meshes.back().offsets[asset::MeshElements::kColours].stride =
             sizeof(float) * 4u;
           mesh->setSubMeshes(sub_meshes);
         };
@@ -1334,9 +1334,9 @@ foreign class Mesh {
 
           Vector<asset::SubMesh> sub_meshes = mesh->getSubMeshes();
           if (sub_meshes.empty()) sub_meshes.push_back(asset::SubMesh());
-          sub_meshes.back().offset.at(asset::MeshElements::kTangents).count = 
+          sub_meshes.back().offsets[asset::MeshElements::kTangents].count =
             tangents.size();
-          sub_meshes.back().offset.at(asset::MeshElements::kTangents).stride = 
+          sub_meshes.back().offsets[asset::MeshElements::kTangents].stride = 
             sizeof(float) * 3u;
           mesh->setSubMeshes(sub_meshes);
         };
@@ -1354,9 +1354,9 @@ foreign class Mesh {
 
           Vector<asset::SubMesh> sub_meshes = mesh->getSubMeshes();
           if (sub_meshes.empty()) sub_meshes.push_back(asset::SubMesh());
-          sub_meshes.back().offset.at(asset::MeshElements::kJoints).count =
+          sub_meshes.back().offsets[asset::MeshElements::kJoints].count =
             joints.size();
-          sub_meshes.back().offset.at(asset::MeshElements::kJoints).stride = 
+          sub_meshes.back().offsets[asset::MeshElements::kJoints].stride =
             sizeof(float) * 4u;
           mesh->setSubMeshes(sub_meshes);
         };
@@ -1374,9 +1374,9 @@ foreign class Mesh {
 
           Vector<asset::SubMesh> sub_meshes = mesh->getSubMeshes();
           if (sub_meshes.empty()) sub_meshes.push_back(asset::SubMesh());
-          sub_meshes.back().offset.at(asset::MeshElements::kWeights).count = 
+          sub_meshes.back().offsets[asset::MeshElements::kWeights].count =
             weights.size();
-          sub_meshes.back().offset.at(asset::MeshElements::kWeights).stride =
+          sub_meshes.back().offsets[asset::MeshElements::kWeights].stride =
             sizeof(float) * 4u;
           mesh->setSubMeshes(sub_meshes);
         };
@@ -1394,9 +1394,9 @@ foreign class Mesh {
 
           Vector<asset::SubMesh> sub_meshes = mesh->getSubMeshes();
           if (sub_meshes.empty()) sub_meshes.push_back(asset::SubMesh());
-          sub_meshes.back().offset.at(asset::MeshElements::kIndices).count = 
+          sub_meshes.back().offsets[asset::MeshElements::kIndices].count =
             indices.size();
-          sub_meshes.back().offset.at(asset::MeshElements::kIndices).stride = 
+          sub_meshes.back().offsets[asset::MeshElements::kIndices].stride =
             sizeof(uint32_t);
           mesh->setSubMeshes(sub_meshes);
         };
@@ -3067,7 +3067,7 @@ foreign class Collider {
         if (mesh &&
           (true == g_meshRenderSystem->hasComponent(entity) &&
           mesh == g_meshRenderSystem->getMesh(entity) &&
-          mesh->getSubMeshes().at(g_meshRenderSystem->getSubMesh(entity)).offset.at(asset::MeshElements::kPositions).count > 0u) &&
+          mesh->getSubMeshes().at(g_meshRenderSystem->getSubMesh(entity)).offsets[asset::MeshElements::kPositions].count > 0u) &&
           (false == (g_meshRenderSystem->getAlbedoTexture(entity) != nullptr &&
             g_meshRenderSystem->getAlbedoTexture(entity)->getLayer(0u).containsAlpha())))
           add_mesh_collider = true;

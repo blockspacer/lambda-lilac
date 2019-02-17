@@ -235,6 +235,14 @@ namespace lambda
     return (uint64_t)time_stamp.time_since_epoch().count();
   }
   
+	//////////////////////////////////////////////////////////////////////////////
+	uint64_t FileSystem::GetFileSize(const String & file)
+	{
+		String full_path = FullFilePath(file);
+		std::experimental::filesystem::path file_path(lambda::stlString(full_path));
+		return (uint64_t)std::experimental::filesystem::file_size(file_path);
+	}
+
   //////////////////////////////////////////////////////////////////////////////
   Vector<String> FileSystem::GetAllFilesInFolder(String folder,
                                                  String extension)
@@ -297,6 +305,13 @@ namespace lambda
     return 0ul;
   }
   
+	//////////////////////////////////////////////////////////////////////////////
+	uint64_t FileSystem::GetFileSize(const String & file)
+	{
+		return 0ul;
+	}
+
+
   //////////////////////////////////////////////////////////////////////////////
   Vector<String> FileSystem::GetAllFilesInFolder(String /*folder*/,
                                                  String /*extension*/)

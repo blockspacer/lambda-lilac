@@ -38,7 +38,7 @@ namespace lambda
       void bind();
       void unbind();
       void bindBuffers();
-      uint16_t getStages() const;
+			Vector<uint32_t> getStages() const;
 
       void updateShaderVariable(const platform::ShaderVariable& variable);
 
@@ -59,7 +59,7 @@ namespace lambda
       Microsoft::WRL::ComPtr<ID3D11PixelShader>    ps_;
       Microsoft::WRL::ComPtr<ID3D11GeometryShader> gs_;
       Microsoft::WRL::ComPtr<ID3D11InputLayout>    il_;
-      uint16_t stages_ = 0;
+			Vector<uint32_t> stages_;
 
       D3D11Context* context_;
       Vector<platform::ShaderBuffer> vs_buffers_;

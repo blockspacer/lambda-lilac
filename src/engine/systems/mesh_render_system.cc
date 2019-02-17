@@ -190,7 +190,7 @@ namespace lambda
       // Attach all of the mesh renderers.
       for (size_t i = 0; i < mesh->getSubMeshes().size(); ++i)
       {
-        const asset::SubMesh& sub_mesh = mesh->getSubMeshes().at(i);
+        asset::SubMesh& sub_mesh = mesh->getSubMeshes().at(i);
         TransformComponent transform = transforms.at(i);
         
         transform.setLocalTranslation(sub_mesh.io.translation);
@@ -203,7 +203,7 @@ namespace lambda
         }
 
         // Mesh
-        if (sub_mesh.offset.at(asset::MeshElements::kPositions).count > 0u)
+        if (sub_mesh.offsets[asset::MeshElements::kPositions].count > 0u)
         {
           MeshRenderComponent mesh_render = addComponent(entities.at(i));
           mesh_render.setMesh(mesh);
@@ -214,17 +214,17 @@ namespace lambda
           // Textures
           if (sub_mesh.io.tex_alb != -1)
           {
-            assert(sub_mesh.offset.at(asset::MeshElements::kPositions).count > 0);
+            assert(sub_mesh.offsets[asset::MeshElements::kPositions].count > 0);
             mesh_render.setAlbedoTexture(textures.at(alb_offset + sub_mesh.io.tex_alb));
           }
           if (sub_mesh.io.tex_nor != -1)
           {
-            assert(sub_mesh.offset.at(asset::MeshElements::kPositions).count > 0);
+            assert(sub_mesh.offsets[asset::MeshElements::kPositions].count > 0);
             mesh_render.setNormalTexture(textures.at(nor_offset + sub_mesh.io.tex_nor));
           }
           if (sub_mesh.io.tex_mrt != -1)
           {
-            assert(sub_mesh.offset.at(asset::MeshElements::kPositions).count > 0);
+            assert(sub_mesh.offsets[asset::MeshElements::kPositions].count > 0);
             mesh_render.setMetallicRoughnessTexture(textures.at(mrt_offset + sub_mesh.io.tex_mrt));
           }
         }

@@ -20,7 +20,7 @@
 #include <algorithm>
 #include "utils/profiler.h"
 
-#if VIOLET_GUI_CEF
+#if VIOLET_GUI_ULTRALIGHT
 #include "gui/gui.h"
 #endif
 
@@ -79,12 +79,33 @@ asset::VioletTextureHandle g_gui_texture;
 
 static bool finished = false;
 
-class LoadListenerImpl : public ultralight::LoadListener {
+class LoadListenerImpl : public ultralight::LoadListener 
+{
 public:
-	virtual ~LoadListenerImpl() {}
+	virtual ~LoadListenerImpl()
+	{}
 
-	virtual void OnFinishLoading(ultralight::View* caller) {
+	virtual void OnFinishLoading(ultralight::View* caller) 
+	{
 		finished = true;
+	}
+};
+
+class ViewListenerImpl : public ultralight::ViewListener
+{
+public:
+	virtual ~ViewListenerImpl()
+	{}
+
+	virtual void OnAddConsoleMessage(ultralight::View* caller,
+		ultralight::MessageSource source,
+		ultralight::MessageLevel level,
+		const String& message,
+		uint32_t line_number,
+		uint32_t column_number,
+		const String& source_id)
+	{
+		foundation::Warning(message.c_str());
 	}
 };
 
@@ -94,77 +115,44 @@ public:
 	struct RW { ultralight::Ref<ultralight::Renderer> ptr; }*renderer_;
 	struct RV { ultralight::Ref<ultralight::View> ptr; }*view_;
 	LoadListenerImpl* load_listener_;
+	ViewListenerImpl* view_listener_;
+	double time_ = 0.0;
 
 	void init()
 	{
+		gui::Create();
+
 		renderer_ = new RW{ ultralight::Renderer::Create() };
-		view_ = new RV{ renderer_->ptr->CreateView(1280u, 720u, true) };
+		view_ = new RV{ renderer_->ptr->CreateView(1920u, 1080u, true) };
 
 		load_listener_ = new LoadListenerImpl();
+		view_listener_ = new ViewListenerImpl();
 		view_->ptr->set_load_listener(load_listener_);
+		view_->ptr->set_view_listener(view_listener_);
 
-		view_->ptr->LoadHTML(R"(
-  <!DOCTYPE html>
-<html>
-<head>
-<style> 
-div {
-  width: 100px;
-  height: 100px;
-  background-color: red;
-  position: relative;
-  -webkit-animation-name: example; /* Safari 4.0 - 8.0 */
-  -webkit-animation-duration: 4s; /* Safari 4.0 - 8.0 */
-  -webkit-animation-iteration-count: 3; /* Safari 4.0 - 8.0 */
-  animation-name: example;
-  animation-duration: 4s;
-  animation-iteration-count: 100000;
-}
-
-/* Safari 4.0 - 8.0 */
-@-webkit-keyframes example {
-  0%   {background-color:red; left:0px; top:0px;}
-  25%  {background-color:yellow; left:200px; top:0px;}
-  50%  {background-color:blue; left:200px; top:200px;}
-  75%  {background-color:green; left:0px; top:200px;}
-  100% {background-color:red; left:0px; top:0px;}
-}
-
-/* Standard syntax */
-@keyframes example {
-  0%   {background-color:red; left:0px; top:0px;}
-  25%  {background-color:yellow; left:200px; top:0px;}
-  50%  {background-color:blue; left:200px; top:200px;}
-  75%  {background-color:green; left:0px; top:200px;}
-  100% {background-color:red; left:0px; top:0px;}
-}
-</style>
-</head>
-<body>
-
-<p><b>Note:</b> This example does not work in Internet Explorer 9 and earlier versions.</p>
-
-<div></div>
-
-</body>
-</html>
-  )");
+		String html = FileSystem::FileToString("resources/web-pages/subtitles.html");
+		//view_->ptr->LoadURL("file:///resources/web-pages/subtitles.html");
+		view_->ptr->LoadHTML(ultralight::String(html.c_str()));
 
 		while (!finished)
 			renderer_->ptr->Update();
 
 		{
-			auto bitmap = view_->ptr->bitmap();
-			auto width = bitmap->width();
-			auto height = bitmap->height();
-			auto bpp = bitmap->bpp();
+			auto width  = 1;
+			auto height = 1;
+			
+			if (view_->ptr->bitmap())
+			{
+				width  = view_->ptr->bitmap()->width();
+				height = view_->ptr->bitmap()->height();
+			}
 
 			g_gui_texture = asset::TextureManager::getInstance()->create(Name("Back Buffer GUI"));
 
 
 			VioletTexture texture;
 			texture.flags     = kTextureFlagDynamicData;
-			texture.format    = TextureFormat::kB8G8R8A8;
+			texture.format    = TextureFormat::kR8G8B8A8;
 			texture.width     = width;
 			texture.height    = height;
 			texture.mip_count = 1;
@@ -175,28 +163,41 @@ div {
 	~UltraLighter()
 	{
 		view_->ptr->set_load_listener(nullptr);
+		view_->ptr->set_view_listener(nullptr);
 		delete load_listener_;
+		delete view_listener_;
 	}
 
-	void update()
+	void update(double dt)
 	{
+		time_ += dt;
+		if (time_ < 1.0 / 30.0)
+			return;
+		time_ -= 1.0 / 30.0;
+
 		renderer_->ptr->Update();
 		renderer_->ptr->Render();
 
-		if (view_->ptr->is_bitmap_dirty())
+		if (view_->ptr->is_bitmap_dirty() && view_->ptr->bitmap())
 		{
-			auto bitmap = view_->ptr->bitmap();
-			auto width = bitmap->width();
-			auto height = bitmap->height();
-			auto pixels = bitmap->raw_pixels();
-			auto bpp = bitmap->bpp();
-			auto size = width * height * bpp;
+			const auto& bitmap = view_->ptr->bitmap();
+			const auto& width = bitmap->width();
+			const auto& height = bitmap->height();
+			const auto& bpp = bitmap->bpp();
+			const auto& size = width * height * bpp;
 
-			Vector<char> data(size);
-			memcpy(data.data(), pixels, size);
-
+			uint32_t s = (uint32_t)((size + (sizeof(uint32_t) - 1u)) / sizeof(uint32_t));
+			Vector<uint32_t> data(s);
+			memcpy(data.data(), bitmap->LockPixels(), size);
 			g_gui_texture->getLayer(0).setData(data);
+			bitmap->UnlockPixels();
 		}
+	}
+
+	void resize(uint32_t width, uint32_t height)
+	{
+		//view_->ptr->Resize(width, height);
+		//g_gui_texture->getLayer(0).resize(width, height);
 	}
 };
 
@@ -436,11 +437,10 @@ public:
 
     imgui->imEnd();
   }
-  void update(const double& /*delta_time*/) override
+  void update(const double& delta_time) override
   {
-		ultralighter_.update();
 #if USE_GUI
-		//gui_.update(delta_time);
+		ultralighter_.update(delta_time);
 #endif
 
     foundation::SharedPointer<platform::IImGUI> imgui = getImGUI();
@@ -512,6 +512,9 @@ public:
     case platform::WindowMessageType::kClose:
       getWindow()->close();
       break;
+		case platform::WindowMessageType::kResize:
+			ultralighter_.resize(message.data[0], message.data[1]);
+			break;
     default:
       break;
     }

@@ -15,33 +15,6 @@ namespace lambda
     class D3D11RenderBuffer;
 
     ///////////////////////////////////////////////////////////////////////////
-    enum class MeshStages : uint16_t
-    {
-      kTranslation = 1 << 0,
-      kNormal      = 1 << 1,
-      kTexCoord    = 1 << 2,
-      kColour      = 1 << 3,
-      kTangent     = 1 << 4,
-      kJoint       = 1 << 5,
-      kWeights     = 1 << 6,
-      kCount       = 7u,
-    };
-
-    ///////////////////////////////////////////////////////////////////////////
-    inline MeshStages operator|(MeshStages a, MeshStages b)
-    {
-      return static_cast<MeshStages>(static_cast<uint16_t>(a) | 
-        static_cast<uint16_t>(b));
-    }
-    
-    ///////////////////////////////////////////////////////////////////////////
-    inline MeshStages operator|=(MeshStages a, MeshStages b)
-    {
-      return static_cast<MeshStages>(static_cast<uint16_t>(a) | 
-        static_cast<uint16_t>(b));
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
     class D3D11Mesh : public asset::IGPUAsset
     {
     public:
@@ -49,11 +22,11 @@ namespace lambda
       virtual ~D3D11Mesh() override;
 
       void bind(
-        const uint16_t& stages, 
-        const asset::Mesh& mesh, 
+        const Vector<uint32_t>& stages,
+				asset::MeshHandle mesh,
         const uint32_t& sub_mesh_idx
       );
-      void draw(const asset::Mesh& mesh, const uint32_t& sub_mesh_idx);
+      void draw(asset::MeshHandle mesh, const uint32_t& sub_mesh_idx);
 
     private:
       void update(
@@ -77,7 +50,7 @@ namespace lambda
 
     private:
       D3D11Context* context_;
-      Array<D3D11RenderBuffer*, asset::MeshElements::kCount> buffer_;
+			UnorderedMap<uint32_t, D3D11RenderBuffer*> buffer_;
     };
   }
 }

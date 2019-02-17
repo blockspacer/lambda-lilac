@@ -24,7 +24,8 @@ namespace lambda
     static void WriteFile(const String& file, const Vector<char>& data, const Vector<char>& header = Vector<char>());
     static void WriteFile(const String& file, const char* data, const size_t& data_size, const char* header = nullptr, const size_t& header_size = 0u);
     
-    static uint64_t GetTimeStamp(const String& file);
+		static uint64_t GetTimeStamp(const String& file);
+		static uint64_t GetFileSize(const String& file);
     static Vector<String> GetAllFilesInFolder(String folder = "", String extension = "");
     static Vector<String> GetAllFilesInFolderRecursive(String folder = "", String extension = "");
     static String GetExtension(const String& file);

@@ -1,11 +1,6 @@
 #include "common.fx"
 #include "atmosphere.fx"
 
-struct VSInput
-{
-  float3 position : POSITION;
-};
-
 cbuffer cbPerPass
 {
   float4x4 model_matrix;
@@ -27,7 +22,7 @@ struct VSOutput
   float4 position : SV_POSITION;
 };
 
-VSOutput VS(VSInput vIn, uint id : SV_VertexID)
+VSOutput VS(uint id : SV_VertexID)
 {
   VSOutput vOut;
   vOut.tex      = float2((id << 1) & 2, id & 2);

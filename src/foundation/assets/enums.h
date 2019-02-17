@@ -52,6 +52,7 @@ namespace lambda
     kBC6,
     kBC7,
     kB8G8R8A8,
+		kA8
   };
   // Bytes Per Pixel. Bytes Per Row. Bytes Per Layer.
   inline void calculateImageMemory(TextureFormat format, uint16_t w, uint16_t h, uint32_t& bpp, uint32_t& bpr, uint32_t& bpl)
@@ -62,6 +63,11 @@ namespace lambda
     case TextureFormat::kUnknown:
       bpp = bpr = bpl = 0u;
       break;
+		case TextureFormat::kA8:
+			bpp = 1;
+			bpr = bpp * w;
+			bpl = bpr * h;
+			break;
     case TextureFormat::kR16:
       bpp = 2;
       bpr = bpp * w;

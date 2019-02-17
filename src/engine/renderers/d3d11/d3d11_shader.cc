@@ -304,7 +304,7 @@ namespace lambda
     }
     
     ///////////////////////////////////////////////////////////////////////////
-    uint16_t D3D11Shader::getStages() const
+		Vector<uint32_t> D3D11Shader::getStages() const
     {
       return stages_;
     }
@@ -575,9 +575,12 @@ namespace lambda
         D3D11_INPUT_ELEMENT_DESC element;
         element.SemanticName = parameter.SemanticName;
 
+				String semantic = element.SemanticName;
+
         // Inlining
-        if (String(element.SemanticName).find("INL") != String::npos)
+        if (semantic.find("inl_") != String::npos)
         {
+					semantic = semantic.substr(strlen("inl_"));
           element.InputSlot = idx;
           inl++;
         }
@@ -595,8 +598,9 @@ namespace lambda
         }
 
         // Instancing
-        if (String(element.SemanticName).find("INSTANCE") != String::npos)
+        if (String(element.SemanticName).find("instance_") != String::npos)
         {
+					semantic = semantic.substr(strlen("instance_"));
           element.InputSlotClass = D3D11_INPUT_PER_INSTANCE_DATA;
           element.InstanceDataStepRate = 1;
         }
@@ -606,36 +610,10 @@ namespace lambda
         element.InputSlotClass       = D3D11_INPUT_PER_VERTEX_DATA;
         element.InstanceDataStepRate = 0;
 
-        if (String(element.SemanticName).find("POSITION") != String::npos)
-        {
-          stages_ |= (uint16_t)MeshStages::kTranslation;
-        }
-        else if (String(element.SemanticName).find("NORMAL") != String::npos)
-        {
-          stages_ |= (uint16_t)MeshStages::kNormal;
-        }
-        else if 
-          (String(element.SemanticName).find("TEX_COORD") != String::npos)
-        {
-          stages_ |= (uint16_t)MeshStages::kTexCoord;
-        }
-        else if (String(element.SemanticName).find("COLOUR") != String::npos)
-        {
-          stages_ |= (uint16_t)MeshStages::kColour;
-        }
-        else if (String(element.SemanticName).find("TANGENT") != String::npos)
-        {
-          stages_ |= (uint16_t)MeshStages::kTangent;
-        }
-        else if (String(element.SemanticName).find("JOINT") != String::npos)
-        {
-          stages_ |= (uint16_t)MeshStages::kJoint;
-        }
-        else if (String(element.SemanticName).find("WEIGHT") != String::npos)
-        {
-          stages_ |= (uint16_t)MeshStages::kWeights;
-        }
-        if (parameter.Mask == 1)
+				if (inl <= 1)
+					stages_.push_back(constexprHash(semantic));
+			
+				if (parameter.Mask == 1)
         {
           if (parameter.ComponentType == D3D_REGISTER_COMPONENT_UINT32)  
             element.Format = DXGI_FORMAT_R32_UINT;

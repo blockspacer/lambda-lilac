@@ -12,54 +12,40 @@ namespace lambda
     {
       switch (format)
       {
+			case TextureFormat::kA8:
+				return DXGI_FORMAT::DXGI_FORMAT_A8_UNORM;
       case TextureFormat::kR8G8B8A8:
         return DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM;
-        break;
       case TextureFormat::kB8G8R8A8:
         return DXGI_FORMAT::DXGI_FORMAT_B8G8R8A8_UNORM;
-        break;
       case TextureFormat::kR16G16B16A16:
         return DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT;
-        break;
       case TextureFormat::kR32G32B32A32:
         return DXGI_FORMAT::DXGI_FORMAT_R32G32B32A32_FLOAT;
-        break;
       case TextureFormat::kR16G16:
         return DXGI_FORMAT::DXGI_FORMAT_R16G16_FLOAT;
-        break;
       case TextureFormat::kR32G32:
         return DXGI_FORMAT::DXGI_FORMAT_R32G32_FLOAT;
-        break;
       case TextureFormat::kR16:
         return DXGI_FORMAT::DXGI_FORMAT_R16_FLOAT;
-        break;
       case TextureFormat::kR32:
         return DXGI_FORMAT::DXGI_FORMAT_R32_FLOAT;
-        break;
       case TextureFormat::kR24G8:
         return DXGI_FORMAT::DXGI_FORMAT_R24G8_TYPELESS;
-        break;
       case TextureFormat::kBC1:
         return DXGI_FORMAT::DXGI_FORMAT_BC1_UNORM;
-        break;
       case TextureFormat::kBC2:
         return DXGI_FORMAT::DXGI_FORMAT_BC2_UNORM;
-        break;
       case TextureFormat::kBC3:
         return DXGI_FORMAT::DXGI_FORMAT_BC3_UNORM;
-        break;
       case TextureFormat::kBC4:
         return DXGI_FORMAT::DXGI_FORMAT_BC4_UNORM;
-        break;
       case TextureFormat::kBC5:
         return DXGI_FORMAT::DXGI_FORMAT_BC5_UNORM;
-        break;
       case TextureFormat::kBC6:
         return DXGI_FORMAT::DXGI_FORMAT_BC6H_UF16;
-        break;
       case TextureFormat::kBC7:
         return DXGI_FORMAT::DXGI_FORMAT_BC7_UNORM;
-        break;
       }
 
       return DXGI_FORMAT::DXGI_FORMAT_UNKNOWN;
@@ -90,8 +76,10 @@ namespace lambda
       D3D11_TEXTURE2D_DESC desc{};
       Vector<D3D11_SUBRESOURCE_DATA> datas;
       
-      const bool is_render_target = (texture->getLayer(0u).getFlags() & 
+      is_render_target = (texture->getLayer(0u).getFlags() & 
         kTextureFlagIsRenderTarget) ? true : false;
+			is_dynamic = (texture->getLayer(0u).getFlags() & 
+				kTextureFlagDynamicData) ? true : false;
       UINT bind_flags    = is_render_target ? 
         (format_ == DXGI_FORMAT_R24G8_TYPELESS ? D3D11_BIND_DEPTH_STENCIL : 
           D3D11_BIND_RENDER_TARGET) : 0u;
@@ -104,10 +92,10 @@ namespace lambda
       desc.Format             = format_;
       desc.SampleDesc.Count   = 1u;
       desc.SampleDesc.Quality = 0u;
-      desc.Usage              = (is_render_target || !contains_data) ? 
-        D3D11_USAGE_DEFAULT : D3D11_USAGE_IMMUTABLE;
+      desc.Usage              = is_dynamic ? D3D11_USAGE_DYNAMIC :
+				(is_render_target || !contains_data) ? D3D11_USAGE_DEFAULT : D3D11_USAGE_IMMUTABLE;
       desc.BindFlags          = D3D11_BIND_SHADER_RESOURCE | bind_flags;
-      desc.CPUAccessFlags     = 0u;
+      desc.CPUAccessFlags     = is_dynamic ? D3D11_CPU_ACCESS_WRITE : 0u;
       desc.MiscFlags          = 0u | 
         (desc.ArraySize == 6u ? D3D11_RESOURCE_MISC_TEXTURECUBE : 0u);
 
@@ -224,6 +212,29 @@ namespace lambda
           texture_[i]->Release();
       }
     }
+
+		///////////////////////////////////////////////////////////////////////////
+		void D3D11Texture::update(
+			asset::VioletTextureHandle texture, 
+			ID3D11Device* device, 
+			ID3D11DeviceContext* context)
+		{
+			for (uint32_t i = 0; i < texture->getLayerCount(); ++i)
+			{
+				auto& layer = texture->getLayer(i);
+
+				if (layer.isDirty())
+				{
+					D3D11_MAPPED_SUBRESOURCE mapped_resource;
+					HRESULT result = context->Map(texture_[0], i, D3D11_MAP_WRITE_DISCARD, 0, &mapped_resource);
+					LMB_ASSERT(SUCCEEDED(result), "D3D11 TEXTURE: Could not bind texture!");
+					memcpy(mapped_resource.pData, layer.getData().data(), mapped_resource.DepthPitch);
+					context->Unmap(texture_[0], i);
+
+					layer.clean();
+				}
+			}
+		}
 
     ///////////////////////////////////////////////////////////////////////////
     void D3D11Texture::bind(ID3D11DeviceContext* context, uint8_t slot)

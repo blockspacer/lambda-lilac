@@ -2,9 +2,9 @@
 
 struct VSInput
 {
-  float3 position : POSITION;
-  float3 normal   : NORMAL;
-  float2 tex      : TEX_COORD;
+  float3 position : Positions;
+  float3 normal   : Normals;
+  float2 tex      : TexCoords;
 };
 
 struct VSOutput

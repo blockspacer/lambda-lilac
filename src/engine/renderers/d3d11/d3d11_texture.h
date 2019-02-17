@@ -21,6 +21,10 @@ namespace lambda
         ID3D11DeviceContext* context
       );
       ~D3D11Texture();
+			void update(
+				asset::VioletTextureHandle texture,
+				ID3D11Device* device,
+				ID3D11DeviceContext* context);
       void bind(ID3D11DeviceContext* context, uint8_t slot);
       DXGI_FORMAT getFormat() const;
       ID3D11ShaderResourceView* getSRV() const;
@@ -52,6 +56,8 @@ namespace lambda
       ID3D11DepthStencilView* dsv_[2u];
       Vector<ID3D11RenderTargetView*> rtv_[2u];
       unsigned char texture_index_;
+			bool is_render_target;
+			bool is_dynamic;
     };
   }
 }

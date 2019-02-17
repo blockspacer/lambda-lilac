@@ -32,7 +32,7 @@ namespace lambda
         {
           if (true == g_mesh_render_system->hasComponent(entity) &&
             mesh == g_mesh_render_system->getMesh(entity) &&
-            mesh->getSubMeshes().at(g_mesh_render_system->getSubMesh(entity)).offset.at(asset::MeshElements::kPositions).count > 0u)
+            mesh->getSubMeshes().at(g_mesh_render_system->getSubMesh(entity)).offsets[asset::MeshElements::kPositions].count > 0u)
           {
             if (false == (g_mesh_render_system->getAlbedoTexture(entity) != nullptr && 
               g_mesh_render_system->getAlbedoTexture(entity)->getLayer(0u).containsAlpha()))

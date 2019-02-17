@@ -642,14 +642,14 @@ namespace lambda
         textures.push_back(*(asset::VioletTextureHandle*)command->texture.ptr);
         
         asset::SubMesh sub_mesh;
-        sub_mesh.offset.at(asset::MeshElements::kPositions) = 
+        sub_mesh.offsets[asset::MeshElements::kPositions] = 
           asset::SubMesh::Offset(
             0u, 
             max_vertex_count_,   
             sizeof(platform::ImGUIVertex)
         );
 
-        sub_mesh.offset.at(asset::MeshElements::kIndices) = 
+        sub_mesh.offsets[asset::MeshElements::kIndices] = 
           asset::SubMesh::Offset(
             0u, 
             command->elem_count, 

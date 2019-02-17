@@ -96,6 +96,7 @@ function(LinkDependencies)
     IF (${VIOLET_GUI_ULTRALIGHT})
       ADD_LIBRARY(ultralight INTERFACE)
       TARGET_INCLUDE_DIRECTORIES(ultralight INTERFACE "deps/ultralight/include")
+      TARGET_INCLUDE_DIRECTORIES(ultralight INTERFACE "deps/ultralight/deps")
       
       IF(VIOLET_WIN32)
         TARGET_LINK_LIBRARIES(ultralight INTERFACE 

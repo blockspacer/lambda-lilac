@@ -47,9 +47,9 @@ namespace lambda
       }
 
       asset::SubMesh sub_mesh;
-      sub_mesh.offset.at(asset::MeshElements::kPositions) = 
+      sub_mesh.offsets[asset::MeshElements::kPositions] =
         asset::SubMesh::Offset(0u, positions_.size(), sizeof(glm::vec3));
-      sub_mesh.offset.at(asset::MeshElements::kColours)   = 
+      sub_mesh.offsets[asset::MeshElements::kColours] =
         asset::SubMesh::Offset(0u, colours_.size(),   sizeof(glm::vec4));
 
       mesh_->set(asset::MeshElements::kPositions, positions_);
