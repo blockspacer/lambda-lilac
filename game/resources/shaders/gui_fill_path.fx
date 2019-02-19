@@ -1,21 +1,64 @@
 cbuffer Uniforms : register(b0)
 {
   float4 State;
-  matrix Transform;
-  float4 Scalar4[2];
-  float4 Vector[8];
-  uint ClipSize;
-  matrix Clip[8];
+  float4x4 Transform;
+  float4 Scalar4_0;
+  float4 Scalar4_1;
+  float4 Vector_0;
+  float4 Vector_1;
+  float4 Vector_2;
+  float4 Vector_3;
+  float4 Vector_4;
+  float4 Vector_5;
+  float4 Vector_6;
+  float4 Vector_7;
+  float ClipSize;
+  float4x4 Clip_0;
+  float4x4 Clip_1;
+  float4x4 Clip_2;
+  float4x4 Clip_3;
+  float4x4 Clip_4;
+  float4x4 Clip_5;
+  float4x4 Clip_6;
+  float4x4 Clip_7;
 };
 
 float Time() { return State[0]; }
 float ScreenWidth() { return State[1]; }
 float ScreenHeight() { return State[2]; }
-float ScreenScale() { return State[3]; }
-float Scalar(int i) { if (i < 4) return Scalar4[0][i]; else return Scalar4[1][i - 4]; }
+float Scalar(int i) { if (i < 4) return Scalar4_0[i]; else return Scalar4_1[i - 4]; }
 
-Texture2D texture0 : register(t0);
-SamplerState sampler0 : register(s0);
+float4x4 GetClip(uint i)
+{
+  switch(i)
+  {
+    case 0: return Clip_0;
+    case 1: return Clip_1;
+    case 2: return Clip_2;
+    case 3: return Clip_3;
+    case 4: return Clip_4;
+    case 5: return Clip_5;
+    case 6: return Clip_6;
+    case 7: return Clip_7;
+    default: return 0.0f;
+  }
+}
+
+float4 GetVector(uint i)
+{
+  switch(i)
+  {
+    case 0: return Vector_0;
+    case 1: return Vector_1;
+    case 2: return Vector_2;
+    case 3: return Vector_3;
+    case 4: return Vector_4;
+    case 5: return Vector_5;
+    case 6: return Vector_6;
+    case 7: return Vector_7;
+    default: return 0.0f;
+  }
+}
 
 struct VS_OUTPUT
 {
@@ -23,6 +66,29 @@ struct VS_OUTPUT
   float4 Color       : COLOR0;
   float2 ObjectCoord : TEXCOORD0;
 };
+
+// VS
+float2 ScreenToDeviceCoords(float2 screen_coord) {
+  screen_coord *= 2.0 / float2(ScreenWidth(), -ScreenHeight());
+  screen_coord += float2(-1.0, 1.0);
+  return screen_coord;
+}
+
+VS_OUTPUT VS(float2 Position : inl_Positions,
+            float4  Color    : inl_COLOR0,
+            float2  ObjCoord : inl_TEXCOORD0)
+{
+  VS_OUTPUT output;
+  float2 screen_coord = mul(Transform, float4(Position, 1.0, 1.0)).xy;
+  output.Position = float4(ScreenToDeviceCoords(screen_coord), 1.0, 1.0);
+  output.Color = Color;
+  output.ObjectCoord = ObjCoord;
+  return output;
+}
+
+// PS
+Texture2D texture0 : register(t0);
+SamplerState sampler0 : register(s0);
 
 float sdRect(float2 p, float2 size) {
   float2 d = abs(p) - size;
@@ -141,13 +207,13 @@ float antialias(in float d, in float width, in float median) {
   return smoothstep(median - width, median + width, d);
 }
 
-float4 GetCol(in matrix m, uint i) { return float4(m[0][i], m[1][i], m[2][i], m[3][i]); }
+float4 GetCol(in float4x4 m, uint i) { return float4(m[0][i], m[1][i], m[2][i], m[3][i]); }
 
 #define VISUALIZE_CLIP 0
 
 void applyClip(VS_OUTPUT input, inout float4 outColor) {
-  for (uint i = 0; i < ClipSize; i++) {
-    matrix data = Clip[i];
+  for (uint i = 0; i < (uint)ClipSize; i++) {
+    float4x4 data = GetClip(i);
     float2 origin = GetCol(data, 0).xy;
     float2 size = GetCol(data, 0).zw;
     float4 radii_x, radii_y;

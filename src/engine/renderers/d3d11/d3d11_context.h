@@ -15,7 +15,7 @@ struct ID3D11DepthStencilView;
 struct ID3D11BlendState;
 struct ID3DUserDefinedAnnotation;
 
-#define GPU_MARKERS 0
+#define GPU_MARKERS 1
 #define GPU_TIMERS 0
 
 namespace lambda
@@ -189,10 +189,14 @@ namespace lambda
       virtual void generateMipMaps(
         const asset::VioletTextureHandle& texture
       ) override;
-      virtual void copyToScreen(
-        const asset::VioletTextureHandle& texture
-      ) override;
-      virtual void bindShaderPass(
+			virtual void copyToScreen(
+				const asset::VioletTextureHandle& texture
+			) override;
+			virtual void copyToTexture(
+				const asset::VioletTextureHandle& src,
+				const asset::VioletTextureHandle& dst
+			) override;
+			virtual void bindShaderPass(
         const platform::ShaderPass& shader_pass
       ) override;
       virtual void clearRenderTarget(
@@ -201,15 +205,23 @@ namespace lambda
       ) override;
 
       virtual void setScissorRect(const glm::vec4& rect) override;
-      virtual void setViewports(const Vector<glm::vec4>& rects);
+      virtual void setViewports(const Vector<glm::vec4>& rects) override;
 
       virtual void setMesh(asset::MeshHandle mesh) override;
       virtual void setSubMesh(const uint32_t& sub_mesh_idx) override;
       virtual void setShader(asset::VioletShaderHandle shader) override;
-      virtual void setTexture(
-        asset::VioletTextureHandle texture, 
-        uint8_t slot
-      ) override;
+			virtual void setTexture(
+				asset::VioletTextureHandle texture,
+				uint8_t slot
+			) override;
+			virtual void setRenderTargets(
+				Vector<asset::VioletTextureHandle> render_targets,
+				asset::VioletTextureHandle depth_buffer
+			) override;
+			void setRenderTargets(
+				Vector<ID3D11RenderTargetView*> render_targets,
+			ID3D11DepthStencilView* depth_buffer
+			);
 
       virtual void pushMarker(const String& name) override;
       virtual void setMarker(const String& name) override;

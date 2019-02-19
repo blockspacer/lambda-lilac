@@ -949,6 +949,47 @@ namespace lambda
       context_.context->RSSetState(rs_state);
     }
   
+
+		///////////////////////////////////////////////////////////////////////////
+		void D3D11Context::copyToTexture(const asset::VioletTextureHandle& src,
+			const asset::VioletTextureHandle& dst)
+		{
+			if (!src || !dst)
+				return;
+
+			ID3D11RasterizerState* rs_state;
+			context_.context->RSGetState(&rs_state);
+			static const unsigned int NUM_VIEWPORTS = 1u;
+			D3D11_VIEWPORT viewports[NUM_VIEWPORTS];
+			unsigned int num_viewports = NUM_VIEWPORTS;
+			context_.context->RSGetViewports(&num_viewports, viewports);
+
+			glm::vec4 viewport(
+				0, 
+				0, 
+				dst->getLayer(0).getWidth(),
+				dst->getLayer(0).getHeight()
+			);
+			setViewports({ viewport });
+			setRasterizerState(platform::RasterizerState::SolidBack());
+			setBlendState(platform::BlendState::Default());
+			auto rtv = getRenderTargetView(dst);
+			context_.context->OMSetRenderTargets(
+				1u,
+				&rtv,
+				nullptr
+			);
+			setScissorRect(viewport);
+			setMesh(full_screen_quad_.mesh);
+			setShader(full_screen_quad_.shader);
+			setSubMesh(0u);
+			setTexture(src, 0u);
+			draw();
+
+			context_.context->RSSetViewports(num_viewports, viewports);
+			context_.context->RSSetState(rs_state);
+		}
+
     ///////////////////////////////////////////////////////////////////////////
     void D3D11Context::bindShaderPass(const platform::ShaderPass& shader_pass)
     {
@@ -959,14 +1000,13 @@ namespace lambda
       
       context_.context->OMSetRenderTargets(0, nullptr, nullptr);
 
-      for (unsigned char i = 
-        /*(unsigned char)shader_pass.getInputs().size()*/0u; 
-        i < highest_bound_texture_; ++i)
-      {
-        bound_.textures[i] = nullptr;
-        ID3D11ShaderResourceView* srv = nullptr;
-        context_.context->PSSetShaderResources(i, 1u, &srv);
-      }
+			{
+				memset(bound_.textures, 0, sizeof(bound_.textures));
+				memset(textures_, 0, sizeof(textures_));
+				ID3D11ShaderResourceView* srvs[8];
+				memset(srvs, 0, sizeof(srvs));
+				context_.context->PSSetShaderResources(0, 8, srvs);
+			}
 
       // set shader and related stuff.
       setShader(shader_pass.getShader());
@@ -1074,11 +1114,7 @@ namespace lambda
         scissor_rects.data()
       );
       setViewports(viewports);
-      context_.context->OMSetRenderTargets(
-        (UINT)rtvs.size(), 
-        rtvs.data(),
-        dsv
-      );
+			setRenderTargets(rtvs, dsv);
     }
     
     ///////////////////////////////////////////////////////////////////////////
@@ -1211,6 +1247,30 @@ namespace lambda
       textures_[slot] = 
         asset_manager_.getTexture(texture)->getTexture()->getSRV();
     }
+
+		///////////////////////////////////////////////////////////////////////////
+		void D3D11Context::setRenderTargets(
+			Vector<asset::VioletTextureHandle> render_targets,
+			asset::VioletTextureHandle depth_buffer)
+		{
+			Vector<ID3D11RenderTargetView*> rtvs(render_targets.size());
+			for (uint32_t i = 0; i < render_targets.size(); ++i)
+				rtvs[i] = getRenderTargetView(render_targets[i]);
+
+			setRenderTargets(rtvs, getDepthStencilView(depth_buffer));
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		void D3D11Context::setRenderTargets(
+			Vector<ID3D11RenderTargetView*> render_targets, 
+			ID3D11DepthStencilView* depth_buffer)
+		{
+			context_.context->OMSetRenderTargets(
+				(UINT)render_targets.size(),
+				render_targets.data(),
+				depth_buffer
+			);
+		}
 
     ///////////////////////////////////////////////////////////////////////////
     void D3D11Context::pushMarker(const String& name)
@@ -1403,6 +1463,9 @@ namespace lambda
       int idx, 
       int mip_map)
     {
+			if (!texture)
+				return nullptr;
+
       D3D11RenderTexture* tex = asset_manager_.getTexture(texture);
       if (idx == -1)
         idx = tex->getTexture()->pingPongIdx();
@@ -1414,6 +1477,9 @@ namespace lambda
       asset::VioletTextureHandle texture, 
       int idx)
     {
+			if (!texture)
+				return nullptr;
+
       D3D11RenderTexture* tex = asset_manager_.getTexture(texture);
       if(idx == -1)
         idx = tex->getTexture()->pingPongIdx();

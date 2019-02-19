@@ -27,7 +27,5 @@ namespace lambda
 		protected:
 			Map<uint64_t, ultralight::RefPtr<ultralight::Buffer>> fonts_;
 		};
-
-		extern void Create();
   }
 }

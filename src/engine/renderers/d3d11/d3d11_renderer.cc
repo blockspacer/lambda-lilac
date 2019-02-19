@@ -510,6 +510,13 @@ namespace lambda
       queue_actions_.push_back(action);
     }
     
+		///////////////////////////////////////////////////////////////////////////
+		void D3D11Renderer::copyToTexture(const asset::VioletTextureHandle& src,
+			const asset::VioletTextureHandle& dst)
+		{
+			LMB_ASSERT(false, "TODO (Hilze): Implement");
+		}
+
     ///////////////////////////////////////////////////////////////////////////
     void D3D11Renderer::bindShaderPass(const platform::ShaderPass& shader_pass)
     {
@@ -587,6 +594,14 @@ namespace lambda
       action->slot = slot;
       queue_actions_.push_back(action);
     }
+
+		///////////////////////////////////////////////////////////////////////////
+		void D3D11Renderer::setRenderTargets(
+			Vector<asset::VioletTextureHandle> render_targets, 
+			asset::VioletTextureHandle depth_buffer)
+		{
+			LMB_ASSERT(false, "TODO (Hilze): Implement");
+		}
 
     ///////////////////////////////////////////////////////////////////////////
     void D3D11Renderer::pushMarker(const String& name)
@@ -742,6 +757,13 @@ namespace lambda
       context_->copyToScreen(texture);
     }
 
+		///////////////////////////////////////////////////////////////////////////
+		void D3D11Renderer::copyToTexture(const asset::VioletTextureHandle& src,
+			const asset::VioletTextureHandle& dst)
+		{
+			context_->copyToTexture(src, dst);
+		}
+
     ///////////////////////////////////////////////////////////////////////////
     void D3D11Renderer::bindShaderPass(const platform::ShaderPass& shader_pass)
     {
@@ -793,6 +815,15 @@ namespace lambda
     {
       context_->setTexture(texture, slot);
     }
+
+		///////////////////////////////////////////////////////////////////////////
+		void D3D11Renderer::setRenderTargets(
+			Vector<asset::VioletTextureHandle> render_targets,
+			asset::VioletTextureHandle depth_buffer)
+		{
+			context_->setRenderTargets(render_targets, depth_buffer);
+		}
+
 
     ///////////////////////////////////////////////////////////////////////////
     void D3D11Renderer::pushMarker(const String& name)

@@ -10,7 +10,7 @@ namespace lambda
 {
 	namespace gui
 	{
-		extern void Create()
+		extern void Create(world::IWorld* world)
 		{
 			ultralight::Platform& platform = ultralight::Platform::instance();
 
@@ -20,12 +20,12 @@ namespace lambda
 			config.font_family_standard = "Arial";                            // Default font family
 
 
-			//MyGPUDriver*  gpu_driver  = new MyGPUDriver();
+			MyGPUDriver*  gpu_driver  = new MyGPUDriver(world);
 			//MyFileSystem* file_system = new MyFileSystem();
 			//MyFontLoader* font_loader = new MyFontLoader();
 
 			platform.set_config(config);
-			//platform.set_gpu_driver(gpu_driver);
+			platform.set_gpu_driver(gpu_driver);
 			//platform.set_file_system(file_system);
 			//platform.set_font_loader(font_loader);
 		}

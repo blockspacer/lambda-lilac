@@ -94,6 +94,7 @@ function(LinkDependencies)
     
   # /// ULTRALIGHT ////////////////////////////////////////////////
     IF (${VIOLET_GUI_ULTRALIGHT})
+      ADD_SUBDIRECTORY("deps/ultralight")
       ADD_LIBRARY(ultralight INTERFACE)
       TARGET_INCLUDE_DIRECTORIES(ultralight INTERFACE "deps/ultralight/include")
       TARGET_INCLUDE_DIRECTORIES(ultralight INTERFACE "deps/ultralight/deps")

@@ -22,6 +22,7 @@
 
 #if VIOLET_GUI_ULTRALIGHT
 #include "gui/gui.h"
+#include "gui/gpu_driver.h"
 #endif
 
 #if VIOLET_WIN32
@@ -117,10 +118,15 @@ public:
 	LoadListenerImpl* load_listener_;
 	ViewListenerImpl* view_listener_;
 	double time_ = 0.0;
+	asset::VioletShaderHandle copy_no_scale_;
+	world::IWorld* world_;
 
-	void init()
+	void init(world::IWorld* world)
 	{
-		gui::Create();
+		world_ = world;
+		gui::Create(world);
+
+		copy_no_scale_ = asset::ShaderManager::getInstance()->get(Name("resources/shaders/copy_no_scale.fx"));
 
 		renderer_ = new RW{ ultralight::Renderer::Create() };
 		view_ = new RV{ renderer_->ptr->CreateView(1920u, 1080u, true) };
@@ -138,8 +144,8 @@ public:
 			renderer_->ptr->Update();
 
 		{
-			auto width  = 1;
-			auto height = 1;
+			auto width  = 1920;
+			auto height = 1080;
 			
 			if (view_->ptr->bitmap())
 			{
@@ -151,7 +157,7 @@ public:
 
 
 			VioletTexture texture;
-			texture.flags     = kTextureFlagDynamicData;
+			texture.flags     = kTextureFlagIsRenderTarget;
 			texture.format    = TextureFormat::kR8G8B8A8;
 			texture.width     = width;
 			texture.height    = height;
@@ -170,15 +176,34 @@ public:
 
 	void update(double dt)
 	{
-		time_ += dt;
+		/*time_ += dt;
 		if (time_ < 1.0 / 30.0)
 			return;
-		time_ -= 1.0 / 30.0;
+		time_ -= 1.0 / 30.0;*/
 
 		renderer_->ptr->Update();
+
+		gui::MyGPUDriver* driver = (gui::MyGPUDriver*)ultralight::Platform::instance().gpu_driver();
+
+		driver->BeginSynchronize();
+
+		// Render all active views to command lists and dispatch calls to GPUDriver
 		renderer_->ptr->Render();
 
-		if (view_->ptr->is_bitmap_dirty() && view_->ptr->bitmap())
+		driver->EndSynchronize();
+
+		// Draw any pending commands to screen
+		if (driver->HasCommandsPending())
+		{
+			driver->DrawCommandList();
+			
+			world_->getRenderer()->copyToTexture(
+				driver->GetRenderBuffer(view_->ptr->render_target().render_buffer_id),
+				g_gui_texture
+			);
+		}
+
+		/*if (view_->ptr->is_bitmap_dirty() && view_->ptr->bitmap())
 		{
 			const auto& bitmap = view_->ptr->bitmap();
 			const auto& width = bitmap->width();
@@ -191,7 +216,7 @@ public:
 			memcpy(data.data(), bitmap->LockPixels(), size);
 			g_gui_texture->getLayer(0).setData(data);
 			bitmap->UnlockPixels();
-		}
+		}*/
 	}
 
 	void resize(uint32_t width, uint32_t height)
@@ -327,7 +352,7 @@ public:
 		//gui_.initialize(g_gui_texture);
     //gui_.loadURL("C:/github/lambda-engine/test.html");
 #endif
-		ultralighter_.init();
+		ultralighter_.init(this);
 	
 		getPostProcessManager().addTarget(platform::RenderTarget(Name("gui"), g_gui_texture));
 	}

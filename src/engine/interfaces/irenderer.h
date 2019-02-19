@@ -90,6 +90,10 @@ namespace lambda
         const asset::VioletTextureHandle& texture
       ) = 0;
       virtual void copyToScreen(const asset::VioletTextureHandle& texture) = 0;
+			virtual void copyToTexture(
+				const asset::VioletTextureHandle& src,
+				const asset::VioletTextureHandle& dst
+			) = 0;
       virtual void bindShaderPass(const platform::ShaderPass& shader_pass) = 0;
       virtual void clearRenderTarget(
         asset::VioletTextureHandle texture, 
@@ -97,6 +101,7 @@ namespace lambda
       ) = 0;
 
       virtual void setScissorRect(const glm::vec4& rect) = 0;
+			virtual void setViewports(const Vector<glm::vec4>& rects) = 0;
 
       virtual void setMesh(asset::MeshHandle mesh) = 0;
       virtual void setSubMesh(const uint32_t& sub_mesh_idx) = 0;
@@ -105,6 +110,10 @@ namespace lambda
         asset::VioletTextureHandle texture, 
         uint8_t slot = 0
       ) = 0;
+			virtual void setRenderTargets(
+				Vector<asset::VioletTextureHandle> render_targets,
+				asset::VioletTextureHandle depth_buffer
+			) = 0;
 
       virtual void pushMarker(const String& name) = 0;
       virtual void setMarker(const String& name) = 0;

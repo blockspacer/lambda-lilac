@@ -114,7 +114,7 @@
 15502710396190000 resources/shaders/blur_7x1.fx
 15502710339297339 resources/shaders/blur_9x1.fx
 15487217440674502 resources/shaders/common.fx
-15498029736347061 resources/shaders/copy.fx
+15505231266989998 resources/shaders/copy.fx
 15502710555793156 resources/shaders/debug.fx
 15502710645616806 resources/shaders/default_normal.fx
 15502710742464254 resources/shaders/default_opaque.fx
@@ -153,8 +153,7 @@
 15498027934141433 resources/shaders/vsm_publish_point.fx
 15498027884452203 resources/shaders/vsm_publish_spot.fx
 15502714384880000 resources/shaders/water.fx
-15502788784292320 resources/web-pages/subtitles.html
-15503318493750000 resources/shaders/gui_v2f_c4f_t2f_t2f_d28f.fx
-15503318440585111 resources/shaders/gui_v2f_c4f_t2f.fx
-15501684168991805 resources/shaders/gui_fill_path.fx
-15501684168986787 resources/shaders/gui_fill.fx
+15504158597255897 resources/web-pages/subtitles.html
+15505333039800000 resources/shaders/gui_fill_path.fx
+15505332925630000 resources/shaders/gui_fill.fx
+15505231196440000 resources/shaders/copy_no_scale.fx

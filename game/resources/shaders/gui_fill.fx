@@ -1,22 +1,64 @@
 cbuffer Uniforms : register(b0)
 {
   float4 State;
-  matrix Transform;
-  float4 Scalar4[2];
-  float4 Vector[8];
-  uint ClipSize;
-  matrix Clip[8];
+  float4x4 Transform;
+  float4 Scalar4_0;
+  float4 Scalar4_1;
+  float4 Vector_0;
+  float4 Vector_1;
+  float4 Vector_2;
+  float4 Vector_3;
+  float4 Vector_4;
+  float4 Vector_5;
+  float4 Vector_6;
+  float4 Vector_7;
+  float ClipSize;
+  float4x4 Clip_0;
+  float4x4 Clip_1;
+  float4x4 Clip_2;
+  float4x4 Clip_3;
+  float4x4 Clip_4;
+  float4x4 Clip_5;
+  float4x4 Clip_6;
+  float4x4 Clip_7;
 };
 
 float Time() { return State[0]; }
 float ScreenWidth() { return State[1]; }
 float ScreenHeight() { return State[2]; }
-float ScreenScale() { return State[3]; }
-float Scalar(int i) { if (i < 4) return Scalar4[0][i]; else return Scalar4[1][i - 4]; }
+float Scalar(int i) { if (i < 4) return Scalar4_0[i]; else return Scalar4_1[i - 4]; }
 
-Texture2D texture0 : register(t0);
-Texture2D texture1 : register(t1);
-SamplerState sampler0 : register(s0);
+float4x4 GetClip(uint i)
+{
+  switch(i)
+  {
+    case 0: return Clip_0;
+    case 1: return Clip_1;
+    case 2: return Clip_2;
+    case 3: return Clip_3;
+    case 4: return Clip_4;
+    case 5: return Clip_5;
+    case 6: return Clip_6;
+    case 7: return Clip_7;
+    default: return 0.0f;
+  }
+}
+
+float4 GetVector(uint i)
+{
+  switch(i)
+  {
+    case 0: return Vector_0;
+    case 1: return Vector_1;
+    case 2: return Vector_2;
+    case 3: return Vector_3;
+    case 4: return Vector_4;
+    case 5: return Vector_5;
+    case 6: return Vector_6;
+    case 7: return Vector_7;
+    default: return 0.0f;
+  }
+}
 
 struct VS_OUTPUT
 {
@@ -34,14 +76,72 @@ struct VS_OUTPUT
   float2 ScreenCoord : TEXCOORD2;
 };
 
+// VS
+float2 ScreenToDeviceCoords(float2 screen_coord) {
+  screen_coord *= 2.0 / float2(ScreenWidth(), -ScreenHeight());
+  screen_coord += float2(-1.0, 1.0);
+  return screen_coord;
+}
+
+VS_OUTPUT VS(float2 Position : inl_Positions,
+            float4 Color    : inl_COLOR0,
+            float2 TexCoord : inl_TEXCOORD0,
+            float2 ObjCoord : inl_TEXCOORD1,
+            float4 Data0    : inl_COLOR1,
+            float4 Data1    : inl_COLOR2,
+            float4 Data2    : inl_COLOR3,
+            float4 Data3    : inl_COLOR4,
+            float4 Data4    : inl_COLOR5,
+            float4 Data5    : inl_COLOR6,
+            float4 Data6    : inl_COLOR7)
+{
+  VS_OUTPUT output;
+  output.ObjectCoord = ObjCoord;
+  output.ScreenCoord = mul(Transform, float4(Position, 1.0, 1.0)).xy;
+  output.Position = float4(ScreenToDeviceCoords(output.ScreenCoord), 1.0, 1.0);
+  output.Color = Color;
+  output.TexCoord = TexCoord;
+  output.Data0 = Data0;
+  output.Data1 = Data1;
+  output.Data2 = Data2;
+  output.Data3 = Data3;
+  output.Data4 = Data4;
+  output.Data5 = Data5;
+  output.Data6 = Data6;
+  return output;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// PS
+Texture2D texture0 : register(t0);
+Texture2D texture1 : register(t1);
+SamplerState sampler0 : register(s0);
+
 float OutColor;
 
 uint FillType(VS_OUTPUT input) { return uint(input.Data0.x); }
-float4 TileRectUV() { return Vector[0]; }
-float2 TileSize() { return Vector[1].zw; }
-float2 PatternTransformA() { return Vector[2].xy; }
-float2 PatternTransformB() { return Vector[2].zw; }
-float2 PatternTransformC() { return Vector[3].xy; }
+float4 TileRectUV() { return Vector_0; }
+float2 TileSize() { return Vector_1.zw; }
+float2 PatternTransformA() { return Vector_2.xy; }
+float2 PatternTransformB() { return Vector_2.zw; }
+float2 PatternTransformC() { return Vector_3.xy; }
 uint Gradient_NumStops(VS_OUTPUT input) { return uint(input.Data0.y); }
 bool Gradient_IsRadial(VS_OUTPUT input) { return bool(input.Data0.z); }
 float Gradient_R0(VS_OUTPUT input) { return input.Data1.x; }
@@ -66,7 +166,7 @@ GradientStop GetGradientStop(VS_OUTPUT input, uint offset) {
       result.color = input.Data6;
   } else {
     result.percent = Scalar(offset - 4);
-    result.color = Vector[offset - 4];
+    result.color = GetVector(offset - 4);
   }
   return result;
 }
@@ -301,9 +401,9 @@ float supersample(in float2 uv) {
   float4 box = float4(uv - duv, uv + duv);
 
   float asum = samp(box.xy, width, median)
-             + samp(box.zw, width, median)
-             + samp(box.xw, width, median)
-             + samp(box.zy, width, median);
+            + samp(box.zw, width, median)
+            + samp(box.xw, width, median)
+            + samp(box.zy, width, median);
 #if SHARPEN_MORE
   alpha = (alpha + 0.4 * asum) * 0.39;
 #else
@@ -547,7 +647,7 @@ float4 fillBoxShadow(VS_OUTPUT input) {
   
   float d = inset * sdRoundRect(p - origin, size, input.Data2, input.Data3);
   float alpha = radius >= 1.0? pow(antialias(-d, radius * 1.2, 0.0), 2.2) * 2.5 / pow(radius, 0.04) :
-                               antialias(-d, AA_WIDTH, 1.0);
+                              antialias(-d, AA_WIDTH, 1.0);
   alpha = clamp(alpha, 0.0, 1.0) * input.Color.a;
   return float4(input.Color.rgb * alpha, alpha);
 }
@@ -679,13 +779,13 @@ float4 fillMask(VS_OUTPUT input) {
   return float4(col.rgb * alpha, col.a * alpha);
 }
 
-float4 GetCol(in matrix m, uint i) { return float4(m[0][i], m[1][i], m[2][i], m[3][i]); }
+float4 GetCol(in float4x4 m, uint i) { return float4(m[0][i], m[1][i], m[2][i], m[3][i]); }
 
 #define VISUALIZE_CLIP 0
 
 void applyClip(VS_OUTPUT input, inout float4 outColor) {
-  for (uint i = 0; i < ClipSize; i++) {
-    matrix data = Clip[i];
+  for (uint i = 0; i < (uint)ClipSize; i++) {
+    float4x4 data = GetClip(i);
     float2 origin = GetCol(data, 0).xy;
     float2 size = GetCol(data, 0).zw;
     float4 radii_x, radii_y;

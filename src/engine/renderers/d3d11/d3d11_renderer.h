@@ -70,6 +70,10 @@ namespace lambda
       virtual void copyToScreen(
         const asset::VioletTextureHandle& texture
       ) override;
+			virtual void copyToTexture(
+				const asset::VioletTextureHandle& src,
+				const asset::VioletTextureHandle& dst
+			) override;
       virtual void bindShaderPass(
         const platform::ShaderPass& shader_pass
       ) override;
@@ -88,6 +92,10 @@ namespace lambda
         asset::VioletTextureHandle texture, 
         uint8_t slot
       ) override;
+			virtual void setRenderTargets(
+				Vector<asset::VioletTextureHandle> render_targets,
+				asset::VioletTextureHandle depth_buffer
+			) override;
 
       virtual void pushMarker(const String& name) override;
       virtual void setMarker(const String& name) override;

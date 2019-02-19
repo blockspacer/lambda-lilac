@@ -1,11 +1,17 @@
 #pragma once
 #include <assets/texture.h>
+#include <assets/shader.h>
 #include <assets/mesh.h>
 
 #include <Ultralight/platform/GPUDriver.h>
 
 namespace lambda
 {
+	namespace world
+	{
+		class IWorld;
+	}
+
   namespace gui
   {
 		///////////////////////////////////////////////////////////////////////////
@@ -15,7 +21,7 @@ namespace lambda
 			: public ultralight::GPUDriver
 		{
 		public:
-			MyGPUDriver();
+			MyGPUDriver(world::IWorld* world);
 			virtual ~MyGPUDriver();
 
 			virtual void BeginSynchronize() override;
@@ -66,6 +72,13 @@ namespace lambda
 			virtual bool HasCommandsPending() override;
 			virtual void DrawCommandList() override;
 
+			void BindShader(const ultralight::GPUState& state);
+
+			asset::VioletTextureHandle GetRenderBuffer(uint32_t render_target_id);
+
+		private:
+			world::IWorld* world_;
+
 			UnorderedMap<uint32_t, asset::VioletTextureHandle> textures_;
 			UnorderedMap<uint32_t, asset::VioletTextureHandle> render_targets_;
 			UnorderedMap<uint32_t, asset::MeshHandle>          geometry_;
@@ -76,6 +89,9 @@ namespace lambda
 
 			std::vector<ultralight::Command> command_list_;
 			int batch_count_;
+
+			asset::VioletShaderHandle shader_fill_;
+			asset::VioletShaderHandle shader_fill_path_;
 		};
   }
 }

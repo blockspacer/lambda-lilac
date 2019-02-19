@@ -78,8 +78,8 @@ namespace lambda
       
       is_render_target = (texture->getLayer(0u).getFlags() & 
         kTextureFlagIsRenderTarget) ? true : false;
-			is_dynamic = (texture->getLayer(0u).getFlags() & 
-				kTextureFlagDynamicData) ? true : false;
+			is_dynamic = ((texture->getLayer(0u).getFlags() &
+				kTextureFlagDynamicData) && !is_render_target) ? true : false;
       UINT bind_flags    = is_render_target ? 
         (format_ == DXGI_FORMAT_R24G8_TYPELESS ? D3D11_BIND_DEPTH_STENCIL : 
           D3D11_BIND_RENDER_TARGET) : 0u;
