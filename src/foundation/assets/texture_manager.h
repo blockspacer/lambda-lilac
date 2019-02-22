@@ -20,7 +20,7 @@ namespace lambda
   static constexpr uint32_t kTextureFlagDynamicScale   = 1u << 1u;
   static constexpr uint32_t kTextureFlagDynamicData    = 1u << 2u;
   static constexpr uint32_t kTextureFlagClear          = 1u << 3u;
-  //static constexpr uint32_t kTextureFlagMipMaps        = 1u << 4u;
+  static constexpr uint32_t kTextureFlagRecreate       = 1u << 4u;
   static constexpr uint32_t kTextureFlagIsRenderTarget = 1u << 5u;
   static constexpr uint32_t kTextureFlagFromDDS        = 1u << 6u;
   static constexpr uint32_t kTextureFlagContainsAlpha  = 1u << 7u;

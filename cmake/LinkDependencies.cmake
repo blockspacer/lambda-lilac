@@ -6,8 +6,6 @@ function(LinkDependencies)
 
 
 
-  SET(BUILD_TESTING OFF CACHE BOOL "" FORCE)
-
 
 
 
@@ -26,7 +24,9 @@ function(LinkDependencies)
     MESSAGE(FATAL_ERROR "Unknown compiler platform")
   ENDIF (VIOLET_WIN32)
 
+  
 
+  SET(USE_MSVC_RUNTIME_LIBRARY_DLL OFF CACHE BOOL "" FORCE)
 
 
 

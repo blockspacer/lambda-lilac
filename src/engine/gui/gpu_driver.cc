@@ -53,7 +53,7 @@ namespace lambda
 			uint32_t      height = bitmap->height();
 			uint32_t      flags = kTextureFlagDynamicData;
 			TextureFormat format = ultralight::kBitmapFormat_RGBA8 ?
-				TextureFormat::kR8G8B8A8 : TextureFormat::kA8;
+				TextureFormat::kB8G8R8A8 : TextureFormat::kA8;
 
 			Vector<uint8_t> data;
 
@@ -90,7 +90,7 @@ namespace lambda
 			asset::VioletTextureHandle texture = textures_[texture_id];
 
 			if (texture->getLayer(0).getWidth() == bitmap->width() &&
-				(texture->getLayer(0).getFormat() == TextureFormat::kR8G8B8A8) ==
+				(texture->getLayer(0).getFormat() == TextureFormat::kB8G8R8A8) ==
 				(bitmap->format() == ultralight::kBitmapFormat_RGBA8))
 			{
 
@@ -332,10 +332,7 @@ namespace lambda
 			const ultralight::VertexBuffer& vertices,
 			const ultralight::IndexBuffer& indices)
 		{
-			DestroyGeometry(geometry_id);
-			CreateGeometry(geometry_id, vertices, indices);
-
-			/*asset::MeshHandle mesh = geometry_[geometry_id];
+			asset::MeshHandle mesh = geometry_[geometry_id];
 
 			if (vertices.format == ultralight::kVertexBufferFormat_2f_4ub_2f)
 			{
@@ -359,7 +356,7 @@ namespace lambda
 			sub_mesh.offset(asset::MeshElements::kPositions).count = vertices.size / sub_mesh.offset(asset::MeshElements::kPositions).stride;
 			sub_mesh.offset(asset::MeshElements::kIndices).stride = sizeof(uint32_t);
 			sub_mesh.offset(asset::MeshElements::kIndices).count = indices.size / sub_mesh.offset(asset::MeshElements::kIndices).stride;
-			mesh->setSubMeshes({ sub_mesh });*/
+			mesh->setSubMeshes({ sub_mesh });
 		}
 
 		///////////////////////////////////////////////////////////////////////////

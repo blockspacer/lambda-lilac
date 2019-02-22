@@ -431,6 +431,16 @@ ENDIF()
 
 IF(${VIOLET_GUI_ULTRALIGHT})
   TARGET_LINK_LIBRARIES(lambda-engine PUBLIC ultralight)
+
+  IF(VIOLET_WIN32)
+    ADD_CUSTOM_COMMAND(TARGET lambda-engine POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/Ultralight.dll ${CMAKE_BINARY_DIR}/bin/Debug
+      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/UltralightCore.dll ${CMAKE_BINARY_DIR}/bin/Debug
+      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/WebCore.dll ${CMAKE_BINARY_DIR}/bin/Debug
+      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/Ultralight.dll ${CMAKE_BINARY_DIR}/bin/Release
+      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/UltralightCore.dll ${CMAKE_BINARY_DIR}/bin/Release
+      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/WebCore.dll ${CMAKE_BINARY_DIR}/bin/Release)
+  ENDIF()
 ENDIF()
 
 TARGET_INCLUDE_DIRECTORIES(lambda-engine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

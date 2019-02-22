@@ -1607,8 +1607,17 @@ namespace lambda
     D3D11RenderTexture* D3D11Context::D3D11AssetManager::getTexture(
       asset::VioletTextureHandle texture)
     {
-			// TODO (Hilze): Have some sort of check to make sure that the size and format still match.
+      if (!texture)
+        return nullptr;
 
+      if (texture->isDirty() && (texture->getLayer(0u).getFlags() & kTextureFlagRecreate) != 0)
+      {
+        texture->getLayer(0u).setFlags(texture->getLayer(0u).getFlags() & ~kTextureFlagRecreate);
+        removeTexture(texture);
+        texture->clean();
+      }
+
+			// TODO (Hilze): Have some sort of check to make sure that the size and format still match.
       auto it = textures_.find(texture.getHash());
       
       if (it == textures_.end())

@@ -101,6 +101,7 @@ namespace lambda
       {
         data_.width  = width;
         data_.height = height;
+        data_.flags |= kTextureFlagRecreate;
         makeDirty();
       }
     }

@@ -8,6 +8,23 @@ SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
+SET(CMAKE_CXX_FLAGS_RELEASE "/MT")
+SET(CMAKE_CXX_FLAGS_DEBUG "/MTd")
+SET(CompilerFlags
+        CMAKE_CXX_FLAGS
+        CMAKE_CXX_FLAGS_DEBUG
+        CMAKE_CXX_FLAGS_RELEASE
+        CMAKE_C_FLAGS
+        CMAKE_C_FLAGS_DEBUG
+        CMAKE_C_FLAGS_RELEASE
+        )
+FOREACH(CompilerFlag ${CompilerFlags})
+  STRING(REPLACE "/MT" "/MD" ${CompilerFlag} "${${CompilerFlag}}")
+ENDFOREACH()
+FOREACH(CompilerFlag ${CompilerFlags})
+  STRING(REPLACE "/MDd" "/MTd" ${CompilerFlag} "${${CompilerFlag}}")
+ENDFOREACH()
+
 # Add all platform defines.
 IF (WIN32)
   SET(VIOLET_WIN32 ON)
