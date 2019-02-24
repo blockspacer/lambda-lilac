@@ -20,12 +20,18 @@ namespace lambda
 		MyFileSystem::~MyFileSystem()
 		{
 		}
-		
+
 		///////////////////////////////////////////////////////////////////////////
 		static String toString(const ultralight::String16& path)
 		{
 			WideString wstr(path.data(), path.data() + path.size());
 			return lmbString(std::string(wstr.begin(), wstr.end()));
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		static String toString(const WideString& path)
+		{
+			return lmbString(std::string(path.begin(), path.end()));
 		}
 
 		///////////////////////////////////////////////////////////////////////////
@@ -86,7 +92,7 @@ namespace lambda
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		WideString GetMimeType(const WideString& szExtension)
+		WideString GetMimeType(WideString szExtension)
 		{
 #if VIOLET_WIN32
 			// return mime type for extension
@@ -125,7 +131,7 @@ namespace lambda
 			const ultralight::String16& path, 
 			ultralight::String16& result)
 		{
-			String str = lambda::FileSystem::GetExtension(toString(path));
+			String str = "." + lambda::FileSystem::GetExtension(toString(path));
 			WideString mimetype = GetMimeType(toWideString(str));
 			result = ultralight::String16(mimetype.c_str(), mimetype.length());
 			return true;

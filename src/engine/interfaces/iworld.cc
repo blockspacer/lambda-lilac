@@ -25,6 +25,7 @@ namespace lambda
 			renderer_->initialize(this);
 			setWindow(window);
 			setImGUI(imgui);
+			gui_.init(this);
 
 			scene_.initialize(this);
 			scripting_->setWorld(this);
@@ -95,7 +96,11 @@ namespace lambda
         }
 
 				update(delta_time_);
-				
+
+				utilities::Profiler::getInstance().startTimer("GUI: Update");
+				gui_.update(delta_time_);
+				utilities::Profiler::getInstance().endTimer("GUI: Update");
+
 				utilities::Profiler::getInstance().startTimer("Scripting: Update");
 				scripting_->executeFunction(
           "Game::Update", 
@@ -165,9 +170,11 @@ namespace lambda
       while (getWindow()->pollMessage(message))
       {
         bool was_handled = false;
-        if (imgui_->inputHandleMessage(message))
+				if (!was_handled && gui_.handleWindowMessage(message))
+					was_handled = true;
+        if (!was_handled && imgui_->inputHandleMessage(message))
           was_handled = true;
-        
+
 				switch (message.type)
         {
         case platform::WindowMessageType::kResize:
@@ -309,5 +316,11 @@ namespace lambda
     {
       return post_process_manager_;
     }
+
+		///////////////////////////////////////////////////////////////////////////
+		gui::GUI& IWorld::getGUI()
+		{
+			return gui_;
+		}
   }
 }

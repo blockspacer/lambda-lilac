@@ -17,6 +17,8 @@ import "Core/Collider" for Collider
 import "Core/Input" for Input, Keys, Buttons, Axes
 import "Core/Math" for Math
 
+import "Core/Graphics" for Graphics
+import "Core/GUI" for GUI
 import "Core/Time" for Time
 import "Core/File" for File
 import "Core/Assert" for Assert
@@ -75,6 +77,8 @@ class World {
           // }
         }
 
+        GUI.bindCallback("changedSetting(_,_)", this)
+
         _init_once = true
     }
     deinitialize() {
@@ -85,6 +89,8 @@ class World {
             _init_once = false
             //PostProcess.addShaderPass("apply_gui", Shader.load("resources/shaders/apply_gui.fx"), [ "post_process_buffer", "gui" ], [ "post_process_buffer" ])
         }
+
+		    GUI.executeJavaScript("updateDebug(%(Time.deltaTime));")
         
         // Update the RSM light.
         var sin_y_rot = -Math.sin(Math.deg2Rad * _camera.getComponent(FreeLookCamera).rotation.y)
@@ -94,5 +100,13 @@ class World {
         transform.worldPosition = _camera.transform.worldPosition + offset
     }
     fixedUpdate() {
+    }
+    changedSetting(id, val) {
+      if (id == "vsync") {
+        Graphics.setVSync(val > 0.0 ? true : false)
+      }
+      if (id == "render_scale") {
+        Graphics.setRenderScale(val)
+      }
     }
 }

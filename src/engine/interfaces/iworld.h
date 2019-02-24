@@ -14,6 +14,7 @@
 #include "platform/shader_variable_manager.h"
 #include "platform/debug_renderer.h"
 #include "platform/post_process_manager.h"
+#include "gui/gui.h"
 
 namespace lambda
 {
@@ -63,6 +64,7 @@ namespace lambda
       platform::ShaderVariableManager& getShaderVariableManager();
       platform::DebugRenderer& getDebugRenderer();
       platform::PostProcessManager& getPostProcessManager();
+			gui::GUI& getGUI();
 
     private:
 			platform::ShaderVariableManager shader_variable_manager_;
@@ -81,6 +83,7 @@ namespace lambda
       io::InputManager input_manager_;
       foundation::SharedPointer<scripting::IScriptContext> scripting_;
       foundation::SharedPointer<platform::IImGUI> imgui_;
+			gui::GUI gui_;
     };
   }
 }

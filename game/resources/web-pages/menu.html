@@ -314,6 +314,8 @@
 			var next = sideways[id][current_sideways[id]];
 			curr.style.display = "none";
 			next.style.display = "inline-block";
+
+      changedSetting(id, current_sideways[id]);
 		}
 		
 		function changeSidewaysDown(id)
@@ -326,10 +328,12 @@
 			{
 				current_sideways[id] = sideways[id].length - 1;
 			}
-			
+
 			var next = sideways[id][current_sideways[id]];
 			curr.style.display = "none";
 			next.style.display = "inline-block";
+
+      changedSetting(id, current_sideways[id]);
 		}
 	</script>
 	<body>
@@ -469,25 +473,30 @@
 						</div>
 						<div class="menu_BodyWrapper">
 							<p class="menu_BodySubName">Full screen</p>
-							<a class="menu_Button" style="user-select: none;"   onclick="changeSidewaysDown('gfs');">&laquo;</a>
-							<p class="menu_BodyOption menu_Sideways" id="gfs_0" onclick="changeSidewaysUp('gfs');">Enabled</p>
-							<p class="menu_BodyOption menu_Sideways" id="gfs_1" onclick="changeSidewaysUp('gfs');">Disabled</p>
-							<a class="menu_Button" style="user-select: none;"   onclick="changeSidewaysUp('gfs');">&raquo;</a>
+							<a class="menu_Button" style="user-select: none;"           onclick="changeSidewaysDown('full_screen');">&laquo;</a>
+							<p class="menu_BodyOption menu_Sideways" id="full_screen_0" onclick="changeSidewaysUp('full_screen');">Disabled</p>
+							<p class="menu_BodyOption menu_Sideways" id="full_screen_1" onclick="changeSidewaysUp('full_screen');">Enabled</p>
+							<a class="menu_Button" style="user-select: none;"           onclick="changeSidewaysUp('full_screen');">&raquo;</a>
 						</div>
 						<div class="menu_BodyWrapper">
 							<p class="menu_BodySubName">V-Sync</p>
-							<a class="menu_Button" style="user-select: none;"   onclick="changeSidewaysDown('gvs');">&laquo;</a>
-							<p class="menu_BodyOption menu_Sideways" id="gvs_0" onclick="changeSidewaysUp('gvs');">Enabled</p>
-							<p class="menu_BodyOption menu_Sideways" id="gvs_1" onclick="changeSidewaysUp('gvs');">Disabled</p>
-							<a class="menu_Button" style="user-select: none;"   onclick="changeSidewaysUp('gvs');">&raquo;</a>
+							<a class="menu_Button" style="user-select: none;"     onclick="changeSidewaysDown('vsync');">&laquo;</a>
+							<p class="menu_BodyOption menu_Sideways" id="vsync_0" onclick="changeSidewaysUp('vsync');">Disabled</p>
+							<p class="menu_BodyOption menu_Sideways" id="vsync_1" onclick="changeSidewaysUp('vsync');">Enabled</p>
+							<a class="menu_Button" style="user-select: none;"     onclick="changeSidewaysUp('vsync');">&raquo;</a>
+						</div>
+						<div class="menu_BodyWrapper">
+							<p class="menu_BodySubName">Render Scale</p>
+							<p class="menu_BodyOption" id="render_scale" style="cursor: default; width: 20pt; margin: 0pt;">1</p>
+							<input id="subtitles_font_size" type="range" min="0.1" max="1" value="1" step="0.01" onchange="this.parentElement.children[1].innerHTML = this.value; changedSetting('render_scale', parseFloat(this.value));" class="menu_Slider menu_Transition">
 						</div>
 						<div class="menu_BodyWrapper">
 							<p class="menu_BodySubName">Preset</p>
-							<a class="menu_Button" style="user-select: none;"   onclick="changeSidewaysDown('gps');">&laquo;</a>
-							<p class="menu_BodyOption menu_Sideways" id="gps_0" onclick="changeSidewaysUp('gps');">Low</p>
-							<p class="menu_BodyOption menu_Sideways" id="gps_1" onclick="changeSidewaysUp('gps');">Medium</p>
-							<p class="menu_BodyOption menu_Sideways" id="gps_2" onclick="changeSidewaysUp('gps');">High</p>
-							<a class="menu_Button" style="user-select: none;"   onclick="changeSidewaysUp('gps');">&raquo;</a>
+							<a class="menu_Button" style="user-select: none;"               onclick="changeSidewaysDown('graphics_preset');">&laquo;</a>
+							<p class="menu_BodyOption menu_Sideways" id="graphics_preset_0" onclick="changeSidewaysUp('graphics_preset');">Low</p>
+							<p class="menu_BodyOption menu_Sideways" id="graphics_preset_1" onclick="changeSidewaysUp('graphics_preset');">Medium</p>
+							<p class="menu_BodyOption menu_Sideways" id="graphics_preset_2" onclick="changeSidewaysUp('graphics_preset');">High</p>
+							<a class="menu_Button" style="user-select: none;"               onclick="changeSidewaysUp('graphics_preset');">&raquo;</a>
 						</div>
 						<div class="menu_BodyWrapper" style="padding-top: 10pt;">
 							<p class="menu_BodyName menu_Transition" style="font-size: 15pt; width: 280pt; bottom: 0pt; position: absolute;" onclick="moveToMenu('settings');">Back</p>
@@ -509,17 +518,17 @@
 						</div>
 						<div class="menu_BodyWrapper">
 							<p class="menu_BodySubName"></p>
-							<a class="menu_Button" style="user-select: none;"  onclick="changeSidewaysDown('se');">&laquo;</a>
-							<p class="menu_BodyOption menu_Sideways" id="se_0" onclick="changeSidewaysUp('se');">Enabled</p>
-							<p class="menu_BodyOption menu_Sideways" id="se_1" onclick="changeSidewaysUp('se');">Disabled</p>
-							<a class="menu_Button" style="user-select: none;"  onclick="changeSidewaysUp('se');">&raquo;</a>
+							<a class="menu_Button" style="user-select: none;"        onclick="changeSidewaysDown('subitles');">&laquo;</a>
+							<p class="menu_BodyOption menu_Sideways" id="subitles_0" onclick="changeSidewaysUp('subitles');">Disabled</p>
+							<p class="menu_BodyOption menu_Sideways" id="subitles_1" onclick="changeSidewaysUp('subitles');">Enabled</p>
+							<a class="menu_Button" style="user-select: none;"        onclick="changeSidewaysUp('subitles');">&raquo;</a>
 						</div>
 						<div class="menu_BodyWrapper">
 							<p class="menu_BodySubName">Background</p>
-							<a class="menu_Button" style="user-select: none;"   onclick="changeSidewaysDown('sbe');">&laquo;</a>
-							<p class="menu_BodyOption menu_Sideways" id="sbe_0" onclick="changeSidewaysUp('sbe');">Enabled</p>
-							<p class="menu_BodyOption menu_Sideways" id="sbe_1" onclick="changeSidewaysUp('sbe');">Disabled</p>
-							<a class="menu_Button" style="user-select: none;"   onclick="changeSidewaysUp('sbe');">&raquo;</a>
+							<a class="menu_Button" style="user-select: none;"                    onclick="changeSidewaysDown('subtitles_background');">&laquo;</a>
+							<p class="menu_BodyOption menu_Sideways" id="subtitles_background_0" onclick="changeSidewaysUp('subtitles_background');">Disabled</p>
+							<p class="menu_BodyOption menu_Sideways" id="subtitles_background_1" onclick="changeSidewaysUp('subtitles_background');">Enabled</p>
+							<a class="menu_Button" style="user-select: none;"                    onclick="changeSidewaysUp('subtitles_background');">&raquo;</a>
 						</div>
 						<div class="menu_BodyWrapper">
 							<p class="menu_BodySubName">Font size</p>
@@ -568,8 +577,8 @@
 			var s = document.getElementsByClassName("menu_Sideways");
 			for (var i = 0; i < s.length; ++i)
 			{
-				var id = s[i].id.substring(0, s[i].id.indexOf('_'));
-				var idx = parseInt(s[i].id.substring(s[i].id.indexOf('_') + 1));
+				var id = s[i].id.substring(0, s[i].id.lastIndexOf('_'));
+				var idx = parseInt(s[i].id.substring(s[i].id.lastIndexOf('_') + 1));
 				if (!(id in sideways))
 				{
 					sideways[id] = [];
@@ -604,28 +613,20 @@
 			window.addEventListener("resize", resizeMenuBar);
 			resizeMenuBar();
 
-			var g_time = 0;
-			var g_fps = 0;
-			var g_prevTime = Date.now();
-			function updateDbg() {
-				var now = Date.now();
-				var delta = now - g_prevTime;
-				g_prevTime = now;
-			
-				g_time += delta;
+      var g_time = 0;
+      var g_fps  = 0;
+			function updateDebug(delta_time) {
+				g_time += delta_time;
 				g_fps++;
 				
-				if (g_time >= 1000)
+				if (g_time >= 1.0)
 				{
 					document.getElementById("dbg_fps").innerHTML = g_fps;
-					document.getElementById("dbg_ms").innerHTML = Math.floor(1 / g_fps);
-					g_time -= 1000;
+					document.getElementById("dbg_ms").innerHTML  = Math.round(1000.0 / g_fps);
+					g_time -= 1.0;
 					g_fps = 0;
 				}
-			
-				setTimeout(updateDbg, 1);
 			}
-			updateDbg();
 		</script>
 	</body>
 </html>

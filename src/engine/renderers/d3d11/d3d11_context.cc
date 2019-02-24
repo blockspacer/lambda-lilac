@@ -745,11 +745,17 @@ namespace lambda
 
       beginTimer("Copy To Screen");
       pushMarker("Copy To Screen");
-      copyToScreen(
-        world_->getPostProcessManager().getTarget(
-          world_->getPostProcessManager().getFinalTarget()
-        ).getTexture()
-      );
+			
+			setBlendState(platform::BlendState::Alpha());
+
+			copyToScreen(
+				world_->getPostProcessManager().getTarget(
+					world_->getPostProcessManager().getFinalTarget()
+				).getTexture()
+			);
+			copyToScreen(
+				world_->getPostProcessManager().getTarget(Name("gui")).getTexture()
+			);
       popMarker();
       endTimer("Copy To Screen");
 

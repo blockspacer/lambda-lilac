@@ -49,6 +49,8 @@ SET(UltralightGuiSources
   "gui/font_handler.cc"
   "gui/gpu_driver.h"
   "gui/gpu_driver.cc"
+  "gui/gui_value.h"
+  "gui/gui_value.cc"
 )
 SET(InterfacesSources
   "interfaces/icomponent.h"

@@ -96,8 +96,7 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     void TextureLayer::resize(uint32_t width, uint32_t height)
     {
-      if ((data_.flags & kTextureFlagResize) && 
-        !(data_.flags & kTextureFlagFromDDS))
+      if (0 == (data_.flags & kTextureFlagFromDDS))
       {
         data_.width  = width;
         data_.height = height;

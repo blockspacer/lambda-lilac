@@ -20,17 +20,6 @@
 #include <algorithm>
 #include "utils/profiler.h"
 
-#if VIOLET_GUI_ULTRALIGHT
-#include "gui/gui.h"
-#include "gui/gpu_driver.h"
-#endif
-
-#if VIOLET_WIN32
-#include <windows.h>
-#endif
-
-#define USE_GUI 1
-
 #if defined VIOLET_RENDERER_D3D11
 #include "renderers/d3d11/d3d11_renderer.h"
 #elif defined VIOLET_RENDERER_METAL
@@ -70,173 +59,6 @@
 
 
 using namespace lambda;
-
-#if USE_GUI
-asset::VioletTextureHandle g_gui_texture;
-#endif
-
-
-#include <Ultralight/Ultralight.h>
-
-static bool finished = false;
-
-class LoadListenerImpl : public ultralight::LoadListener 
-{
-public:
-	virtual ~LoadListenerImpl()
-	{}
-
-	virtual void OnFinishLoading(ultralight::View* caller) 
-	{
-		finished = true;
-	}
-};
-
-class ViewListenerImpl : public ultralight::ViewListener
-{
-public:
-	virtual ~ViewListenerImpl()
-	{}
-
-	virtual void OnAddConsoleMessage(ultralight::View* caller,
-		ultralight::MessageSource source,
-		ultralight::MessageLevel level,
-		const String& message,
-		uint32_t line_number,
-		uint32_t column_number,
-		const String& source_id)
-	{
-		foundation::Warning(message.c_str());
-	}
-};
-
-class UltraLighter
-{
-public:
-	struct RW { ultralight::Ref<ultralight::Renderer> ptr; }*renderer_;
-	struct RV { ultralight::Ref<ultralight::View> ptr; }*view_;
-	LoadListenerImpl* load_listener_;
-	ViewListenerImpl* view_listener_;
-	double time_ = 0.0;
-	asset::VioletShaderHandle copy_no_scale_;
-	world::IWorld* world_;
-
-	void init(world::IWorld* world)
-	{
-		world_ = world;
-		gui::Create(world);
-
-		copy_no_scale_ = asset::ShaderManager::getInstance()->get(Name("resources/shaders/copy_no_scale.fx"));
-
-		renderer_ = new RW{ ultralight::Renderer::Create() };
-		view_ = new RV{ renderer_->ptr->CreateView(1920u, 1080u, true) };
-
-		load_listener_ = new LoadListenerImpl();
-    //view_listener_ = new ViewListenerImpl();
-		view_->ptr->set_load_listener(load_listener_);
-    //view_->ptr->set_view_listener(view_listener_);
-
-		String html = FileSystem::FileToString("resources/web-pages/menu.html");
-		//view_->ptr->LoadURL("file:///resources/web-pages/subtitles.html");
-		view_->ptr->LoadHTML(ultralight::String(html.c_str()));
-
-		while (!finished)
-			renderer_->ptr->Update();
-
-		{
-			g_gui_texture = asset::TextureManager::getInstance()->create(Name("Back Buffer GUI"));
-
-			VioletTexture texture;
-			texture.flags     = kTextureFlagIsRenderTarget | kTextureFlagResize;
-			texture.format    = TextureFormat::kR8G8B8A8;
-			texture.width     = 1;
-			texture.height    = 1;
-			texture.mip_count = 1;
-			g_gui_texture->addLayer(asset::TextureLayer(texture));
-		}
-	}
-
-	~UltraLighter()
-	{
-		view_->ptr->set_load_listener(nullptr);
-    //view_->ptr->set_view_listener(nullptr);
-		delete load_listener_;
-    //delete view_listener_;
-	}
-
-	void update(double dt)
-	{
-		time_ += dt;
-		if (time_ < 1.0 / 60.0)
-			return;
-		time_ -= 1.0 / 60.0;
-
-		renderer_->ptr->Update();
-
-		gui::MyGPUDriver* driver = (gui::MyGPUDriver*)ultralight::Platform::instance().gpu_driver();
-
-		driver->BeginSynchronize();
-
-		// Render all active views to command lists and dispatch calls to GPUDriver
-		renderer_->ptr->Render();
-
-		driver->EndSynchronize();
-
-		// Draw any pending commands to screen
-		if (driver->HasCommandsPending())
-		{
-			driver->DrawCommandList();
-			
-			world_->getRenderer()->copyToTexture(
-				driver->GetRenderBuffer(view_->ptr->render_target().render_buffer_id),
-				g_gui_texture
-			);
-		}
-	}
-
-  int last_x_ = 0;
-  int last_y_ = 0;
-  void handleWindowMessage(const platform::WindowMessage& message)
-  {
-    switch (message.type)
-    {
-    case platform::WindowMessageType::kMouseMove:
-    {
-      ultralight::MouseEvent mouse_event;
-      mouse_event.type = ultralight::MouseEvent::kType_MouseMoved;
-      last_x_ = (int)message.data[0];
-      last_y_ = (int)message.data[1];
-      mouse_event.x = last_x_;
-      mouse_event.y = last_y_;
-      mouse_event.button = ultralight::MouseEvent::kButton_None;
-      view_->ptr->FireMouseEvent(mouse_event);
-      break;
-    }
-    case platform::WindowMessageType::kMouseButton:
-    {
-      ultralight::MouseEvent mouse_event;
-      bool up = message.data[1] > 0;
-      ultralight::MouseEvent::Button button;
-      if (message.data[0] == 0) button = ultralight::MouseEvent::kButton_Left;
-      if (message.data[0] == 1) button = ultralight::MouseEvent::kButton_Middle;
-      if (message.data[0] == 2) button = ultralight::MouseEvent::kButton_Right;
-      mouse_event.type = up ? ultralight::MouseEvent::kType_MouseDown : ultralight::MouseEvent::kType_MouseUp;
-      mouse_event.button = button;
-      mouse_event.x = last_x_;
-      mouse_event.y = last_y_;
-      view_->ptr->FireMouseEvent(mouse_event);
-      break;
-    }
-    }
-
-  }
-
-	void resize(uint32_t width, uint32_t height)
-	{
-		view_->ptr->Resize(width, height);
-		g_gui_texture->getLayer(0).resize(width, height);
-	}
-};
 
 glm::vec4 RGBtoHSV(const glm::vec4& rgb) {
   glm::vec4 hsv = rgb;
@@ -360,9 +182,7 @@ public:
 
   void initialize() override
   {
-		ultralighter_.init(this);
-	
-		getPostProcessManager().addTarget(platform::RenderTarget(Name("gui"), g_gui_texture));
+		getGUI().loadURL("file:///resources/web-pages/menu.html");
 	}
   void deinitialize() override
   {
@@ -472,9 +292,7 @@ public:
   }
   void update(const double& delta_time) override
   {
-#if USE_GUI
-		ultralighter_.update(delta_time);
-#endif
+		return;
 
     foundation::SharedPointer<platform::IImGUI> imgui = getImGUI();
 
@@ -530,23 +348,18 @@ public:
       }
     }
   }
+
   virtual void fixedUpdate() override
   {
   }
+
   virtual void handleWindowMessage(const platform::WindowMessage& message) override
   {
-#if USE_GUI
-    ultralighter_.handleWindowMessage(message);
-#endif
-
     switch (message.type)
     {
     case platform::WindowMessageType::kClose:
       getWindow()->close();
       break;
-		case platform::WindowMessageType::kResize:
-			ultralighter_.resize(message.data[0], message.data[1]);
-			break;
     default:
       break;
     }
@@ -554,9 +367,6 @@ public:
 
 private:
   FrameCounter frame_counter;
-#if USE_GUI
-	UltraLighter ultralighter_;
-#endif
 };
 
 int main(int argc, char** argv)
@@ -566,7 +376,7 @@ int main(int argc, char** argv)
   else if (argc == 2)
     LMB_ASSERT(false, "No entry script was specified!")
 
-  lambda::FileSystem::SetBaseDir(argv[1]);
+  lambda::FileSystem::	SetBaseDir(argv[1]);
   String script(argv[2]);
 
   {

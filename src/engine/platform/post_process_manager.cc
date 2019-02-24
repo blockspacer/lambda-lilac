@@ -54,7 +54,8 @@ namespace lambda
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void PostProcessManager::resize(const glm::uvec2& size)
     {
-      for (auto& target : targets_)
+			last_size_ = size;
+			for (auto& target : targets_)
         target.second.resize(size);
     }
 
@@ -174,7 +175,7 @@ namespace lambda
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     RenderTarget::RenderTarget()
-      : render_scale_(0.0f)
+      : render_scale_(1.0f)
       , name_("back_buffer")
       , mip_map_(0)
       , is_back_buffer_(true)
@@ -205,7 +206,7 @@ namespace lambda
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     RenderTarget::RenderTarget(const Name& name, asset::VioletTextureHandle texture)
-      : render_scale_(0.0f)
+      : render_scale_(1.0f)
       , texture_(texture)
       , name_(name)
       , mip_map_(0)
@@ -239,7 +240,8 @@ namespace lambda
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void RenderTarget::resize(const glm::uvec2& size)
     {
-      texture_->resize((uint32_t)((float)size.x * render_scale_), (uint32_t)((float)size.y * render_scale_));
+			if ((texture_->getLayer(0u).getFlags() & kTextureFlagResize) != 0)
+				texture_->resize((uint32_t)((float)size.x * render_scale_), (uint32_t)((float)size.y * render_scale_));
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

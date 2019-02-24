@@ -17,6 +17,7 @@
 #include <systems/mono_behaviour_system.h>
 #include <platform/post_process_manager.h>
 #include <interfaces/iworld.h>
+#include <gui/gui.h>
 
 #include <memory/memory.h>
 #include <containers/containers.h>
@@ -66,12 +67,12 @@ namespace lambda
       return (T*)wrenSetSlotNewForeign(vm, slot, class_slot, sizeof(T));
     }
 
-    namespace Console
-    {
-      /////////////////////////////////////////////////////////////////////////
-      char* Load()
-      {
-        String str = R"(
+		namespace Console
+		{
+			/////////////////////////////////////////////////////////////////////////
+			char* Load()
+			{
+				String str = R"(
 ///////////////////////////////////////////////////////////////////////////////
 ///// console.wren ////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -82,29 +83,94 @@ class Console {
     foreign static warning(string)
 }
 )";
-        char* data = (char*)WREN_ALLOC(str.size() + 1u);
-        memcpy(data, str.data(), str.size() + 1u);
-        return data;
-      }
+				char* data = (char*)WREN_ALLOC(str.size() + 1u);
+				memcpy(data, str.data(), str.size() + 1u);
+				return data;
+			}
 
-      /////////////////////////////////////////////////////////////////////////
-      WrenForeignMethodFn Bind(const char* signature)
-      {
-        if (strcmp(signature, "debug(_)") == 0) return [](WrenVM* vm) {
-          LMB_LOG_DEBG("%s\n", wrenGetSlotString(vm, 1));
-        };
-        if (strcmp(signature, "error(_)") == 0) return [](WrenVM* vm) {
-          LMB_LOG_ERR("%s\n", wrenGetSlotString(vm, 1));
-        };
-        if (strcmp(signature, "info(_)") == 0) return [](WrenVM* vm) {
-          LMB_LOG_INFO("%s\n", wrenGetSlotString(vm, 1));
-        };
-        if (strcmp(signature, "warning(_)") == 0) return [](WrenVM* vm) {
-          LMB_LOG_WARN("%s\n", wrenGetSlotString(vm, 1));
-        };
-        return nullptr;
-      }
-    }
+			/////////////////////////////////////////////////////////////////////////
+			WrenForeignMethodFn Bind(const char* signature)
+			{
+				if (strcmp(signature, "debug(_)") == 0) return [](WrenVM* vm) {
+					LMB_LOG_DEBG("%s\n", wrenGetSlotString(vm, 1));
+				};
+				if (strcmp(signature, "error(_)") == 0) return [](WrenVM* vm) {
+					LMB_LOG_ERR("%s\n", wrenGetSlotString(vm, 1));
+				};
+				if (strcmp(signature, "info(_)") == 0) return [](WrenVM* vm) {
+					LMB_LOG_INFO("%s\n", wrenGetSlotString(vm, 1));
+				};
+				if (strcmp(signature, "warning(_)") == 0) return [](WrenVM* vm) {
+					LMB_LOG_WARN("%s\n", wrenGetSlotString(vm, 1));
+				};
+				return nullptr;
+			}
+		}
+		namespace GUI
+		{
+			/////////////////////////////////////////////////////////////////////////
+			char* Load()
+			{
+				String str = R"(
+///////////////////////////////////////////////////////////////////////////////
+///// gui.wren ////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+class GUI {
+    foreign static executeJavaScript(string)
+    foreign static bindCallback(name, object)
+}
+)";
+				char* data = (char*)WREN_ALLOC(str.size() + 1u);
+				memcpy(data, str.data(), str.size() + 1u);
+				return data;
+			}
+
+			struct UserDataWrapper
+			{
+				WrenHandle* object;
+				WrenHandle* function;
+			};
+
+			/////////////////////////////////////////////////////////////////////////
+			void callback(Vector<lambda::gui::JSVal> js_args, const void* user_data)
+			{
+				const UserDataWrapper& ud = *(UserDataWrapper*)user_data;
+
+				Vector<ScriptValue> args;
+				for (int i = 0; i < js_args.size(); ++i)
+				{
+					if (js_args[i].isBool())
+						args.push_back(ScriptValue(js_args[i].asBool()));
+					else if (js_args[i].isNumber())
+						args.push_back(ScriptValue(js_args[i].asNumber()));
+					else if (js_args[i].isString())
+						args.push_back(ScriptValue(String(js_args[i].asString())));
+				}
+
+				g_world->getScripting()->executeFunction(ud.object, ud.function, args);
+			}
+
+			WrenForeignMethodFn Bind(const char* signature)
+			{
+				if (strcmp(signature, "executeJavaScript(_)") == 0) return [](WrenVM* vm) {
+					g_world->getGUI().executeJavaScript(wrenGetSlotString(vm, 1));
+				};
+				if (strcmp(signature, "bindCallback(_,_)") == 0) return [](WrenVM* vm) {
+					String name = wrenGetSlotString(vm, 1);
+					UserDataWrapper* user_data = 
+						foundation::Memory::construct<UserDataWrapper>();
+					user_data->object   = wrenGetSlotHandle(vm, 2);
+					wrenSetSlotHandle(vm, 0, user_data->object);
+					user_data->function = wrenMakeCallHandle(vm, name.c_str());
+					g_world->getGUI().bindJavaScriptCallback(
+						name.substr(0, name.find("(")),
+						callback,
+						user_data
+					);
+				};
+				return nullptr;
+			}
+		}
     namespace Vec2
     {
 
@@ -4615,8 +4681,10 @@ class Assert {
     {
       if (strstr(module, "Core") != 0)
       {
-        if (hashEqual(className, "Console"))
+				if (hashEqual(className, "Console"))
 					return Console::Bind(signature);
+				if (hashEqual(className, "GUI"))
+					return GUI::Bind(signature);
         if (hashEqual(className, "Vec2")) 
 					return Vec2::Bind(signature);
         if (hashEqual(className, "Vec3"))    
@@ -4681,8 +4749,10 @@ class Assert {
     {
       if (strstr(name_cstr, "Core") != 0)
       {
-        if (hashEqual(name_cstr + 5u, "Console"))     
+				if (hashEqual(name_cstr + 5u, "Console"))
 					return Console::Load();
+				if (hashEqual(name_cstr + 5u, "GUI"))
+					return GUI::Load();
         if (hashEqual(name_cstr + 5u, "Vec2"))        
 					return Vec2::Load();
         if (hashEqual(name_cstr + 5u, "Vec3"))        
