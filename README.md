@@ -9,19 +9,24 @@ I have also learned how to design the systems that make the engine function, lik
 <br>
 Some of the features that we have currently implemented are:<br>
 <table>
-<tr><th>Graphics</th><td>DirectX11</td></tr>
-<tr><th>Scripting</th><td>AngelScript</td></tr>
-<tr><th>Audio</th><td>OpenAL</td></tr>
-<tr><th>Physics</th><td>Bullet</td></tr>
-<tr><th>Networking</th><td>ENet</td></tr>
+  <tr><th>Graphics</th><td><b>DirectX11</b> and <b>Metal*</b></td></tr>
+  <tr><th>GUI</th><td><b>UltraLight</b></td></tr>
+  <tr><th>Scripting</th><td><b>Wren</b> and <b>AngelScript**</b></td></tr>
+  <tr><th>Audio</th><td><b>SoLoud</b></td></tr>
+  <tr><th>Physics</th><td><b>Bullet3</b></td></tr>
+  <tr><th>Networking</th><td><b>ENet**</b></td></tr>
+  <tr><th>Tools</th><td><b>ShaderConductor</b>, <b>DirectXTex</b>, <b>TinyGLTF*</b> and <b>Assimp**</b></td></tr>
 </table>
+* In progress
+** Deprecated
 
 I however have not skipped on the graphics department. These are the post processing effects that I have currently implemented:<br>
 <li>Physically Based Rendering (PBR)</li>
+<li>Image Based Lighting (IBL)</li>
 <li>Tone Mapping</li>
 <li>Bloom</li>
-<li>Screen Space Ambient Occlusion (SSAO)</li>
 <li>Fast Approximate Anti-Aliasing (FXAA)</li>
+<li>Shadow Mapping</li>
 
 <h2>Documentation</h2>
 You can check out the documentation for our scripting implementation <a href="docs/index.html">here</a>.
