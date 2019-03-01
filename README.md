@@ -9,14 +9,14 @@ I have also learned how to design the systems that make the engine function, lik
 <br>
 Some of the features that we have currently implemented are:<br>
 <table>
-  <tr><th>Graphics</th><td><b>DirectX11</b> and <b>Metal*</b></td></tr>
-  <tr><th>Windows</th><td><b>Win32</b>, <b>GLFW</b> and <b>SDL2**</b></td></tr>
-  <tr><th>GUI</th><td><b>UltraLight</b></td></tr>
-  <tr><th>Scripting</th><td><b>Wren</b> and <b>AngelScript***</b></td></tr>
-  <tr><th>Audio</th><td><b>SoLoud</b></td></tr>
-  <tr><th>Physics</th><td><b>Bullet3</b></td></tr>
-  <tr><th>Networking</th><td><b>ENet***</b></td></tr>
-  <tr><th>Tools</th><td><b>ShaderConductor</b>, <b>DirectXTex</b>, <b>TinyGLTF*</b> and <b>Assimp***</b></td></tr>
+  <tr><th><p>Graphics</th><td><b>DirectX11</b> and <b>Metal</b><sup>IN PROGRESS</sup></p></td></tr>
+  <tr><th><p>Windows</th><td><b>Win32</b>, <b>GLFW</b> and <b>SDL2**</b></p></td></tr>
+  <tr><th><p>GUI</th><td><b>UltraLight</b></p></td></tr>
+  <tr><th><p>Scripting</th><td><b>Wren</b> and <b>AngelScript***</b></p></td></tr>
+  <tr><th><p>Audio</th><td><b>SoLoud</b></p></td></tr>
+  <tr><th><p>Physics</th><td><b>Bullet3</b></p></td></tr>
+  <tr><th><p>Networking</th><td><b>ENet***</b></p></td></tr>
+  <tr><th><p>Tools</th><td><b>ShaderConductor</b>, <b>DirectXTex</b>, <b>TinyGLTF<sup>IN PROGRESS</sup></b> and <b>Assimp***</b></p></td></tr>
 </table>
 * In progress
 ** Does not work on Windows
