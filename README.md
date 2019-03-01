@@ -9,17 +9,19 @@ I have also learned how to design the systems that make the engine function, lik
 <br>
 Some of the features that we have currently implemented are:<br>
 <table>
-  <tr><th>Graphics</th><td><b>DirectX11</b> and <b>Metal*</b></td></tr>
-  <tr><th>GUI</th><td><b>UltraLight</b></td></tr>
-  <tr><th>Scripting</th><td><b>Wren</b> and <b>AngelScript**</b></td></tr>
-  <tr><th>Audio</th><td><b>SoLoud</b></td></tr>
-  <tr><th>Physics</th><td><b>Bullet3</b></td></tr>
-  <tr><th>Networking</th><td><b>ENet**</b></td></tr>
-  <tr><th>Tools</th><td><b>ShaderConductor</b>, <b>DirectXTex</b>, <b>TinyGLTF*</b> and <b>Assimp**</b></td></tr>
+  <tr><th><p>Graphics</th><td><b>DirectX11</b> and <b>Metal</b><sup>1</sup></p></td></tr>
+  <tr><th><p>Windows</th><td><b>Win32</b>, <b>GLFW</b> and <b>SDL2</b><sup>2</sup></p></td></tr>
+  <tr><th><p>GUI</th><td><b>UltraLight</b></p></td></tr>
+  <tr><th><p>Scripting</th><td><b>Wren</b> and <b>AngelScript</b><sup>3</sup></p></td></tr>
+  <tr><th><p>Audio</th><td><b>SoLoud</b></p></td></tr>
+  <tr><th><p>Physics</th><td><b>Bullet3</b></p></td></tr>
+  <tr><th><p>Networking</th><td><b>ENet</b><sup>3</sup></p></td></tr>
+  <tr><th><p>Tools</th><td><b>ShaderConductor</b>, <b>DirectXTex</b>, <b>TinyGLTF</b><sup>1</sup> and <b>Assimp</b><sup>3</sup></p></td></tr>
 </table>
-* In progress
-** Deprecated
-
+<b>1)</b> In progress<br/>
+<b>2)</b> Does not work on Windows<br/>
+<b>3)</b> Deprecated<br/>
+<br/>
 I however have not skipped on the graphics department. These are the post processing effects that I have currently implemented:<br>
 <li>Physically Based Rendering (PBR)</li>
 <li>Image Based Lighting (IBL)</li>
@@ -74,8 +76,33 @@ You can check out the documentation for our scripting implementation <a href="do
   </div>
 </div>
 
-<b>Make sure to install LFS with: </b> git lfs install --skip-smudge
-<br/>
-<b>To get all submodules execute these two commands: </b> <b>1)</b> git submodule init <b>2)</b> git submodule update --recursive --remote
-<br/>
-To build tools you will need to have <b>Python 2.7.x</b> installed.
+#How to clone this repository
+<table>
+  <tr>
+    <td>Clone this repo</td>
+    <td>git clone https://github.com/hvonck/lambda-lilac.git</td>
+  </tr>
+  <tr>
+    <td>Make sure that you have LFS installed</td>
+    <td>git lfs install --skip-smudge</td>
+  </tr>
+    <td>Fetch all LFS files</td>
+    <td>git lfs pull</td>
+  </tr>
+  <tr>
+    <td>Initialize all submodules</td>
+    <td>git submodule init</td>
+  </tr>
+  <tr>
+    <td>Update all submodules</td>
+    <td>git submodule update --recursive --remote</td>
+  </tr>
+  <tr>
+    <td>If you want to build tools</td>
+    <td>Install Python 2.7.x</td>
+  </tr>
+  <tr>
+    <td>Run CMAKE</td>
+    <td>cmake -S . -B ./bin/</td>
+  </tr>
+</table>
