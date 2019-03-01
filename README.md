@@ -74,8 +74,30 @@ You can check out the documentation for our scripting implementation <a href="do
   </div>
 </div>
 
-<b>Make sure to install LFS with: </b> git lfs install --skip-smudge
-<br/>
-<b>To get all submodules execute these two commands: </b> <b>1)</b> git submodule init <b>2)</b> git submodule update --recursive --remote
-<br/>
-To build tools you will need to have <b>Python 2.7.x</b> installed.
+#How to clone this repository
+<table>
+  <tr>
+    <td>Make sure that you have LFS installed</td>
+    <td>git lfs install --skip-smudge</td>
+  </tr>
+  <tr>
+    <td>Clone this repo</td>
+    <td>git clone https://github.com/hvonck/lambda-lilac.git</td>
+  </tr>
+  <tr>
+    <td>Initialize all submodules</td>
+    <td>git submodule init</td>
+  </tr>
+  <tr>
+    <td>Update all submodules</td>
+    <td>git submodule update --recursive --remote</td>
+  </tr>
+  <tr>
+    <td>If you want to build tools</td>
+    <td>Install Python 2.7.x</td>
+  </tr>
+  <tr>
+    <td>Run CMAKE</td>
+    <td>cmake -S . -B ./bin/</td>
+  </tr>
+</table>
