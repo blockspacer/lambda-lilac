@@ -43,7 +43,7 @@ You can check out the documentation for our scripting implementation <a href="do
           <img src="docs/img/hilze.jpg" style="padding:0px; width:200px;"/>
         </td>
         <td style="border:none; padding:5px">
-          <p>Graphics and PS4 programmer in the making. Is not required to do graphics, nor work with the PS4 but enjoys that combination the most. Currently developing a [REDACTED] with [REDACTED] for the [REDACTED]. It is really quite interesting.</p>
+          <p>TODO (Hilze): Fill in.</p>
         </td>
       </tr>
     </table>
@@ -61,7 +61,7 @@ You can check out the documentation for our scripting implementation <a href="do
     <table style="margin: 0px; padding: 0px; border-collapse:collapse;">
       <tr>
         <td style="border:none; padding:5px">
-          <p>This is a brief and very long description about me. Please fill this in later when you have the time okay? for now I am just testing the limits</p>
+          <p>TODO (Mano): Fill in.</p>
         </td>
         <td style="border:none; padding:0px;">
           <img src="docs/img/mano.jpg" style="width:200px"/>
@@ -75,6 +75,7 @@ You can check out the documentation for our scripting implementation <a href="do
 </div>
 
 <b>Make sure to install LFS with: </b> git lfs install --skip-smudge
+<br/>
 <b>To get all submodules execute these two commands: </b> <b>1)</b> git submodule init <b>2)</b> git submodule update --recursive --remote
-
-[![Waffle.io - Columns and their card count](https://badge.waffle.io/hvonck/lambda-engine.svg?columns=all)](https://waffle.io/hvonck/lambda-engine)
+<br/>
+To build tools you will need to have <b>Python 2.7.x</b> installed.
