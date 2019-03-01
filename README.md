@@ -76,7 +76,7 @@ You can check out the documentation for our scripting implementation <a href="do
   </div>
 </div>
 
-#How to clone this repository
+# How to clone this repository
 <table>
   <tr>
     <td>Clone this repo</td>
