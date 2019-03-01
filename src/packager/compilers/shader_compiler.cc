@@ -21,10 +21,13 @@ namespace lambda
 	}
 
 	///////////////////////////////////////////////////////////////////////////
-	Vector<Vector<uint32_t>> CompileX(
+	bool CompileX(
 		String file, 
-		ShaderConductor::ShaderStage stage)
+		ShaderConductor::ShaderStage stage,
+		Vector<Vector<uint32_t>>& output)
 	{
+		output.resize(VIOLET_LANG_COUNT);
+
 		String source = FileSystem::FileToString(file);
 
 		String entry;
@@ -74,9 +77,9 @@ namespace lambda
 		target_descs[VIOLET_SPIRV].language = ShaderConductor::ShadingLanguage::SpirV;
 		target_descs[VIOLET_SPIRV].version  = nullptr;
 		target_descs[VIOLET_METAL].language = ShaderConductor::ShadingLanguage::Msl;
-		target_descs[VIOLET_METAL].version = nullptr;
-		target_descs[VIOLET_HLSL].language = ShaderConductor::ShadingLanguage::Hlsl;
-		target_descs[VIOLET_HLSL].version = "50";
+		target_descs[VIOLET_METAL].version  = nullptr;
+		target_descs[VIOLET_HLSL].language  = ShaderConductor::ShadingLanguage::Hlsl;
+		target_descs[VIOLET_HLSL].version   = "50";
 
 		ShaderConductor::Compiler::ResultDesc results[VIOLET_LANG_COUNT];
 		ShaderConductor::Compiler::Compile(source_desc, options, target_descs, VIOLET_LANG_COUNT, results);
@@ -94,16 +97,16 @@ namespace lambda
 				);
 
 				if (error == "error: missing entry point definition\n")
-					return Vector<Vector<uint32_t>>(VIOLET_LANG_COUNT);
+					return true;
 
 				String err = "ShaderConductor: Failed to compile shader \"" + file +
 					"\" with message:\n" + error;
 
-				LMB_ASSERT(false, err.c_str());
+				foundation::Info(err.c_str());
+				return false;
 			}
 		}
 
-		Vector<Vector<uint32_t>> res(VIOLET_LANG_COUNT);
 		for (int i = 0; i < VIOLET_LANG_COUNT; ++i)
 		{
 			Vector<char> temp;
@@ -118,24 +121,33 @@ namespace lambda
 				temp.resize(source.size());
 				memcpy(temp.data(), source.c_str(), source.size());
 			}
-			res[i] = utilities::convertVec<char, uint32_t>(temp);
+			output[i] = utilities::convertVec<char, uint32_t>(temp);
 		}
-		return res;
+
+		return true;
 	}
 
 	///////////////////////////////////////////////////////////////////////////
-	void VioletShaderCompiler::Compile(ShaderCompileInfo compile_info)
+	bool VioletShaderCompiler::Compile(ShaderCompileInfo compile_info)
 	{
 		VioletShader shader_program;
 		shader_program.file_path = compile_info.file;
 		shader_program.hash = GetHash(shader_program.file_path);
 		shader_program.blobs.resize((int)ShaderStages::kCount);
-		shader_program.blobs[(int)ShaderStages::kVertex]   = CompileX(compile_info.file, ShaderConductor::ShaderStage::VertexShader);
-		shader_program.blobs[(int)ShaderStages::kPixel]    = CompileX(compile_info.file, ShaderConductor::ShaderStage::PixelShader);
-		shader_program.blobs[(int)ShaderStages::kGeometry] = CompileX(compile_info.file, ShaderConductor::ShaderStage::GeometryShader);
-		shader_program.blobs[(int)ShaderStages::kHull]     = CompileX(compile_info.file, ShaderConductor::ShaderStage::HullShader);
-		shader_program.blobs[(int)ShaderStages::kDomain]   = CompileX(compile_info.file, ShaderConductor::ShaderStage::DomainShader);
-		shader_program.blobs[(int)ShaderStages::kCompute]  = CompileX(compile_info.file, ShaderConductor::ShaderStage::ComputeShader);
+		if (!CompileX(compile_info.file, ShaderConductor::ShaderStage::VertexShader, shader_program.blobs[(int)ShaderStages::kVertex]))
+			return false;
+		if (!CompileX(compile_info.file, ShaderConductor::ShaderStage::PixelShader, shader_program.blobs[(int)ShaderStages::kPixel]))
+			return false;
+		if (!CompileX(compile_info.file, ShaderConductor::ShaderStage::GeometryShader, shader_program.blobs[(int)ShaderStages::kGeometry]))
+			return false;
+		if (!CompileX(compile_info.file, ShaderConductor::ShaderStage::HullShader, shader_program.blobs[(int)ShaderStages::kHull]))
+			return false;
+		if (!CompileX(compile_info.file, ShaderConductor::ShaderStage::DomainShader, shader_program.blobs[(int)ShaderStages::kDomain]))
+			return false;
+		if (!CompileX(compile_info.file, ShaderConductor::ShaderStage::ComputeShader, shader_program.blobs[(int)ShaderStages::kCompute]))
+			return false;
+
 		AddShader(shader_program);
+		return true;
 	}
 }

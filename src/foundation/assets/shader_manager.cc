@@ -216,7 +216,6 @@ namespace lambda
 	VioletShaderManager::VioletShaderManager()
 	{
 		SetMagicNumber("shader");
-		SetFilePathIndex("shaders.vi");
 		SetGeneratedFilePath("generated/");
 		Load();
 	}

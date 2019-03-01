@@ -3,14 +3,17 @@
 #include <utils/utilities.h>
 #include <utils/console.h>
 #include <memory/memory.h>
-//#define STBI_MALLOC(sz)           lambda::foundation::Memory::allocate(sz)
-//#define STBI_REALLOC(p,newsz)     lambda::foundation::Memory::reallocate(p,newsz)
-//#define STBI_FREE(p)              lambda::foundation::Memory::deallocate(p)
-#define STBI_NO_STDIO
-//#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
+#if VIOLET_DIRECTX_TEX
 #include <DirectXTex.h>
 #include <wrl.h>
+#else
+#define STBI_MALLOC(sz)           lambda::foundation::Memory::allocate(sz)
+#define STBI_REALLOC(p,newsz)     lambda::foundation::Memory::reallocate(p,newsz)
+#define STBI_FREE(p)              lambda::foundation::Memory::deallocate(p)
+#define STBI_NO_STDIO
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+#endif
 
 #define VIOLET_GENERATE_MIPS 1
 
@@ -23,8 +26,9 @@ namespace lambda
   }
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  void VioletTextureCompiler::Compile(TextureCompileInfo texture_info)
+  bool VioletTextureCompiler::Compile(TextureCompileInfo texture_info)
   {
+#if VIOLET_DIRECTX_TEX
     HRESULT hr = CoInitializeEx(nullptr, COINITBASE_MULTITHREADED);
     LMB_ASSERT(SUCCEEDED(hr), "TextureCompiler: Could not initialize texture compiler.");
 
@@ -100,30 +104,85 @@ namespace lambda
 
     foundation::Memory::destruct(src_image);
     src_image = nullptr;
+#else
 
-    /*Vector<char> raw_texture = FileSystem::FileToVector(texture_info.file);
-    int w, h, bpp;
-    unsigned char* data = stbi_load_from_memory((unsigned char*)raw_texture.data(), (int)raw_texture.size(), &w, &h, &bpp, STBI_rgb_alpha);
+	String extension = FileSystem::GetExtension(texture_info.file);
+	Vector<unsigned char> raw_data;
+	int w, h;
+	bool contains_alpha = false;
+	TextureFormat format;
 
-    if (data == nullptr)
-    {
-      foundation::Error("Failed to load texture: " + texture_info.file + "\n");
-      foundation::Error("STBI Error: " + String(stbi_failure_reason()) + "\n");
-      LMB_ASSERT(false, "Texture compiler failed");
-      return;
-    }
+	if (extension == "hdr" || extension == "HDR")
+	{
+		format = TextureFormat::kR32G32B32A32;
 
-    Vector<unsigned char> raw_data(w * h * 4);
-    memcpy(raw_data.data(), data, raw_data.size());
-    stbi_image_free(data);
+		int bpp;
+		Vector<char> raw_texture = FileSystem::FileToVector(texture_info.file);
+		float* data = stbi_loadf_from_memory((unsigned char*)raw_texture.data(), (int)raw_texture.size(), &w, &h, &bpp, STBI_rgb_alpha);
+
+		if (data == nullptr)
+		{
+			foundation::Error("Failed to load texture: " + texture_info.file + "\n");
+			foundation::Error("STBI Error: " + String(stbi_failure_reason()) + "\n");
+			return false;
+		}
+
+		for (int i = 0; i < w * h * 4; i += 4)
+		{
+			if (data[i + 3] < 1.0f)
+			{
+				contains_alpha = true;
+				break;
+			}
+		}
+
+		raw_data.resize(w * h * 4 * sizeof(float));
+		memcpy(raw_data.data(), data, raw_data.size());
+		stbi_image_free(data);
+	}
+	else
+	{
+		format = TextureFormat::kR8G8B8A8;
+
+		int bpp;
+		Vector<char> raw_texture = FileSystem::FileToVector(texture_info.file);
+		uint8_t* data = stbi_load_from_memory((unsigned char*)raw_texture.data(), (int)raw_texture.size(), &w, &h, &bpp, STBI_rgb_alpha);
+
+		if (data == nullptr)
+		{
+			foundation::Error("Failed to load texture: " + texture_info.file + "\n");
+			foundation::Error("STBI Error: " + String(stbi_failure_reason()) + "\n");
+			return false;
+		}
+
+		for (int i = 0; i < w * h * 4; i += 4)
+		{
+			if (data[i + 3] < UINT8_MAX)
+			{
+				contains_alpha = true;
+				break;
+			}
+		}
+
+		raw_data.resize(w * h * 4);
+		memcpy(raw_data.data(), data, raw_data.size());
+		stbi_image_free(data);
+	}
 
     VioletTexture texture;
     texture.hash   = GetHash(texture_info.file);
     texture.file   = texture_info.file;
-    texture.format = TextureFormat::kR8G8B8A8;
+    texture.format = format;
     texture.width  = (uint32_t)w;
     texture.height = (uint32_t)h;
+	texture.mip_count = 1;
+	texture.flags = kTextureFlagFromDDS;
+	if (contains_alpha)
+		texture.flags |= kTextureFlagContainsAlpha;
     texture.data   = utilities::convertVec<unsigned char, uint32_t>(raw_data);
-    AddTexture(texture);*/
+    AddTexture(texture);
+
+	return true;
+#endif
   }
 }

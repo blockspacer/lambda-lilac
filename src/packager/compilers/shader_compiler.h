@@ -12,6 +12,6 @@ namespace lambda
 	{
 	public:
 		VioletShaderCompiler();
-		void Compile(ShaderCompileInfo compile_info);
+		bool Compile(ShaderCompileInfo compile_info);
 	};
 }

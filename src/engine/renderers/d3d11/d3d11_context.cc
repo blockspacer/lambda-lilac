@@ -491,7 +491,7 @@ namespace lambda
 
 #if GPU_MARKERS
       HRESULT result = context_.context->QueryInterface(
-        IID_PPV_ARGS(&user_defined_annotation_)
+        IID_PPV_ARGS(user_defined_annotation_.ReleaseAndGetAddressOf())
       );
 
       if (FAILED(result))

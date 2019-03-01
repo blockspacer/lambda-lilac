@@ -10,7 +10,6 @@ namespace lambda
   VioletShaderPassManager::VioletShaderPassManager()
   {
     SetMagicNumber("pass");
-    SetFilePathIndex("passes.vi");
     SetGeneratedFilePath("generated/");
     Load();
   }

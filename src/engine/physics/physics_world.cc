@@ -351,11 +351,8 @@ namespace lambda
       );
 
       Vector<entity::Entity> entities(callback.entities.size());
-      for (uint64_t i = 0u; i < entities.size(); ++i)
-      {
-				entities.at(i) = 
-					(uint32_t)callback.entities.at(i);
-      }
+	  for (uint64_t i = 0u; i < entities.size(); ++i)
+		  entities.at(i) = callback.entities.at(i);
       
       return entities;
     }

@@ -10,7 +10,6 @@ namespace lambda
   VioletWaveManager::VioletWaveManager()
   {
     SetMagicNumber("wav");
-    SetFilePathIndex("generated/waves");
     SetGeneratedFilePath("generated/");
     Load();
   }

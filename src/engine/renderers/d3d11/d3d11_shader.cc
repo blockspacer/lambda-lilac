@@ -21,15 +21,17 @@ namespace lambda
 				file_path_ = FileSystem::RemoveName(file_path_);
 			}
 
+
 			// Inherited via ID3DInclude
-			virtual HRESULT Open(
-				D3D_INCLUDE_TYPE IncludeType,
-				LPCSTR pFileName,
-				LPCVOID pParentData,
-				LPCVOID* ppData,
-				UINT* pBytes) override
+			STDMETHOD(Open)(
+				THIS_ D3D_INCLUDE_TYPE IncludeType, 
+				LPCSTR pFileName, 
+				LPCVOID pParentData, 
+				LPCVOID *ppData, 
+				UINT *pBytes) override
 			{
-				Vector<char> bytes = FileSystem::FileToVector(file_path_ + '/' + pFileName);
+				Vector<char> bytes = 
+					FileSystem::FileToVector(file_path_ + '/' + pFileName);
 				UINT size = (UINT)bytes.size();
 
 				*ppData = foundation::Memory::allocate(size);
@@ -38,7 +40,7 @@ namespace lambda
 				return S_OK;
 			}
 
-			virtual HRESULT Close(LPCVOID pData) override
+			STDMETHOD(Close)(THIS_ LPCVOID pData) override
 			{
 				foundation::Memory::deallocate((void*)pData);
 				return S_OK;

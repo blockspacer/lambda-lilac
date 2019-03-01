@@ -18,6 +18,13 @@ namespace lambda
 
 			virtual ultralight::String16 fallback_font() const override;
 			
+			virtual ultralight::String16 fallback_font_for_characters(
+				const ultralight::String16& characters, 
+				int weight, 
+				bool italic, 
+				float size) const override;
+
+
 			virtual ultralight::Ref<ultralight::Buffer> Load(
 				const ultralight::String16& family, 
 				int weight, 

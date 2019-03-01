@@ -79,7 +79,7 @@ PSOutput PS(VSOutput pIn)
 #endif
 
   float3 N      = normalize(pIn.normal);
-  float2 mr     = tex_mr.Sample(SamLinearWarp, pIn.tex).bg; //* metallic_roughness;
+  float2 mr     = tex_mr.Sample(SamLinearWarp, pIn.tex).gb; //* metallic_roughness;
   pOut.position = float4(pIn.hPosition.xyz, 1.0f);
   pOut.normal   = float4(N * 0.5f + 0.5f, 1.0f);
   pOut.mr       = float4(mr, 0.0f, 1.0f);

@@ -12,6 +12,6 @@ namespace lambda
   {
   public:
     VioletTextureCompiler();
-    void Compile(TextureCompileInfo texture_info);
+    bool Compile(TextureCompileInfo texture_info);
   };
 }

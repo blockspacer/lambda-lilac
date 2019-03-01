@@ -9,7 +9,6 @@ namespace lambda
   public: // Not virtuals
     void SetMagicNumber(String magic_number);
     void SetGeneratedFilePath(String file_path);
-    void SetFilePathIndex(String file_path);
     Vector<char> GetData(uint64_t hash) const;
     
     void Save() const;
@@ -22,7 +21,6 @@ namespace lambda
 
   private:
     String file_path_generated_;
-    String file_path_index_;
     String magic_number_;
   };
 }

@@ -5,6 +5,10 @@
 #include <Ultralight/Renderer.h>
 #include <tchar.h>
 
+#if VIOLET_WIN32
+#include <windows.h>
+#endif
+
 namespace lambda
 {
 	namespace gui
@@ -21,6 +25,16 @@ namespace lambda
 		
 		///////////////////////////////////////////////////////////////////////////
 		ultralight::String16 MyFontLoader::fallback_font() const
+		{
+			return ultralight::String16();
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		ultralight::String16 MyFontLoader::fallback_font_for_characters(
+			const ultralight::String16& characters, 
+			int weight, 
+			bool italic, 
+			float size) const
 		{
 			return ultralight::String16();
 		}

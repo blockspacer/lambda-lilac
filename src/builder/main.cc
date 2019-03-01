@@ -383,7 +383,7 @@ void removeFile(
     Error("[---] " + file + " removed!\n");
 }
 
-void updateFile(
+bool updateFile(
 	const lambda::String& file, 
 	lambda::VioletTextureCompiler texture_compiler, 
 	lambda::VioletWaveCompiler wave_compiler,
@@ -393,48 +393,68 @@ void updateFile(
   if (extension == "png" || extension == "jpg" || extension == "jpeg" || extension == "hdr")
   {
     lambda::foundation::Info("[TEX] " + file + "\n");
-    texture_compiler.RemoveTexture(texture_compiler.GetHash(file));
     lambda::foundation::Info("\tCompiling...\n");
 
     lambda::TextureCompileInfo compile_info{};
     compile_info.file = file;
-    texture_compiler.Compile(compile_info);
-    lambda::foundation::Info("\tCompiled!\n");
-    texture_compiler.Save();
-    lambda::foundation::Info("\tSaved!\n");
+    
+	if (texture_compiler.Compile(compile_info))
+	{
+      lambda::foundation::Info("\tCompiled!\n");
+      texture_compiler.Save();
+      lambda::foundation::Info("\tSaved!\n");
+	  return true;
+	}
+	else
+	{
+	  lambda::foundation::Info("\tCompilation failed!\n");
+	  return false;
+	}
   }
-	else if (extension == "wav")
-	{
-		lambda::foundation::Info("[WAV] " + file + "\n");
-		wave_compiler.RemoveWave(wave_compiler.GetHash(file));
-		lambda::foundation::Info("\tCompiling...\n");
-
-		lambda::WaveCompileInfo compile_info{};
-		compile_info.file = file;
-		wave_compiler.Compile(compile_info);
-		lambda::foundation::Info("\tCompiled!\n");
-
-		wave_compiler.Save();
-		lambda::foundation::Info("\tSaved!\n");
+  else if (extension == "wav")
+  {
+    lambda::foundation::Info("[WAV] " + file + "\n");
+    lambda::foundation::Info("\tCompiling...\n");
+    
+    lambda::WaveCompileInfo compile_info{};
+    compile_info.file = file;
+    if (wave_compiler.Compile(compile_info))
+    {
+      lambda::foundation::Info("\tCompiled!\n");
+      wave_compiler.Save();
+      lambda::foundation::Info("\tSaved!\n");
+	  return true;
 	}
-	else if (extension == "fx")
-	{
-		lambda::foundation::Info("[SHA] " + file + "\n");
-		shader_compiler.RemoveShader(shader_compiler.GetHash(file));
-		lambda::foundation::Info("\tCompiling...\n");
-
-		lambda::ShaderCompileInfo compile_info{};
-		compile_info.file = file;
-		shader_compiler.Compile(compile_info);
-		lambda::foundation::Info("\tCompiled!\n");
-
-		shader_compiler.Save();
-		lambda::foundation::Info("\tSaved!\n");
+    else
+    {
+      lambda::foundation::Info("\tCompilation failed!\n");
+	  return false;
 	}
+  }
+  else if (extension == "fx")
+  {
+    lambda::foundation::Info("[SHA] " + file + "\n");
+    lambda::foundation::Info("\tCompiling...\n");
+    
+    lambda::ShaderCompileInfo compile_info{};
+    compile_info.file = file;
+    if (shader_compiler.Compile(compile_info))
+    {
+      lambda::foundation::Info("\tCompiled!\n");
+      shader_compiler.Save();
+      lambda::foundation::Info("\tSaved!\n");
+	  return true;
+	}
+    else
+    {
+      lambda::foundation::Info("\tCompilation failed!\n");
+	  return false;
+    }
+  }
   else if (extension == "as")
-    Warning("[AS-] " + file + " changed!\n");
-  else if (extension == "chai")
-    Warning("[CHA] " + file + " changed!\n");
+	  Warning("[AS-] " + file + " changed!\n");
+  else if (extension == "wren")
+	  Warning("[WRE] " + file + " changed!\n");
   else if (extension == "glb")
     Warning("[MDL] " + file + " changed!\n");
   else if (extension == "ttf")
@@ -444,7 +464,8 @@ void updateFile(
   else if (extension == "ini")
     Warning("[INI] " + file + " changed!\n");
   else
-    Error("[---] " + file + " changed!\n");
+    Debug("[---] " + file + " changed!\n");
+  return true;
 }
 
 int main(int argc, char** argv)
@@ -456,8 +477,8 @@ int main(int argc, char** argv)
   lambda::FileSystem::SetBaseDir(argv[1]);
   TimeStampManager time_stamp_manager;
   lambda::VioletTextureCompiler texture_compiler;
-	lambda::VioletWaveCompiler wave_compiler;
-	lambda::VioletShaderCompiler shader_compiler;
+  lambda::VioletWaveCompiler wave_compiler;
+  lambda::VioletShaderCompiler shader_compiler;
 
   while (true)
   {
@@ -484,9 +505,8 @@ int main(int argc, char** argv)
 
       // Update the file.
       if (time_stamp_manager.hasFileChanged(file))
-        updateFile(file, texture_compiler, wave_compiler, shader_compiler);
-
-      time_stamp_manager.updateTimeStap(file);
+        if (updateFile(file, texture_compiler, wave_compiler, shader_compiler))
+		  time_stamp_manager.updateTimeStap(file);
     }
 
     // Remove all deleted files.

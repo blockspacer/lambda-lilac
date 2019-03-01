@@ -15,7 +15,7 @@ struct ID3D11DepthStencilView;
 struct ID3D11BlendState;
 struct ID3DUserDefinedAnnotation;
 
-#define GPU_MARKERS 1
+#define GPU_MARKERS 0
 #define GPU_TIMERS 0
 
 namespace lambda

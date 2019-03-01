@@ -12,6 +12,6 @@ namespace lambda
   {
   public:
     VioletWaveCompiler();
-    void Compile(WaveCompileInfo wave_info);
+	bool Compile(WaveCompileInfo wave_info);
   };
 }

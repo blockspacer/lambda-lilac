@@ -83,13 +83,13 @@ SET(VIOLET_CONFIG_FOUNDATION TRUE CACHE BOOL "[CORE] Should Foundation be build?
 SET(VIOLET_CONFIG_ENGINE TRUE CACHE BOOL "[CORE] Should Engine be build?")
 
 IF(${VIOLET_WIN32})
-  SET(VIOLET_CONFIG_TOOLS TRUE CACHE BOOL "[CORE] Should Tools be build?")
+  SET(VIOLET_CONFIG_TOOLS FALSE CACHE BOOL "[CORE] Should Tools be build?")
 ELSE()
   SET(VIOLET_CONFIG_TOOLS FALSE CACHE INTERNAL "[CORE] Tools not available on this platform.")
 ENDIF()
 
 IF(${VIOLET_WIN32})
-  SET(VIOLET_CONFIG_NETWORKING TRUE CACHE BOOL "[CORE] Should Networking be build?")
+  SET(VIOLET_CONFIG_NETWORKING FALSE CACHE BOOL "[CORE] Should Networking be build?")
 ELSE()
   SET(VIOLET_CONFIG_NETWORKING FALSE CACHE INTERNAL "[CORE] Networking not available on this platform.")
 ENDIF()
@@ -126,7 +126,7 @@ IF(${VIOLET_CONFIG_ENGINE})
 
 # /// WINDOWS ///////////////////////////////////////////////////
 	SET(VIOLET_WINDOW_GLFW FALSE CACHE BOOL "[WINDOW] Should GLFW Window be used?")
-	SET(VIOLET_WINDOW_SDL2 TRUE CACHE BOOL "[WINDOW] Should SDL2 Window be used?")
+	SET(VIOLET_WINDOW_SDL2 FALSE CACHE BOOL "[WINDOW] Should SDL2 Window be used?")
 
   IF(${VIOLET_WIN32})
     SET(VIOLET_WINDOW_WIN32 TRUE CACHE BOOL "[WINDOW] Should Win32 Window be used?")
@@ -135,13 +135,13 @@ IF(${VIOLET_CONFIG_ENGINE})
   ENDIF()
 
 # /// SCRIPTING /////////////////////////////////////////////////
-  SET(VIOLET_SCRIPTING_ANGEL TRUE CACHE BOOL "[SCRIPTING] Should AngelScript be used?")
+  SET(VIOLET_SCRIPTING_ANGEL FALSE CACHE BOOL "[SCRIPTING] Should AngelScript be used?")
   SET(VIOLET_SCRIPTING_WREN TRUE CACHE BOOL "[SCRIPTING] Should Wren be used?")
 
 # /// IMGUI /////////////////////////////////////////////////////
-	SET(VIOLET_IMGUI_NUKLEAR TRUE CACHE BOOL "[IMGUI] Should Nuklear ImGUI be used?")
+	SET(VIOLET_IMGUI_NUKLEAR FALSE CACHE BOOL "[IMGUI] Should Nuklear ImGUI be used?")
 	SET(VIOLET_IMGUI_DEAR FALSE CACHE BOOL "[IMGUI] Should Dear ImGUI be used?")
-	SET(VIOLET_IMGUI_NO FALSE CACHE BOOL "[IMGUI] Should No ImGUI be used?")
+	SET(VIOLET_IMGUI_NO TRUE CACHE BOOL "[IMGUI] Should No ImGUI be used?")
 	IF(NOT ${VIOLET_IMGUI_NUKLEAR} AND NOT ${VIOLET_IMGUI_DEAR})
 		SET(VIOLET_IMGUI_NO TRUE)
   ENDIF()
@@ -154,6 +154,7 @@ ENDIF()
 # /// TOOLS /////////////////////////////////////////////////////
 # ///////////////////////////////////////////////////////////////
 IF(${VIOLET_CONFIG_TOOLS})
+	SET(VIOLET_USE_DIRECTX_TEX FALSE CACHE BOOL "[TOOLS] Should DirectXTex be used?")
 ENDIF()
 # ///////////////////////////////////////////////////////////////
 # /// BOOLEANS //////////////////////////////////////////////////

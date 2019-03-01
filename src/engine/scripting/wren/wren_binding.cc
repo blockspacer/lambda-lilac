@@ -137,7 +137,7 @@ class GUI {
 				const UserDataWrapper& ud = *(UserDataWrapper*)user_data;
 
 				Vector<ScriptValue> args;
-				for (int i = 0; i < js_args.size(); ++i)
+				for (uint32_t i = 0; i < js_args.size(); ++i)
 				{
 					if (js_args[i].isBool())
 						args.push_back(ScriptValue(js_args[i].asBool()));
@@ -1944,9 +1944,9 @@ foreign class GameObject {
 
 					Vector<String> tags((size_t)wrenGetListCount(vm, 1));
 
-					for (int i = 0; i < tags.size(); ++i)
+					for (uint32_t i = 0; i < tags.size(); ++i)
 					{
-						wrenGetListElement(vm, 1, i, 2);
+						wrenGetListElement(vm, 1, (int)i, 2);
 						tags[i] = wrenGetSlotString(vm, 2);
 					}
 

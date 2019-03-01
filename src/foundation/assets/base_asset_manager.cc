@@ -18,12 +18,6 @@ namespace lambda
   }
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  void VioletBaseAssetManager::SetFilePathIndex(String file_path)
-  {
-    file_path_index_ = file_path;
-  }
-
-  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   Vector<char> VioletBaseAssetManager::GetData(uint64_t hash) const
   {
     return LoadData(hash);
@@ -32,33 +26,11 @@ namespace lambda
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   void VioletBaseAssetManager::Save() const
   {
-    /*Vector<char> index(indices_.size() * sizeof(VioletPackageIndex));
-    memcpy((void*)index.data(), indices_.data(), index.size());
-
-    VioletPackage index_package;
-    index_package.setContainsIndex(true);
-    index_package.SetMagicNumber(magic_number_);
-    index_package.SetData(index);
-    index_package.Save(file_path_index_);*/
   }
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   void VioletBaseAssetManager::Load()
   {
-    //indices_.clear();
-
-    VioletPackage index_package;
-    index_package.SetMagicNumber(magic_number_);
-    index_package.Load(file_path_index_);
-
-    Vector<char> data = index_package.GetData();
-
-    // Early out.
-    if (data.empty())
-      return;
-
-    //indices_.resize(data.size() / sizeof(VioletPackageIndex));
-    //memcpy((void*)indices_.data(), data.data(), data.size());
   }
 
   void VioletBaseAssetManager::SaveData(Vector<char> data, uint64_t hash)

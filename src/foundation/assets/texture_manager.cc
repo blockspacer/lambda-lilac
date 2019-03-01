@@ -10,7 +10,6 @@ namespace lambda
   VioletTextureManager::VioletTextureManager()
   {
     SetMagicNumber("tex");
-    SetFilePathIndex("generated/textures");
     SetGeneratedFilePath("generated/");
     Load();
   }

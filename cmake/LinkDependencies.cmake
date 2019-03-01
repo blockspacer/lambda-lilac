@@ -176,7 +176,7 @@ function(LinkDependencies)
       "deps/stb/stb_vorbis.c"               "deps/stb/stb_voxel_render.h"          "deps/stb/stretchy_buffer.h")
     ADD_LIBRARY(stb ${StbSources})
     TARGET_INCLUDE_DIRECTORIES(stb INTERFACE "deps/stb")
-    SetSolutionFolder("deps/asset"      stb)
+    SetSolutionFolder("deps/asset" stb)
 
   # /// TINY GLTF /////////////////////////////////////////////////
     ADD_LIBRARY(tiny-gltf INTERFACE)
@@ -294,40 +294,42 @@ function(LinkDependencies)
     #SetSolutionFolder("deps/asset" hlslcc)
     
   # /// DIRECTX TEX ///////////////////////////////////////////////
-    SET(DirectXTexSources
-    "deps/DirectXTex/DirectXTex/BC.h"
-    "deps/DirectXTex/DirectXTex/BCDirectCompute.h"
-    "deps/DirectXTex/DirectXTex/d3dx12.h"
-    "deps/DirectXTex/DirectXTex/DDS.h"
-    "deps/DirectXTex/DirectXTex/DirectXTex.h"
-    "deps/DirectXTex/DirectXTex/DirectXTexP.h"
-    "deps/DirectXTex/DirectXTex/Filters.h"
-    "deps/DirectXTex/DirectXTex/scoped.h"
-    "deps/DirectXTex/DirectXTex/BC.cpp"
-    "deps/DirectXTex/DirectXTex/BC4BC5.cpp"
-    "deps/DirectXTex/DirectXTex/BC6HBC7.cpp"
-    "deps/DirectXTex/DirectXTex/BCDirectCompute.cpp"
-    "deps/DirectXTex/DirectXTex/DirectXTexCompress.cpp"
-    "deps/DirectXTex/DirectXTex/DirectXTexCompressGPU.cpp"
-    "deps/DirectXTex/DirectXTex/DirectXTexConvert.cpp"
-    "deps/DirectXTex/DirectXTex/DirectXTexD3D11.cpp"
-    "deps/DirectXTex/DirectXTex/DirectXTexD3D12.cpp"
-    "deps/DirectXTex/DirectXTex/DirectXTexDDS.cpp"
-    "deps/DirectXTex/DirectXTex/DirectXTexFlipRotate.cpp"
-    "deps/DirectXTex/DirectXTex/DirectXTexHDR.cpp"
-    "deps/DirectXTex/DirectXTex/DirectXTexImage.cpp"
-    "deps/DirectXTex/DirectXTex/DirectXTexMipmaps.cpp"
-    "deps/DirectXTex/DirectXTex/DirectXTexMisc.cpp"
-    "deps/DirectXTex/DirectXTex/DirectXTexNormalMaps.cpp"
-    "deps/DirectXTex/DirectXTex/DirectXTexPMAlpha.cpp"
-    "deps/DirectXTex/DirectXTex/DirectXTexResize.cpp"
-    "deps/DirectXTex/DirectXTex/DirectXTexTGA.cpp"
-    "deps/DirectXTex/DirectXTex/DirectXTexUtil.cpp"
-    "deps/DirectXTex/DirectXTex/DirectXTexWIC.cpp"
-    )
-    ADD_LIBRARY(directxtex ${DirectXTexSources})
-    TARGET_INCLUDE_DIRECTORIES(directxtex INTERFACE "deps/DirectXTex/DirectXTex")
-    SetSolutionFolder("deps/asset" directxtex)
+    IF(${VIOLET_USE_DIRECTX_TEX})
+	    SET(DirectXTexSources
+        "deps/DirectXTex/DirectXTex/BC.h"
+        "deps/DirectXTex/DirectXTex/BCDirectCompute.h"
+        "deps/DirectXTex/DirectXTex/d3dx12.h"
+        "deps/DirectXTex/DirectXTex/DDS.h"
+        "deps/DirectXTex/DirectXTex/DirectXTex.h"
+        "deps/DirectXTex/DirectXTex/DirectXTexP.h"
+        "deps/DirectXTex/DirectXTex/Filters.h"
+        "deps/DirectXTex/DirectXTex/scoped.h"
+        "deps/DirectXTex/DirectXTex/BC.cpp"
+        "deps/DirectXTex/DirectXTex/BC4BC5.cpp"
+        "deps/DirectXTex/DirectXTex/BC6HBC7.cpp"
+        "deps/DirectXTex/DirectXTex/BCDirectCompute.cpp"
+        "deps/DirectXTex/DirectXTex/DirectXTexCompress.cpp"
+        "deps/DirectXTex/DirectXTex/DirectXTexCompressGPU.cpp"
+        "deps/DirectXTex/DirectXTex/DirectXTexConvert.cpp"
+        "deps/DirectXTex/DirectXTex/DirectXTexD3D11.cpp"
+        "deps/DirectXTex/DirectXTex/DirectXTexD3D12.cpp"
+        "deps/DirectXTex/DirectXTex/DirectXTexDDS.cpp"
+        "deps/DirectXTex/DirectXTex/DirectXTexFlipRotate.cpp"
+        "deps/DirectXTex/DirectXTex/DirectXTexHDR.cpp"
+        "deps/DirectXTex/DirectXTex/DirectXTexImage.cpp"
+        "deps/DirectXTex/DirectXTex/DirectXTexMipmaps.cpp"
+        "deps/DirectXTex/DirectXTex/DirectXTexMisc.cpp"
+        "deps/DirectXTex/DirectXTex/DirectXTexNormalMaps.cpp"
+        "deps/DirectXTex/DirectXTex/DirectXTexPMAlpha.cpp"
+        "deps/DirectXTex/DirectXTex/DirectXTexResize.cpp"
+        "deps/DirectXTex/DirectXTex/DirectXTexTGA.cpp"
+        "deps/DirectXTex/DirectXTex/DirectXTexUtil.cpp"
+        "deps/DirectXTex/DirectXTex/DirectXTexWIC.cpp"
+	    )
+	    ADD_LIBRARY(directxtex ${DirectXTexSources})
+	    TARGET_INCLUDE_DIRECTORIES(directxtex INTERFACE "deps/DirectXTex/DirectXTex")
+	    SetSolutionFolder("deps/asset" directxtex)
+    ENDIF()
   ELSE()
       SET(VIOLET_USE_HLSLCC OFF CACHE BOOL "" FORCE)
 
