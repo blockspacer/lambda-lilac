@@ -77,12 +77,15 @@ You can check out the documentation for our scripting implementation <a href="do
 #How to clone this repository
 <table>
   <tr>
+    <td>Clone this repo</td>
+    <td>git clone https://github.com/hvonck/lambda-lilac.git</td>
+  </tr>
+  <tr>
     <td>Make sure that you have LFS installed</td>
     <td>git lfs install --skip-smudge</td>
   </tr>
-  <tr>
-    <td>Clone this repo</td>
-    <td>git clone https://github.com/hvonck/lambda-lilac.git</td>
+    <td>Fetch all LFS files</td>
+    <td>git lfs fetch</td>
   </tr>
   <tr>
     <td>Initialize all submodules</td>
