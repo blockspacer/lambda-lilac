@@ -85,7 +85,7 @@ You can check out the documentation for our scripting implementation <a href="do
     <td>git lfs install --skip-smudge</td>
   </tr>
     <td>Fetch all LFS files</td>
-    <td>git lfs fetch</td>
+    <td>git lfs pull</td>
   </tr>
   <tr>
     <td>Initialize all submodules</td>
