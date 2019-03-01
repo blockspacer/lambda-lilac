@@ -75,5 +75,6 @@ You can check out the documentation for our scripting implementation <a href="do
 </div>
 
 <b>Make sure to install LFS with: </b> git lfs install --skip-smudge
+<b>To get all submodules execute these two commands: </b> <b>1)</b> git submodule init <b>2)</b> git submodule update --recursive --remote
 
 [![Waffle.io - Columns and their card count](https://badge.waffle.io/hvonck/lambda-engine.svg?columns=all)](https://waffle.io/hvonck/lambda-engine)
