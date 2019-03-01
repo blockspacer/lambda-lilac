@@ -9,18 +9,18 @@ I have also learned how to design the systems that make the engine function, lik
 <br>
 Some of the features that we have currently implemented are:<br>
 <table>
-  <tr><th><p>Graphics</th><td><b>DirectX11</b> and <b>Metal<sup>1</sup></b></p></td></tr>
-  <tr><th><p>Windows</th><td><b>Win32</b>, <b>GLFW</b> and <b>SDL2<sup>2</sup></b></p></td></tr>
+  <tr><th><p>Graphics</th><td><b>DirectX11</b> and <b>Metal</b><sup>1</sup></p></td></tr>
+  <tr><th><p>Windows</th><td><b>Win32</b>, <b>GLFW</b> and <b>SDL2</b><sup>2</sup></p></td></tr>
   <tr><th><p>GUI</th><td><b>UltraLight</b></p></td></tr>
-  <tr><th><p>Scripting</th><td><b>Wren</b> and <b>AngelScript<sup>3</sup></b></p></td></tr>
+  <tr><th><p>Scripting</th><td><b>Wren</b> and <b>AngelScript</b><sup>3</sup></p></td></tr>
   <tr><th><p>Audio</th><td><b>SoLoud</b></p></td></tr>
   <tr><th><p>Physics</th><td><b>Bullet3</b></p></td></tr>
-  <tr><th><p>Networking</th><td><b>ENet<sup>3</sup></b></p></td></tr>
-  <tr><th><p>Tools</th><td><b>ShaderConductor</b>, <b>DirectXTex</b>, <b>TinyGLTF<sup>1</sup></b> and <b>Assimp<sup>3</sup></b></p></td></tr>
+  <tr><th><p>Networking</th><td><b>ENet</b><sup>3</sup></p></td></tr>
+  <tr><th><p>Tools</th><td><b>ShaderConductor</b>, <b>DirectXTex</b>, <b>TinyGLTF</b><sup>1</sup> and <b>Assimp</b><sup>3</sup></p></td></tr>
 </table>
-1) In progress<br/>
-2) Does not work on Windows<br/>
-3) Deprecated<br/>
+<b>1)</b> In progress<br/>
+<b>2)</b> Does not work on Windows<br/>
+<b>3)</b> Deprecated<br/>
 <br/>
 I however have not skipped on the graphics department. These are the post processing effects that I have currently implemented:<br>
 <li>Physically Based Rendering (PBR)</li>
