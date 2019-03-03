@@ -23,7 +23,11 @@ namespace lambda
 			void setShaderVariable(const platform::ShaderVariable& variable);
 			Vector<platform::ShaderVariable> getQueuedShaderVariables();
 
+			bool getKeepInMemory() const;
+			void setKeepInMemory(bool keep_in_memory);
+
 		private:
+			bool keep_in_memory_;
 			VioletShader shader_;
 			Vector<platform::ShaderVariable> queued_shader_variables_;
 		};

@@ -3,19 +3,22 @@
 #include <utils/utilities.h>
 #include <utils/console.h>
 #include <memory/memory.h>
-#if VIOLET_DIRECTX_TEX
-#include <DirectXTex.h>
-#include <wrl.h>
-#else
+
 #define STBI_MALLOC(sz)           lambda::foundation::Memory::allocate(sz)
 #define STBI_REALLOC(p,newsz)     lambda::foundation::Memory::reallocate(p,newsz)
 #define STBI_FREE(p)              lambda::foundation::Memory::deallocate(p)
 #define STBI_NO_STDIO
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
-#endif
 
-#define VIOLET_GENERATE_MIPS 1
+#define STB_IMAGE_RESIZE_IMPLEMENTATION
+#include <stb_image_resize.h>
+
+#define STBI_MSC_SECURE_CRT
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb_image_write.h>
+
+#include <algorithm>
 
 namespace lambda
 {
@@ -25,164 +28,130 @@ namespace lambda
   {
   }
 
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	int calcImageSize(int w, int h, int mips)
+	{
+		int data_size = 0;
+		for (int i = 0; i < mips; ++i)
+		{
+			data_size += w * h * 4;
+			w = std::max(1, w / 2);
+			h = std::max(1, h / 2);
+		}
+		return data_size;
+	}
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	void genMips(int w, int h, int mips, unsigned char* data)
+	{
+		int offset = 0;
+
+		for (int i = 0; i < mips - 1; ++i)
+		{
+			int new_width = std::max(1, w / 2);
+			int new_height = std::max(1, h / 2);
+			int new_offset = offset + w * h * 4;
+
+			stbir_resize_uint8(
+				data + offset,
+				w,
+				h,
+				0,
+				data + new_offset,
+				new_width,
+				new_height,
+				0,
+				STBI_rgb_alpha
+			);
+
+			w = new_width;
+			h = new_height;
+			offset = new_offset;
+		}
+	}
+
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  bool VioletTextureCompiler::Compile(TextureCompileInfo texture_info)
+	bool VioletTextureCompiler::Compile(TextureCompileInfo texture_info)
   {
-#if VIOLET_DIRECTX_TEX
-    HRESULT hr = CoInitializeEx(nullptr, COINITBASE_MULTITHREADED);
-    LMB_ASSERT(SUCCEEDED(hr), "TextureCompiler: Could not initialize texture compiler.");
-
-    // Flags.
-    bool compress = true;
-    bool generate_mips = true;
-    TextureFormat format = TextureFormat::kBC3;
-
-    // Load file.
-    Vector<char> raw_texture = FileSystem::FileToVector(texture_info.file);
-    DirectX::TexMetadata info;
-    DirectX::ScratchImage* src_image = foundation::Memory::construct<DirectX::ScratchImage>();
-    if (FileSystem::GetExtension(texture_info.file) == "hdr")
-    {
-      hr = DirectX::LoadFromHDRMemory(raw_texture.data(), raw_texture.size(), &info, *src_image);
-      format = TextureFormat::kBC6;
-      generate_mips = false;
-    }
-    else
-      hr = DirectX::LoadFromWICMemory(raw_texture.data(), raw_texture.size(), DirectX::DDS_FLAGS_NONE, &info, *src_image);
-    LMB_ASSERT(SUCCEEDED(hr), "TextureCompiler: Could not load file.");
-
-    // Generate mip maps.
-    if (generate_mips)
-    {
-      DirectX::ScratchImage* dst_image = foundation::Memory::construct<DirectX::ScratchImage>();
-      hr = DirectX::GenerateMipMaps(src_image->GetImages(), src_image->GetImageCount(), src_image->GetMetadata(), DirectX::TEX_FILTER_DEFAULT, 0u, *dst_image);
-      foundation::Memory::destruct(src_image);
-      src_image = dst_image;
-      LMB_ASSERT(SUCCEEDED(hr), "TextureCompiler: Could not generate mip maps.");
-    }
-
-    // Convert file.
-    if (compress)
-    {
-      DXGI_FORMAT compression_format;
-      switch (format)
-      {
-      case TextureFormat::kBC1: compression_format = DXGI_FORMAT_BC1_UNORM; break;
-      case TextureFormat::kBC2: compression_format = DXGI_FORMAT_BC2_UNORM; break;
-      case TextureFormat::kBC3: compression_format = DXGI_FORMAT_BC3_UNORM; break;
-      case TextureFormat::kBC4: compression_format = DXGI_FORMAT_BC4_UNORM; break;
-      case TextureFormat::kBC5: compression_format = DXGI_FORMAT_BC5_UNORM; break;
-      case TextureFormat::kBC6: compression_format = DXGI_FORMAT_BC6H_UF16; break;
-      case TextureFormat::kBC7: compression_format = DXGI_FORMAT_BC7_UNORM; break;
-      }
-
-      DirectX::ScratchImage* dst_image = foundation::Memory::construct<DirectX::ScratchImage>();
-      hr = DirectX::Compress(src_image->GetImages(), src_image->GetImageCount(), src_image->GetMetadata(),
-        compression_format, DirectX::TEX_COMPRESS_DEFAULT, DirectX::TEX_THRESHOLD_DEFAULT, *dst_image);
-      foundation::Memory::destruct(src_image);
-      src_image = dst_image;
-      LMB_ASSERT(SUCCEEDED(hr), "TextureCompiler: Could not compress a texture.");
-    }
-
-    // Get DDS data.
-    DirectX::Blob blob;
-    DirectX::SaveToDDSMemory(src_image->GetImages(), src_image->GetImageCount(), src_image->GetMetadata(), DirectX::DDS_FLAGS_NONE, blob);
-
-    VioletTexture texture;
-    texture.hash   = GetHash(texture_info.file);
-    texture.file   = texture_info.file;
-    texture.format = format;
-    texture.width  = (uint16_t)src_image->GetImage(0u, 0u, 0u)->width;
-    texture.height = (uint16_t)src_image->GetImage(0u, 0u, 0u)->height;
-    texture.mip_count = (uint16_t)src_image->GetImageCount(); // TODO (Hilze): Verify.
-    texture.flags  = kTextureFlagFromDDS;
-    if (!src_image->IsAlphaAllOpaque())
-      texture.flags |= kTextureFlagContainsAlpha;
-    texture.data.resize((uint32_t)((blob.GetBufferSize() + (sizeof(uint32_t) - 1u)) / sizeof(uint32_t)), 0u);
-    memcpy(texture.data.data(), blob.GetBufferPointer(), blob.GetBufferSize());
-    AddTexture(texture);
-
-    foundation::Memory::destruct(src_image);
-    src_image = nullptr;
-#else
-
-	String extension = FileSystem::GetExtension(texture_info.file);
-	Vector<unsigned char> raw_data;
-	int w, h;
-	bool contains_alpha = false;
-	TextureFormat format;
-
-	if (extension == "hdr" || extension == "HDR")
-	{
-		format = TextureFormat::kR32G32B32A32;
-
-		int bpp;
+		String extension = FileSystem::GetExtension(texture_info.file);
+		Vector<char> raw_data;
+		int w, h, num_mips;
+		bool contains_alpha = false;
+		TextureFormat format;
 		Vector<char> raw_texture = FileSystem::FileToVector(texture_info.file);
-		float* data = stbi_loadf_from_memory((unsigned char*)raw_texture.data(), (int)raw_texture.size(), &w, &h, &bpp, STBI_rgb_alpha);
 
-		if (data == nullptr)
+		if (stbi_is_hdr_from_memory((unsigned char*)raw_texture.data(), (int)raw_texture.size()))
 		{
-			foundation::Error("Failed to load texture: " + texture_info.file + "\n");
-			foundation::Error("STBI Error: " + String(stbi_failure_reason()) + "\n");
-			return false;
-		}
+			format = TextureFormat::kR32G32B32A32;
 
-		for (int i = 0; i < w * h * 4; i += 4)
-		{
-			if (data[i + 3] < 1.0f)
+			int bpp;
+			float* data = stbi_loadf_from_memory((unsigned char*)raw_texture.data(), (int)raw_texture.size(), &w, &h, &bpp, STBI_rgb_alpha);
+
+			if (data == nullptr)
 			{
-				contains_alpha = true;
-				break;
+				foundation::Error("Failed to load texture: " + texture_info.file + "\n");
+				foundation::Error("STBI Error: " + String(stbi_failure_reason()) + "\n");
+				return false;
 			}
-		}
 
-		raw_data.resize(w * h * 4 * sizeof(float));
-		memcpy(raw_data.data(), data, raw_data.size());
-		stbi_image_free(data);
-	}
-	else
-	{
-		format = TextureFormat::kR8G8B8A8;
-
-		int bpp;
-		Vector<char> raw_texture = FileSystem::FileToVector(texture_info.file);
-		uint8_t* data = stbi_load_from_memory((unsigned char*)raw_texture.data(), (int)raw_texture.size(), &w, &h, &bpp, STBI_rgb_alpha);
-
-		if (data == nullptr)
-		{
-			foundation::Error("Failed to load texture: " + texture_info.file + "\n");
-			foundation::Error("STBI Error: " + String(stbi_failure_reason()) + "\n");
-			return false;
-		}
-
-		for (int i = 0; i < w * h * 4; i += 4)
-		{
-			if (data[i + 3] < UINT8_MAX)
+			for (int i = 0; i < w * h * 4; i += 4)
 			{
-				contains_alpha = true;
-				break;
+				if (data[i + 3] < 1.0f)
+				{
+					contains_alpha = true;
+					break;
+				}
 			}
+
+			num_mips = 1;
+
+			raw_data.resize(w * h * 4 * sizeof(float)* num_mips);
+			memcpy(raw_data.data(), data, w * h * 4 * sizeof(float));
+			stbi_image_free(data);
+		}
+		else
+		{
+			format = TextureFormat::kR8G8B8A8;
+
+			int bpp;
+			uint8_t* data = stbi_load_from_memory((unsigned char*)raw_texture.data(), (int)raw_texture.size(), &w, &h, &bpp, STBI_rgb_alpha);
+
+			if (data == nullptr)
+			{
+				foundation::Error("Failed to load texture: " + texture_info.file + "\n");
+				foundation::Error("STBI Error: " + String(stbi_failure_reason()) + "\n");
+				return false;
+			}
+
+			for (int i = 0; i < w * h * 4; i += 4)
+			{
+				if (data[i + 3] < UINT8_MAX)
+				{
+					contains_alpha = true;
+					break;
+				}
+			}
+
+			num_mips = (int)floorf(std::log2f(std::fminf((float)w, (float)h)) + 1.0f);
+
+			int data_size = calcImageSize(w, h, num_mips);
+			raw_data.resize(data_size);
+			memcpy(raw_data.data(), data, w * h * 4);
+			stbi_image_free(data);
+			genMips(w, h, num_mips, (unsigned char*)raw_data.data());
 		}
 
-		raw_data.resize(w * h * 4);
-		memcpy(raw_data.data(), data, raw_data.size());
-		stbi_image_free(data);
-	}
+		VioletTexture texture;
+		texture.hash      = GetHash(texture_info.file);
+		texture.file      = texture_info.file;
+		texture.format    = format;
+		texture.width     = (uint32_t)w;
+		texture.height    = (uint32_t)h;
+		texture.mip_count = num_mips;
+		texture.flags     = kTextureFlagFromDDS | (contains_alpha ? kTextureFlagContainsAlpha : 0);
+		texture.data      = raw_data;
+		AddTexture(texture);
 
-    VioletTexture texture;
-    texture.hash   = GetHash(texture_info.file);
-    texture.file   = texture_info.file;
-    texture.format = format;
-    texture.width  = (uint32_t)w;
-    texture.height = (uint32_t)h;
-	texture.mip_count = 1;
-	texture.flags = kTextureFlagFromDDS;
-	if (contains_alpha)
-		texture.flags |= kTextureFlagContainsAlpha;
-    texture.data   = utilities::convertVec<unsigned char, uint32_t>(raw_data);
-    AddTexture(texture);
-
-	return true;
-#endif
+		return true;
   }
 }

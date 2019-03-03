@@ -80,10 +80,12 @@ namespace lambda
         kTextureFlagIsRenderTarget) ? true : false;
 			is_dynamic = ((texture->getLayer(0u).getFlags() &
 				kTextureFlagDynamicData) && !is_render_target) ? true : false;
+			bool from_dds = (texture->getLayer(0u).getFlags() & kTextureFlagFromDDS)
+				? true : false;
       UINT bind_flags    = is_render_target ? 
         (format_ == DXGI_FORMAT_R24G8_TYPELESS ? D3D11_BIND_DEPTH_STENCIL : 
           D3D11_BIND_RENDER_TARGET) : 0u;
-      bool contains_data = !texture->getLayer(0u).getData().empty();
+      bool contains_data = !texture->getLayer(0u).getData().empty() || from_dds;
 
       desc.Width              = texture->getLayer(0u).getWidth();
       desc.Height             = texture->getLayer(0u).getHeight();
@@ -93,7 +95,8 @@ namespace lambda
       desc.SampleDesc.Count   = 1u;
       desc.SampleDesc.Quality = 0u;
       desc.Usage              = is_dynamic ? D3D11_USAGE_DYNAMIC :
-				(is_render_target || !contains_data) ? D3D11_USAGE_DEFAULT : D3D11_USAGE_IMMUTABLE;
+				(is_render_target || !contains_data) ?
+				D3D11_USAGE_DEFAULT : D3D11_USAGE_IMMUTABLE;
       desc.BindFlags          = D3D11_BIND_SHADER_RESOURCE | bind_flags;
       desc.CPUAccessFlags     = is_dynamic ? D3D11_CPU_ACCESS_WRITE : 0u;
       desc.MiscFlags          = 0u | 
@@ -101,14 +104,25 @@ namespace lambda
 
       datas.resize(contains_data ? desc.ArraySize * desc.MipLevels : 0u);
 
+			Vector<Vector<char>> dds_data(desc.ArraySize);
+
       for (uint32_t layer = 0u; layer < desc.ArraySize && 
         contains_data; ++layer)
       {
         uint32_t w = texture->getLayer(layer).getWidth();
         uint32_t h = texture->getLayer(layer).getHeight();
 
+
+				const char* data = texture->getLayer(layer).getData().data();
+				if (!data && from_dds)
+				{
+					dds_data[layer] = asset::TextureManager::getInstance()->getData(texture);
+					data = dds_data[layer].data();
+				}
+					
+
         uint32_t offset = 0u;
-        if (texture->getLayer(layer).getData()[0u] == 0x20534444)
+        if (*((uint32_t*)data) == 0x20534444)
         {
           // TODO (Hilze): Read the DDS header and find out
           // if it uses the extended or normal header.
@@ -118,9 +132,6 @@ namespace lambda
           else
             offset = 128u;
         }
-
-        const char* data = 
-          (const char*)texture->getLayer(layer).getData().data();
 
         for (uint32_t mip = 0u; mip < desc.MipLevels; ++mip)
         {
@@ -223,7 +234,8 @@ namespace lambda
 			{
 				auto& layer = texture->getLayer(i);
 
-				if (layer.isDirty())
+				// TODO (Hilze): Find out why DDSses are dynamic.
+				if (layer.isDirty() && !(layer.getFlags() & kTextureFlagFromDDS))
 				{
 					D3D11_MAPPED_SUBRESOURCE mapped_resource;
 					HRESULT result = context->Map(texture_[0], i, D3D11_MAP_WRITE_DISCARD, 0, &mapped_resource);

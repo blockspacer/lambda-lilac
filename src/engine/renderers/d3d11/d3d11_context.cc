@@ -425,7 +425,7 @@ namespace lambda
         D3D_FEATURE_LEVEL supported_level;
 
         UINT create_device_flags = 0;
-#ifdef _DEBUG
+#ifndef NDEBUG
         create_device_flags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
         D3D_DRIVER_TYPE driver_types[] = {
@@ -1635,7 +1635,7 @@ namespace lambda
         textures_.insert(
           eastl::make_pair(
             texture.getHash(), 
-            RefType<D3D11RenderTexture>{ d3d11_texture, 0u, 0.0f }
+            RefType<D3D11RenderTexture>{ d3d11_texture, 0u, 0.0f, false }
           )
         );
         it = textures_.find(texture.getHash());
@@ -1686,7 +1686,7 @@ namespace lambda
         meshes_.insert(
           eastl::make_pair(
             mesh.id, 
-            RefType<D3D11Mesh>{ d3d11_mesh, 0u, 0.0f }
+            RefType<D3D11Mesh>{ d3d11_mesh, 0u, 0.0f, false }
           )
         );
 
@@ -1727,7 +1727,7 @@ namespace lambda
 				shaders_.insert(
 					eastl::make_pair(
 						shader.getHash(),
-						RefType<D3D11Shader>{ d3d11_shader, 0u, 0.0f }
+						RefType<D3D11Shader>{ d3d11_shader, 0u, 0.0f, shader->getKeepInMemory() }
 				)
 				);
 				it = shaders_.find(shader.getHash());
@@ -1788,7 +1788,7 @@ namespace lambda
           if (it.second.ref == 0u)
           {
             it.second.time += dt;
-            if (it.second.time >= kMaxTime)
+            if (it.second.time >= kMaxTime && !it.second.keep_in_memory)
               marked_for_delete.push_back(it.first);
           }
           else
@@ -1808,7 +1808,7 @@ namespace lambda
           if (it.second.ref == 0u)
           {
             it.second.time += dt;
-            if (it.second.time >= kMaxTime)
+            if (it.second.time >= kMaxTime && !it.second.keep_in_memory)
               marked_for_delete.push_back(it.first);
           }
           else
@@ -1828,7 +1828,7 @@ namespace lambda
 					if (it.second.ref == 0u)
 					{
 						it.second.time += dt;
-						if (it.second.time >= kMaxTime)
+						if (it.second.time >= kMaxTime && !it.second.keep_in_memory)
 							marked_for_delete.push_back(it.first);
 					}
 					else

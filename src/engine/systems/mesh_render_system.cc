@@ -340,7 +340,7 @@ namespace lambda
         1u, 1u, 1u,
         TextureFormat::kR8G8B8A8,
         0u,
-        Vector<unsigned char>{ 0u, 255u, 0u, 0u }
+        Vector<unsigned char>{ 0u, 0u, 255u, 0u }
       );
     }
     void MeshRenderSystem::deinitialize()

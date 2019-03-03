@@ -118,31 +118,27 @@ namespace lambda
         glm::vec2 uv2 = tex_coords[i2];
         glm::vec2 uv3 = tex_coords[i3];
 
-        glm::vec3 tangent;
-        glm::vec3 edge1 = p2 - p1;
-        glm::vec3 edge2 = p3 - p1;
-        glm::vec2 edge1uv = uv2 - uv1;
-        glm::vec2 edge2uv = uv3 - uv1;
+				glm::vec3 edge1 = p2 - p1;
+				glm::vec3 edge2 = p3 - p1;
+				glm::vec2 deltaUV1 = uv2 - uv1;
+				glm::vec2 deltaUV2 = uv3 - uv1;
 
-        float t = edge1uv.x * edge2uv.y - edge2uv.x * edge1uv.y;
+				float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
 
-        if (t != 0.0f) {
-          float mul = 1.0f / t;
-          tangent = (edge2uv.y * edge1 - edge1uv.y * edge2) * mul;
-        }
+				glm::vec3 tangent;
+				tangent.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+				tangent.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+				tangent.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+				tangent = glm::normalize(tangent);
 
         tangents[i1] += tangent;
         tangents[i2] += tangent;
         tangents[i3] += tangent;
       }
 
-      for (uint32_t i = 0; i < positions.size(); ++i) {
-        const glm::vec3& normal = normals[i];
-        glm::vec3& tangent = tangents[i];
-
-        if (tangent != glm::vec3(0.0f, 0.0f, 0.0f))
-          tangent = glm::orthonormalize(normal, tangent);
-      }
+      for (uint32_t i = 0; i < tangents.size(); ++i)
+				if (tangents[i] != glm::vec3(0.0f, 0.0f, 0.0f))
+					tangents[i] = glm::normalize(tangents[i]);
 
       set(MeshElements::kTangents, tangents);
     }
@@ -262,9 +258,9 @@ namespace lambda
 				SubMesh{ {
 				{ kPositions, SubMesh::Offset(0, 3, sizeof(glm::vec3)) },
 				{ kNormals,   SubMesh::Offset(0, 3, sizeof(glm::vec3)) },
-				{ kTexCoords, SubMesh::Offset(0, 3, sizeof(glm::vec3)) },
+				{ kTexCoords, SubMesh::Offset(0, 3, sizeof(glm::vec2)) },
 				{ kColours,   SubMesh::Offset(0, 3, sizeof(glm::vec4)) },
-				{ kTangents,  SubMesh::Offset(0, 3, sizeof(glm::vec2)) },
+				{ kTangents,  SubMesh::Offset(0, 3, sizeof(glm::vec3)) },
 				{ kJoints,    SubMesh::Offset(0, 0, sizeof(glm::vec4)) },
 				{ kWeights,   SubMesh::Offset(0, 0, sizeof(glm::vec4)) },
 				{ kIndices,   SubMesh::Offset(0, 3, sizeof(uint32_t)) } },
@@ -274,7 +270,7 @@ namespace lambda
       };
       sub_meshes.at(0u).io.double_sided = true;
 
-      return Mesh({ 
+      Mesh mesh({
 				{ kPositions, positions  },
 				{ kNormals,   normals    },
 				{ kTexCoords, tex_coords },
@@ -284,6 +280,10 @@ namespace lambda
 				{ kWeights,   Buffer()   },
 				{ kIndices,   indices    }
 			}, sub_meshes);
+
+			mesh.recalculateTangents();
+
+			return mesh;
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -392,9 +392,9 @@ namespace lambda
         { 
 					{ kPositions, SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
 					{ kNormals,   SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
-					{ kTexCoords, SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
+					{ kTexCoords, SubMesh::Offset(0, vertices.size(), sizeof(glm::vec2)) },
 					{ kColours,   SubMesh::Offset(0, vertices.size(), sizeof(glm::vec4)) },
-					{ kTangents,  SubMesh::Offset(0, vertices.size(), sizeof(glm::vec2)) },
+					{ kTangents,  SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
 					{ kJoints,    SubMesh::Offset(0, 0, sizeof(glm::vec4))               },
 					{ kWeights,   SubMesh::Offset(0, 0, sizeof(glm::vec4))               },
 					{ kIndices,   SubMesh::Offset(0, indices.size(), sizeof(uint32_t))   }
@@ -480,9 +480,9 @@ namespace lambda
         { 
 					{ kPositions, SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
 					{ kNormals,   SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
-					{ kTexCoords, SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
+					{ kTexCoords, SubMesh::Offset(0, vertices.size(), sizeof(glm::vec2)) },
 					{ kColours,   SubMesh::Offset(0, vertices.size(), sizeof(glm::vec4)) },
-					{ kTangents,  SubMesh::Offset(0, vertices.size(), sizeof(glm::vec2)) },
+					{ kTangents,  SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
 					{ kJoints,    SubMesh::Offset(0, 0, sizeof(glm::vec4))               },
 					{ kWeights,   SubMesh::Offset(0, 0, sizeof(glm::vec4))               },
 					{ kIndices,   SubMesh::Offset(0, indices.size(), sizeof(uint32_t))   } },
@@ -551,9 +551,9 @@ namespace lambda
         {
 					{ kPositions, SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
 					{ kNormals,   SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
-					{ kTexCoords, SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
+					{ kTexCoords, SubMesh::Offset(0, vertices.size(), sizeof(glm::vec2)) },
 					{ kColours,   SubMesh::Offset(0, vertices.size(), sizeof(glm::vec4)) },
-					{ kTangents,  SubMesh::Offset(0, vertices.size(), sizeof(glm::vec2)) },
+					{ kTangents,  SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
 					{ kJoints,    SubMesh::Offset(0, 0, sizeof(glm::vec4))               },
 					{ kWeights,   SubMesh::Offset(0, 0, sizeof(glm::vec4))               },
 					{ kIndices,   SubMesh::Offset(0, indices.size(), sizeof(uint32_t))   } },
@@ -718,9 +718,9 @@ namespace lambda
         {
 					{ kPositions, SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
 					{ kNormals,   SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
-					{ kTexCoords, SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
+					{ kTexCoords, SubMesh::Offset(0, vertices.size(), sizeof(glm::vec2)) },
 					{ kColours,   SubMesh::Offset(0, vertices.size(), sizeof(glm::vec4)) },
-					{ kTangents,  SubMesh::Offset(0, vertices.size(), sizeof(glm::vec2)) },
+					{ kTangents,  SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
 					{ kJoints,    SubMesh::Offset(0, 0, sizeof(glm::vec4))               },
 					{ kWeights,   SubMesh::Offset(0, 0, sizeof(glm::vec4))               },
 					{ kIndices,   SubMesh::Offset(0, indices.size(), sizeof(uint32_t))   } },
@@ -786,9 +786,9 @@ namespace lambda
           { 
 						{ kPositions, SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
 						{ kNormals,   SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
-						{ kTexCoords, SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
+						{ kTexCoords, SubMesh::Offset(0, vertices.size(), sizeof(glm::vec2)) },
 						{ kColours,   SubMesh::Offset(0, vertices.size(), sizeof(glm::vec4)) },
-						{ kTangents,  SubMesh::Offset(0, vertices.size(), sizeof(glm::vec2)) },
+						{ kTangents,  SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
 						{ kJoints,    SubMesh::Offset(0, 0, sizeof(glm::vec4))               },
 						{ kWeights,   SubMesh::Offset(0, 0, sizeof(glm::vec4))               },
 						{ kIndices,   SubMesh::Offset(0, indices.size(), sizeof(uint32_t))   } },
@@ -900,9 +900,9 @@ namespace lambda
         { 
 					{ kPositions, SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
 					{ kNormals,   SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
-					{ kTexCoords, SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
+					{ kTexCoords, SubMesh::Offset(0, vertices.size(), sizeof(glm::vec2)) },
 					{ kColours,   SubMesh::Offset(0, vertices.size(), sizeof(glm::vec4)) },
-					{ kTangents,  SubMesh::Offset(0, vertices.size(), sizeof(glm::vec2)) },
+					{ kTangents,  SubMesh::Offset(0, vertices.size(), sizeof(glm::vec3)) },
 					{ kJoints,    SubMesh::Offset(0, 0, sizeof(glm::vec4))               },
 					{ kWeights,   SubMesh::Offset(0, 0, sizeof(glm::vec4))               },
 					{ kIndices,   SubMesh::Offset(0, indices.size(), sizeof(uint32_t))   } },

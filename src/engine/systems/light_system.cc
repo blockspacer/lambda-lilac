@@ -193,7 +193,7 @@ namespace lambda
         Name("__default_light_texture__"),
         1u, 1u, 1u, TextureFormat::kR8G8B8A8,
         kTextureFlagIsRenderTarget, // TODO (Hilze): Remove!
-        Vector<unsigned char>(4u, 255u)
+        Vector<char>(4, 255)
       );
 
       world_->getRenderer()->clearRenderTarget(default_shadow_map_.getTexture(), glm::vec4(1.0f));

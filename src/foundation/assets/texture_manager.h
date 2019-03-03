@@ -14,7 +14,7 @@ namespace lambda
     uint32_t flags  = 0u;
     uint16_t mip_count = 1u;
     TextureFormat format = TextureFormat::kUnknown;
-    Vector<uint32_t> data;
+    Vector<char> data;
   };
 
   static constexpr uint32_t kTextureFlagDynamicScale   = 1u << 1u;
@@ -34,11 +34,11 @@ namespace lambda
     uint64_t GetHash(String texture_name);
 
     void AddTexture(VioletTexture texture);
-    VioletTexture GetTexture(uint64_t hash);
+    VioletTexture GetTexture(uint64_t hash, bool get_data = false);
     void RemoveTexture(uint64_t hash);
 
   private:
-    VioletTexture JSonToTexture(Vector<char> json);
-    Vector<char> TextureToJSon(VioletTexture texture);
+    VioletTexture JSonToTextureHeader(Vector<char> json);
+    Vector<char> TextureHeaderToJSon(VioletTexture texture);
   };
 }

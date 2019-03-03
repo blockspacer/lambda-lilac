@@ -6,6 +6,9 @@ struct VSInput
   float3 position : Positions;
   float3 normal   : Normals;
   float2 tex      : TexCoords;
+#if NORMAL_MAPPING
+  float3 tangent  : Tangents;
+#endif
 };
 
 struct VSOutput
@@ -13,8 +16,12 @@ struct VSOutput
   float4 position  : SV_POSITION0;
   float4 hPosition : H_POSITION;
   float4 colour    : COLOUR;
-  float3 normal    : NORMAL;
   float2 tex       : TEX_COORD;
+#if NORMAL_MAPPING
+  float3x3 tbn     : TBN;
+#else
+  float3 normal    : NORMAL;
+#endif
 };
 
 cbuffer cbPerMesh
@@ -29,8 +36,18 @@ VSOutput VS(VSInput vIn)
   vOut.hPosition = mul(model_matrix, float4(vIn.position, 1.0f));
   vOut.position  = mul(view_projection_matrix, vOut.hPosition);
   vOut.colour    = float4(1.0f, 1.0f, 1.0f, 1.0f);
-  vOut.normal    = normalize(mul((float3x3)model_matrix, vIn.normal));
   vOut.tex       = vIn.tex;
+
+#if NORMAL_MAPPING
+  float3 bitangent = cross(vIn.normal, vIn.tangent);
+  float3 N = normalize(mul((float3x3)model_matrix, vIn.normal));
+  float3 B = normalize(mul((float3x3)model_matrix, bitangent));
+  float3 T = normalize(mul((float3x3)model_matrix, vIn.tangent));
+  vOut.tbn = float3x3(T, B, N);
+#else
+  vOut.normal = normalize(mul((float3x3)model_matrix, vIn.normal));
+#endif
+
   return vOut;
 }
 
@@ -78,7 +95,13 @@ PSOutput PS(VSOutput pIn)
 	pOut.albedo.rgb = lerp(lerp(0.4, 0.5, when_ge(es, 0.0f)), lerp(0.9, 1.0, when_ge(es, 0.0f)), when_ge(el, 0.0f));
 #endif
 
-  float3 N      = normalize(pIn.normal);
+#if NORMAL_MAPPING
+  float3 N = normalize(tex_normal.Sample(SamLinearWarp, pIn.tex).rgb * 2.0f - 1.0f);
+  N = mul(N, pIn.tbn);
+#else
+  float3 N = normalize(pIn.normal);
+#endif
+
   float2 mr     = tex_mr.Sample(SamLinearWarp, pIn.tex).gb; //* metallic_roughness;
   pOut.position = float4(pIn.hPosition.xyz, 1.0f);
   pOut.normal   = float4(N * 0.5f + 0.5f, 1.0f);

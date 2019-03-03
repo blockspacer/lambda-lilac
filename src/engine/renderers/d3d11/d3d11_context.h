@@ -326,6 +326,7 @@ namespace lambda
           T* t;
           uint32_t ref;
           float time;
+					bool keep_in_memory;
         };
         static constexpr float kMaxTime = 2.0f;
         UnorderedMap<uint64_t, RefType<D3D11RenderTexture>> textures_;

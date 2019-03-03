@@ -40,12 +40,9 @@ class World {
     initialize() {
         _ground = Ground.new()
         _trees = Trees.new(_ground)
-        _ground.disable()
         _trees.enabled = false
         _ground.initialize()
         _trees.initialize()
-
-        PostProcess.setShaderVariableFloat1("water_height", _ground.waterHeight)
 
         _post_processer = PostProcessor.new()
         _lighting = Lighting.new()
@@ -55,41 +52,36 @@ class World {
 
         // Move the camera so you do not spawn under the ground.
         var new_position = _camera.transform.worldPosition
-        new_position.y = _ground.heightOnPosition(new_position) + 2.0
+        new_position.y = 2.0
         _camera.transform.worldPosition = new_position
 
         {
-          var model = GameObject.new()
-          model.transform.worldScale = Vec3.new(0.5)
-          var mesh = Mesh.load("resources/gltf/map.glb")
-          model.addComponent(MeshRender).attach(mesh)
-          var collider = model.addComponent(Collider)
-          collider.makeMeshColliderRecursive(mesh)
+          // var model = GameObject.new()
+          // model.transform.worldScale = Vec3.new(0.5)
+          // var mesh = Mesh.load("resources/gltf/map.glb")
+          // model.addComponent(MeshRender).attach(mesh)
+          // var collider = model.addComponent(Collider)
+          // collider.makeMeshColliderRecursive(mesh)
 
-          new_position.y = _ground.heightOnPosition(new_position) + 10.0
+          new_position.y = 10.0
           _camera.transform.worldPosition = new_position
 
-          // {
-          //   var model2 = GameObject.new()
-          //   model2.transform.worldScale = Vec3.new(10.0)
-          //   var mesh2 = Mesh.load("resources/gltf/camera.glb")
-          //   model2.addComponent(MeshRender).attach(mesh2)
-          // }
+          {
+            // var model2 = GameObject.new()
+            // model2.transform.worldScale = Vec3.new(2.5)
+            // var mesh2 = Mesh.load("resources/gltf/world.glb")
+            // model2.addComponent(MeshRender).attach(mesh2)
+            // var collider2 = model2.addComponent(Collider)
+            // collider2.makeMeshColliderRecursive(mesh2)
+          }
         }
 
         GUI.bindCallback("changedSetting(_,_)", this)
-
-        _init_once = true
     }
     deinitialize() {
 
     }
     update() {
-        if (_init_once) {
-            _init_once = false
-            //PostProcess.addShaderPass("apply_gui", Shader.load("resources/shaders/apply_gui.fx"), [ "post_process_buffer", "gui" ], [ "post_process_buffer" ])
-        }
-
 		    GUI.executeJavaScript("updateDebug(%(Time.deltaTime));")
         
         // Update the RSM light.
@@ -99,8 +91,10 @@ class World {
         var transform = _lighting.rsm.getComponent(Transform)
         transform.worldPosition = _camera.transform.worldPosition + offset
     }
+
     fixedUpdate() {
     }
+
     changedSetting(id, val) {
       if (id == "vsync") {
         Graphics.setVSync(val > 0.0 ? true : false)

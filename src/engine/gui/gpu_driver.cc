@@ -55,7 +55,7 @@ namespace lambda
 			TextureFormat format = ultralight::kBitmapFormat_RGBA8 ?
 				TextureFormat::kB8G8R8A8 : TextureFormat::kA8;
 
-			Vector<uint8_t> data;
+			Vector<char> data;
 
 			if (bitmap->IsEmpty())
 			{
@@ -94,9 +94,7 @@ namespace lambda
 				(bitmap->format() == ultralight::kBitmapFormat_RGBA8))
 			{
 
-				uint32_t s = (uint32_t)((bitmap->size() +
-					(sizeof(uint32_t) - 1u)) / sizeof(uint32_t));
-				Vector<uint32_t> data(s);
+				Vector<char> data(bitmap->size());
 				memcpy(data.data(), bitmap->LockPixels(), bitmap->size());
 				texture->getLayer(0).setData(data);
 				bitmap->UnlockPixels();
@@ -113,7 +111,7 @@ namespace lambda
 					bpl
 				);
 
-				Vector<uint32_t> data = texture->getLayer(0).getData();
+				Vector<char> data = texture->getLayer(0).getData();
 
 				ultralight::Ref<ultralight::Bitmap> mapped_bitmap =
 					ultralight::Bitmap::Create(
@@ -479,9 +477,15 @@ namespace lambda
 		void MyGPUDriver::BindShader(const ultralight::GPUState& state)
 		{
 			if (!shader_fill_)
+			{
 				shader_fill_ = asset::ShaderManager::getInstance()->get(Name("resources/shaders/gui_fill.fx"));
+				shader_fill_->setKeepInMemory(true);
+			}
 			if (!shader_fill_path_)
+			{
 				shader_fill_path_ = asset::ShaderManager::getInstance()->get(Name("resources/shaders/gui_fill_path.fx"));
+				shader_fill_path_->setKeepInMemory(true);
+			}
 
 			asset::VioletShaderHandle shader = (state.shader_type == ultralight::kShaderType_Fill) ? shader_fill_ : shader_fill_path_;
 

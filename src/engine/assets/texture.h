@@ -16,8 +16,7 @@ namespace lambda
       TextureLayer();
       TextureLayer(const TextureLayer& layer);
       TextureLayer(const VioletTexture& data);
-      const Vector<uint32_t>& getData() const;
-      void setData(const Vector<uint32_t>& data);
+      const Vector<char>& getData() const;
       void setData(const Vector<char>& data);
       uint32_t getWidth() const;
       uint32_t getHeight() const;
@@ -72,26 +71,27 @@ namespace lambda
       VioletTextureHandle create(Name name);
       VioletTextureHandle create(Name name, Texture texture);
       VioletTextureHandle create(Name name, VioletTexture texture);
-      VioletTextureHandle create(
-        Name name, 
-        uint32_t width, 
-        uint32_t height, 
-        uint32_t layers, 
-        TextureFormat format, 
-        uint32_t flags, 
-        const Vector<unsigned char>& data
-      );
-      VioletTextureHandle create(
-        Name name, 
-        uint32_t width, 
-        uint32_t height, 
-        uint32_t layers = 1u, 
-        TextureFormat format = TextureFormat::kR8G8B8A8, 
-        uint32_t flags = 0u, 
-        const Vector<char>& data = Vector<char>()
-      );
+			VioletTextureHandle create(
+				Name name,
+				uint32_t width,
+				uint32_t height,
+				uint32_t layers = 1u,
+				TextureFormat format = TextureFormat::kR8G8B8A8,
+				uint32_t flags = 0u,
+				const Vector<char>& data = Vector<char>()
+			);
+			VioletTextureHandle create(
+				Name name,
+				uint32_t width,
+				uint32_t height,
+				uint32_t layers,
+				TextureFormat format,
+				uint32_t flags,
+				const Vector<unsigned char>& data
+			);
       VioletTextureHandle get(Name name);
       VioletTextureHandle get(uint64_t hash);
+			Vector<char> getData(VioletTextureHandle texture);
       void destroy(VioletTextureHandle texture);
 
     public:

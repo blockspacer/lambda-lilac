@@ -127,8 +127,6 @@ namespace lambda
 				MyFontLoader* font_loader =
 					foundation::Memory::construct<MyFontLoader>();
 
-				file_system->FileExists("Nope");
-
 				platform.set_config(config);
 				platform.set_gpu_driver(gpu_driver);
 				platform.set_file_system(file_system);
@@ -136,7 +134,7 @@ namespace lambda
 			}
 
 			renderer_ = foundation::Memory::construct<RW>(ultralight::Renderer::Create());
-			view_ = foundation::Memory::construct<VW>(renderer_->ptr->CreateView(1280u, 720u, true));
+			view_     = foundation::Memory::construct<VW>(renderer_->ptr->CreateView(1280u, 720u, true));
 
 
 			texture_ = asset::TextureManager::getInstance()->create(Name("__gui"));

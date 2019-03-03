@@ -32,13 +32,13 @@ namespace lambda
     }
     
     ///////////////////////////////////////////////////////////////////////////
-    const Vector<uint32_t>& TextureLayer::getData() const
+    const Vector<char>& TextureLayer::getData() const
     {
       return data_.data;
     }
     
     ///////////////////////////////////////////////////////////////////////////
-    void TextureLayer::setData(const Vector<uint32_t>& data)
+    void TextureLayer::setData(const Vector<char>& data)
     {
       if ((data_.flags & kTextureFlagDynamicData))
       {
@@ -47,15 +47,6 @@ namespace lambda
 
         if (!data.empty())
           checkForAlpha();
-      }
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    void TextureLayer::setData(const Vector<char>& data)
-    {
-      if ((data_.flags & kTextureFlagDynamicData))
-      {
-        setData(utilities::convertVec<char, uint32_t>(data));
       }
     }
     
@@ -327,30 +318,6 @@ namespace lambda
       Name name, 
       uint32_t width, 
       uint32_t height, 
-      uint32_t /*layers*/,
-      TextureFormat format, 
-      uint32_t flags, 
-      const Vector<unsigned char>& data)
-    {
-      VioletTexture layer;
-      layer.hash   = name.getHash();
-      layer.file   = name.getName();
-      layer.width  = width;
-      layer.height = height;
-      layer.flags  = flags;
-      layer.format = format;
-      layer.data   = utilities::convertVec<unsigned char, uint32_t>(data);
-      return VioletTextureHandle(
-        foundation::Memory::construct<Texture>(layer), 
-        name
-      );
-    }
-    
-    ///////////////////////////////////////////////////////////////////////////
-    VioletTextureHandle TextureManager::create(
-      Name name, 
-      uint32_t width, 
-      uint32_t height, 
       uint32_t /*layers*/, 
       TextureFormat format, 
       uint32_t flags, 
@@ -363,13 +330,34 @@ namespace lambda
       layer.height = height;
       layer.flags  = flags;
       layer.format = format;
-      layer.data   = utilities::convertVec<char, uint32_t>(data);
+      layer.data   = data;
 
       return VioletTextureHandle(
         foundation::Memory::construct<Texture>(layer), 
         name
       );
     }
+
+		///////////////////////////////////////////////////////////////////////////
+		VioletTextureHandle TextureManager::create(
+			Name name,
+			uint32_t width,
+			uint32_t height,
+			uint32_t layers,
+			TextureFormat format,
+			uint32_t flags,
+			const Vector<unsigned char>& data)
+		{
+			return create(
+				name, 
+				width, 
+				height, 
+				layers, 
+				format, 
+				flags, 
+				utilities::convertVec<unsigned char, char>(data)
+			);
+		}
 
     ///////////////////////////////////////////////////////////////////////////
     VioletTextureHandle TextureManager::get(Name name)
@@ -383,6 +371,12 @@ namespace lambda
       VioletTexture texture = manager_.GetTexture(hash);
       return create(texture.file, texture);
     }
+
+		///////////////////////////////////////////////////////////////////////////
+		Vector<char> TextureManager::getData(VioletTextureHandle texture)
+		{
+			return eastl::move(manager_.GetData(texture.getHash()));
+		}
     
     ///////////////////////////////////////////////////////////////////////////
     void TextureManager::destroy(VioletTextureHandle texture)

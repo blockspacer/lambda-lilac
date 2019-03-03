@@ -23,19 +23,24 @@ namespace lambda
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   void VioletTextureManager::AddTexture(VioletTexture texture)
   {
-    SaveData(TextureToJSon(texture), texture.hash);
+		SaveHeader(TextureHeaderToJSon(texture), texture.hash);
+		SaveData(texture.data, texture.hash);
   }
   
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  VioletTexture VioletTextureManager::GetTexture(uint64_t hash)
+  VioletTexture VioletTextureManager::GetTexture(uint64_t hash, bool get_data)
   {
-    return JSonToTexture(GetData(hash));
+		VioletTexture texture = JSonToTextureHeader(GetHeader(hash));
+		if (get_data)
+			texture.data = GetData(hash);
+    return texture;
   }
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   void VioletTextureManager::RemoveTexture(uint64_t hash)
   {
-    RemoveData(hash);
+		RemoveData(hash);
+		RemoveHeader(hash);
   }
 
   String rapidjsonErrortoString(rapidjson::ParseErrorCode error)
@@ -65,7 +70,7 @@ namespace lambda
   }
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  VioletTexture VioletTextureManager::JSonToTexture(Vector<char> data)
+  VioletTexture VioletTextureManager::JSonToTextureHeader(Vector<char> data)
   {
     rapidjson::Document doc;
     const auto& parse_error = doc.Parse(data.data(), data.size());
@@ -79,15 +84,12 @@ namespace lambda
     texture.flags     = doc["flags"].GetUint();
     texture.mip_count = doc["mip count"].GetUint();
     texture.format    = (TextureFormat)doc["format"].GetUint();
-    texture.data.resize(doc["data"].Size());
-    for (uint32_t i = 0u; i < texture.data.size(); ++i)
-      texture.data[i] = doc["data"][i].GetUint();
 
     return texture;
   }
   
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  Vector<char> VioletTextureManager::TextureToJSon(VioletTexture texture)
+  Vector<char> VioletTextureManager::TextureHeaderToJSon(VioletTexture texture)
   {
     rapidjson::Document doc;
     doc.SetObject();
@@ -99,9 +101,6 @@ namespace lambda
     doc.AddMember("flags",     texture.flags, doc.GetAllocator());
     doc.AddMember("mip count", texture.mip_count, doc.GetAllocator());
     doc.AddMember("format",    (uint8_t)texture.format, doc.GetAllocator());
-    doc.AddMember("data",      rapidjson::Value(rapidjson::kArrayType), doc.GetAllocator());
-    for (uint32_t i = 0u; i < texture.data.size(); ++i)
-      doc["data"].PushBack(texture.data[i], doc.GetAllocator());
 
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);

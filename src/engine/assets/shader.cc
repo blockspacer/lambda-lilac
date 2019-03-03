@@ -9,19 +9,22 @@ namespace lambda
 	{
 		///////////////////////////////////////////////////////////////////////////
 		Shader::Shader()
+			: keep_in_memory_(false)
 		{
 		}
 
 		///////////////////////////////////////////////////////////////////////////
 		Shader::Shader(const Shader& shader)
 			: shader_(shader.shader_)
-			, queued_shader_variables_(queued_shader_variables_)
+			, queued_shader_variables_(shader.queued_shader_variables_)
+			, keep_in_memory_(shader.keep_in_memory_)
 		{
 		}
 
 		///////////////////////////////////////////////////////////////////////////
 		Shader::Shader(VioletShader shader)
 			: shader_(shader)
+			, keep_in_memory_(false)
 		{
 		}
 
@@ -52,6 +55,18 @@ namespace lambda
 		Vector<platform::ShaderVariable> Shader::getQueuedShaderVariables()
 		{
 			return eastl::move(queued_shader_variables_);
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		bool Shader::getKeepInMemory() const
+		{
+			return keep_in_memory_;
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		void Shader::setKeepInMemory(bool keep_in_memory)
+		{
+			keep_in_memory_ = keep_in_memory;
 		}
 
 
