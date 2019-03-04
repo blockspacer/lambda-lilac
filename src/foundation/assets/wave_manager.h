@@ -10,7 +10,7 @@ namespace lambda
     uint64_t hash;
     String file;
     float length;
-    Vector<uint32_t> data;
+    Vector<char> data;
   };
 
   class VioletWaveManager : public VioletBaseAssetManager
@@ -21,11 +21,11 @@ namespace lambda
     uint64_t GetHash(String wave_name);
 
     void AddWave(VioletWave wave);
-    VioletWave GetWave(uint64_t hash);
+    VioletWave GetWave(uint64_t hash, bool get_data = false);
     void RemoveWave(uint64_t hash);
 
   private:
-    VioletWave JSonToWave(Vector<char> json);
-    Vector<char> WaveToJSon(VioletWave wave);
+    VioletWave JSonToWaveHeader(Vector<char> json);
+    Vector<char> WaveHeaderToJSon(VioletWave wave);
   };
 }

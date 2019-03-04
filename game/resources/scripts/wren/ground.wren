@@ -51,20 +51,28 @@ class Ground {
       }
 
       var model = GameObject.new()
+      model.name = "ground"
       model.transform.worldScale = Vec3.new(2)
       model.transform.worldPosition = Vec3.new(x - 10, y, z - 10) * 2
-      var mesh = Mesh.generate("cube")
-      model.addComponent(MeshRender).mesh = mesh
+      model.addComponent(MeshRender).mesh = y == 0 ? _mesh : _mesh2
       model.getComponent(MeshRender).subMesh = 0
       model.getComponent(MeshRender).albedo = Texture.load("resources/textures/mossy-ground1-albedo.png")
       model.getComponent(MeshRender).normal = Texture.load("resources/textures/mossy-ground1-normal.png")
       model.getComponent(MeshRender).metallicRoughness = Texture.load("resources/textures/mossy-ground1-metallic-roughness.png")
       var collider = model.addComponent(Collider)
-      collider.makeMeshColliderRecursive(mesh)
+      if (y == 0) {
+        collider.makeBoxCollider()
+      } else {
+        collider.makeSphereCollider()
+      }
+      //collider.friction = 2.5
       _tiles[z][y][x] = model
     }
 
     initialize() {
+      _mesh = Mesh.generate("cube")
+      _mesh2 = Mesh.generate("sphere")
+
       for (z in 0..20) {
         for (x in 0..20) {
           addTile(x, 0, z)
@@ -74,5 +82,26 @@ class Ground {
         }
       }
 
+      _cube = GameObject.new()
+      _cube.name = "cube"
+      _cube.transform.worldScale = Vec3.new(1.9)
+      _cube.transform.worldPosition = Vec3.new(0.1, 2.1, -5.1) * 2
+
+      _cube.addComponent(MeshRender).mesh = _mesh
+      _cube.getComponent(MeshRender).subMesh = 0
+      _cube.getComponent(MeshRender).albedo = Texture.load("resources/textures/rustediron-streaks_basecolor.png")
+      _cube.getComponent(MeshRender).normal = Texture.load("resources/textures/rustediron-streaks_normal.png")
+      _cube.getComponent(MeshRender).metallicRoughness = Texture.load("resources/textures/rustediron-streaks_metallic_roughness.png")
+      var collider = _cube.addComponent(Collider)
+      var pos = _cube.transform.worldPosition
+      var rigidBody = _cube.addComponent(RigidBody)
+      collider.makeBoxCollider()
+      _cube.transform.worldPosition = pos
+    }
+
+    update() {
+      if (_cube.transform.worldPosition.y < -10) {
+        _cube.transform.worldPosition = Vec3.new(0.1, 2.1, -5.1) * 2
+      }
     }
 }

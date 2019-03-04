@@ -233,7 +233,7 @@ namespace lambda
         btRigidBody* rigid_body = btRigidBody::upcast(object);
         btTransform transform;
 
-        if(rigid_body&& false == rigid_body->isStaticObject())
+        if(rigid_body && false == rigid_body->isStaticObject())
         {
           if (rigid_body->getMotionState())
           {
@@ -342,7 +342,6 @@ namespace lambda
       const glm::vec3& start, 
       const glm::vec3& end)
     {
-      return Vector<entity::Entity>();
       PersonalRayCallback callback;
       dynamics_world_->rayTest(
         btVector3(start.x, start.y, start.z), 
@@ -382,7 +381,7 @@ namespace lambda
       dynamics_world_->setDebugDrawer(&physic_visualizer_);
 
 //#define RWSDEBUG // TODO (Hilze): Remove this!
-#if (defined(_DEBUG) || defined(DEBUG)) && false
+#if (defined(_DEBUG) || defined(DEBUG)) || true
       physic_visualizer_.setDebugMode(btIDebugDraw::DBG_DrawWireframe);
 #endif
 

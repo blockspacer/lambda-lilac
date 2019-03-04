@@ -91,7 +91,7 @@ namespace lambda
     {
       asset::SubMesh& sub_mesh = mesh->getSubMeshes().at(sub_mesh_idx);
      
-      if (buffer_.at(asset::MeshElements::kIndices) && 
+      if (buffer_.find(asset::MeshElements::kIndices) != buffer_.end() &&
         buffer_.at(asset::MeshElements::kIndices)->getSize() > 0)
       {
         const asset::SubMesh::Offset& idx = 

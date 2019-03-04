@@ -52,7 +52,7 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		ID3D10Blob* compile(
 			const String& file,
-			const Vector<uint32_t>& source,
+			const Vector<char>& source,
 			const String& entry,
 			const String& target)
 		{
@@ -66,7 +66,7 @@ namespace lambda
 
 			HRESULT result = D3DCompile(
 				(void*)source.data(),
-				source.size() * sizeof(uint32_t),
+				source.size(),
 				file.c_str(), 0,
 				&include_handler,
 				entry.c_str(),
@@ -101,21 +101,23 @@ namespace lambda
       D3D11Context* context)
       : context_(context)
     {
+		auto data = asset::ShaderManager::getInstance()->getData(shader);
+
 			ID3D10Blob* vs_blob = compile(
 				shader->getFilePath(),
-				shader->getByteCode(ShaderStages::kVertex, VIOLET_HLSL),
+				data[(int)ShaderStages::kVertex][VIOLET_HLSL],
 				"VS",
 				"vs_5_0"
 			);;
 			ID3D10Blob* ps_blob = compile(
 				shader->getFilePath(),
-				shader->getByteCode(ShaderStages::kPixel, VIOLET_HLSL),
+				data[(int)ShaderStages::kPixel][VIOLET_HLSL],
 				"PS",
 				"ps_5_0"
 			);;
 			ID3D10Blob* gs_blob = compile(
 				shader->getFilePath(),
-				shader->getByteCode(ShaderStages::kGeometry, VIOLET_HLSL),
+				data[(int)ShaderStages::kGeometry][VIOLET_HLSL],
 				"GS",
 				"gs_5_0"
 			);;

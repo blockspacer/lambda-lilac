@@ -24,10 +24,8 @@ namespace lambda
 	bool CompileX(
 		String file, 
 		ShaderConductor::ShaderStage stage,
-		Vector<Vector<uint32_t>>& output)
+		Array<Vector<char>, VIOLET_LANG_COUNT>& output)
 	{
-		output.resize(VIOLET_LANG_COUNT);
-
 		String source = FileSystem::FileToString(file);
 
 		String entry;
@@ -109,19 +107,16 @@ namespace lambda
 
 		for (int i = 0; i < VIOLET_LANG_COUNT; ++i)
 		{
-			Vector<char> temp;
 			if (i != VIOLET_HLSL)
 			{
-				temp.resize(results[i].target->Size());
-				memcpy(temp.data(), results[i].target->Data(), temp.size());
+				output[i].resize(results[i].target->Size());
+				memcpy(output[i].data(), results[i].target->Data(), output[i].size());
 			}
 			else
-
 			{
-				temp.resize(source.size());
-				memcpy(temp.data(), source.c_str(), source.size());
+				output[i].resize(source.size());
+				memcpy(output[i].data(), source.c_str(), source.size());
 			}
-			output[i] = utilities::convertVec<char, uint32_t>(temp);
 		}
 
 		return true;
@@ -133,7 +128,6 @@ namespace lambda
 		VioletShader shader_program;
 		shader_program.file_path = compile_info.file;
 		shader_program.hash = GetHash(shader_program.file_path);
-		shader_program.blobs.resize((int)ShaderStages::kCount);
 		if (!CompileX(compile_info.file, ShaderConductor::ShaderStage::VertexShader, shader_program.blobs[(int)ShaderStages::kVertex]))
 			return false;
 		if (!CompileX(compile_info.file, ShaderConductor::ShaderStage::PixelShader, shader_program.blobs[(int)ShaderStages::kPixel]))

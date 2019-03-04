@@ -23,16 +23,16 @@ namespace lambda
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   void VioletTextureManager::AddTexture(VioletTexture texture)
   {
-		SaveHeader(TextureHeaderToJSon(texture), texture.hash);
-		SaveData(texture.data, texture.hash);
+    SaveHeader(TextureHeaderToJSon(texture), texture.hash);
+    SaveData(texture.data, texture.hash);
   }
   
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   VioletTexture VioletTextureManager::GetTexture(uint64_t hash, bool get_data)
   {
-		VioletTexture texture = JSonToTextureHeader(GetHeader(hash));
-		if (get_data)
-			texture.data = GetData(hash);
+    VioletTexture texture = JSonToTextureHeader(GetHeader(hash));
+    if (get_data)
+      texture.data = GetData(hash);
     return texture;
   }
 

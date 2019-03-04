@@ -40,7 +40,7 @@ namespace lambda
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		Vector<uint32_t> Shader::getByteCode(ShaderStages stage, int type) const
+		Vector<char> Shader::getByteCode(ShaderStages stage, int type) const
 		{
 			return shader_.blobs[(int)stage][type];
 		}
@@ -113,6 +113,15 @@ namespace lambda
 		void ShaderManager::destroy(VioletShaderHandle shader)
 		{
 			foundation::Memory::destruct<Shader>(shader.get());
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		Array<Array<Vector<char>, VIOLET_LANG_COUNT>, (int)ShaderStages::kCount>
+			ShaderManager::getData(const VioletShaderHandle& Shader)
+		{
+			VioletShader s = Shader->getVioletShader();
+			getManager().getBlobs(s);
+			return s.blobs;
 		}
 
 		///////////////////////////////////////////////////////////////////////////

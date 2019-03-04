@@ -37,6 +37,8 @@ namespace lambda
       void makeSphereCollider();
       void makeCapsuleCollider();
       void makeMeshCollider(asset::MeshHandle mesh, const uint32_t& sub_mesh_id);
+	  void setFriction(float friction);
+	  float getFriction() const;
 
     private:
       ColliderSystem* system_;
@@ -77,7 +79,9 @@ namespace lambda
       void makeSphere(const entity::Entity& entity);
       void makeCapsule(const entity::Entity& entity);
       void makeMeshCollider(const entity::Entity& entity, asset::MeshHandle mesh, const uint32_t& sub_mesh_id);
-      
+	  void setFriction(const entity::Entity& entity, float friction);
+	  float getFriction(const entity::Entity& entity) const;
+
     protected:
       ColliderData& lookUpData(const entity::Entity& entity);
       const ColliderData& lookUpData(const entity::Entity& entity) const;

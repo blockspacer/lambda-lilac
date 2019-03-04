@@ -15,7 +15,8 @@ namespace lambda
 	{
 		uint64_t hash;
 		String file_path;
-		Vector<Vector<Vector<uint32_t>>> blobs;
+		Array<Array<Pair<uint32_t, uint32_t>, VIOLET_LANG_COUNT>, (size_t)ShaderStages::kCount> blob_sizes;
+		Array<Array<Vector<char>, VIOLET_LANG_COUNT>, (size_t)ShaderStages::kCount> blobs;
 	};
 
 	class VioletShaderManager : public VioletBaseAssetManager
@@ -26,11 +27,12 @@ namespace lambda
 		uint64_t GetHash(String file_path);
 
 		void AddShader(VioletShader shader_program);
-		VioletShader GetShader(uint64_t hash);
+		VioletShader GetShader(uint64_t hash, bool get_data = false);
 		void RemoveShader(uint64_t hash);
+		void getBlobs(VioletShader& shader_program);
 
 	private:
-		Vector<char> ShaderToJSon(VioletShader shader_program);
-		VioletShader JSonToShader(Vector<char> json);
+		Vector<char> ShaderHeaderToJSon(VioletShader shader_program);
+		VioletShader JSonToShaderHeader(Vector<char> json);
 	};
 }

@@ -18,13 +18,17 @@ namespace lambda
 			~Shader();
 
 			String getFilePath() const;
-			Vector<uint32_t> getByteCode(ShaderStages stage, int type) const;
+			Vector<char> getByteCode(ShaderStages stage, int type) const;
 
 			void setShaderVariable(const platform::ShaderVariable& variable);
 			Vector<platform::ShaderVariable> getQueuedShaderVariables();
 
 			bool getKeepInMemory() const;
 			void setKeepInMemory(bool keep_in_memory);
+
+		protected:
+			VioletShader getVioletShader() const { return shader_; }
+			friend class ShaderManager;
 
 		private:
 			bool keep_in_memory_;
@@ -43,6 +47,9 @@ namespace lambda
 			VioletShaderHandle get(Name name);
 			VioletShaderHandle get(uint64_t hash);
 			void destroy(VioletShaderHandle Shader);
+			Array<Array<Vector<char>, VIOLET_LANG_COUNT>, (int)ShaderStages::kCount>
+				getData(const VioletShaderHandle& Shader);
+
 
 		public:
 			static ShaderManager* getInstance();

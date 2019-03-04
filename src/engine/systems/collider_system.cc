@@ -152,25 +152,6 @@ namespace lambda
       make(entity, shape);
     }
 
-    size_t rangeDivider(const size_t& idx)
-    {
-      if (idx < 100u)
-      {
-        return idx;
-      }
-      else /*if (idx < 250u)*/
-      {
-        return idx / 2u;
-      }
-      /*else if (idx < 500u)
-      {
-        return idx / 3u;
-      }
-      else
-      {
-        return idx / 4u;
-      }*/
-    }
     void ColliderSystem::makeMeshCollider(const entity::Entity& entity, asset::MeshHandle mesh, const uint32_t& sub_mesh_id)
     {
       auto it_sub_mesh = mesh_colliders_[mesh.id].find(sub_mesh_id);
@@ -261,7 +242,18 @@ namespace lambda
       lookUpData(entity).type = ColliderType::kMesh;
       make(entity, shape);
     }
-    ColliderData& ColliderSystem::lookUpData(const entity::Entity& entity)
+
+	void ColliderSystem::setFriction(const entity::Entity& entity, float friction)
+	{
+		lookUpData(entity).rigid_body->setFriction(friction);
+	}
+
+	float ColliderSystem::getFriction(const entity::Entity & entity) const
+	{
+		return lookUpData(entity).rigid_body->getFriction();
+	}
+    
+	ColliderData& ColliderSystem::lookUpData(const entity::Entity& entity)
     {
       assert(entity_to_data_.find(entity) != entity_to_data_.end());
 			assert(data_.at(entity_to_data_.at(entity)).valid);
@@ -301,7 +293,18 @@ namespace lambda
     {
       system_->makeMeshCollider(entity_, mesh, sub_mesh_id);
     }
-    ColliderData::ColliderData(const ColliderData & other)
+	
+	void ColliderComponent::setFriction(float friction)
+	{
+		system_->setFriction(entity_, friction);
+	}
+
+	float ColliderComponent::getFriction() const
+	{
+		return system_->getFriction(entity_);
+	}
+    
+	ColliderData::ColliderData(const ColliderData& other)
     {
       type            = other.type;
       collision_shape = other.collision_shape;

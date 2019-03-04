@@ -52,7 +52,8 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    D3D11Texture::D3D11Texture(
+#pragma optimize("", off)
+	D3D11Texture::D3D11Texture(
       asset::VioletTextureHandle texture, 
       ID3D11Device* device, 
       ID3D11DeviceContext* context) 
@@ -225,6 +226,7 @@ namespace lambda
     }
 
 		///////////////////////////////////////////////////////////////////////////
+#pragma optimize("", off)
 		void D3D11Texture::update(
 			asset::VioletTextureHandle texture, 
 			ID3D11Device* device, 

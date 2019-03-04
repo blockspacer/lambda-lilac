@@ -23,23 +23,28 @@ namespace lambda
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   void VioletWaveManager::AddWave(VioletWave wave)
   {
-    SaveData(WaveToJSon(wave), wave.hash);
+	SaveHeader(WaveHeaderToJSon(wave), wave.hash);
+	SaveData(wave.data, wave.hash);
   }
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  VioletWave VioletWaveManager::GetWave(uint64_t hash)
+  VioletWave VioletWaveManager::GetWave(uint64_t hash, bool get_data)
   {
-    return JSonToWave(GetData(hash));
+    VioletWave wave = JSonToWaveHeader(GetHeader(hash));
+    if (get_data)
+      wave.data = GetData(hash);
+    return wave;
   }
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   void VioletWaveManager::RemoveWave(uint64_t hash)
   {
-    RemoveData(hash);
+	  RemoveData(hash);
+	  RemoveHeader(hash);
   }
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  VioletWave VioletWaveManager::JSonToWave(Vector<char> data)
+  VioletWave VioletWaveManager::JSonToWaveHeader(Vector<char> data)
   {
     rapidjson::Document doc;
     const auto& parse_error = doc.Parse(data.data(), data.size());
@@ -49,15 +54,12 @@ namespace lambda
     wave.hash   = doc["hash"].GetUint64();
     wave.file   = lmbString(doc["file"].GetString());
     wave.length = doc["length"].GetFloat();
-    wave.data.resize(doc["data"].Size());
-    for (uint32_t i = 0u; i < wave.data.size(); ++i)
-      wave.data[i] = doc["data"][i].GetUint();
     
     return wave;
   }
   
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  Vector<char> VioletWaveManager::WaveToJSon(VioletWave wave)
+  Vector<char> VioletWaveManager::WaveHeaderToJSon(VioletWave wave)
   {
     rapidjson::Document doc;
     doc.SetObject();
@@ -65,9 +67,6 @@ namespace lambda
     doc.AddMember("hash", wave.hash, doc.GetAllocator());
     doc.AddMember("file", rapidjson::StringRef(wave.file.c_str()), doc.GetAllocator());
     doc.AddMember("length", wave.length, doc.GetAllocator());
-    doc.AddMember("data", rapidjson::Value(rapidjson::kArrayType), doc.GetAllocator());
-    for (uint32_t i = 0u; i < wave.data.size(); ++i)
-      doc["data"].PushBack(wave.data[i], doc.GetAllocator());
 
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);

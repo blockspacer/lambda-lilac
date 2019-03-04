@@ -1904,8 +1904,8 @@ foreign class GameObject {
 
 					String name = g_nameSystem->getName(e);
 					const size_t len = name.size() + 1;
-					const char* c_str = (const char*)WREN_ALLOC(len);
-					memcpy((char*)name.c_str(), c_str, len);
+					char* c_str = (char*)WREN_ALLOC(len);
+					memcpy(c_str, name.c_str(), len);
 					wrenSetSlotString(vm, 0, c_str);
 				};
 				if (strcmp(signature, "name=(_)") == 0) return [](WrenVM* vm) {
@@ -2762,7 +2762,7 @@ class RigidBody {
     foreign priv_velocity(go)
     foreign priv_velocity(go, velocity)
     foreign priv_angularVelocity(go)
-    foreign priv_angularVelocity(go, angularVelocity)         
+    foreign priv_angularVelocity(go, angularVelocity)
     foreign priv_velocityConstraints(go)
     foreign priv_velocityConstraints(go, velocityConstraints) 
     foreign priv_angularConstraints(go)
@@ -3099,10 +3099,14 @@ foreign class Collider {
     foreign goRemove(gameObject)
 
     foreign makeBoxCollider()
+    makeCubeCollider() { makeBoxCollider() }
     foreign makeSphereCollider()
     foreign makeCapsuleCollider()
     foreign makeMeshCollider(mesh, subMesh)
     foreign makeMeshColliderRecursive(mesh)
+
+	foreign friction
+	foreign friction=(friction)
 }
 )";
         char* data = (char*)WREN_ALLOC(str.size() + 1u);
@@ -3186,10 +3190,15 @@ foreign class Collider {
         if (strcmp(signature, "makeMeshCollider(_,_)") == 0) return [](WrenVM* vm) {
           GetForeign<ColliderHandle>(vm)->handle.makeMeshCollider(*GetForeign<asset::MeshHandle>(vm, 1), (uint32_t)wrenGetSlotDouble(vm, 2));
         };
-
         if (strcmp(signature, "makeMeshColliderRecursive(_)") == 0) return [](WrenVM* vm) {
           addMeshCollider(GetForeign<ColliderHandle>(vm)->handle.entity(), *GetForeign<asset::MeshHandle>(vm, 1));
         };
+		if (strcmp(signature, "friction=(_)") == 0) return [](WrenVM* vm) {
+			GetForeign<ColliderHandle>(vm)->handle.setFriction((float)(uint32_t)wrenGetSlotDouble(vm, 1));
+		};
+		if (strcmp(signature, "friction") == 0) return [](WrenVM* vm) {
+			wrenSetSlotDouble(vm, 0, GetForeign<ColliderHandle>(vm)->handle.getFriction());
+		};
         return nullptr;
       }
     }
@@ -4298,7 +4307,7 @@ class Time {
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 class Physics {
     foreign static gravity
-    foreign static raycast(from, to)
+    foreign static castRay(from, to)
 }
 )";
 				char* data = (char*)WREN_ALLOC(str.size() + 1u);

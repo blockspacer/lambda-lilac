@@ -425,7 +425,7 @@ namespace lambda
         D3D_FEATURE_LEVEL supported_level;
 
         UINT create_device_flags = 0;
-#ifndef NDEBUG
+#ifdef NDEBUG
         create_device_flags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
         D3D_DRIVER_TYPE driver_types[] = {

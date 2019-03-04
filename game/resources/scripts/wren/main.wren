@@ -63,7 +63,7 @@ class World {
           // var collider = model.addComponent(Collider)
           // collider.makeMeshColliderRecursive(mesh)
 
-          new_position.y = 10.0
+          new_position.y = 2.0
           _camera.transform.worldPosition = new_position
 
           {
@@ -90,6 +90,8 @@ class World {
         var offset = Vec3.new(sin_y_rot, 0.0, cos_y_rot).normalized * 25.0
         var transform = _lighting.rsm.getComponent(Transform)
         transform.worldPosition = _camera.transform.worldPosition + offset
+
+        _ground.update()
     }
 
     fixedUpdate() {

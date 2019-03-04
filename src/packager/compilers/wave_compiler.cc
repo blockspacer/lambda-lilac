@@ -47,7 +47,7 @@ namespace lambda
     wave.hash   = GetHash(wave_info.file);
     wave.file   = wave_info.file;
     wave.length = (float)wav.getLength();
-    wave.data   = utilities::convertVec<char, uint32_t>(FileSystem::FileToVector(wave_info.file));
+    wave.data   = FileSystem::FileToVector(wave_info.file);
     AddWave(wave);
 
 	return true;
