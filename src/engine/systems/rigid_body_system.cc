@@ -96,10 +96,7 @@ namespace lambda
       collider_system_ = world.getScene().getSystem<ColliderSystem>().get();
       physics_world_.initialize(
         &world.getDebugRenderer(),
-        world.getScene().getSystem<entity::EntitySystem>(),
-        transform_system_,
-				world.getScene().getSystem<RigidBodySystem>(),
-				world.getScene().getSystem<MonoBehaviourSystem>()
+        &world
       );
     }
     void RigidBodySystem::deinitialize()
@@ -146,10 +143,9 @@ namespace lambda
     }
     void RigidBodySystem::setVelocity(const entity::Entity& entity, const glm::vec3& velocity)
     {
-      if (std::isnan(velocity.x) || std::isnan(velocity.y) || std::isnan(velocity.z) || glm::dot(velocity, velocity) == 0.0f)
-      {
-        return;
-      }
+	  if (std::isnan(velocity.x) || std::isnan(velocity.y) || std::isnan(velocity.z))
+	    return;
+
       RigidBodyData& data = lookUpData(entity);
       data.rigid_body->setLinearVelocity(
         btVector3(
@@ -172,10 +168,9 @@ namespace lambda
     }
     void RigidBodySystem::setAngularVelocity(const entity::Entity& entity, const glm::vec3& velocity)
     {
-      if (std::isnan(velocity.x) || std::isnan(velocity.y) || std::isnan(velocity.z) || glm::dot(velocity, velocity) == 0.0f)
-      {
+	  if (std::isnan(velocity.x) || std::isnan(velocity.y) || std::isnan(velocity.z))
         return;
-      }
+
       RigidBodyData& data = lookUpData(entity);
       data.rigid_body->setAngularVelocity(
         btVector3(

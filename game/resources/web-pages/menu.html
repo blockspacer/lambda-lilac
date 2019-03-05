@@ -298,6 +298,8 @@
 				menus[id].classList.add('fadeIn');
 			}
 			current_menu = id;
+
+			movedToMenu(id);
 		}
 		
 		function changeSidewaysUp(id)
@@ -353,6 +355,9 @@
 					<p class="menu_BodyName menu_Transition" style="width: 280pt" onclick="moveToMenu('main');">Exit to Main Menu</p>
 				</div>
 				<div class="menu_BodyWrapper">
+					<p class="menu_BodyName menu_Transition" style="width: 280pt" onclick="moveToMenu('debug');">Debug</p>
+				</div>
+				<div class="menu_BodyWrapper">
 					<p class="menu_BodyName menu_Transition" style="width: 280pt">Exit to Desktop</p>
 				</div>
 			</div>
@@ -374,6 +379,9 @@
 				</div>
 				<div class="menu_BodyWrapper">
 					<p class="menu_BodyName menu_Transition" style="width: 280pt" onclick="moveToMenu('accessibility');">Accessibility</p>
+				</div>
+				<div class="menu_BodyWrapper">
+					<p class="menu_BodyName menu_Transition" style="width: 280pt" onclick="moveToMenu('debug');">Debug</p>
 				</div>
 			</div>
 		</div>
@@ -549,6 +557,31 @@
 							<p class="menu_BodyOption menu_Sideways" id="cbm_5" onclick="changeSidewaysUp('cbm');">Tritanomaly</p>
 							<p class="menu_BodyOption menu_Sideways" id="cbm_6" onclick="changeSidewaysUp('cbm');">Tritanopia</p>
 							<a class="menu_Button" style="user-select: none;"   onclick="changeSidewaysUp('cbm');">&raquo;</a>
+						</div>
+						<div class="menu_BodyWrapper" style="padding-top: 10pt;">
+							<p class="menu_BodyName menu_Transition" style="font-size: 15pt; width: 280pt; bottom: 0pt; position: absolute;" onclick="moveToMenu('main');">Back</p>
+						</div>
+					</td>
+				</tr>
+			</table>
+		</div>
+		<div class="menu" id="debug">
+			<table>
+				<tr>
+					<td class="menu_TitleTD">
+						<p class="menu_TitlePrev">Main Menu</p>
+						<p class="menu_TitleName">Debug</p>
+					</td>
+					<td class="menu_BodyTD">
+						<div class="menu_BodyWrapper">
+							<p class="menu_BodyName" style="padding-top: 15pt; padding-bottom: 0pt; cursor: default;">Physics</p>
+						</div>
+						<div class="menu_BodyWrapper">
+							<p class="menu_BodySubName">Debug Draw</p>
+							<a class="menu_Button" style="user-select: none;"                  onclick="changeSidewaysDown('physics_debug_draw');">&laquo;</a>
+							<p class="menu_BodyOption menu_Sideways" id="physics_debug_draw_0" onclick="changeSidewaysUp('physics_debug_draw');">Disabled</p>
+							<p class="menu_BodyOption menu_Sideways" id="physics_debug_draw_1" onclick="changeSidewaysUp('physics_debug_draw');">Enabled</p>
+							<a class="menu_Button" style="user-select: none;"                  onclick="changeSidewaysUp('physics_debug_draw');">&raquo;</a>
 						</div>
 						<div class="menu_BodyWrapper" style="padding-top: 10pt;">
 							<p class="menu_BodyName menu_Transition" style="font-size: 15pt; width: 280pt; bottom: 0pt; position: absolute;" onclick="moveToMenu('main');">Back</p>

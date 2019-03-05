@@ -248,11 +248,24 @@ namespace lambda
 		lookUpData(entity).rigid_body->setFriction(friction);
 	}
 
-	float ColliderSystem::getFriction(const entity::Entity & entity) const
+	float ColliderSystem::getFriction(const entity::Entity& entity) const
 	{
 		return lookUpData(entity).rigid_body->getFriction();
 	}
-    
+
+	void ColliderSystem::setMass(const entity::Entity& entity, float mass)
+	{
+		lookUpData(entity).rigid_body->setMassProps(
+			mass,
+			lookUpData(entity).rigid_body->getLocalInertia()
+		);
+	}
+
+	float ColliderSystem::getMass(const entity::Entity& entity) const
+	{
+		return 1.0f / lookUpData(entity).rigid_body->getInvMass();
+	}
+
 	ColliderData& ColliderSystem::lookUpData(const entity::Entity& entity)
     {
       assert(entity_to_data_.find(entity) != entity_to_data_.end());
@@ -293,7 +306,7 @@ namespace lambda
     {
       system_->makeMeshCollider(entity_, mesh, sub_mesh_id);
     }
-	
+
 	void ColliderComponent::setFriction(float friction)
 	{
 		system_->setFriction(entity_, friction);
@@ -303,7 +316,17 @@ namespace lambda
 	{
 		return system_->getFriction(entity_);
 	}
-    
+
+	void ColliderComponent::setMass(float mass)
+	{
+		system_->setMass(entity_, mass);
+	}
+
+	float ColliderComponent::getMass() const
+	{
+		return system_->getMass(entity_);
+	}
+
 	ColliderData::ColliderData(const ColliderData& other)
     {
       type            = other.type;

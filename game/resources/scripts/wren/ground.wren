@@ -37,9 +37,14 @@ class GroundEnabledType {
 class Ground {
     construct new() {
       _tiles = []
+      _gameObjects = []
+      _allow_repeat = [ true, false ]
+      _meshes = []
+      _needs_box_collider = []
+      _offset = Vec3.new(20, 2, 20)
     }
 
-    addTile(x, y, z) {
+    addTile(x, y, z, type) {
       while(_tiles.count <= z) {
         _tiles.add([])
       }
@@ -50,44 +55,107 @@ class Ground {
         _tiles[z][y].add(null)
       }
 
+      _tiles[z][y][x] = type
+    }
+
+    createObj(position, size, mesh, needs_box_collider) {
       var model = GameObject.new()
       model.name = "ground"
-      model.transform.worldScale = Vec3.new(2)
-      model.transform.worldPosition = Vec3.new(x - 10, y, z - 10) * 2
-      model.addComponent(MeshRender).mesh = y == 0 ? _mesh : _mesh2
+      model.transform.worldScale = size
+      model.transform.worldPosition = position
+      model.addComponent(MeshRender).mesh = mesh
       model.getComponent(MeshRender).subMesh = 0
       model.getComponent(MeshRender).albedo = Texture.load("resources/textures/mossy-ground1-albedo.png")
       model.getComponent(MeshRender).normal = Texture.load("resources/textures/mossy-ground1-normal.png")
       model.getComponent(MeshRender).metallicRoughness = Texture.load("resources/textures/mossy-ground1-metallic-roughness.png")
       var collider = model.addComponent(Collider)
-      if (y == 0) {
+      if (needs_box_collider) {
         collider.makeBoxCollider()
       } else {
         collider.makeSphereCollider()
       }
-      //collider.friction = 2.5
-      _tiles[z][y][x] = model
+      _gameObjects.add(model)
     }
 
-    initialize() {
-      _mesh = Mesh.generate("cube")
-      _mesh2 = Mesh.generate("sphere")
-
-      for (z in 0..20) {
-        for (x in 0..20) {
-          addTile(x, 0, z)
-          if (z == 0 || z == 20 || x == 0 || x == 20) {
-            addTile(x, 1, z)
+    cubeValid(from, to, type) {
+      for (z in from.z..to.z) {
+        for (y in from.y..to.y) {
+          for (x in from.x..to.x) {
+            if (_tiles[z][y][x] != type) {
+              return false
+            }
           }
         }
       }
+      return true
+    }
 
+    floodFillTile(x, y, z, type) {
+      if (type == null) {
+        return
+      }
+
+      var max_z = z
+      for (z_ in z..._tiles.count) {
+        if (cubeValid(Vec3.new(x, y, z), Vec3.new(x, y, z_), type)) {
+          max_z = z_
+        } else {
+          break
+        }
+      }
+      
+      var max_x = x
+      for (x_ in x..._tiles[z][y].count) {
+        if (cubeValid(Vec3.new(x, y, z), Vec3.new(x_, y, max_z), type)) {
+          max_x = x_
+        } else {
+          break
+        }
+      }
+      
+      for (z_ in z..max_z) {
+        for (x_ in x..max_x) {
+          _tiles[z_][y][x_] = null
+        }
+      }
+
+      var needs_box_collider = _needs_box_collider[type]
+      var mesh = _meshes[type]
+
+      if (_allow_repeat[type]) {
+        var scale = Vec3.new(max_x - x + 1, 1, max_z - z + 1) * 2
+        var position = Vec3.new(x, y, z) * 2 + scale / 2 - _offset
+        createObj(position, scale, mesh, needs_box_collider)
+      } else {
+        for (z_ in z..max_z) {
+          for (x_ in x..max_x) {
+            var scale = Vec3.new(1, 1, 1) * 2
+            var position = Vec3.new(x_, y, z_) * 2 + scale / 2 - _offset
+            createObj(position, scale, mesh, needs_box_collider)
+          }
+        }
+      }
+    }
+
+    rasterize() {
+      for (z in 0..._tiles.count) {
+        for (y in 0..._tiles[z].count) {
+          for (x in 0..._tiles[z][y].count) {
+            if (_tiles[z][y][x] != null) {
+              floodFillTile(x, y, z, _tiles[z][y][x])
+            }
+          }
+        }
+      }
+    }
+
+    cube() {
       _cube = GameObject.new()
       _cube.name = "cube"
       _cube.transform.worldScale = Vec3.new(1.9)
       _cube.transform.worldPosition = Vec3.new(0.1, 2.1, -5.1) * 2
 
-      _cube.addComponent(MeshRender).mesh = _mesh
+      _cube.addComponent(MeshRender).mesh = _meshes[0]
       _cube.getComponent(MeshRender).subMesh = 0
       _cube.getComponent(MeshRender).albedo = Texture.load("resources/textures/rustediron-streaks_basecolor.png")
       _cube.getComponent(MeshRender).normal = Texture.load("resources/textures/rustediron-streaks_normal.png")
@@ -96,7 +164,37 @@ class Ground {
       var pos = _cube.transform.worldPosition
       var rigidBody = _cube.addComponent(RigidBody)
       collider.makeBoxCollider()
+      collider.mass = 2.5
+      collider.friction = 2.0
       _cube.transform.worldPosition = pos
+    }
+
+    initialize() {
+      _meshes.add(Mesh.generate("cube"))
+      _needs_box_collider.add(true)
+      _meshes.add(Mesh.generate("sphere"))
+      _needs_box_collider.add(false)
+
+      for (z in 0..20) {
+        for (x in 0..20) {
+          // Layer 0
+          addTile(x, 0, z, 0)
+          
+          // Layer 1
+          if (!((x == 15) && (z != 0 && z != 20))) {
+            addTile(x, 1, z, 0)
+          }
+
+          // Layer 2
+          if (z == 0 || z == 20 || x == 0 || x == 20) {
+            addTile(x, 2, z, 1)
+          }
+        }
+      }
+
+      rasterize()
+
+      cube()
     }
 
     update() {

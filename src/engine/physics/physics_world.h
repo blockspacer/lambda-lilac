@@ -20,8 +20,21 @@ namespace lambda
 		class MonoBehaviourSystem;
   }
 
+  namespace world
+  {
+	  class IWorld;
+  }
+
   namespace physics
   {
+    ///////////////////////////////////////////////////////////////////////////
+	struct Manifold
+	{
+	  entity::Entity entity;
+	  glm::vec3 normal;
+	  glm::vec3 point;
+	};
+
     ///////////////////////////////////////////////////////////////////////////
     class PhysicsWorld
     {
@@ -31,10 +44,7 @@ namespace lambda
       
       void initialize(
 				platform::DebugRenderer* debug_renderer,
-				foundation::SharedPointer<entity::EntitySystem> entity_system,
-				foundation::SharedPointer<components::TransformSystem> transform_system,
-				foundation::SharedPointer<components::RigidBodySystem> rigid_body_system,
-				foundation::SharedPointer<components::MonoBehaviourSystem> mono_behaviour_system
+				world::IWorld* world
       );
       void deinitialize();
       void render();
@@ -42,10 +52,21 @@ namespace lambda
 
       void release();
       btDiscreteDynamicsWorld* dynamicsWorld();
-      Vector<entity::Entity> raycast(
-        const glm::vec3& start, 
-        const glm::vec3& end
-      );
+	  Vector<Manifold> raycast(
+		  const glm::vec3& start,
+		  const glm::vec3& end
+	  );
+	  Vector<Manifold> collisionTest(
+		  const entity::Entity& entity
+	  );
+
+	  void setDebugDrawEnabled(bool debug_draw_enabled);
+	  bool getDebugDrawEnabled() const;
+
+	  void setGravity(glm::vec3 gravity);
+	  glm::vec3 getGravity() const;
+
+	  components::TransformSystem* getTransformSystem() const;
 
     private:
       void initialize();
@@ -63,10 +84,10 @@ namespace lambda
       
       foundation::SharedPointer<btCollisionDispatcher> dispatcher_;
       foundation::SharedPointer<btBroadphaseInterface> pair_cache_;
-      foundation::SharedPointer<btDiscreteDynamicsWorld> dynamics_world_;
-      foundation::SharedPointer<entity::EntitySystem>    entity_system_;
-      foundation::SharedPointer<components::TransformSystem> transform_system_;
+	  foundation::SharedPointer<btDiscreteDynamicsWorld> dynamics_world_;
+	  world::IWorld* world_;
       PhysicVisualizer physic_visualizer_;
+	  bool debug_draw_enabled_;
     };
   }
 }

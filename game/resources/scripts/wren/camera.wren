@@ -16,6 +16,7 @@ import "Core/WaveSource" for WaveSource
 import "Core/Collider" for Collider
 import "Core/MonoBehaviour" for MonoBehaviour
 import "Core/Physics" for Physics
+import "Core/Manifold" for Manifold
 
 import "Core/Input" for Input, Keys, Buttons, Axes
 import "Core/Math" for Math
@@ -29,6 +30,9 @@ class FreeLookCamera is MonoBehaviour {
   construct new() { super() }
   static goGet(val) { MonoBehaviour.goGet(val) }
   static goRemove(val) { MonoBehaviour.goRemove(val) }
+
+  hasInput { _has_input }
+  hasInput=(has_input) { _has_input = has_input }
 
   initializeVariables() {
     _jump_height      = 1.1
@@ -47,6 +51,7 @@ class FreeLookCamera is MonoBehaviour {
     _time             = 0.0
     _attacker         = null
     _attack           = false
+    _has_input        = true
   }
 
   initialize() {
@@ -77,18 +82,25 @@ class FreeLookCamera is MonoBehaviour {
   rotation { _rotation }
   cameraTransform { _camera_transform }
 
-  fixedUpdate() {
+  getAttack             { (InputController.MovementUpDown > 0.0 && _has_input) ? true : false }
+  getHeldAttack         { (InputController.CameraAttack   > 0.0 && _has_input) ? true : false }
+  getCameraVertical     { _has_input ? InputController.CameraVertical   * Time.fixedDeltaTime * _sensitivity.x : 0.0 }
+  getCameraHorizontal   { _has_input ? InputController.CameraHorizontal * Time.fixedDeltaTime * _sensitivity.y : 0.0 }
+  getMovementVertical   { _has_input ? InputController.MovementVertical   : 0.0 }
+  getMovementHorizontal { _has_input ? InputController.MovementHorizontal : 0.0 }
+  getMovementSprint     { _has_input ? Math.lerp(InputController.MovementSprint, _max_speed, _max_speed_sprint) : 0.0 }
 
+  fixedUpdate() {
     // Jumping.
     var last_attack = _attack
-    _attack = InputController.MovementUpDown > 0.0 ? true : false
+    _attack = getAttack
     if (_attack && !last_attack) {
       if (!_attacker) {
         var from = _camera_transform.worldPosition
         var to = from + _camera_transform.worldForward * 10
         for(v in Physics.castRay(from, to)) {
-          if (v.name == "cube") {
-            _attacker = v
+          if (v.gameObject.name == "cube") {
+            _attacker = v.gameObject
             break
           }
         }
@@ -100,14 +112,35 @@ class FreeLookCamera is MonoBehaviour {
     }
 
     if (_attacker) {
-      var pFrom = _camera_transform.worldPosition + _camera_transform.worldForward * 5
+      var dist = 5
+      var pFrom = _camera_transform.worldPosition + _camera_transform.worldForward * dist
+
+      var from = _camera_transform.worldPosition
+      var to = from + _camera_transform.worldForward * 5
+      for(v in Physics.castRay(from, to)) {
+        if (v.gameObject.name == "ground") {
+          var l = (_camera_transform.worldPosition - (v.point + v.normal)).length
+
+          if (l < dist) {
+            dist = l
+            pFrom = v.point + v.normal
+          }
+        }
+      }
+
+      var pEuler = Vec2.new(_camera_transform.worldForward.x, _camera_transform.worldForward.z)
+      pEuler.normalize()
+      pEuler = Vec3.new(0.0, Math.atan2(pEuler.x, pEuler.y), 0.0)
+      
       _attacker.transform.worldPosition = pFrom
-      _attacker.getComponent(RigidBody).velocity = Physics.gravity * -1
+      _attacker.transform.worldEuler = pEuler
+      _attacker.getComponent(RigidBody).velocity = Vec3.new(0.0)
+      _attacker.getComponent(RigidBody).angularVelocity = Vec3.new(0.0)
     }
 
 
     var last_held_attack = _held_attack
-    _held_attack = InputController.CameraAttack > 0.0 ? true : false
+    _held_attack = getHeldAttack
     if (_held_attack && !last_held_attack) {
       _shurikens.add(ShurikenBehaviour.create(_camera_transform.worldPosition, _camera_transform.worldForward))
     }
@@ -135,7 +168,7 @@ class FreeLookCamera is MonoBehaviour {
 
   rotateCamera() {
     // Rotate the camera.
-    _temp_rotation = _temp_rotation + Vec3.new(InputController.CameraVertical * Time.fixedDeltaTime * _sensitivity.x, InputController.CameraHorizontal * Time.fixedDeltaTime * _sensitivity.y, 0.0)
+    _temp_rotation = _temp_rotation + Vec3.new(getCameraVertical, getCameraHorizontal, 0.0)
     _temp_rotation.x = Math.clamp(_temp_rotation.x, -90.0, 90.0)
     _temp_rotation.y = Math.wrap( _temp_rotation.y, 0.0, 360.0)
   }
@@ -155,7 +188,7 @@ class FreeLookCamera is MonoBehaviour {
     var sin = -Math.sin(Math.deg2Rad * _temp_rotation.y)
     var cos =  Math.cos(Math.deg2Rad * _temp_rotation.y)
 
-    var movement = Vec2.new(sin, -cos).normalized * InputController.MovementVertical + Vec2.new(-cos, -sin).normalized * -InputController.MovementHorizontal
+    var movement = Vec2.new(sin, -cos).normalized * getMovementVertical + Vec2.new(-cos, -sin).normalized * -getMovementHorizontal
 
     // Move the player.
     var movement_length = movement.lengthSqr
@@ -170,7 +203,7 @@ class FreeLookCamera is MonoBehaviour {
 
       var vel_length = Vec2.new(_temp_velocity.x, _temp_velocity.z).length
       var mov_length = movement.length
-      var mul = Math.clamp(0.0, 1.0, (Math.lerp(InputController.MovementSprint, _max_speed, _max_speed_sprint) - vel_length) / mov_length)
+      var mul = Math.clamp(0.0, 1.0, (getMovementSprint - vel_length) / mov_length)
       _temp_velocity = _temp_velocity + Vec3.new(movement.x, 0.0, movement.y) * mul
     }
   }
@@ -188,7 +221,7 @@ class FreeLookCamera is MonoBehaviour {
     }
 
     var len = _temp_velocity.x * _temp_velocity.x + _temp_velocity.z * _temp_velocity.z
-    var max_speed = Math.lerp(InputController.MovementSprint, _max_speed, _max_speed_sprint)
+    var max_speed = getMovementSprint
     if (len > max_speed) {
       _temp_velocity.x = (_temp_velocity.x / len) * max_speed
       _temp_velocity.z = (_temp_velocity.z / len) * max_speed

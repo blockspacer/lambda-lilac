@@ -6,89 +6,90 @@
 #include "systems/rigid_body_system.h"
 #include "systems/entity_system.h"
 #include "systems/mono_behaviour_system.h"
+#include "interfaces/iworld.h"
 
 namespace lambda
 {
   namespace physics
   {
-		components::MonoBehaviourSystem* g_monoBehaviourSystem;
+        components::MonoBehaviourSystem* g_monoBehaviourSystem;
 
-		///////////////////////////////////////////////////////////////////////////
-		void ContactStarted(btPersistentManifold*const& manifold)
-		{
-			const auto* body0 = manifold->getBody0();
-			const auto* body1 = manifold->getBody1();
+        ///////////////////////////////////////////////////////////////////////////
+        void ContactStarted(btPersistentManifold*const& manifold)
+        {
+            const auto* body0 = manifold->getBody0();
+            const auto* body1 = manifold->getBody1();
 
-			const auto& bt_normal = 
-				(manifold->getNumContacts() <= 0) ? btVector3(0.0f, 0.0f, 0.0f) : 
-				manifold->getContactPoint(0).m_normalWorldOnB;
-			const glm::vec3& normal =
-				glm::vec3(bt_normal.x(), bt_normal.y(), bt_normal.z());
+            const auto& bt_normal = 
+                (manifold->getNumContacts() <= 0) ? btVector3(0.0f, 0.0f, 0.0f) : 
+                manifold->getContactPoint(0).m_normalWorldOnB;
+            const glm::vec3& normal =
+                glm::vec3(bt_normal.x(), bt_normal.y(), bt_normal.z());
 
-			const entity::Entity lhs = body0->getUserIndex();
-			const entity::Entity rhs = body1->getUserIndex();
+            const entity::Entity lhs = body0->getUserIndex();
+            const entity::Entity rhs = body1->getUserIndex();
 
-			bool is_trigger = 
-				(body0->getCollisionFlags() & 
-					btCollisionObject::CF_NO_CONTACT_RESPONSE +
-				body1->getCollisionFlags() & 
-					btCollisionObject::CF_NO_CONTACT_RESPONSE) != 0 ? true : false;
+            bool is_trigger = 
+                (body0->getCollisionFlags() & 
+                    btCollisionObject::CF_NO_CONTACT_RESPONSE +
+                body1->getCollisionFlags() & 
+                    btCollisionObject::CF_NO_CONTACT_RESPONSE) != 0 ? true : false;
 
-			if (is_trigger)
-				g_monoBehaviourSystem->onTriggerEnter(lhs, rhs, normal);
-			else
-				g_monoBehaviourSystem->onCollisionEnter(lhs, rhs, normal);
-		}
+            if (is_trigger)
+                g_monoBehaviourSystem->onTriggerEnter(lhs, rhs, normal);
+            else
+                g_monoBehaviourSystem->onCollisionEnter(lhs, rhs, normal);
+        }
 
-		///////////////////////////////////////////////////////////////////////////
-		void ContactEnded(btPersistentManifold*const& manifold)
-		{
-			const auto* body0 = manifold->getBody0();
-			const auto* body1 = manifold->getBody1();
+        ///////////////////////////////////////////////////////////////////////////
+        void ContactEnded(btPersistentManifold*const& manifold)
+        {
+            const auto* body0 = manifold->getBody0();
+            const auto* body1 = manifold->getBody1();
 
-			const auto& bt_normal = 
-				(manifold->getNumContacts() <= 0) ? btVector3(0.0f, 0.0f, 0.0f) : 
-				manifold->getContactPoint(0).m_normalWorldOnB;
-			const glm::vec3& normal = 
-				glm::vec3(bt_normal.x(), bt_normal.y(), bt_normal.z());
+            const auto& bt_normal = 
+                (manifold->getNumContacts() <= 0) ? btVector3(0.0f, 0.0f, 0.0f) : 
+                manifold->getContactPoint(0).m_normalWorldOnB;
+            const glm::vec3& normal = 
+                glm::vec3(bt_normal.x(), bt_normal.y(), bt_normal.z());
 
-			const entity::Entity lhs = body0->getUserIndex();
-			const entity::Entity rhs = body1->getUserIndex();
+            const entity::Entity lhs = body0->getUserIndex();
+            const entity::Entity rhs = body1->getUserIndex();
 
-			bool is_trigger =
-				(body0->getCollisionFlags() &
-					btCollisionObject::CF_NO_CONTACT_RESPONSE +
-					body1->getCollisionFlags() &
-					btCollisionObject::CF_NO_CONTACT_RESPONSE) != 0 ? true : false;
+            bool is_trigger =
+                (body0->getCollisionFlags() &
+                    btCollisionObject::CF_NO_CONTACT_RESPONSE +
+                    body1->getCollisionFlags() &
+                    btCollisionObject::CF_NO_CONTACT_RESPONSE) != 0 ? true : false;
 
-			if (is_trigger)
-				g_monoBehaviourSystem->onTriggerExit(lhs, rhs, normal);
-			else
-				g_monoBehaviourSystem->onCollisionExit(lhs, rhs, normal);
-		}
+            if (is_trigger)
+                g_monoBehaviourSystem->onTriggerExit(lhs, rhs, normal);
+            else
+                g_monoBehaviourSystem->onCollisionExit(lhs, rhs, normal);
+        }
 
-		///////////////////////////////////////////////////////////////////////////
-		bool ContactProcessed(btManifoldPoint& cp, void* body0, void* body1)
-		{
-			const auto* _body0 = (btCollisionObject*)body0;
-			const auto* _body1 = (btCollisionObject*)body1;
+        ///////////////////////////////////////////////////////////////////////////
+        bool ContactProcessed(btManifoldPoint& cp, void* body0, void* body1)
+        {
+            const auto* _body0 = (btCollisionObject*)body0;
+            const auto* _body1 = (btCollisionObject*)body1;
 
-			const auto& bt_normal = cp.m_normalWorldOnB;
-			const glm::vec3& normal =
-				glm::vec3(bt_normal.x(), bt_normal.y(), bt_normal.z());
+            const auto& bt_normal = cp.m_normalWorldOnB;
+            const glm::vec3& normal =
+                glm::vec3(bt_normal.x(), bt_normal.y(), bt_normal.z());
 
-			const entity::Entity lhs = _body0->getUserIndex();
-			const entity::Entity rhs = _body1->getUserIndex();
+            const entity::Entity lhs = _body0->getUserIndex();
+            const entity::Entity rhs = _body1->getUserIndex();
 
-			bool is_trigger =
-				(_body0->getCollisionFlags() &
-					btCollisionObject::CF_NO_CONTACT_RESPONSE +
-					_body1->getCollisionFlags() &
-					btCollisionObject::CF_NO_CONTACT_RESPONSE) != 0 ? true : false;
+            bool is_trigger =
+                (_body0->getCollisionFlags() &
+                    btCollisionObject::CF_NO_CONTACT_RESPONSE +
+                    _body1->getCollisionFlags() &
+                    btCollisionObject::CF_NO_CONTACT_RESPONSE) != 0 ? true : false;
 
-			//Scripting::ScriptBinding::get()->ContactProcessed(lhs, rhs, normal, is_trigger);
-			return false;
-		}
+            //Scripting::ScriptBinding::get()->ContactProcessed(lhs, rhs, normal, is_trigger);
+            return false;
+        }
 
 
     ///////////////////////////////////////////////////////////////////////////
@@ -113,7 +114,17 @@ namespace lambda
 
     ///////////////////////////////////////////////////////////////////////////
     PhysicsWorld::PhysicsWorld()
+#if defined(_DEBUG) || defined(DEBUG)
+		: debug_draw_enabled_(true)
+#else
+		: debug_draw_enabled_(false)
+#endif
     {
+		physic_visualizer_.setDebugMode(
+			debug_draw_enabled_ ? 
+			btIDebugDraw::DBG_DrawWireframe : 
+			btIDebugDraw::DBG_NoDebug
+		);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -125,23 +136,18 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     void PhysicsWorld::initialize(
       platform::DebugRenderer* debug_renderer, 
-      foundation::SharedPointer<entity::EntitySystem> entity_system, 
-      foundation::SharedPointer<components::TransformSystem> transform_system,
-      foundation::SharedPointer<components::RigidBodySystem> rigid_body_system,
-			foundation::SharedPointer<components::MonoBehaviourSystem> mono_behaviour_system)
+	  world::IWorld* world)
     {
+	  world_ = world;
       physic_visualizer_.initialize(debug_renderer);
-      entity_system_ = entity_system;
-      transform_system_ = transform_system;
-      rigid_body_system_ = rigid_body_system;
-			g_monoBehaviourSystem = mono_behaviour_system.get();
+      g_monoBehaviourSystem = world_->getScene().getSystem<components::MonoBehaviourSystem>().get();
       initialize();
     }
 
     ///////////////////////////////////////////////////////////////////////////
     void PhysicsWorld::deinitialize()
     {
-			g_monoBehaviourSystem = nullptr;
+      g_monoBehaviourSystem = nullptr;
       destroy();
     }
 
@@ -150,6 +156,30 @@ namespace lambda
     {
       dynamics_world_->debugDrawWorld();
     }
+
+	///////////////////////////////////////////////////////////////////////////
+	inline bool isNaN(const glm::vec3& v)
+	{
+		return (std::isnan(v.x) || std::isnan(v.y) || std::isnan(v.z));
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	inline bool isNotNaN(const glm::vec3& v)
+	{
+		return (!std::isnan(v.x) && !std::isnan(v.y) && !std::isnan(v.z));
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	inline bool isNaN(const glm::quat& v)
+	{
+		return (std::isnan(v.x) || std::isnan(v.y) || std::isnan(v.z) || std::isnan(v.w));
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	inline bool isNotNaN(const glm::quat& v)
+	{
+		return (!std::isnan(v.x) && !std::isnan(v.y) && !std::isnan(v.z) && !std::isnan(v.w));
+	}
 
     ///////////////////////////////////////////////////////////////////////////
     void PhysicsWorld::update(const double& time_step)
@@ -165,62 +195,43 @@ namespace lambda
         {
           btTransform transform;
 
-          // TODO (Hilze): Find out why this doesn't work
-          /*if (rigid_body&& rigid_body->getMotionState())
-          {
-            rigid_body->getMotionState()->getWorldTransform(transform);
+		  const entity::Entity entity = rigid_body->getUserIndex();
+		  bool activate = false;
 
-            const entity::Entity entity((uint64_t)rigid_body->getUserIndex(), 
-              0u, entity_system_.get());
-            glm::vec3 pos = transform_system_->getWorldTranslation(entity);
-            glm::quat rot = transform_system_->getWorldRotation(entity);
-            if (false == (std::isnan(pos.x) || 
-              std::isnan(pos.y) || 
-              std::isnan(pos.z)))
-            {
-              transform.setOrigin(btVector3(pos.x, pos.y, pos.z));
-            }
-            if (false == (std::isnan(rot.x) || 
-              std::isnan(rot.y) || 
-              std::isnan(rot.z) || 
-              std::isnan(rot.w)))
-            {
-              transform.setRotation(btQuaternion(rot.x, rot.y, rot.z, rot.w));
-            }
+		  {
+			  transform = rigid_body->getWorldTransform();
 
-            rigid_body->getMotionState()->setWorldTransform(transform);
-          }*/
+			  glm::vec3 pos = getTransformSystem()->getWorldTranslation(entity);
+			  glm::quat rot = getTransformSystem()->getWorldRotation(entity);
 
-          transform = object->getWorldTransform();
-          const entity::Entity entity = 
-            (uint32_t)rigid_body->getUserIndex();
-          glm::vec3 pos = transform_system_->getWorldTranslation(entity);
-          glm::quat rot = transform_system_->getWorldRotation(entity);
-          if (false == (std::isnan(pos.x) || 
-            std::isnan(pos.y) || 
-            std::isnan(pos.z)))
-          {
-						const btVector3 bt_pos(pos.x, pos.y, pos.z);
-						if (transform.getOrigin() != bt_pos)
-						{
-							transform.setOrigin(bt_pos);
-							object->activate();
-						}
-          }
-          if (false == (std::isnan(rot.x) || 
-            std::isnan(rot.y) || 
-            std::isnan(rot.z) || 
-            std::isnan(rot.w)))
-          {
-						const btQuaternion bt_rot(rot.x, rot.y, rot.z, rot.w);
-						if (transform.getRotation() != bt_rot)
-						{
-							transform.setRotation(bt_rot);
-							object->activate();
-						}
-          }
-          object->setWorldTransform(transform);
+			  if (isNotNaN(pos))
+			  {
+				  const btVector3 bt_pos(pos.x, pos.y, pos.z);
+				  if (transform.getOrigin() != bt_pos)
+				  {
+					  transform.setOrigin(bt_pos);
+					  activate = true;
+				  }
+			  }
 
+			  if (isNotNaN(rot))
+			  {
+				  const btQuaternion bt_rot(rot.x, rot.y, rot.z, rot.w);
+				  if (transform.getRotation() != bt_rot)
+				  {
+					  transform.setRotation(bt_rot);
+					  activate = true;
+				  }
+			  }
+
+			  rigid_body->setWorldTransform(transform);
+			  rigid_body->getMotionState()->setWorldTransform(transform);
+		  }
+
+		  if (activate)
+			  object->activate();
+
+		  //*/
         }
       }
 
@@ -235,17 +246,8 @@ namespace lambda
 
         if(rigid_body && false == rigid_body->isStaticObject())
         {
-          if (rigid_body->getMotionState())
-          {
-            rigid_body->getMotionState()->getWorldTransform(transform);
-          }
-          else
-          {
-            transform = object->getWorldTransform();
-          }
-
-          const entity::Entity entity =
-            (uint32_t)rigid_body->getUserIndex();
+          transform = rigid_body->getCenterOfMassTransform();
+          const entity::Entity entity = rigid_body->getUserIndex();
 
           glm::quat rot(
             transform.getRotation().w(),
@@ -253,38 +255,38 @@ namespace lambda
             transform.getRotation().y(),
             transform.getRotation().z()
           );
+
           bool reset = false;
           if (false == (std::isnan(rot.x) || 
             std::isnan(rot.y) || 
             std::isnan(rot.z) || 
             std::isnan(rot.w)))
           {
-            transform_system_->setWorldRotation(entity, rot);
+            getTransformSystem()->setWorldRotation(entity, rot);
           }
           else
           {
             reset = true;
-            rot = transform_system_->getWorldRotation(entity);
+            rot = getTransformSystem()->getWorldRotation(entity);
             transform.setRotation(btQuaternion(rot.x, rot.y, rot.z, rot.w));
           }
 
           // TODO (Hilze): Figure out why
-          btTransform transform2 = object->getWorldTransform();
           glm::vec3 pos(
-            transform2.getOrigin().x(),
-            transform2.getOrigin().y(),
-            transform2.getOrigin().z()
+            transform.getOrigin().x(),
+            transform.getOrigin().y(),
+            transform.getOrigin().z()
           );
           if (false == (std::isnan(pos.x) || 
             std::isnan(pos.y) || 
             std::isnan(pos.z)))
           {
-            transform_system_->setWorldTranslation(entity, pos);
+            getTransformSystem()->setWorldTranslation(entity, pos);
           }
           else
           {
             reset = true;
-            pos = transform_system_->getWorldTranslation(entity);
+            pos = getTransformSystem()->getWorldTranslation(entity);
             transform.setOrigin(btVector3(pos.x, pos.y, pos.z));
           }
 
@@ -296,19 +298,8 @@ namespace lambda
             rigid_body->setAngularVelocity(btVector3(0.0f, 0.0f, 0.0f));
             rigid_body->updateInertiaTensor();
             rigid_body->setWorldTransform(transform);
-          }
-
-          glm::vec3 vel(
-            rigid_body->getLinearVelocity().x(),
-            rigid_body->getLinearVelocity().y(),
-            rigid_body->getLinearVelocity().z()
-          );
-
-          glm::vec3 ang(
-            rigid_body->getAngularVelocity().x(),
-            rigid_body->getAngularVelocity().y(),
-            rigid_body->getAngularVelocity().z()
-          );
+			rigid_body->getMotionState()->setWorldTransform(transform);
+		  }
         }
       }
     }
@@ -338,23 +329,98 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    Vector<entity::Entity> PhysicsWorld::raycast(
+    Vector<Manifold> PhysicsWorld::raycast(
       const glm::vec3& start, 
       const glm::vec3& end)
     {
-      PersonalRayCallback callback;
-      dynamics_world_->rayTest(
-        btVector3(start.x, start.y, start.z), 
-        btVector3(end.x, end.y, end.z),
-        callback
-      );
+	  btVector3 f(start.x, start.y, start.z);
+	  btVector3 t(end.x, end.y, end.z);
+	  
+	  btCollisionWorld::AllHitsRayResultCallback callback(f, t);
+      dynamics_world_->rayTest(f, t, callback);
 
-      Vector<entity::Entity> entities(callback.entities.size());
-	  for (uint64_t i = 0u; i < entities.size(); ++i)
-		  entities.at(i) = callback.entities.at(i);
-      
-      return entities;
+
+      Vector<Manifold> manifolds(callback.m_hitFractions.size());
+	  for (int i = 0; i < (int)manifolds.size(); ++i)
+	  {
+		  manifolds[i].entity = static_cast<entity::Entity>(callback.m_collisionObjects[i]->getUserIndex());
+		  manifolds[i].point  = glm::vec3(callback.m_hitPointWorld[i].x(), callback.m_hitPointWorld[i].y(), callback.m_hitPointWorld[i].z());
+		  manifolds[i].normal = glm::vec3(callback.m_hitNormalWorld[i].x(), callback.m_hitNormalWorld[i].y(), callback.m_hitNormalWorld[i].z());
+	  }
+
+      return manifolds;
     }
+
+	struct MyContactCallBack : public btCollisionWorld::ContactResultCallback
+	{
+		virtual btScalar addSingleResult(btManifoldPoint& cp, const btCollisionObjectWrapper* colObj0Wrap, 
+			int partId0, int index0, const btCollisionObjectWrapper* colObj1Wrap, int partId1, int index1) override
+		{
+			btVector3 ptA = cp.getPositionWorldOnA();
+			btVector3 ptB = cp.getPositionWorldOnB();
+			return 0;
+		}
+	};
+
+	///////////////////////////////////////////////////////////////////////////
+	Vector<Manifold> physics::PhysicsWorld::collisionTest(const entity::Entity& entity)
+	{
+		/*MyContactCallBack callback;
+		dynamics_world_->contactTest(object, callback);
+
+
+		Vector<Manifold> manifolds(callback.m_hitFractions.size());
+		for (int i = 0; i < (int)manifolds.size(); ++i)
+		{
+			manifolds[i].entity = static_cast<entity::Entity>(callback.m_collisionObjects[i]->getUserIndex());
+			manifolds[i].point = glm::vec3(callback.m_hitPointWorld[i].x(), callback.m_hitPointWorld[i].y(), callback.m_hitPointWorld[i].z());
+			manifolds[i].normal = glm::vec3(callback.m_hitNormalWorld[i].x(), callback.m_hitNormalWorld[i].y(), callback.m_hitNormalWorld[i].z());
+		}
+
+		return manifolds;*/
+		return Vector<Manifold>();
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	void physics::PhysicsWorld::setDebugDrawEnabled(bool debug_draw_enabled)
+	{
+		debug_draw_enabled_ = debug_draw_enabled;
+
+		physic_visualizer_.setDebugMode(
+			debug_draw_enabled_ ?
+			btIDebugDraw::DBG_DrawWireframe :
+			btIDebugDraw::DBG_NoDebug
+		);
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	bool physics::PhysicsWorld::getDebugDrawEnabled() const
+	{
+		return debug_draw_enabled_;
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	void physics::PhysicsWorld::setGravity(glm::vec3 gravity)
+	{
+		dynamics_world_->setGravity(btVector3(
+			gravity.x,
+			gravity.y,
+			gravity.z
+		));
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	glm::vec3 physics::PhysicsWorld::getGravity() const
+	{
+		btVector3 gravity = dynamics_world_->getGravity();
+		return glm::vec3(gravity.x(), gravity.y(), gravity.z());
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	components::TransformSystem* physics::PhysicsWorld::getTransformSystem() const
+	{
+		return world_->getScene().getSystem<components::TransformSystem>().get();
+	}
 
     ///////////////////////////////////////////////////////////////////////////
     void PhysicsWorld::initialize()
@@ -380,10 +446,11 @@ namespace lambda
       dynamics_world_->setGravity(btVector3(0.0f, -9.81f, 0.0f));
       dynamics_world_->setDebugDrawer(&physic_visualizer_);
 
-//#define RWSDEBUG // TODO (Hilze): Remove this!
-#if (defined(_DEBUG) || defined(DEBUG)) || true
-      physic_visualizer_.setDebugMode(btIDebugDraw::DBG_DrawWireframe);
-#endif
+	  physic_visualizer_.setDebugMode(
+		  debug_draw_enabled_ ?
+		  btIDebugDraw::DBG_DrawWireframe :
+		  btIDebugDraw::DBG_NoDebug
+	  );
 
       // TODO (Hilze): Add Physics callbacks. 
       // Might require a rewrite of the scripting ecs.
@@ -395,9 +462,7 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     void PhysicsWorld::destroy()
     {
-      transform_system_.reset();
-      rigid_body_system_.reset();
-      entity_system_.reset();
+	  world_ = nullptr;
       release();
     }
   }

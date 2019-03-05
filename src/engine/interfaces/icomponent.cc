@@ -15,7 +15,7 @@ namespace lambda
     bool IComponent::operator==(const IComponent& other) const
     {
       return entity_ == other.entity_;
-    }
+    } 
 
     ///////////////////////////////////////////////////////////////////////////
     bool IComponent::operator!=(const IComponent& other) const

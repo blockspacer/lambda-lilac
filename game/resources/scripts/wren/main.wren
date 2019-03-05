@@ -27,6 +27,7 @@ import "Core/MonoBehaviour" for MonoBehaviour
 
 import "Core/PostProcess" for PostProcess
 import "Core/Console" for Console
+import "Core/Physics" for Physics
 
 import "resources/scripts/wren/post_processor" for PostProcessor
 import "resources/scripts/wren/input_controller" for InputController
@@ -77,6 +78,7 @@ class World {
         }
 
         GUI.bindCallback("changedSetting(_,_)", this)
+        GUI.bindCallback("movedToMenu(_)", this)
     }
     deinitialize() {
 
@@ -104,5 +106,12 @@ class World {
       if (id == "render_scale") {
         Graphics.setRenderScale(val)
       }
+      if (id == "physics_debug_draw") {
+        Physics.debugDrawEnabled = val > 0.0 ? true : false
+      }
+    }
+
+    movedToMenu(menu) {
+      _camera.getComponent(FreeLookCamera).hasInput = menu == "" ? true : false
     }
 }

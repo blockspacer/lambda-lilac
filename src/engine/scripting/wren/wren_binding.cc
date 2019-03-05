@@ -3107,6 +3107,8 @@ foreign class Collider {
 
 	foreign friction
 	foreign friction=(friction)
+	foreign mass
+	foreign mass=(mass)
 }
 )";
         char* data = (char*)WREN_ALLOC(str.size() + 1u);
@@ -3198,6 +3200,12 @@ foreign class Collider {
 		};
 		if (strcmp(signature, "friction") == 0) return [](WrenVM* vm) {
 			wrenSetSlotDouble(vm, 0, GetForeign<ColliderHandle>(vm)->handle.getFriction());
+		};
+		if (strcmp(signature, "mass=(_)") == 0) return [](WrenVM* vm) {
+			GetForeign<ColliderHandle>(vm)->handle.setMass((float)(uint32_t)wrenGetSlotDouble(vm, 1));
+		};
+		if (strcmp(signature, "mass") == 0) return [](WrenVM* vm) {
+			wrenSetSlotDouble(vm, 0, GetForeign<ColliderHandle>(vm)->handle.getMass());
 		};
         return nullptr;
       }
@@ -4209,7 +4217,7 @@ class Math {
           wrenSetSlotDouble(vm, 0, std::min(wrenGetSlotDouble(vm, 1), wrenGetSlotDouble(vm, 2)));
         };
         if (strcmp(signature, "max(_,_)") == 0) return [](WrenVM* vm) {
-          wrenSetSlotDouble(vm, 0, std::min(wrenGetSlotDouble(vm, 1), wrenGetSlotDouble(vm, 2)));
+          wrenSetSlotDouble(vm, 0, std::max(wrenGetSlotDouble(vm, 1), wrenGetSlotDouble(vm, 2)));
         };
         if (strcmp(signature, "abs(_)") == 0) return [](WrenVM* vm) {
           wrenSetSlotDouble(vm, 0, std::abs(wrenGetSlotDouble(vm, 1)));
@@ -4297,6 +4305,73 @@ class Time {
 				return nullptr;
 			}
 		}
+		namespace Manifold
+		{
+			char* Load()
+			{
+				String str = R"(
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///// manifold.wren ///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+foreign class Manifold {
+	foreign gameObject
+	foreign normal
+	foreign point
+}
+)";
+				char* data = (char*)WREN_ALLOC(str.size() + 1u);
+				memcpy(data, str.data(), str.size() + 1u);
+				return data;
+			}
+
+			WrenHandle* handle = nullptr;
+			/////////////////////////////////////////////////////////////////////////
+			physics::Manifold* makeAt(WrenVM* vm, int slot, int class_slot, physics::Manifold val = physics::Manifold())
+			{
+				if (handle == nullptr)
+				{
+					wrenGetVariable(vm, "Core/Manifold", "Manifold", class_slot);
+					handle = wrenGetSlotHandle(vm, class_slot);
+				}
+				wrenSetSlotHandle(vm, class_slot, handle);
+				physics::Manifold* data = MakeForeign<physics::Manifold>(vm, slot, class_slot);
+				memcpy(data, &val, sizeof(physics::Manifold));
+				return data;
+			}
+
+			/////////////////////////////////////////////////////////////////////////
+			physics::Manifold* make(WrenVM* vm, const physics::Manifold val = physics::Manifold())
+			{
+				return makeAt(vm, 0, 1, val);
+			}
+
+			/////////////////////////////////////////////////////////////////////////
+			WrenForeignClassMethods Construct()
+			{
+				return WrenForeignClassMethods{
+					[](WrenVM* vm) {
+					make(vm);
+				},
+					[](void* data) {
+				}
+				};
+			}
+
+			/////////////////////////////////////////////////////////////////////////
+			WrenForeignMethodFn Bind(const char* signature)
+			{
+				if (strcmp(signature, "gameObject") == 0) return [](WrenVM* vm) {
+					GameObject::make(vm, GetForeign<physics::Manifold>(vm, 0)->entity);
+				};
+				if (strcmp(signature, "normal") == 0) return [](WrenVM* vm) {
+					Vec3::make(vm, GetForeign<physics::Manifold>(vm, 0)->normal);
+				};
+				if (strcmp(signature, "point") == 0) return [](WrenVM* vm) {
+					Vec3::make(vm, GetForeign<physics::Manifold>(vm, 0)->point);
+				};
+				return nullptr;
+			}
+		}
 		namespace Physics
 		{
 			char* Load()
@@ -4307,7 +4382,11 @@ class Time {
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 class Physics {
     foreign static gravity
+    foreign static gravity=(gravity)
     foreign static castRay(from, to)
+
+	foreign static debugDrawEnabled
+	foreign static debugDrawEnabled=(debugDrawEnabled)
 }
 )";
 				char* data = (char*)WREN_ALLOC(str.size() + 1u);
@@ -4317,23 +4396,29 @@ class Physics {
 			WrenForeignMethodFn Bind(const char* signature)
 			{
 				if (strcmp(signature, "gravity") == 0) return [](WrenVM* vm) {
-					Vec3::make(vm, glm::vec3(0.0f, 9.81f, 0.0f)); // TODO (Hilze): Make dynamic.
+					Vec3::make(vm, g_rigidBodySystem->GetPhysicsWorld().getGravity());
+				};
+				if (strcmp(signature, "gravity=(_)") == 0) return [](WrenVM* vm) {
+					g_rigidBodySystem->GetPhysicsWorld().setGravity(*GetForeign<glm::vec3>(vm, 1));
 				};
 				if (strcmp(signature, "castRay(_,_)") == 0) return [](WrenVM* vm) {
 					glm::vec3 from = *GetForeign<glm::vec3>(vm, 1);
-					glm::vec3 to   = *GetForeign<glm::vec3>(vm, 2);
+					glm::vec3 to = *GetForeign<glm::vec3>(vm, 2);
 
-					Vector<entity::Entity> result = g_rigidBodySystem->GetPhysicsWorld().raycast(from, to);
+					Vector<physics::Manifold> result = g_rigidBodySystem->GetPhysicsWorld().raycast(from, to);
 					wrenSetSlotNewList(vm, 0);
 
-					for (entity::Entity res : result)
+					for (physics::Manifold res : result)
 					{
-						GameObject::makeAt(vm, 1, 2, res);
+						Manifold::makeAt(vm, 1, 2, res);
 						wrenInsertInList(vm, 0, -1, 1);
 					}
 				};
-				if (strcmp(signature, "normal") == 0) return [](WrenVM* vm) {
-					Vec3::make(vm, glm::vec3(0.0f, 9.81f, 0.0f)); // TODO (Hilze): Make dynamic.
+				if (strcmp(signature, "debugDrawEnabled") == 0) return [](WrenVM* vm) {
+					wrenSetSlotBool(vm, 0, g_rigidBodySystem->GetPhysicsWorld().getDebugDrawEnabled());
+				};
+				if (strcmp(signature, "debugDrawEnabled=(_)") == 0) return [](WrenVM* vm) {
+					g_rigidBodySystem->GetPhysicsWorld().setDebugDrawEnabled(wrenGetSlotBool(vm, 1));
 				};
 				return nullptr;
 			}
@@ -4671,7 +4756,9 @@ class Assert {
 					return Collider::Construct();
         if (hashEqual(className, "Light"))     
 					return Light::Construct();
-				if (hashEqual(className, "File"))    
+				if (hashEqual(className, "Manifold"))    
+					return Manifold::Construct();
+				if (hashEqual(className, "File"))
 					return File::Construct();
         if (hashEqual(className, "Noise"))  
 					return Noise::Construct();
@@ -4740,8 +4827,10 @@ class Assert {
 					return Math::Bind(signature);
 				if (hashEqual(className, "Time"))        
 					return Time::Bind(signature);
-				if (hashEqual(className, "Physics"))   
+				if (hashEqual(className, "Physics"))
 					return Physics::Bind(signature);
+				if (hashEqual(className, "Manifold"))
+					return Manifold::Bind(signature);
         if (hashEqual(className, "File"))         
 					return File::Bind(signature);
         if (hashEqual(className, "Noise"))      
@@ -4808,8 +4897,10 @@ class Assert {
 					return Math::Load();
 				if (hashEqual(name_cstr + 5u, "Time"))        
 					return Time::Load();
-				if (hashEqual(name_cstr + 5u, "Physics"))     
+				if (hashEqual(name_cstr + 5u, "Physics"))
 					return Physics::Load();
+				if (hashEqual(name_cstr + 5u, "Manifold"))
+					return Manifold::Load();
         if (hashEqual(name_cstr + 5u, "File"))        
 					return File::Load();
         if (hashEqual(name_cstr + 5u, "Noise"))      
@@ -4935,7 +5026,8 @@ class Assert {
       wrenReleaseHandle(vm, WaveSource::handle);
       wrenReleaseHandle(vm, Collider::handle);
       wrenReleaseHandle(vm, Light::handle);
-      wrenReleaseHandle(vm, File::handle);
+	  wrenReleaseHandle(vm, Manifold::handle);
+	  wrenReleaseHandle(vm, File::handle);
       wrenReleaseHandle(vm, Noise::handle);
       
       g_world            = nullptr;
