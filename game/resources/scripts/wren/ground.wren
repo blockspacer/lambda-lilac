@@ -43,6 +43,11 @@ class Ground {
       _needs_box_collider = []
       _cubes = []
       _offset = Vec3.new(20, 2, 20)
+      
+      _meshes.add(Mesh.generate("cube"))
+      _needs_box_collider.add(true)
+      _meshes.add(Mesh.generate("sphere"))
+      _needs_box_collider.add(false)
     }
 
     addTile(x, y, z, type) {
@@ -164,17 +169,15 @@ class Ground {
       var collider  = c.addComponent(Collider)
       var rigidBody = c.addComponent(RigidBody)
       collider.makeBoxCollider()
-      collider.mass     = 2.5
+      collider.mass     = 1.0
       collider.friction = 2.0
 
       _cubes.add(c)
+
+      return c
     }
 
     initialize() {
-      _meshes.add(Mesh.generate("cube"))
-      _needs_box_collider.add(true)
-      _meshes.add(Mesh.generate("sphere"))
-      _needs_box_collider.add(false)
 
       for (z in 0..20) {
         for (x in 0..20) {

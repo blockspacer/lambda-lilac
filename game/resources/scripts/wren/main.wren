@@ -42,7 +42,7 @@ class World {
         _ground = Ground.new()
         _trees = Trees.new(_ground)
         _trees.enabled = false
-        _ground.initialize()
+        //_ground.initialize()
         _trees.initialize()
 
         _post_processer = PostProcessor.new()
@@ -56,13 +56,17 @@ class World {
         new_position.y = 2.0
         _camera.transform.worldPosition = new_position
 
+        _ground.cube(Vec3.new(-11.0, 9.0, 10.0), Vec3.new(2.00))
+        _ground.cube(Vec3.new(-10.0, 7.0, 10.0), Vec3.new(2.50))
+        _ground.cube(Vec3.new(-10.0, 9, 9), Vec3.new(4.0, 0.5, 2.00))
+
         {
-          // var model = GameObject.new()
-          // model.transform.worldScale = Vec3.new(0.5)
-          // var mesh = Mesh.load("resources/gltf/map.glb")
-          // model.addComponent(MeshRender).attach(mesh)
-          // var collider = model.addComponent(Collider)
-          // collider.makeMeshColliderRecursive(mesh)
+          var model = GameObject.new()
+          model.transform.worldScale = Vec3.new(2.5)
+          var mesh = Mesh.load("resources/gltf/lvl.glb")
+          model.addComponent(MeshRender).attach(mesh)
+          var collider = model.addComponent(Collider)
+          collider.makeMeshColliderRecursive(mesh)
 
           new_position.y = 2.0
           _camera.transform.worldPosition = new_position

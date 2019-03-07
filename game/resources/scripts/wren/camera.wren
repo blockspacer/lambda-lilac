@@ -177,21 +177,23 @@ class FreeLookCamera is MonoBehaviour {
       var objForward = _cObject.transform.worldForward
 
       var pEuler = _cObject.getComponent(RigidBody).angularVelocity
-      pEuler.x = pEuler.x * 0.9
-      pEuler.y = pEuler.y * 0.9
+      // pEuler.x = pEuler.x * 0.9
+      // pEuler.y = pEuler.y * 0.9
 
-      {
-        var p1 = Vec2.new(camForward.x, camForward.z).normalized
-        var p2 = Vec2.new(objForward.x, objForward.z).normalized
+      // {
+      //   var p1 = Vec2.new(camForward.x, camForward.z).normalized
+      //   var p2 = Vec2.new(objForward.x, objForward.z).normalized
 
-        var dot = p1.x * p2.x + p1.y * p2.y
-        var det = p1.x * p2.y - p1.y * p2.x
+      //   var dot = p1.x * p2.x + p1.y * p2.y
+      //   var det = p1.x * p2.y - p1.y * p2.x
         
-        pEuler.y = Math.atan2(det, dot)
-        if (Math.abs(pEuler.y) > 0.001) {
-          pEuler.y = pEuler.y * rotSpeed
-        }
-      }
+      //   pEuler.y = Math.atan2(det, dot)
+      //   if (Math.abs(pEuler.y) > 0.001) {
+      //     pEuler.y = pEuler.y * rotSpeed
+      //   }
+      // }
+
+      pEuler = pEuler * 0.5
 
       //var pEuler = Vec2.new(_camera_transform.worldForward.x, _camera_transform.worldForward.z)
       //pEuler.normalize()
