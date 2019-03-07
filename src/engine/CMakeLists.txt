@@ -436,12 +436,18 @@ IF(${VIOLET_GUI_ULTRALIGHT})
 
   IF(VIOLET_WIN32)
     ADD_CUSTOM_COMMAND(TARGET lambda-engine POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/Ultralight.dll ${CMAKE_BINARY_DIR}/bin/Debug
-      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/UltralightCore.dll ${CMAKE_BINARY_DIR}/bin/Debug
-      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/WebCore.dll ${CMAKE_BINARY_DIR}/bin/Debug
-      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/Ultralight.dll ${CMAKE_BINARY_DIR}/bin/Release
-      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/UltralightCore.dll ${CMAKE_BINARY_DIR}/bin/Release
-      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/WebCore.dll ${CMAKE_BINARY_DIR}/bin/Release)
+      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/Ultralight.dll ${CMAKE_BINARY_DIR}/bin/Debug/
+      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/UltralightCore.dll ${CMAKE_BINARY_DIR}/bin/Debug/
+      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/WebCore.dll ${CMAKE_BINARY_DIR}/bin/Debug/
+      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/Ultralight.dll ${CMAKE_BINARY_DIR}/bin/Release/
+      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/UltralightCore.dll ${CMAKE_BINARY_DIR}/bin/Release/
+      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/WebCore.dll ${CMAKE_BINARY_DIR}/bin/Release/
+      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/Ultralight.dll ${CMAKE_BINARY_DIR}/bin/MinSizeRel/
+      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/UltralightCore.dll ${CMAKE_BINARY_DIR}/bin/MinSizeRel/
+      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/WebCore.dll ${CMAKE_BINARY_DIR}/bin/MinSizeRel/
+      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/Ultralight.dll ${CMAKE_BINARY_DIR}/bin/RelWithDebInfo/
+      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/UltralightCore.dll ${CMAKE_BINARY_DIR}/bin/RelWithDebInfo/
+      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/WebCore.dll ${CMAKE_BINARY_DIR}/bin/RelWithDebInfo/)
   ENDIF()
 ENDIF()
 
