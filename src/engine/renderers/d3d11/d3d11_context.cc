@@ -759,67 +759,67 @@ namespace lambda
       popMarker();
       endTimer("Copy To Screen");
 
-      beginTimer("ImGUI");
-      pushMarker("ImGUI");
-      // Update ImGUI.
-      world_->getImGUI()->endFrame();
-      platform::ImGUICommandList command_list = world_->getImGUI()->getCommandList();
-      if(command_list.commands.size() > 0u)
-      {
-        platform::BlendState blend_state(
-          false,
-          true,
-          platform::BlendState::BlendMode::kSrcAlpha,
-          platform::BlendState::BlendMode::kInvSrcAlpha,
-          platform::BlendState::BlendOp::kAdd,
-          platform::BlendState::BlendMode::kInvSrcAlpha,
-          platform::BlendState::BlendMode::kZero,
-          platform::BlendState::BlendOp::kAdd,
-          (uint8_t)platform::BlendState::WriteMode::kColourWriteEnableRGBA
-        );
-        platform::RasterizerState rasterizer_state(
-          platform::RasterizerState::FillMode::kSolid,
-          platform::RasterizerState::CullMode::kNone
-        );
-        platform::SamplerState sampler_state(
-          platform::SamplerState::SampleMode::kLinear,
-          platform::SamplerState::ClampMode::kClamp
-        );
+      //beginTimer("ImGUI");
+      //pushMarker("ImGUI");
+      //// Update ImGUI.
+      //world_->getImGUI()->endFrame();
+      //platform::ImGUICommandList command_list = world_->getImGUI()->getCommandList();
+      //if(command_list.commands.size() > 0u)
+      //{
+      //  platform::BlendState blend_state(
+      //    false,
+      //    true,
+      //    platform::BlendState::BlendMode::kSrcAlpha,
+      //    platform::BlendState::BlendMode::kInvSrcAlpha,
+      //    platform::BlendState::BlendOp::kAdd,
+      //    platform::BlendState::BlendMode::kInvSrcAlpha,
+      //    platform::BlendState::BlendMode::kZero,
+      //    platform::BlendState::BlendOp::kAdd,
+      //    (uint8_t)platform::BlendState::WriteMode::kColourWriteEnableRGBA
+      //  );
+      //  platform::RasterizerState rasterizer_state(
+      //    platform::RasterizerState::FillMode::kSolid,
+      //    platform::RasterizerState::CullMode::kNone
+      //  );
+      //  platform::SamplerState sampler_state(
+      //    platform::SamplerState::SampleMode::kLinear,
+      //    platform::SamplerState::ClampMode::kClamp
+      //  );
 
-        setBlendState(blend_state);
-        setRasterizerState(rasterizer_state);
-        setSamplerState(sampler_state, 0u);
-        setSamplerState(sampler_state, 1u);
+      //  setBlendState(blend_state);
+      //  setRasterizerState(rasterizer_state);
+      //  setSamplerState(sampler_state, 0u);
+      //  setSamplerState(sampler_state, 1u);
 
-        setShader(command_list.shader);
-        setMesh(command_list.mesh);
-        setShaderVariable(
-          platform::ShaderVariable(
-            Name("projection_matrix"), 
-            command_list.projection
-          )
-        );
-        context_.context->OMSetRenderTargets(
-          1u, 
-          context_.backbuffer.GetAddressOf(), 
-          nullptr
-        );
-        setViewports({ default_.viewport });
-        
-        for (size_t i = 0u; i < command_list.commands.size(); ++i)
-        {
-          if (i >= command_list.mesh->getSubMeshes().size())
-            continue;
-          setScissorRect(command_list.commands.at(i).scissor_rect);
-          setSubMesh((uint32_t)i);
-          setTexture(command_list.mesh->getAttachedTextures().at(i), 0u);
-          draw();
-        } 
-        setScissorRect(glm::vec4(0.0f, 0.0f, world_->getWindow()->getSize()));
-      }
-      world_->getImGUI()->startFrame();
-      popMarker();
-      endTimer("ImGUI");
+      //  setShader(command_list.shader);
+      //  setMesh(command_list.mesh);
+      //  setShaderVariable(
+      //    platform::ShaderVariable(
+      //      Name("projection_matrix"), 
+      //      command_list.projection
+      //    )
+      //  );
+      //  context_.context->OMSetRenderTargets(
+      //    1u, 
+      //    context_.backbuffer.GetAddressOf(), 
+      //    nullptr
+      //  );
+      //  setViewports({ default_.viewport });
+      //  
+      //  for (size_t i = 0u; i < command_list.commands.size(); ++i)
+      //  {
+      //    if (i >= command_list.mesh->getSubMeshes().size())
+      //      continue;
+      //    setScissorRect(command_list.commands.at(i).scissor_rect);
+      //    setSubMesh((uint32_t)i);
+      //    setTexture(command_list.mesh->getAttachedTextures().at(i), 0u);
+      //    draw();
+      //  } 
+      //  setScissorRect(glm::vec4(0.0f, 0.0f, world_->getWindow()->getSize()));
+      //}
+      //world_->getImGUI()->startFrame();
+      //popMarker();
+      //endTimer("ImGUI");
 
       pushMarker("Present");
       present();

@@ -558,7 +558,7 @@ foreign class Vec4 {
 			{
 				if (handle == nullptr)
 				{
-					wrenGetVariable(vm, "Core/Vec3", "Vec3", class_slot);
+					wrenGetVariable(vm, "Core/Vec4", "Vec4", class_slot);
 					handle = wrenGetSlotHandle(vm, class_slot);
 				}
 				wrenSetSlotHandle(vm, class_slot, handle);
@@ -706,6 +706,7 @@ foreign class Quat {
 
     foreign normalized
     foreign toString
+    foreign toEuler
     
     foreign x
     foreign y
@@ -845,6 +846,9 @@ foreign class Quat {
           memcpy((void*)c_str, str.data(), str.size() + 1u);
           wrenSetSlotString(vm, 0, c_str);
         };
+		if (strcmp(signature, "toEuler") == 0) return [](WrenVM* vm) {
+			Vec3::make(vm, glm::eulerAngles(*GetForeign<glm::quat>(vm)));
+		};
         return nullptr;
       }
     }
@@ -4280,11 +4284,11 @@ class Math {
         return nullptr;
       }
     }
-		namespace Time
+	namespace Time
+	{
+		char* Load()
 		{
-			char* Load()
-			{
-				String str = R"(
+			String str = R"(
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///// time.wren ///////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -4293,14 +4297,99 @@ class Time {
     foreign static deltaTime
 }
 )";
+			char* data = (char*)WREN_ALLOC(str.size() + 1u);
+			memcpy(data, str.data(), str.size() + 1u);
+			return data;
+		}
+		WrenForeignMethodFn Bind(const char* signature)
+		{
+			if (strcmp(signature, "deltaTime") == 0) return [](WrenVM* vm) {
+				wrenSetSlotDouble(vm, 0, g_world->getDeltaTime());
+			};
+			return nullptr;
+		}
+	}
+	namespace Sort
+	{
+		char* Load()
+		{
+			String str = R"(
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///// sort.wren ///////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+class Sort {
+  static swap(arr, l, r) {
+    var t = arr[l]
+    arr[l] = arr[r]
+    arr[r] = t
+    return arr
+  }
+
+  static bubbleSort(arr, sorter) { 
+    var i = 0
+    while (i < arr.count - 1) {
+      // Last i elements are already in place    
+      var j = 0
+      while (j < arr.count - i - 1) {
+        if (sorter.greater(arr[j], arr[j + 1])) {
+          arr = swap(arr, j, j + 1)
+        }
+        
+        j = j + 1
+      }
+      
+      i = i + 1
+    }
+
+    return arr
+  }
+
+  // Default to bubble sort.
+  static sort(arr, sorter) { bubbleSort(arr, sorter) }
+}
+)";
+			char* data = (char*)WREN_ALLOC(str.size() + 1u);
+			memcpy(data, str.data(), str.size() + 1u);
+			return data;
+		}
+		WrenForeignMethodFn Bind(const char* signature)
+		{
+			return nullptr;
+		}
+	}
+		namespace Debug
+		{
+			char* Load()
+			{
+				String str = R"(
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///// debug.wren //////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+class Debug {
+    foreign static drawLine(from, to, color)
+    foreign static drawTri(p1, p2, p3, color)
+}
+)";
 				char* data = (char*)WREN_ALLOC(str.size() + 1u);
 				memcpy(data, str.data(), str.size() + 1u);
 				return data;
 			}
 			WrenForeignMethodFn Bind(const char* signature)
 			{
-				if (strcmp(signature, "deltaTime") == 0) return [](WrenVM* vm) {
-					wrenSetSlotDouble(vm, 0, g_world->getDeltaTime());
+				if (strcmp(signature, "drawLine(_,_,_)") == 0) return [](WrenVM* vm) {
+					g_world->getDebugRenderer().DrawLine(platform::DebugLine(
+						*GetForeign<glm::vec3>(vm, 1),
+						*GetForeign<glm::vec3>(vm, 2),
+						*GetForeign<glm::vec4>(vm, 3)
+					));
+				};
+				if (strcmp(signature, "drawTri(_,_,_,_)") == 0) return [](WrenVM* vm) {
+					g_world->getDebugRenderer().DrawTri(platform::DebugTri(
+						*GetForeign<glm::vec3>(vm, 1),
+						*GetForeign<glm::vec3>(vm, 2),
+						*GetForeign<glm::vec3>(vm, 3),
+						*GetForeign<glm::vec4>(vm, 4)
+					));
 				};
 				return nullptr;
 			}
@@ -4756,9 +4845,9 @@ class Assert {
 					return Collider::Construct();
         if (hashEqual(className, "Light"))     
 					return Light::Construct();
-				if (hashEqual(className, "Manifold"))    
+        if (hashEqual(className, "Manifold"))    
 					return Manifold::Construct();
-				if (hashEqual(className, "File"))
+        if (hashEqual(className, "File"))
 					return File::Construct();
         if (hashEqual(className, "Noise"))  
 					return Noise::Construct();
@@ -4767,69 +4856,73 @@ class Assert {
       return WrenForeignClassMethods{};
     }
 
-		///////////////////////////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////////////////////
     WrenForeignMethodFn wrenBindForeignMethod(
-			WrenVM* vm, 
-			const char* module, 
-			const char* className, 
-			bool isStatic, 
-			const char* signature)
+      WrenVM* vm, 
+      const char* module, 
+      const char* className, 
+      bool isStatic, 
+      const char* signature)
     {
       if (strstr(module, "Core") != 0)
       {
-				if (hashEqual(className, "Console"))
-					return Console::Bind(signature);
-				if (hashEqual(className, "GUI"))
-					return GUI::Bind(signature);
+        if (hashEqual(className, "Console"))
+          return Console::Bind(signature);
+		if (hashEqual(className, "GUI"))
+          return GUI::Bind(signature);
         if (hashEqual(className, "Vec2")) 
-					return Vec2::Bind(signature);
+          return Vec2::Bind(signature);
         if (hashEqual(className, "Vec3"))    
-					return Vec3::Bind(signature);
+          return Vec3::Bind(signature);
         if (hashEqual(className, "Vec4"))     
-					return Vec4::Bind(signature);
+          return Vec4::Bind(signature);
         if (hashEqual(className, "Quat"))      
-					return Quat::Bind(signature);
+          return Quat::Bind(signature);
         if (hashEqual(className, "Texture"))   
-					return Texture::Bind(signature);
+          return Texture::Bind(signature);
         if (hashEqual(className, "Shader"))      
-					return Shader::Bind(signature);
+          return Shader::Bind(signature);
         if (hashEqual(className, "Wave"))        
-					return Wave::Bind(signature);
+          return Wave::Bind(signature);
         if (hashEqual(className, "Mesh"))        
-					return Mesh::Bind(signature);
+          return Mesh::Bind(signature);
         if (hashEqual(className, "GameObject"))  
-					return GameObject::Bind(signature);
+          return GameObject::Bind(signature);
         if (hashEqual(className, "Transform"))  
-					return Transform::Bind(signature);
+          return Transform::Bind(signature);
         if (hashEqual(className, "Camera"))     
-					return Camera::Bind(signature);
+          return Camera::Bind(signature);
         if (hashEqual(className, "MeshRender"))  
-					return MeshRender::Bind(signature);
+          return MeshRender::Bind(signature);
         if (hashEqual(className, "Lod"))         
-					return LOD::Bind(signature);
+          return LOD::Bind(signature);
         if (hashEqual(className, "RigidBody"))   
-					return RigidBody::Bind(signature);
+          return RigidBody::Bind(signature);
         if (hashEqual(className, "WaveSource"))  
-					return WaveSource::Bind(signature);
+          return WaveSource::Bind(signature);
         if (hashEqual(className, "Collider"))   
-					return Collider::Bind(signature);
+          return Collider::Bind(signature);
         if (hashEqual(className, "Light"))      
-					return Light::Bind(signature);
+          return Light::Bind(signature);
         if (hashEqual(className, "MonoBehaviour")) 
-					return MonoBehaviour::Bind(signature);
+          return MonoBehaviour::Bind(signature);
         if (hashEqual(className, "Graphics"))     
-					return Graphics::Bind(signature);
+          return Graphics::Bind(signature);
         if (hashEqual(className, "PostProcess"))  
-					return PostProcess::Bind(signature);
+          return PostProcess::Bind(signature);
         if (hashEqual(className, "Input"))       
-					return Input::Bind(signature);
+          return Input::Bind(signature);
         if (hashEqual(className, "Math"))        
-					return Math::Bind(signature);
-				if (hashEqual(className, "Time"))        
-					return Time::Bind(signature);
-				if (hashEqual(className, "Physics"))
+          return Math::Bind(signature);
+		if (hashEqual(className, "Time"))
+          return Time::Bind(signature);
+		if (hashEqual(className, "Sort"))
+          return Sort::Bind(signature);
+		if (hashEqual(className, "Debug"))
+					return Debug::Bind(signature);
+		if (hashEqual(className, "Physics"))
 					return Physics::Bind(signature);
-				if (hashEqual(className, "Manifold"))
+		if (hashEqual(className, "Manifold"))
 					return Manifold::Bind(signature);
         if (hashEqual(className, "File"))         
 					return File::Bind(signature);
@@ -4847,9 +4940,9 @@ class Assert {
     {
       if (strstr(name_cstr, "Core") != 0)
       {
-				if (hashEqual(name_cstr + 5u, "Console"))
+        if (hashEqual(name_cstr + 5u, "Console"))
 					return Console::Load();
-				if (hashEqual(name_cstr + 5u, "GUI"))
+		if (hashEqual(name_cstr + 5u, "GUI"))
 					return GUI::Load();
         if (hashEqual(name_cstr + 5u, "Vec2"))        
 					return Vec2::Load();
@@ -4895,11 +4988,15 @@ class Assert {
 					return Input::Load();
         if (hashEqual(name_cstr + 5u, "Math"))       
 					return Math::Load();
-				if (hashEqual(name_cstr + 5u, "Time"))        
-					return Time::Load();
-				if (hashEqual(name_cstr + 5u, "Physics"))
+		if (hashEqual(name_cstr + 5u, "Time"))
+			return Time::Load();
+		if (hashEqual(name_cstr + 5u, "Sort"))
+			return Sort::Load();
+		if (hashEqual(name_cstr + 5u, "Debug"))
+					return Debug::Load();
+		if (hashEqual(name_cstr + 5u, "Physics"))
 					return Physics::Load();
-				if (hashEqual(name_cstr + 5u, "Manifold"))
+		if (hashEqual(name_cstr + 5u, "Manifold"))
 					return Manifold::Load();
         if (hashEqual(name_cstr + 5u, "File"))        
 					return File::Load();
@@ -4934,15 +5031,15 @@ class Assert {
     {
 			g_scriptingData = foundation::Memory::construct<ScriptingData>();
       g_world               = world;
-      g_entitySystem        =
+	  g_entitySystem        =
 				world->getScene().getSystem<entity::EntitySystem>().get();
-			g_nameSystem          =
+	  g_nameSystem          =
 				world->getScene().getSystem<components::NameSystem>().get();
       g_transformSystem     = 
 				world->getScene().getSystem<components::TransformSystem>().get();
       g_cameraSystem        = 
 				world->getScene().getSystem<components::CameraSystem>().get();
-			g_lodSystem           = 
+	  g_lodSystem           =
 				world->getScene().getSystem<components::LODSystem>().get();
       g_lightSystem         = 
 				world->getScene().getSystem<components::LightSystem>().get();
@@ -5008,7 +5105,7 @@ class Assert {
 		///////////////////////////////////////////////////////////////////////////
     extern void WrenRelease(WrenVM* vm)
     {
-			foundation::Memory::destruct(g_scriptingData);
+      foundation::Memory::destruct(g_scriptingData);
       wrenReleaseHandle(vm, Vec2::handle);
       wrenReleaseHandle(vm, Vec3::handle);
       wrenReleaseHandle(vm, Vec4::handle);
@@ -5032,9 +5129,9 @@ class Assert {
       
       g_world            = nullptr;
       g_entitySystem     = nullptr;
-			g_nameSystem       = nullptr;
+	  g_nameSystem       = nullptr;
       g_transformSystem  = nullptr;
-			g_lodSystem        = nullptr;
+	  g_lodSystem        = nullptr;
       g_cameraSystem     = nullptr;
       g_lightSystem      = nullptr;
       g_meshRenderSystem = nullptr;

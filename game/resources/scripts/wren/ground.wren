@@ -41,6 +41,7 @@ class Ground {
       _allow_repeat = [ true, false ]
       _meshes = []
       _needs_box_collider = []
+      _cubes = []
       _offset = Vec3.new(20, 2, 20)
     }
 
@@ -149,24 +150,24 @@ class Ground {
       }
     }
 
-    cube() {
-      _cube = GameObject.new()
-      _cube.name = "cube"
-      _cube.transform.worldScale = Vec3.new(1.9)
-      _cube.transform.worldPosition = Vec3.new(0.1, 2.1, -5.1) * 2
+    cube(position, scale) {
+      var c = GameObject.new()
+      c.name = "cube"
+      c.transform.worldScale = scale
+      c.transform.worldPosition = position
 
-      _cube.addComponent(MeshRender).mesh = _meshes[0]
-      _cube.getComponent(MeshRender).subMesh = 0
-      _cube.getComponent(MeshRender).albedo = Texture.load("resources/textures/rustediron-streaks_basecolor.png")
-      _cube.getComponent(MeshRender).normal = Texture.load("resources/textures/rustediron-streaks_normal.png")
-      _cube.getComponent(MeshRender).metallicRoughness = Texture.load("resources/textures/rustediron-streaks_metallic_roughness.png")
-      var collider = _cube.addComponent(Collider)
-      var pos = _cube.transform.worldPosition
-      var rigidBody = _cube.addComponent(RigidBody)
+      c.addComponent(MeshRender).mesh = _meshes[0]
+      c.getComponent(MeshRender).subMesh = 0
+      c.getComponent(MeshRender).albedo = Texture.load("resources/textures/rustediron-streaks_basecolor.png")
+      c.getComponent(MeshRender).normal = Texture.load("resources/textures/rustediron-streaks_normal.png")
+      c.getComponent(MeshRender).metallicRoughness = Texture.load("resources/textures/rustediron-streaks_metallic_roughness.png")
+      var collider  = c.addComponent(Collider)
+      var rigidBody = c.addComponent(RigidBody)
       collider.makeBoxCollider()
-      collider.mass = 2.5
+      collider.mass     = 2.5
       collider.friction = 2.0
-      _cube.transform.worldPosition = pos
+
+      _cubes.add(c)
     }
 
     initialize() {
@@ -181,25 +182,32 @@ class Ground {
           addTile(x, 0, z, 0)
           
           // Layer 1
-          if (!((x == 15) && (z != 0 && z != 20))) {
+          if (!(x == 15)) {
             addTile(x, 1, z, 0)
           }
 
           // Layer 2
           if (z == 0 || z == 20 || x == 0 || x == 20) {
-            addTile(x, 2, z, 1)
+            if (!(x == 15)) {
+              addTile(x, 2, z, 1)
+            }
           }
         }
       }
 
       rasterize()
 
-      cube()
+      cube(Vec3.new(0.0, 2.0, -5.0) * 2, Vec3.new(1.9))
+      cube(Vec3.new(5.0, 2.0, -5.0) * 2, Vec3.new(1.9))
+      cube(Vec3.new(5.0, 2.0, -0.0) * 2, Vec3.new(1.0, 0.1, 4.0))
     }
 
     update() {
-      if (_cube.transform.worldPosition.y < -10) {
-        _cube.transform.worldPosition = Vec3.new(0.1, 2.1, -5.1) * 2
+      for(c in _cubes) {
+        if (c.transform.worldPosition.y < -10) {
+          c.transform.worldPosition = Vec3.new(0.0, 2.0, -0.0) * 2
+          c.getComponent(RigidBody).velocity = Vec3.new(0.0)
+        }
       }
     }
 }

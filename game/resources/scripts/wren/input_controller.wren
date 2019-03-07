@@ -59,6 +59,7 @@ class InputController {
         //if (Input.getButton(Buttons.A)) val = val + 1.0
         //if (Input.getKey(Keys.Q)) val = val - 1.0
         if (Input.getKey(Keys.Space)) val = val + 1.0
+        if (Input.getKey(Keys.Shift)) val = val - 1.0
 
         return Math.clamp(val, -1.0, 1.0)
     }

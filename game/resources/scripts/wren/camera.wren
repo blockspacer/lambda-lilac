@@ -1,5 +1,6 @@
 import "Core/Vec2" for Vec2
 import "Core/Vec3" for Vec3
+import "Core/Vec4" for Vec4
 
 import "Core/Texture" for Texture
 import "Core/Shader" for Shader
@@ -22,9 +23,23 @@ import "Core/Input" for Input, Keys, Buttons, Axes
 import "Core/Math" for Math
 
 import "Core/Time" for Time
+import "Core/Debug" for Debug
+import "Core/Sort" for Sort
 
 import "resources/scripts/wren/input_controller" for InputController
 import "resources/scripts/wren/shuriken" for ShurikenBehaviour
+
+class Sorter {
+  construct new(pos) {
+    _pos = pos
+  }
+
+  greater(lhs, rhs) {
+    var llhs = (_pos - lhs.point).length
+    var lrhs = (_pos - rhs.point).length
+    return llhs > lrhs
+  }
+}
 
 class FreeLookCamera is MonoBehaviour {
   construct new() { super() }
@@ -49,9 +64,10 @@ class FreeLookCamera is MonoBehaviour {
     _temp_velocity    = Vec3.new(0.0)
     _shurikens        = []
     _time             = 0.0
-    _attacker         = null
-    _attack           = false
     _has_input        = true
+
+    _cObject          = null
+    _cHolding         = false
   }
 
   initialize() {
@@ -82,7 +98,7 @@ class FreeLookCamera is MonoBehaviour {
   rotation { _rotation }
   cameraTransform { _camera_transform }
 
-  getAttack             { (InputController.MovementUpDown > 0.0 && _has_input) ? true : false }
+  getHolding            { _has_input ? InputController.MovementUpDown : 0.0 }
   getHeldAttack         { (InputController.CameraAttack   > 0.0 && _has_input) ? true : false }
   getCameraVertical     { _has_input ? InputController.CameraVertical   * Time.fixedDeltaTime * _sensitivity.x : 0.0 }
   getCameraHorizontal   { _has_input ? InputController.CameraHorizontal * Time.fixedDeltaTime * _sensitivity.y : 0.0 }
@@ -90,54 +106,113 @@ class FreeLookCamera is MonoBehaviour {
   getMovementHorizontal { _has_input ? InputController.MovementHorizontal : 0.0 }
   getMovementSprint     { _has_input ? Math.lerp(InputController.MovementSprint, _max_speed, _max_speed_sprint) : 0.0 }
 
-  fixedUpdate() {
-    // Jumping.
-    var last_attack = _attack
-    _attack = getAttack
-    if (_attack && !last_attack) {
-      if (!_attacker) {
+  drawCube() {
+    var from = _camera_transform.worldPosition
+    var to = from + _camera_transform.worldForward * 2
+    Debug.drawLine(to, to + Vec3.new(0.1, 0.0, 0.0), Vec4.new(1.0, 0.0, 0.0, 1.0))
+    Debug.drawLine(to, to + Vec3.new(0.0, 0.1, 0.0), Vec4.new(0.0, 1.0, 0.0, 1.0))
+    Debug.drawLine(to, to + Vec3.new(0.0, 0.0, 0.1), Vec4.new(0.0, 0.0, 1.0, 1.0))
+  }
+
+  handleCube() {
+    // Select and deselect the cube.
+    var last_holding = _cHolding
+    _cHolding = getHolding
+    if (_cHolding != 0 && last_holding == 0) {
+      if (!_cObject && _cHolding > 0) {
         var from = _camera_transform.worldPosition
         var to = from + _camera_transform.worldForward * 10
-        for(v in Physics.castRay(from, to)) {
+        var sorted = Sort.sort(Physics.castRay(from, to), Sorter.new(from))
+        
+        for (v in sorted) {
+          // You cannot select  ground.
+          if (v.gameObject.name == "ground") {
+            _cObject = null
+            break
+          }
+          // Select the cube.
           if (v.gameObject.name == "cube") {
-            _attacker = v.gameObject
+            _cObject = v.gameObject
             break
           }
         }
       } else {
-        var pVel = _camera_transform.worldForward * 20
-       _attacker.getComponent(RigidBody).velocity = pVel
-        _attacker = null
+        // Release the cube.
+        if (_cHolding > 0.0) {
+          var pVel = _camera_transform.worldForward * 20
+          _cObject.getComponent(RigidBody).velocity = pVel
+        }
+        _cObject = null
       }
     }
 
-    if (_attacker) {
+    if (_cObject) {
       var dist = 5
       var pFrom = _camera_transform.worldPosition + _camera_transform.worldForward * dist
 
-      var from = _camera_transform.worldPosition
-      var to = from + _camera_transform.worldForward * 5
-      for(v in Physics.castRay(from, to)) {
-        if (v.gameObject.name == "ground") {
-          var l = (_camera_transform.worldPosition - (v.point + v.normal)).length
+      // var from = _camera_transform.worldPosition
+      // var to = from + _camera_transform.worldForward * 5
+      // for(v in Physics.castRay(from, to)) {
+      //   if (v.gameObject.name == "ground") {
+      //     var l = (_camera_transform.worldPosition - (v.point + v.normal)).length
 
-          if (l < dist) {
-            dist = l
-            pFrom = v.point + v.normal
-          }
+      //     if (l < dist) {
+      //       dist = l
+      //       pFrom = v.point + v.normal
+      //     }
+      //   }
+      // }
+
+      var speed = 75
+      var rotSpeed = 10
+      var diff = pFrom - _cObject.transform.worldPosition
+      var len = Math.min(diff.length, speed)
+      if (len > 0) {
+        len = Math.sqrt(len / speed) * speed
+        diff = diff.normalized * len
+      }
+      _cObject.getComponent(RigidBody).velocity = diff
+
+      var camForward = _camera_transform.worldForward
+      var objForward = _cObject.transform.worldForward
+
+      var pEuler = _cObject.getComponent(RigidBody).angularVelocity
+      pEuler.x = pEuler.x * 0.9
+      pEuler.y = pEuler.y * 0.9
+
+      {
+        var p1 = Vec2.new(camForward.x, camForward.z).normalized
+        var p2 = Vec2.new(objForward.x, objForward.z).normalized
+
+        var dot = p1.x * p2.x + p1.y * p2.y
+        var det = p1.x * p2.y - p1.y * p2.x
+        
+        pEuler.y = Math.atan2(det, dot)
+        if (Math.abs(pEuler.y) > 0.001) {
+          pEuler.y = pEuler.y * rotSpeed
         }
       }
 
-      var pEuler = Vec2.new(_camera_transform.worldForward.x, _camera_transform.worldForward.z)
-      pEuler.normalize()
-      pEuler = Vec3.new(0.0, Math.atan2(pEuler.x, pEuler.y), 0.0)
-      
-      _attacker.transform.worldPosition = pFrom
-      _attacker.transform.worldEuler = pEuler
-      _attacker.getComponent(RigidBody).velocity = Vec3.new(0.0)
-      _attacker.getComponent(RigidBody).angularVelocity = Vec3.new(0.0)
+      //var pEuler = Vec2.new(_camera_transform.worldForward.x, _camera_transform.worldForward.z)
+      //pEuler.normalize()
+      //pEuler = Vec3.new(0.0, Math.atan2(pEuler.x, pEuler.y), 0.0)
+
+      _cObject.getComponent(RigidBody).angularVelocity = pEuler
+    }
+  }
+
+  update() {
+    drawCube()
+  }
+
+  fixedUpdate() {
+    // Respawning.
+    if (transform.worldPosition.y < -10) {
+      transform.worldPosition = Vec3.new(0.0, 2.0, -0.0) * 2
+      gameObject.getComponent(RigidBody).velocity = Vec3.new(0.0)
     }
 
+    handleCube()
 
     var last_held_attack = _held_attack
     _held_attack = getHeldAttack

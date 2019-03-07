@@ -14,7 +14,12 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     struct DebugLine
     {
-      DebugLine() : start(0.0f), end(0.0f) {}
+      DebugLine() 
+		: start(0.0f)
+		, end(0.0f)
+		, colour_start(0.0f)
+		, colour_end(0.0f) 
+	  {}
       DebugLine(
         const glm::vec3& start, 
         const glm::vec3& end, 
@@ -39,20 +44,67 @@ namespace lambda
       glm::vec4 colour_end;
     };
 
+	struct DebugTri {
+		DebugTri()
+		  : p1(0.0f)
+		  , p2(0.0f)
+		  , p3(0.0f)
+		  , c1(0.0f)
+		  , c2(0.0f)
+		  , c3(0.0f)
+		{}
+		DebugTri(
+		  const glm::vec3& p1,
+		  const glm::vec3& p2,
+		  const glm::vec3& p3,
+		  const glm::vec4 colour)
+		  : p1(p1)
+		  , p2(p2)
+		  , p3(p3)
+		  , c1(colour)
+		  , c2(colour)
+		  , c3(colour)
+		{}
+
+		DebugTri(
+		  const glm::vec3& p1,
+		  const glm::vec3& p2,
+		  const glm::vec3& p3,
+		  const glm::vec4 c1,
+		  const glm::vec4 c2,
+		  const glm::vec4 c3)
+		  : p1(p1)
+		  , p2(p2)
+		  , p3(p3)
+		  , c1(c1)
+		  , c2(c2)
+		  , c3(c3)
+		{}
+
+		glm::vec3 p1;
+		glm::vec3 p2;
+		glm::vec3 p3;
+		glm::vec4 c1;
+		glm::vec4 c2;
+		glm::vec4 c3;
+	};
+
     ///////////////////////////////////////////////////////////////////////////
     class DebugRenderer
     {
     public:
       void DrawLine(const DebugLine& line);
+      void DrawTri(const DebugTri& tri);
       void Render(world::IWorld* world);
 
     private:
-      asset::MeshHandle mesh_;
+	  struct Data {
+	    asset::MeshHandle mesh;
+		Vector<glm::vec3> positions;
+		Vector<glm::vec4> colours;
+	  } lines_, tris_;
+
       ShaderPass shader_pass_;
-      Vector<glm::vec3> positions_;
-      Vector<glm::vec4> colours_;
-      //size_t idx_;
-      //size_t last_size_;
     };
   }
 }

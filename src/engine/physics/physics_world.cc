@@ -363,25 +363,6 @@ namespace lambda
 	};
 
 	///////////////////////////////////////////////////////////////////////////
-	Vector<Manifold> physics::PhysicsWorld::collisionTest(const entity::Entity& entity)
-	{
-		/*MyContactCallBack callback;
-		dynamics_world_->contactTest(object, callback);
-
-
-		Vector<Manifold> manifolds(callback.m_hitFractions.size());
-		for (int i = 0; i < (int)manifolds.size(); ++i)
-		{
-			manifolds[i].entity = static_cast<entity::Entity>(callback.m_collisionObjects[i]->getUserIndex());
-			manifolds[i].point = glm::vec3(callback.m_hitPointWorld[i].x(), callback.m_hitPointWorld[i].y(), callback.m_hitPointWorld[i].z());
-			manifolds[i].normal = glm::vec3(callback.m_hitNormalWorld[i].x(), callback.m_hitNormalWorld[i].y(), callback.m_hitNormalWorld[i].z());
-		}
-
-		return manifolds;*/
-		return Vector<Manifold>();
-	}
-
-	///////////////////////////////////////////////////////////////////////////
 	void physics::PhysicsWorld::setDebugDrawEnabled(bool debug_draw_enabled)
 	{
 		debug_draw_enabled_ = debug_draw_enabled;

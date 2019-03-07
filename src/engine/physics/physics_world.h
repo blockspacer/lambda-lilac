@@ -56,9 +56,6 @@ namespace lambda
 		  const glm::vec3& start,
 		  const glm::vec3& end
 	  );
-	  Vector<Manifold> collisionTest(
-		  const entity::Entity& entity
-	  );
 
 	  void setDebugDrawEnabled(bool debug_draw_enabled);
 	  bool getDebugDrawEnabled() const;

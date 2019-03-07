@@ -115,9 +115,9 @@ namespace lambda
           system->update(delta_time_);
 				utilities::Profiler::getInstance().endTimer("Systems: Update");
 
-				utilities::Profiler::getInstance().startTimer("ImGUI: Update");
-				imgui_->update(delta_time_);
-				utilities::Profiler::getInstance().endTimer("ImGUI: Update");
+				//utilities::Profiler::getInstance().startTimer("ImGUI: Update");
+				//imgui_->update(delta_time_);
+				//utilities::Profiler::getInstance().endTimer("ImGUI: Update");
         
 				utilities::Profiler::getInstance().startTimer("Renderer: Update");
 				renderer_->update(delta_time_);
@@ -141,9 +141,9 @@ namespace lambda
           system->onRender();
 				utilities::Profiler::getInstance().endTimer("Systems: OnRender");
 
-				utilities::Profiler::getInstance().startTimer("ImGUI: GenerateCommandList");
-				imgui_->generateCommandList();
-				utilities::Profiler::getInstance().endTimer("ImGUI: GenerateCommandList");
+				//utilities::Profiler::getInstance().startTimer("ImGUI: GenerateCommandList");
+				//imgui_->generateCommandList();
+				//utilities::Profiler::getInstance().endTimer("ImGUI: GenerateCommandList");
         
 				utilities::Profiler::getInstance().startTimer("Renderer: EndFrame");
 				renderer_->endFrame();
@@ -157,7 +157,7 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     void IWorld::handleWindowMessages()
     {
-      imgui_->inputStart();
+		//imgui_->inputStart();
 
       io::Mouse::State mouse_state = mouse_.getCurrentState();
       io::Keyboard::State keyboard_state = keyboard_.getCurrentState();
@@ -172,8 +172,8 @@ namespace lambda
         bool was_handled = false;
 				if (!was_handled && gui_.handleWindowMessage(message))
 					was_handled = true;
-        if (!was_handled && imgui_->inputHandleMessage(message))
-          was_handled = true;
+        //if (!was_handled && imgui_->inputHandleMessage(message))
+		//was_handled = true;
 
 				switch (message.type)
         {
@@ -212,7 +212,7 @@ namespace lambda
       mouse_.update(mouse_state);
       keyboard_.update(keyboard_state);
 
-      imgui_->inputEnd();
+	  //imgui_->inputEnd();
     }
 
     ///////////////////////////////////////////////////////////////////////////

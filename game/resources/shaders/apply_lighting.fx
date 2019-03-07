@@ -1,4 +1,5 @@
 #include "common.fx"
+#include "sh.fx"
 
 ///////////////////////////////////////////////////////////////////////////
 // Functions //////////////////////////////////////////////////////////////
@@ -45,6 +46,20 @@ VSOutput VS(uint id: SV_VertexID)
   return vOut;
 }
 
+static const float3 g_coefficients[9] = {
+  float3(+0.690826f, +0.791972f, +1.156998f),
+  float3(-0.032214f, -0.032154f, -0.031143f),
+  float3(+0.181760f, +0.213785f, +0.350721f),
+  float3(+0.174773f, +0.165067f, +0.134813f),
+  float3(-0.140021f, -0.133054f, -0.109773f),
+  float3(+0.003920f, +0.002716f, -0.001993f),
+  float3(-0.285459f, -0.332236f, -0.476629f),
+  float3(-0.021688f, -0.022507f, -0.025049f),
+  float3(+0.056419f, +0.054559f, +0.047959f)
+};
+
+static const float3 g_transfer_func = 1.0f;
+
 ///////////////////////////////////////////////////////////////////////////
 // Pixel //////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
@@ -84,5 +99,9 @@ float4 PS(VSOutput pIn) : SV_TARGET0
   float4 albedo = Sample(tex_albedo, SamLinearClamp, pIn.tex);
   float3 light  = Sample(tex_light_map, SamLinearClamp, pIn.tex).rgb;
 
+  //ambient.rgb = EvalSH(N, g_coefficients, g_transfer_func);
+  //light   = 1.0f; // Get rid of light so we can debug the SH.
+  //ambient = 0.0f;
+  
   return float4(pow(abs(albedo.rgb), 2.2f) * (light + ambient), albedo.a);
 }

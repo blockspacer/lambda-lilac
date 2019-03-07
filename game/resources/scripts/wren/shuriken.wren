@@ -101,7 +101,7 @@ class ShurikenBehaviour is MonoBehaviour {
       //_mesh_render.getComponent(MeshRender).makeStaticRecursive()
     }
     _collided = true
-}
+  }
 
   static create(position, direction) {
     var go = GameObject.new()
