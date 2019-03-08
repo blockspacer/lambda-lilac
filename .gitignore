@@ -7,3 +7,5 @@ cmake-build-debug/
 
 deps/DXC/
 bin/
+
+game/generated/
