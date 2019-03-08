@@ -42,13 +42,13 @@ class Door is MonoBehaviour {
     // Button.
     gameObject.name         = "button"
     transform.worldScale    = Vec3.new(0.1, 0.5, 0.5) * 2.5
-    transform.worldPosition = Vec3.new(-4.75, 0.5, -4.0) * 2.5
+    transform.worldPosition = Vec3.new(-4.75, 2.5, -4.1) * 2.5
 
     gameObject.addComponent(MeshRender).mesh              = Mesh.generate("cube")
     gameObject.getComponent(MeshRender).subMesh           = 0
-    gameObject.getComponent(MeshRender).albedo            = Texture.load("resources/textures/rustediron-streaks_basecolor.png")
-    gameObject.getComponent(MeshRender).normal            = Texture.load("resources/textures/rustediron-streaks_normal.png")
-    gameObject.getComponent(MeshRender).metallicRoughness = Texture.load("resources/textures/rustediron-streaks_metallic_roughness.png")
+    gameObject.getComponent(MeshRender).albedo            = Texture.load("resources/textures/woodframe1b-albedo.png")
+    gameObject.getComponent(MeshRender).normal            = Texture.load("resources/textures/woodframe1-normal2.png")
+    gameObject.getComponent(MeshRender).metallicRoughness = Texture.load("resources/textures/woodframe1-metallic-roughness.png")
     
     var button_collider = gameObject.addComponent(Collider)
     button_collider.makeBoxCollider()
@@ -62,9 +62,9 @@ class Door is MonoBehaviour {
 
     _door.addComponent(MeshRender).mesh              = Mesh.generate("cube")
     _door.getComponent(MeshRender).subMesh           = 0
-    _door.getComponent(MeshRender).albedo            = Texture.load("resources/textures/rustediron-streaks_basecolor.png")
-    _door.getComponent(MeshRender).normal            = Texture.load("resources/textures/rustediron-streaks_normal.png")
-    _door.getComponent(MeshRender).metallicRoughness = Texture.load("resources/textures/rustediron-streaks_metallic_roughness.png")
+    _door.getComponent(MeshRender).albedo            = Texture.load("resources/textures/woodframe1b-albedo.png")
+    _door.getComponent(MeshRender).normal            = Texture.load("resources/textures/woodframe1-normal2.png")
+    _door.getComponent(MeshRender).metallicRoughness = Texture.load("resources/textures/woodframe1-metallic-roughness.png")
   
     var door_collider = _door.addComponent(Collider)
     door_collider.makeBoxCollider()
