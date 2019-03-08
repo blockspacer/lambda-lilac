@@ -61,9 +61,6 @@
 [submodule "deps/lz4"]
 	path = deps/lz4
 	url = https://github.com/lz4/lz4.git
-[submodule "deps/HLSLcc"]
-	path = deps/HLSLcc
-	url = https://github.com/Unity-Technologies/HLSLcc.git
 [submodule "deps/DirectXShaderCompiler"]
 	path = deps/DirectXShaderCompiler
 	url = https://github.com/Microsoft/DirectXShaderCompiler.git
