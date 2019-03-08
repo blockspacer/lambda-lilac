@@ -60,36 +60,46 @@ namespace lambda
 				return nullptr;
 
 			ID3D10Blob* blob;
-			ID3D10Blob* error;
 
-			IncludeHandler include_handler(file);
-
-			HRESULT result = D3DCompile(
-				(void*)source.data(),
-				source.size(),
-				file.c_str(), 0,
-				&include_handler,
-				entry.c_str(),
-				target.c_str(),
-				0,
-				0,
-				&blob,
-				&error
-			);
-
-			if (FAILED(result))
+			if (source.size() > 3 && (source[0] == 'D' && source[1] == 'X' && source[2] == 'B' && source[3] == 'C'))
 			{
-				if (error)
-				{
-					String err = 
-						"D3D11Shader: Failed to compile shader with message:\n" + 
-						String((char*)error->GetBufferPointer());
-					LMB_ASSERT(false, err.c_str());
-					error->Release();
-				}
+				HRESULT res = D3DCreateBlob(source.size(), &blob);
+				LMB_ASSERT(res == S_OK, "[SHADER] Failed to create blob!");
+				memcpy(blob->GetBufferPointer(), source.data(), source.size());
+			}
+			else
+			{
+				ID3D10Blob* error;
 
-				if (blob)
-					blob->Release();
+				IncludeHandler include_handler(file);
+
+				HRESULT result = D3DCompile(
+					(void*)source.data(),
+					source.size(),
+					file.c_str(), 0,
+					&include_handler,
+					entry.c_str(),
+					target.c_str(),
+					0,
+					0,
+					&blob,
+					&error
+				);
+
+				if (FAILED(result))
+				{
+					if (error)
+					{
+						String err =
+							"[SHADER] Failed to compile shader with message:\n" +
+							String((char*)error->GetBufferPointer());
+						LMB_ASSERT(false, err.c_str());
+						error->Release();
+					}
+
+					if (blob)
+						blob->Release();
+				}
 			}
 
 			return blob;
@@ -108,19 +118,19 @@ namespace lambda
 				data[(int)ShaderStages::kVertex][VIOLET_HLSL],
 				"VS",
 				"vs_5_0"
-			);;
+			);
 			ID3D10Blob* ps_blob = compile(
 				shader->getFilePath(),
 				data[(int)ShaderStages::kPixel][VIOLET_HLSL],
 				"PS",
 				"ps_5_0"
-			);;
+			);
 			ID3D10Blob* gs_blob = compile(
 				shader->getFilePath(),
 				data[(int)ShaderStages::kGeometry][VIOLET_HLSL],
 				"GS",
 				"gs_5_0"
-			);;
+			);
 
 			if (vs_blob)
 			{

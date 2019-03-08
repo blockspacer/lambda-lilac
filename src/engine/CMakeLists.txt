@@ -412,7 +412,7 @@ IF(NOT ${VIOLET_CONFIG_FOUNDATION})
 ENDIF()
 
 ADD_EXECUTABLE(lambda-engine ${Sources})
-TARGET_LINK_LIBRARIES(lambda-engine PUBLIC lambda-foundation bullet fast-noise inih rapidjson mesh-decimation stb tiny-gltf tinyxml2 soloud)
+TARGET_LINK_LIBRARIES(lambda-engine PUBLIC lambda-foundation bullet fast-noise inih rapidjson mesh-decimation stb tiny-gltf soloud)
 
 IF(${VIOLET_ASSET_ASSIMP})
 	TARGET_LINK_LIBRARIES(lambda-engine PUBLIC _assimp)

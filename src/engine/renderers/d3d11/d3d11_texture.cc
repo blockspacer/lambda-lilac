@@ -8,6 +8,7 @@ namespace lambda
   namespace windows
   {
     ///////////////////////////////////////////////////////////////////////////
+#pragma optimize("", off)
     DXGI_FORMAT formatToD3DFormat(const TextureFormat& format)
     {
       switch (format)
@@ -52,7 +53,6 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
-#pragma optimize("", off)
 	D3D11Texture::D3D11Texture(
       asset::VioletTextureHandle texture, 
       ID3D11Device* device, 
@@ -226,7 +226,6 @@ namespace lambda
     }
 
 		///////////////////////////////////////////////////////////////////////////
-#pragma optimize("", off)
 		void D3D11Texture::update(
 			asset::VioletTextureHandle texture, 
 			ID3D11Device* device, 

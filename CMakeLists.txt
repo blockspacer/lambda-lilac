@@ -154,7 +154,8 @@ ENDIF()
 # /// TOOLS /////////////////////////////////////////////////////
 # ///////////////////////////////////////////////////////////////
 IF(${VIOLET_CONFIG_TOOLS})
-	SET(VIOLET_USE_DIRECTX_TEX FALSE CACHE BOOL "[TOOLS] Should DirectXTex be used?")
+	SET(VIOLET_DIRECTX_TEX FALSE CACHE BOOL "[TOOLS] Should DirectXTex be used?")
+	SET(VIOLET_SHADER_CONDUCTOR FALSE CACHE BOOL "[TOOLS] Should ShaderConductor be used?")
 ENDIF()
 # ///////////////////////////////////////////////////////////////
 # /// BOOLEANS //////////////////////////////////////////////////

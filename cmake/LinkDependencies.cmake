@@ -182,11 +182,6 @@ function(LinkDependencies)
     ADD_LIBRARY(tiny-gltf INTERFACE)
     TARGET_INCLUDE_DIRECTORIES(tiny-gltf INTERFACE "deps/tinygltf")
 
-  # /// TINY XML2 /////////////////////////////////////////////////
-    SET(BUILD_TESTS OFF CACHE BOOL "" FORCE)
-    ADD_SUBDIRECTORY("deps/tinyxml2")
-    SetSolutionFolder("deps/asset"      tinyxml2)
-
   # /// ANGEL SCRIPT //////////////////////////////////////////////
     IF(${VIOLET_SCRIPTING_ANGEL})
       ADD_SUBDIRECTORY("deps/AngelScript/sdk/angelscript/projects/cmake")
@@ -275,26 +270,14 @@ function(LinkDependencies)
   # /// TOOLS /////////////////////////////////////////////////////
   # ///////////////////////////////////////////////////////////////
   IF(${VIOLET_CONFIG_TOOLS})
-  # /// HLSLCC ////////////////////////////////////////////////////
-    SET(HLSLCC_LIBRARY_SHARED OFF CACHE BOOL "" FORCE)
-    ADD_SUBDIRECTORY("deps/HLSLcc")
-    SetSolutionFolder("deps/asset" hlslcc)
-    SET(VIOLET_USE_HLSLCC ON CACHE BOOL "" FORCE)
-
   # /// DIRECTX SHADER COMPILER ///////////////////////////////////
-    ADD_SUBDIRECTORY("deps/ShaderConductor")
-    TARGET_INCLUDE_DIRECTORIES(ShaderConductor INTERFACE "deps/ShaderConductor/Include")
-    #include(DownloadDXC)
-    #DownloadDXC("${CMAKE_SOURCE_DIR}/deps/DXC")
-    
-    #ADD_LIBRARY(dxc INTERFACE)
-    #TARGET_INCLUDE_DIRECTORIES(dxc INTERFACE "deps/DXC/include")
-
-    #ADD_SUBDIRECTORY("deps/DirectXShaderCompiler")
-    #SetSolutionFolder("deps/asset" hlslcc)
+    IF (${VIOLET_SHADER_CONDUCTOR})
+      ADD_SUBDIRECTORY("deps/ShaderConductor")
+      TARGET_INCLUDE_DIRECTORIES(ShaderConductor INTERFACE "deps/ShaderConductor/Include")
+    ENDIF()
     
   # /// DIRECTX TEX ///////////////////////////////////////////////
-    IF(${VIOLET_USE_DIRECTX_TEX})
+    IF(${VIOLET_DIRECTX_TEX})
 	    SET(DirectXTexSources
         "deps/DirectXTex/DirectXTex/BC.h"
         "deps/DirectXTex/DirectXTex/BCDirectCompute.h"
@@ -330,9 +313,6 @@ function(LinkDependencies)
 	    TARGET_INCLUDE_DIRECTORIES(directxtex INTERFACE "deps/DirectXTex/DirectXTex")
 	    SetSolutionFolder("deps/asset" directxtex)
     ENDIF()
-  ELSE()
-      SET(VIOLET_USE_HLSLCC OFF CACHE BOOL "" FORCE)
-
   ENDIF()
 
   # /// LZ4 ///////////////////////////////////////////////////////
@@ -344,13 +324,4 @@ function(LinkDependencies)
   TARGET_INCLUDE_DIRECTORIES(lz4 INTERFACE "deps/lz4/lib")
   SetSolutionFolder("deps/tools"      lz4)
   # TODO (Hilze): Move back ASAP!
-
-
-
-
-
-
-
-  # TODO (Hilze): Find out where this is from?
-  SetSolutionFolder("cmake-targets"   uninstall)
 endfunction()
