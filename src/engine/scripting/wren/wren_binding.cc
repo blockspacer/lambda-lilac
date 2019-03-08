@@ -1250,7 +1250,7 @@ foreign class Mesh {
           Name name(wrenGetSlotString(vm, 1));
           asset::MeshHandle& handle = *make(vm);
           auto io_mesh = io::MeshIO::load(name.getName().c_str());
-          handle = asset::AssetManager::getInstance().createAsset<asset::Mesh>(
+		  handle = asset::AssetManager::getInstance().createAsset<asset::Mesh>(
             name, 
             foundation::Memory::constructShared<asset::Mesh>(
               io::MeshIO::asAsset(io_mesh)

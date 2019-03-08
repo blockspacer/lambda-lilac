@@ -41,7 +41,7 @@ class Ground {
       _allow_repeat = [ true, false ]
       _meshes = []
       _needs_box_collider = []
-      _cubes = []
+      _dynamics = []
       _offset = Vec3.new(20, 2, 20)
       
       _meshes.add(Mesh.generate("cube"))
@@ -172,7 +172,29 @@ class Ground {
       collider.mass     = 1.0
       collider.friction = 2.0
 
-      _cubes.add(c)
+      _dynamics.add(c)
+
+      return c
+    }
+
+    spear(position) {
+      var c = GameObject.new()
+      c.name = "spear"
+      c.transform.worldScale = Vec3.new(0.25, 0.25, 4.0)
+      c.transform.worldPosition = position
+
+      c.addComponent(MeshRender).mesh = _meshes[0]
+      c.getComponent(MeshRender).subMesh = 0
+      c.getComponent(MeshRender).albedo = Texture.load("resources/textures/mossy-ground1-albedo.png")
+      c.getComponent(MeshRender).normal = Texture.load("resources/textures/mossy-ground1-normal.png")
+      c.getComponent(MeshRender).metallicRoughness = Texture.load("resources/textures/mossy-ground1-metallic-roughness.png")
+      var collider  = c.addComponent(Collider)
+      var rigidBody = c.addComponent(RigidBody)
+      collider.makeBoxCollider()
+      collider.mass     = 1.0
+      collider.friction = 2.0
+
+      _dynamics.add(c)
 
       return c
     }
@@ -206,7 +228,7 @@ class Ground {
     }
 
     update() {
-      for(c in _cubes) {
+      for(c in _dynamics) {
         if (c.transform.worldPosition.y < -10) {
           c.transform.worldPosition = Vec3.new(0.0, 2.0, -0.0) * 2
           c.getComponent(RigidBody).velocity = Vec3.new(0.0)

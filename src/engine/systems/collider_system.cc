@@ -220,18 +220,23 @@ namespace lambda
         );
 #else
         // Generate tri-list
-        btTriangleIndexVertexArray* index_vertex_array = foundation::Memory::construct<btTriangleIndexVertexArray>(
-          (int)(index_offset.count / 3u), 
-          indices,
-          (int)(sizeof(int) * 3u),
-        
-          (int)(vertex_offset.count * mpi.size),
-          (float*)vertices,
-          (int)sizeof(glm::vec3)
-        );
+		btTriangleMesh* triangle_mesh = foundation::Memory::construct<btTriangleMesh>(false, false);
+
+		for (uint32_t i = 0; i < index_offset.count; i += 3)
+		{
+			auto v1 = vertices[indices[i + 0]];
+			auto v2 = vertices[indices[i + 1]];
+			auto v3 = vertices[indices[i + 2]];
+			triangle_mesh->addTriangle(
+				btVector3(v1.x, v1.y, v1.z),
+				btVector3(v2.x, v2.y, v2.z),
+				btVector3(v3.x, v3.y, v3.z),
+				false
+			);
+		}
 #endif
 
-        mesh_colliders_[mesh.id].insert(eastl::make_pair(sub_mesh_id, index_vertex_array));
+        mesh_colliders_[mesh.id].insert(eastl::make_pair(sub_mesh_id, triangle_mesh));
         it_sub_mesh = mesh_colliders_[mesh.id].find(sub_mesh_id);
       }
 

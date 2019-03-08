@@ -92,7 +92,7 @@ class FreeLookCamera is MonoBehaviour {
     var deferred_shader_opaque = Shader.load("resources/shaders/default_opaque.fx")
     _camera.addShaderPass("deferred_shader_opaque", deferred_shader_opaque, [], output_opaque)
 
-    gameObject.tags = [ "player" ]
+    gameObject.name = "player"
   }
 
   rotation { _rotation }
@@ -106,7 +106,7 @@ class FreeLookCamera is MonoBehaviour {
   getMovementHorizontal { _has_input ? InputController.MovementHorizontal : 0.0 }
   getMovementSprint     { _has_input ? Math.lerp(InputController.MovementSprint, _max_speed, _max_speed_sprint) : 0.0 }
 
-  drawCube() {
+  drawDebug() {
     var from = _camera_transform.worldPosition
     var to = from + _camera_transform.worldForward * 2
     Debug.drawLine(to, to + Vec3.new(0.1, 0.0, 0.0), Vec4.new(1.0, 0.0, 0.0, 1.0))
@@ -114,8 +114,8 @@ class FreeLookCamera is MonoBehaviour {
     Debug.drawLine(to, to + Vec3.new(0.0, 0.0, 0.1), Vec4.new(0.0, 0.0, 1.0, 1.0))
   }
 
-  handleCube() {
-    // Select and deselect the cube.
+  handleDynamic() {
+    // Select and deselect the dynamic objects.
     var last_holding = _cHolding
     _cHolding = getHolding
     if (_cHolding != 0 && last_holding == 0) {
@@ -130,14 +130,14 @@ class FreeLookCamera is MonoBehaviour {
             _cObject = null
             break
           }
-          // Select the cube.
-          if (v.gameObject.name == "cube") {
+          // Select the dynamic object.
+          if (v.gameObject.name == "cube" || v.gameObject.name == "spear") {
             _cObject = v.gameObject
             break
           }
         }
       } else {
-        // Release the cube.
+        // Release the dynamic object.
         if (_cHolding > 0.0) {
           var pVel = _camera_transform.worldForward * 20
           _cObject.getComponent(RigidBody).velocity = pVel
@@ -176,35 +176,34 @@ class FreeLookCamera is MonoBehaviour {
       var camForward = _camera_transform.worldForward
       var objForward = _cObject.transform.worldForward
 
-      var pEuler = _cObject.getComponent(RigidBody).angularVelocity
-      // pEuler.x = pEuler.x * 0.9
-      // pEuler.y = pEuler.y * 0.9
-
-      // {
-      //   var p1 = Vec2.new(camForward.x, camForward.z).normalized
-      //   var p2 = Vec2.new(objForward.x, objForward.z).normalized
-
-      //   var dot = p1.x * p2.x + p1.y * p2.y
-      //   var det = p1.x * p2.y - p1.y * p2.x
+      if (_cObject.name == "cube") {
+        _cObject.getComponent(RigidBody).angularVelocity = _cObject.getComponent(RigidBody).angularVelocity * 0.75
+      } else {
+        var cF = camForward
+        var oF = objForward
         
-      //   pEuler.y = Math.atan2(det, dot)
-      //   if (Math.abs(pEuler.y) > 0.001) {
-      //     pEuler.y = pEuler.y * rotSpeed
-      //   }
-      // }
+      {
+        var p1 = Vec2.new(cF.x, cF.z).normalized
+        var p2 = Vec2.new(oF.x, oF.z).normalized
 
-      pEuler = pEuler * 0.5
+        var dot = p1.x * p2.x + p1.y * p2.y
+        var det = p1.x * p2.y - p1.y * p2.x
+        
+        pEuler.y = Math.atan2(det, dot)
+        if (Math.abs(pEuler.y) > 0.001) {
+          pEuler.y = pEuler.y * rotSpeed
+        }
+      }
 
-      //var pEuler = Vec2.new(_camera_transform.worldForward.x, _camera_transform.worldForward.z)
-      //pEuler.normalize()
-      //pEuler = Vec3.new(0.0, Math.atan2(pEuler.x, pEuler.y), 0.0)
 
-      _cObject.getComponent(RigidBody).angularVelocity = pEuler
+        _cObject.getComponent(RigidBody).angularVelocity = Vec3.new(0.0)
+        _cObject.transform.worldEuler = _cObject.transform.worldEuler + dR
+      }
     }
   }
 
   update() {
-    drawCube()
+    drawDebug()
   }
 
   fixedUpdate() {
@@ -214,7 +213,7 @@ class FreeLookCamera is MonoBehaviour {
       gameObject.getComponent(RigidBody).velocity = Vec3.new(0.0)
     }
 
-    handleCube()
+    handleDynamic()
 
     var last_held_attack = _held_attack
     _held_attack = getHeldAttack

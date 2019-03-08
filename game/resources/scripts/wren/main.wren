@@ -34,31 +34,32 @@ import "resources/scripts/wren/input_controller" for InputController
 import "resources/scripts/wren/camera" for FreeLookCamera
 import "resources/scripts/wren/lighting" for Lighting
 import "resources/scripts/wren/trees" for Trees
-import "resources/scripts/wren/ground" for Ground
+import "resources/scripts/wren/item_manager" for ItemManager
+import "resources/scripts/wren/door" for Door
 
 class World {
     construct new() {}
     initialize() {
-        _ground = Ground.new()
-        _trees = Trees.new(_ground)
-        _trees.enabled = false
-        //_ground.initialize()
-        _trees.initialize()
+        _item_manager = GameObject.new().addComponent(ItemManager)
 
         _post_processer = PostProcessor.new()
         _lighting = Lighting.new()
 
         _camera = GameObject.new()
 				_camera.addComponent(FreeLookCamera)
+        
+        _door = GameObject.new()
+				_door.addComponent(Door)
 
         // Move the camera so you do not spawn under the ground.
         var new_position = _camera.transform.worldPosition
-        new_position.y = 2.0
+        new_position.y   = 2.0
         _camera.transform.worldPosition = new_position
 
-        _ground.cube(Vec3.new(-11.0, 9.0, 10.0), Vec3.new(2.00))
-        _ground.cube(Vec3.new(-10.0, 7.0, 10.0), Vec3.new(2.50))
-        _ground.cube(Vec3.new(-10.0, 9, 9), Vec3.new(4.0, 0.5, 2.00))
+        _item_manager.cube(Vec3.new(-11.0, 9.0, 10.0), Vec3.new(2.0))
+        _item_manager.cube(Vec3.new(-10.0, 7.0, 10.0), Vec3.new(2.5))
+        _item_manager.cube(Vec3.new(-10.0, 9.0,  9.0), Vec3.new(4.0, 0.5, 2.00))
+        //_item_manager.spear(Vec3.new(2.0, 9.0, 0.0))
 
         {
           var model = GameObject.new()
@@ -70,15 +71,6 @@ class World {
 
           new_position.y = 2.0
           _camera.transform.worldPosition = new_position
-
-          {
-            // var model2 = GameObject.new()
-            // model2.transform.worldScale = Vec3.new(2.5)
-            // var mesh2 = Mesh.load("resources/gltf/world.glb")
-            // model2.addComponent(MeshRender).attach(mesh2)
-            // var collider2 = model2.addComponent(Collider)
-            // collider2.makeMeshColliderRecursive(mesh2)
-          }
         }
 
         GUI.bindCallback("changedSetting(_,_)", this)
@@ -96,8 +88,6 @@ class World {
         var offset = Vec3.new(sin_y_rot, 0.0, cos_y_rot).normalized * 25.0
         var transform = _lighting.rsm.getComponent(Transform)
         transform.worldPosition = _camera.transform.worldPosition + offset
-
-        _ground.update()
     }
 
     fixedUpdate() {

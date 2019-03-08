@@ -33,8 +33,8 @@ namespace lambda
 {
   namespace io
   {
-    const unsigned char MeshIO::Format::kMagicHeader[] = { 'L', 'M', 'B' };
-    const unsigned char MeshIO::Format::kInvalidHeader[] = { 'I', 'N', 'V' };
+    const char MeshIO::Format::kMagicHeader[] = { 'L', 'M', 'B' };
+    const char MeshIO::Format::kInvalidHeader[] = { 'I', 'N', 'V' };
 
     String getPathExtension(const String& file)
     {
@@ -52,19 +52,24 @@ namespace lambda
     //|                                                                  |
     //--------------------------------------------------------------------
 
-    template<typename T>
-    void write(std::ofstream& fout, const T& t)
+	void write(Vector<char>& data, const char* t, size_t len)
+	{
+		data.resize(data.size() + len);
+		memcpy((void*)(data.data() + (data.size() - len)), t, len);
+	}
+	template<typename T>
+    void write(Vector<char>& data, const T& t)
     {
-      fout.write((const char*)&t, sizeof(T));
+	  write(data, (const char*)&t, sizeof(T));
     }
-    void writeHeader(std::ofstream& fout, const MeshIO::DataInfo& info)
+    void writeHeader(Vector<char>& data, const MeshIO::DataInfo& info)
     {
       MeshIO::Format::DataHeader header;
       header.data_size = info.data.size();
       header.segment_count = info.segments.size();
-      write(fout, header);
+      write(data, header);
 
-      fout.write((const char*)info.data.data(), info.data.size());
+      write(data, (const char*)info.data.data(), info.data.size());
 
       for (const MeshIO::DataSegment& segment : info.segments)
       {
@@ -72,17 +77,17 @@ namespace lambda
         segment_header.count = segment.count;
         segment_header.offset = segment.offset;
         segment_header.stride = segment.stride;
-        write(fout, segment_header);
+        write(data, segment_header);
       }
     }
-    void writeHeader(std::ofstream& fout, const MeshIO::TextureInfo& info)
+    void writeHeader(Vector<char>& data, const MeshIO::TextureInfo& info)
     {
       MeshIO::Format::DataHeader header;
       header.data_size = info.data.size();
       header.segment_count = info.segments.size();
-      write(fout, header);
+      write(data, header);
 
-      fout.write((const char*)info.data.data(), info.data.size());
+      write(data, (const char*)info.data.data(), info.data.size());
 
       for (const MeshIO::TextureSegment& segment : info.segments)
       {
@@ -91,51 +96,49 @@ namespace lambda
         segment_header.width = segment.width;
         segment_header.height = segment.height;
         segment_header.bpp = segment.bpp;
-        write(fout, segment_header);
+        write(data, segment_header);
       }
     }
-    void writeHeader(std::ofstream& fout, const Vector<MeshIO::SubMesh>& meshes)
+    void writeHeader(Vector<char>& data, const Vector<MeshIO::SubMesh>& meshes)
     {
       MeshIO::Format::ModelHeader header;
       header.model_count = meshes.size();
-      write(fout, header);
+      write(data, header);
 
       for (const MeshIO::SubMesh& mesh : meshes)
       {
-        fout.write((const char*)&mesh, sizeof(MeshIO::SubMesh));
+        write(data, (const char*)&mesh, sizeof(MeshIO::SubMesh));
       }
     }
-    void startWriting(std::ofstream& fout)
+    void startWriting(Vector<char>& data)
     {
-      fout.seekp(0, std::ios::beg);
-      fout.write((const char*)&MeshIO::Format::kInvalidHeader[0], 3);
+      write(data, MeshIO::Format::kInvalidHeader, 3);
     }
-    void finalizeWriting(std::ofstream& fout)
+    void finalizeWriting(Vector<char>& data)
     {
-      fout.seekp(0, std::ios::beg);
-      fout.write((const char*)&MeshIO::Format::kMagicHeader[0], 3);
+	  memcpy(data.data(), MeshIO::Format::kMagicHeader, 3);
     }
 
-    void MeshIO::save(const Mesh& mesh, const String& path)
+	Vector<char> MeshIO::save(const Mesh& mesh)
     {
-      std::ofstream fout(path.c_str(), std::ofstream::binary);
-      startWriting(fout);
+	  Vector<char> data;
+      startWriting(data);
 
-      writeHeader(fout, mesh.data.pos);
-      writeHeader(fout, mesh.data.nor);
-      writeHeader(fout, mesh.data.tan);
-      writeHeader(fout, mesh.data.col);
-      writeHeader(fout, mesh.data.tex);
-      writeHeader(fout, mesh.data.joi);
-      writeHeader(fout, mesh.data.wei);
-      writeHeader(fout, mesh.data.idx);
-      writeHeader(fout, mesh.data.tex_alb);
-      writeHeader(fout, mesh.data.tex_nor);
-      writeHeader(fout, mesh.data.tex_mrt);
-      writeHeader(fout, mesh.meshes);
+      writeHeader(data, mesh.data.pos);
+      writeHeader(data, mesh.data.nor);
+      writeHeader(data, mesh.data.tan);
+      writeHeader(data, mesh.data.col);
+      writeHeader(data, mesh.data.tex);
+      writeHeader(data, mesh.data.joi);
+      writeHeader(data, mesh.data.wei);
+      writeHeader(data, mesh.data.idx);
+      writeHeader(data, mesh.data.tex_alb);
+      writeHeader(data, mesh.data.tex_nor);
+      writeHeader(data, mesh.data.tex_mrt);
+      writeHeader(data, mesh.meshes);
 
-      finalizeWriting(fout);
-      fout.close();
+      finalizeWriting(data);
+	  return data;
     }
 
     //--------------------------------------------------------------------
@@ -345,7 +348,9 @@ namespace lambda
       }
       else
       {
-        return loadMeshCustom(full_path.c_str());
+		  Mesh mesh;
+		  loadMeshCustom(path, mesh);
+		  return mesh;
       }
     }
 
@@ -356,23 +361,29 @@ namespace lambda
     //|                                                                  |
     //--------------------------------------------------------------------
 
+	void read(const Vector<char>& data, size_t& offset, char* t, size_t len)
+	{
+		memcpy(t, data.data() + offset, len);
+		offset += len;
+	}
+
     template<typename T>
-    void read(std::ifstream& fin, T& t)
+    void read(const Vector<char>& data, size_t& offset, T& t)
     {
-      fin.read((char*)&t, sizeof(T));
+		read(data, offset, (char*)&t, sizeof(T));
     }
-    void readHeader(std::ifstream& fin, MeshIO::DataInfo& info)
+    void readHeader(const Vector<char>& data, size_t& offset, MeshIO::DataInfo& info)
     {
       MeshIO::Format::DataHeader header;
-      read(fin, header);
+      read(data, offset, header);
 
       info.data.resize(header.data_size);
-      fin.read((char*)info.data.data(), header.data_size);
+      read(data, offset, (char*)info.data.data(), header.data_size);
 
       for (size_t i = 0; i < header.segment_count; ++i)
       {
         MeshIO::Format::SegmentHeader segment_header;
-        read(fin, segment_header);
+        read(data, offset, segment_header);
 
         MeshIO::DataSegment segment;
         segment.count = segment_header.count;
@@ -382,18 +393,18 @@ namespace lambda
         info.segments.push_back(segment);
       }
     }
-    void readHeader(std::ifstream& fin, MeshIO::TextureInfo& info)
+    void readHeader(const Vector<char>& data, size_t& offset, MeshIO::TextureInfo& info)
     {
       MeshIO::Format::DataHeader header;
-      read(fin, header);
+      read(data, offset, header);
 
       info.data.resize(header.data_size);
-      fin.read((char*)info.data.data(), header.data_size);
+      read(data, offset, (char*)info.data.data(), header.data_size);
 
       for (size_t i = 0; i < header.segment_count; ++i)
       {
         MeshIO::Format::TextureHeader segment_header;
-        read(fin, segment_header);
+        read(data, offset, segment_header);
 
         MeshIO::TextureSegment segment;
         segment.offset = segment_header.offset;
@@ -403,59 +414,57 @@ namespace lambda
         info.segments.push_back(segment);
       }
     }
-    void readHeader(std::ifstream& fin, Vector<MeshIO::SubMesh>& meshes)
+    void readHeader(const Vector<char>& data, size_t& offset, Vector<MeshIO::SubMesh>& meshes)
     {
       MeshIO::Format::ModelHeader header;
-      read(fin, header);
+      read(data, offset, header);
 
       for (size_t i = 0; i < header.model_count; ++i)
       {
         MeshIO::SubMesh mesh;
-        read(fin, mesh);
+        read(data, offset, mesh);
         meshes.push_back(mesh);
       }
     }
-    bool validateFile(std::ifstream& fin)
+
+    bool validateFile(const Vector<char>& data, size_t& offset)
     {
-      fin.seekg(0, std::ios::beg);
-      unsigned char magic_header[3] = { MeshIO::Format::kInvalidHeader[0], MeshIO::Format::kInvalidHeader[1], MeshIO::Format::kInvalidHeader[2] };
-      fin.read((char*)&magic_header[0], 3);
+	  char magic_header[3];
+	  read(data, offset, magic_header, 3);
 
       return
-        magic_header[0] == MeshIO::Format::kMagicHeader[0]&&
-        magic_header[1] == MeshIO::Format::kMagicHeader[1]&&
+        magic_header[0] == MeshIO::Format::kMagicHeader[0] &&
+        magic_header[1] == MeshIO::Format::kMagicHeader[1] &&
         magic_header[2] == MeshIO::Format::kMagicHeader[2];
     }
 
-    MeshIO::Mesh MeshIO::loadMeshCustom(const String& path)
+    bool MeshIO::loadMeshCustom(const String& path, Mesh& mesh)
     {
-      Mesh mesh;
+	  mesh = Mesh{};
 
-      std::ifstream fin(path.c_str(), std::ofstream::binary);
-      if (fin.is_open() == false || false == validateFile(fin))
+	  size_t offset = 0;
+	  Vector<char> data = FileSystem::FileToVector(path);
+
+      if (!validateFile(data, offset))
       {
-
-        foundation::Error("MeshIO: Failed to load mesh\n");
-        assert(false&& "Failed to load mesh");
-        return mesh;
+        foundation::Error("[MESH] Failed to load mesh\n");
+        return false;
       }
 
-      readHeader(fin, mesh.data.pos);
-      readHeader(fin, mesh.data.nor);
-      readHeader(fin, mesh.data.tan);
-      readHeader(fin, mesh.data.col);
-      readHeader(fin, mesh.data.tex);
-      readHeader(fin, mesh.data.joi);
-      readHeader(fin, mesh.data.wei);
-      readHeader(fin, mesh.data.idx);
-      readHeader(fin, mesh.data.tex_alb);
-      readHeader(fin, mesh.data.tex_nor);
-      readHeader(fin, mesh.data.tex_mrt);
-      readHeader(fin, mesh.meshes);
+      readHeader(data, offset, mesh.data.pos);
+      readHeader(data, offset, mesh.data.nor);
+      readHeader(data, offset, mesh.data.tan);
+      readHeader(data, offset, mesh.data.col);
+      readHeader(data, offset, mesh.data.tex);
+      readHeader(data, offset, mesh.data.joi);
+      readHeader(data, offset, mesh.data.wei);
+      readHeader(data, offset, mesh.data.idx);
+      readHeader(data, offset, mesh.data.tex_alb);
+      readHeader(data, offset, mesh.data.tex_nor);
+      readHeader(data, offset, mesh.data.tex_mrt);
+      readHeader(data, offset, mesh.meshes);
 
-      fin.close();
-
-      return mesh;
+      return true;
     }
 
     //--------------------------------------------------------------------

@@ -3,6 +3,7 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtc/quaternion.hpp>
 #include "mesh.h"
+#include <sstream>
 
 namespace lambda
 {
@@ -86,20 +87,20 @@ namespace lambda
 
     public:
       static Mesh load(const String& path);
-      static void save(const Mesh& mesh, const String& path);
+      static Vector<char> save(const Mesh& mesh);
 
       static asset::Mesh asAsset(Mesh& mesh);
 
     private:
-      static Mesh loadMeshCustom(const String& path);
+      static bool loadMeshCustom(const String& path, Mesh& mesh);
       static Mesh loadMeshGLTF(const String& path);
       static Mesh loadMeshAssimp(const String& path);
 
     public:
       struct Format
       {
-        static const unsigned char kMagicHeader[3];
-        static const unsigned char kInvalidHeader[3];
+        static const char kMagicHeader[3];
+        static const char kInvalidHeader[3];
 
         struct DataHeader
         {

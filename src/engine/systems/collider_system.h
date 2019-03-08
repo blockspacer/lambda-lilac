@@ -8,7 +8,7 @@
 class btCollisionShape;
 struct btDefaultMotionState;
 class btRigidBody;
-class btTriangleIndexVertexArray;
+class btTriangleMesh;
 
 namespace lambda
 {
@@ -97,7 +97,7 @@ namespace lambda
 			Set<entity::Entity> marked_for_delete_;
 			Queue<uint32_t> unused_data_entries_;
 
-      Map<size_t, Map<uint64_t, btTriangleIndexVertexArray*>> mesh_colliders_;
+      Map<size_t, Map<uint64_t, btTriangleMesh*>> mesh_colliders_;
 
       foundation::SharedPointer<TransformSystem> transform_system_;
       foundation::SharedPointer<RigidBodySystem> rigid_body_system_;
