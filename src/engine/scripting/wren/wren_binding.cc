@@ -2771,6 +2771,10 @@ class RigidBody {
     foreign priv_velocityConstraints(go, velocityConstraints) 
     foreign priv_angularConstraints(go)
     foreign priv_angularConstraints(go, angularConstraints)   
+    foreign priv_friction(go)
+    foreign priv_friction(go, friction)   
+    foreign priv_mass(go)
+    foreign priv_mass(go, mass)   
 
     applyImpulse(impulse)                     { priv_applyImpulse(_go, impulse) }
     velocity                                  { priv_velocity(_go) }
@@ -2781,6 +2785,10 @@ class RigidBody {
     velocityConstraints=(velocityConstraints) { priv_velocityConstraints(_go, velocityConstraints) }
     angularConstraints                        { priv_angularConstraints(_go) }
     angularConstraints=(angularConstraints)   { priv_angularConstraints(_go, angularConstraints) }
+	friction                                  { priv_friction(_go) }
+	friction=(friction)                       { priv_friction(_go, friction) }
+	mass                                      { priv_mass(_go) }
+	mass=(mass)                               { priv_mass(_go, mass) }
 }
 )";
         char* data = (char*)WREN_ALLOC(str.size() + 1u);
@@ -2853,16 +2861,36 @@ class RigidBody {
 					uint8_t v = g_rigidBodySystem->getVelocityConstraints(e);
 					wrenSetSlotDouble(vm, 0, v);
 				};
-        if (strcmp(signature, "priv_angularConstraints(_,_)") == 0) return [](WrenVM* vm) {
-					entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
-					uint8_t v = (uint8_t)wrenGetSlotDouble(vm, 2);
-					g_rigidBodySystem->setAngularConstraints(e, v);
-				};
-        if (strcmp(signature, "priv_angularConstraints(_)") == 0) return [](WrenVM* vm) {
-					entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
-					uint8_t v = g_rigidBodySystem->getAngularConstraints(e);
-					wrenSetSlotDouble(vm, 0, v);
-        };
+		if (strcmp(signature, "priv_angularConstraints(_,_)") == 0) return [](WrenVM* vm) {
+			entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
+			uint8_t v = (uint8_t)wrenGetSlotDouble(vm, 2);
+			g_rigidBodySystem->setAngularConstraints(e, v);
+		};
+		if (strcmp(signature, "priv_angularConstraints(_)") == 0) return [](WrenVM* vm) {
+			entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
+			uint8_t v = g_rigidBodySystem->getAngularConstraints(e);
+			wrenSetSlotDouble(vm, 0, v);
+		};
+		if (strcmp(signature, "priv_friction(_,_)") == 0) return [](WrenVM* vm) {
+			entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
+			float v = (float)wrenGetSlotDouble(vm, 2);
+			g_rigidBodySystem->setFriction(e, v);
+		};
+		if (strcmp(signature, "priv_friction(_)") == 0) return [](WrenVM* vm) {
+			entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
+			float v = g_rigidBodySystem->getFriction(e);
+			wrenSetSlotDouble(vm, 0, (double)v);
+		};
+		if (strcmp(signature, "priv_mass(_,_)") == 0) return [](WrenVM* vm) {
+			entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
+			float v = (float)wrenGetSlotDouble(vm, 2);
+			g_rigidBodySystem->setMass(e, v);
+		};
+		if (strcmp(signature, "priv_mass(_)") == 0) return [](WrenVM* vm) {
+			entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
+			float v = g_rigidBodySystem->getMass(e);
+			wrenSetSlotDouble(vm, 0, (double)v);
+		};
         return nullptr;
       }
     }
@@ -3108,11 +3136,6 @@ foreign class Collider {
     foreign makeCapsuleCollider()
     foreign makeMeshCollider(mesh, subMesh)
     foreign makeMeshColliderRecursive(mesh)
-
-	foreign friction
-	foreign friction=(friction)
-	foreign mass
-	foreign mass=(mass)
 }
 )";
         char* data = (char*)WREN_ALLOC(str.size() + 1u);
@@ -3199,18 +3222,6 @@ foreign class Collider {
         if (strcmp(signature, "makeMeshColliderRecursive(_)") == 0) return [](WrenVM* vm) {
           addMeshCollider(GetForeign<ColliderHandle>(vm)->handle.entity(), *GetForeign<asset::MeshHandle>(vm, 1));
         };
-		if (strcmp(signature, "friction=(_)") == 0) return [](WrenVM* vm) {
-			GetForeign<ColliderHandle>(vm)->handle.setFriction((float)(uint32_t)wrenGetSlotDouble(vm, 1));
-		};
-		if (strcmp(signature, "friction") == 0) return [](WrenVM* vm) {
-			wrenSetSlotDouble(vm, 0, GetForeign<ColliderHandle>(vm)->handle.getFriction());
-		};
-		if (strcmp(signature, "mass=(_)") == 0) return [](WrenVM* vm) {
-			GetForeign<ColliderHandle>(vm)->handle.setMass((float)(uint32_t)wrenGetSlotDouble(vm, 1));
-		};
-		if (strcmp(signature, "mass") == 0) return [](WrenVM* vm) {
-			wrenSetSlotDouble(vm, 0, GetForeign<ColliderHandle>(vm)->handle.getMass());
-		};
         return nullptr;
       }
     }
@@ -4485,16 +4496,16 @@ class Physics {
 			WrenForeignMethodFn Bind(const char* signature)
 			{
 				if (strcmp(signature, "gravity") == 0) return [](WrenVM* vm) {
-					Vec3::make(vm, g_rigidBodySystem->GetPhysicsWorld().getGravity());
+					Vec3::make(vm, g_rigidBodySystem->getPhysicsWorld()->getGravity());
 				};
 				if (strcmp(signature, "gravity=(_)") == 0) return [](WrenVM* vm) {
-					g_rigidBodySystem->GetPhysicsWorld().setGravity(*GetForeign<glm::vec3>(vm, 1));
+					g_rigidBodySystem->getPhysicsWorld()->setGravity(*GetForeign<glm::vec3>(vm, 1));
 				};
 				if (strcmp(signature, "castRay(_,_)") == 0) return [](WrenVM* vm) {
 					glm::vec3 from = *GetForeign<glm::vec3>(vm, 1);
 					glm::vec3 to = *GetForeign<glm::vec3>(vm, 2);
 
-					Vector<physics::Manifold> result = g_rigidBodySystem->GetPhysicsWorld().raycast(from, to);
+					Vector<physics::Manifold> result = g_rigidBodySystem->getPhysicsWorld()->raycast(from, to);
 					wrenSetSlotNewList(vm, 0);
 
 					for (physics::Manifold res : result)
@@ -4504,10 +4515,10 @@ class Physics {
 					}
 				};
 				if (strcmp(signature, "debugDrawEnabled") == 0) return [](WrenVM* vm) {
-					wrenSetSlotBool(vm, 0, g_rigidBodySystem->GetPhysicsWorld().getDebugDrawEnabled());
+					wrenSetSlotBool(vm, 0, g_rigidBodySystem->getPhysicsWorld()->getDebugDrawEnabled());
 				};
 				if (strcmp(signature, "debugDrawEnabled=(_)") == 0) return [](WrenVM* vm) {
-					g_rigidBodySystem->GetPhysicsWorld().setDebugDrawEnabled(wrenGetSlotBool(vm, 1));
+					g_rigidBodySystem->getPhysicsWorld()->setDebugDrawEnabled(wrenGetSlotBool(vm, 1));
 				};
 				return nullptr;
 			}

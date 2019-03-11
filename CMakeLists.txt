@@ -148,6 +148,11 @@ IF(${VIOLET_CONFIG_ENGINE})
   
 # /// GUI ///////////////////////////////////////////////////////
   SET(VIOLET_GUI_ULTRALIGHT TRUE CACHE BOOL "[GUI] Should Ultralight be used?")
+
+# /// PHYSICS ///////////////////////////////////////////////////
+  SET(VIOLET_PHYSICS_BULLET FALSE CACHE BOOL "[PHYSICS] Should Bullet3 be used?")
+  SET(VIOLET_PHYSICS_REACT TRUE CACHE BOOL "[PHYSICS] Should React be used?")
+  
 ENDIF()
 
 

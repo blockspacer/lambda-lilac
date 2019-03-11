@@ -5,8 +5,15 @@
 #include "systems/entity_system.h"
 #include "interfaces/iworld.h"
 
-#include <btBulletDynamicsCommon.h>
 #include <glm/gtx/functions.hpp>
+
+#if VIOLET_PHYSICS_BULLET
+#include "physics/bullet/physics_world.h"
+#endif
+#if VIOLET_PHYSICS_REACT
+#include "physics/react/physics_world.h"
+#endif
+
 
 namespace lambda
 {
@@ -34,21 +41,10 @@ namespace lambda
 				entity_to_data_[entity] = idx;
 			}
 
-      /** Init start */
       RigidBodyData& data = lookUpData(entity);
       ColliderData& collider = collider_system_->lookUpData(entity);
-      data.rigid_body = collider.rigid_body;
-
-      btVector3 inertia;
-      collider.collision_shape->calculateLocalInertia(data.mass, inertia);
-      data.inertia = glm::vec3(inertia.x(), inertia.x(), inertia.z());
-
-      data.rigid_body->setMassProps(data.mass, inertia);
-      data.rigid_body->setCollisionFlags(0);
-
-      physics_world_.dynamicsWorld()->removeCollisionObject(data.rigid_body);
-      physics_world_.dynamicsWorld()->addRigidBody(data.rigid_body);
-      /** Init end */
+	  data.collision_body = collider.collision_body;
+	  data.collision_body->makeRigidBody();
 
       return RigidBodyComponent(entity, this);
     }
@@ -73,9 +69,8 @@ namespace lambda
 					if (it != entity_to_data_.end())
 					{
 						RigidBodyData& data = data_.at(it->second);
-						physics_world_.dynamicsWorld()->removeRigidBody(data.rigid_body);
-						physics_world_.dynamicsWorld()->addCollisionObject(data.rigid_body);
-
+						data.collision_body->makeCollider();
+						data.collision_body = nullptr;
 						uint32_t idx = it->second;
 						unused_data_entries_.push(idx);
 						data_to_entity_.erase(idx);
@@ -86,7 +81,8 @@ namespace lambda
 				marked_for_delete_.clear();
 			}
 		}
-    physics::PhysicsWorld& RigidBodySystem::GetPhysicsWorld()
+	
+    physics::IPhysicsWorld* RigidBodySystem::getPhysicsWorld() const
     {
       return physics_world_;
     }
@@ -94,7 +90,15 @@ namespace lambda
     {
       transform_system_ = world.getScene().getSystem<TransformSystem>();
       collider_system_ = world.getScene().getSystem<ColliderSystem>().get();
-      physics_world_.initialize(
+
+#if VIOLET_PHYSICS_REACT
+	  physics_world_ = foundation::Memory::construct<physics::ReactPhysicsWorld>();
+#endif
+#if VIOLET_PHYSICS_BULLET
+	  physics_world_ = foundation::Memory::construct<physics::BulletPhysicsWorld>();
+#endif
+
+	  physics_world_->initialize(
         &world.getDebugRenderer(),
         &world
       );
@@ -103,116 +107,77 @@ namespace lambda
     {
       collider_system_ = nullptr;
       transform_system_.reset();
-      physics_world_.deinitialize();
+      physics_world_->deinitialize();
     }
     void RigidBodySystem::update(const double& delta_time)
     {
-      physics_world_.render();
+      physics_world_->render();
     }
     void RigidBodySystem::fixedUpdate(const double& time_step)
     {
-      physics_world_.update(time_step);
+      physics_world_->update(time_step);
     }
     float RigidBodySystem::getMass(const entity::Entity& entity) const
     {
-      return lookUpData(entity).mass;
+		return lookUpData(entity).collision_body->getMass();
     }
     void RigidBodySystem::setMass(const entity::Entity& entity, const float& mass)
     {
       RigidBodyData& data = lookUpData(entity);
-      data.mass = mass;
-
-      btVector3 inertia(0.0f, 0.0f, 0.0f);
-      if (mass > 0.0f)
-      {
-        ColliderData& shape = collider_system_->lookUpData(entity);
-        shape.collision_shape->calculateLocalInertia(data.mass, inertia);
-      }
-      data.inertia = glm::vec3(inertia.x(), inertia.x(), inertia.z());
-      data.rigid_body->setMassProps(data.mass, inertia);
+	  lookUpData(entity).collision_body->setMass(mass);
     }
     glm::vec3 RigidBodySystem::getVelocity(const entity::Entity& entity) const
     {
-      const RigidBodyData& data = lookUpData(entity);
-      btVector3 velocity = data.rigid_body->getLinearVelocity();
-      return glm::vec3(
-        velocity.x(),
-        velocity.y(),
-        velocity.z()
-      );
-    }
+		return lookUpData(entity).collision_body->getVelocity();
+	}
     void RigidBodySystem::setVelocity(const entity::Entity& entity, const glm::vec3& velocity)
     {
 	  if (std::isnan(velocity.x) || std::isnan(velocity.y) || std::isnan(velocity.z))
 	    return;
 
-      RigidBodyData& data = lookUpData(entity);
-      data.rigid_body->setLinearVelocity(
-        btVector3(
-          velocity.x,
-          velocity.y,
-          velocity.z
-        )
-      );
-      data.rigid_body->activate();
+	  lookUpData(entity).collision_body->setVelocity(velocity);
     }
     glm::vec3 RigidBodySystem::getAngularVelocity(const entity::Entity& entity) const
     {
       const RigidBodyData& data = lookUpData(entity);
-      btVector3 velocity = data.rigid_body->getAngularVelocity();
-      return glm::vec3(
-        velocity.x(),
-        velocity.y(),
-        velocity.z()
-      );
+
+	  return lookUpData(entity).collision_body->getAngularVelocity();
     }
     void RigidBodySystem::setAngularVelocity(const entity::Entity& entity, const glm::vec3& velocity)
     {
 	  if (std::isnan(velocity.x) || std::isnan(velocity.y) || std::isnan(velocity.z))
         return;
 
-      RigidBodyData& data = lookUpData(entity);
-      data.rigid_body->setAngularVelocity(
-        btVector3(
-          velocity.x,
-          velocity.y,
-          velocity.z
-        )
-      );
-      data.rigid_body->activate();
+	  lookUpData(entity).collision_body->setAngularVelocity(velocity);
     }
     uint8_t RigidBodySystem::getAngularConstraints(const entity::Entity& entity) const
     {
-      return lookUpData(entity).angular_constraints;
+      return lookUpData(entity).collision_body->getAngularConstraints();
     }
     void RigidBodySystem::setAngularConstraints(const entity::Entity& entity, const uint8_t& constraints)
     {
-      RigidBodyData& data = lookUpData(entity);
-
-      data.rigid_body->setAngularFactor(btVector3(
-        (constraints& (uint8_t)RigidBodyConstraints::kX) == 0 ? 0.0f : 1.0f,
-        (constraints& (uint8_t)RigidBodyConstraints::kY) == 0 ? 0.0f : 1.0f,
-        (constraints& (uint8_t)RigidBodyConstraints::kZ) == 0 ? 0.0f : 1.0f
-      ));
+		lookUpData(entity).collision_body->setAngularConstraints(constraints);
     }
     uint8_t RigidBodySystem::getVelocityConstraints(const entity::Entity& entity) const
     {
-      return lookUpData(entity).velocity_constraints;
+		return lookUpData(entity).collision_body->getVelocityConstraints();
     }
     void RigidBodySystem::setVelocityConstraints(const entity::Entity& entity, const uint8_t& constraints)
     {
-      RigidBodyData& data = lookUpData(entity);
-
-      data.rigid_body->setLinearFactor(btVector3(
-        (constraints& (uint8_t)RigidBodyConstraints::kX) == 0 ? 0.0f : 1.0f,
-        (constraints& (uint8_t)RigidBodyConstraints::kY) == 0 ? 0.0f : 1.0f,
-        (constraints& (uint8_t)RigidBodyConstraints::kZ) == 0 ? 0.0f : 1.0f
-      ));
-    }
+		lookUpData(entity).collision_body->setVelocityConstraints(constraints);
+	}
     void RigidBodySystem::applyImpulse(const entity::Entity& entity, const glm::vec3& impulse)
     {
-      lookUpData(entity).rigid_body->applyCentralImpulse(btVector3(impulse.x, impulse.y, impulse.z));
+		lookUpData(entity).collision_body->applyImpulse(impulse);
     }
+	void RigidBodySystem::setFriction(const entity::Entity & entity, float friction)
+	{
+		lookUpData(entity).collision_body->setFriction(friction);
+	}
+	float RigidBodySystem::getFriction(const entity::Entity & entity) const
+	{
+		return lookUpData(entity).collision_body->getFriction();
+	}
     RigidBodyData& RigidBodySystem::lookUpData(const entity::Entity& entity)
     {
       LMB_ASSERT(entity_to_data_.find(entity) != entity_to_data_.end(), ("RigidBody: could not find component: " + toString(entity)).c_str());
@@ -281,25 +246,25 @@ namespace lambda
     {
       system_->applyImpulse(entity_, impulse);
     }
+	void RigidBodyComponent::setFriction(float friction)
+	{
+		system_->setFriction(entity_, friction);
+	}
+	float RigidBodyComponent::getFriction() const
+	{
+		return system_->getFriction(entity_);
+	}
     RigidBodyData::RigidBodyData(const RigidBodyData& other)
     {
-      rigid_body           = other.rigid_body;
-      inertia              = other.inertia;
-      mass                 = other.mass;
-      velocity_constraints = other.velocity_constraints;
-      angular_constraints  = other.angular_constraints;
-      entity               = other.entity;
-			valid                = other.valid;
+	  collision_body       = other.collision_body;
+	  entity               = other.entity;
+	  valid                = other.valid;
     }
     RigidBodyData & RigidBodyData::operator=(const RigidBodyData & other)
     {
-      rigid_body           = other.rigid_body;
-      inertia              = other.inertia;
-      mass                 = other.mass;
-      velocity_constraints = other.velocity_constraints;
-      angular_constraints  = other.angular_constraints;
+	  collision_body       = other.collision_body;
       entity               = other.entity;
-			valid                = other.valid;
+	  valid                = other.valid;
       return *this;
     }
   }

@@ -56,10 +56,9 @@ class ItemManager is MonoBehaviour {
        
         var collider  = c.addComponent(Collider)
         var rigidBody = c.addComponent(RigidBody)
-        
         collider.makeBoxCollider()
-        collider.mass     = 1.0
-        collider.friction = 2.0
+        rigidBody.mass     = 1.0
+        rigidBody.friction = 2.0
 
         _dynamics.add(c)
 
@@ -82,8 +81,8 @@ class ItemManager is MonoBehaviour {
         var collider  = c.addComponent(Collider)
         var rigidBody = c.addComponent(RigidBody)
         collider.makeBoxCollider()
-        collider.mass     = 1.0
-        collider.friction = 2.0
+        rigidBody.mass     = 1.0
+        rigidBody.friction = 2.0
 
         _dynamics.add(c)
 

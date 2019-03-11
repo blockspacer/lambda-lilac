@@ -1,15 +1,10 @@
 #pragma once
 #include "interfaces/isystem.h"
 #include "interfaces/icomponent.h"
+#include "interfaces/iphysics.h"
 #include <containers/containers.h>
 #include <memory/memory.h>
 #include "assets/mesh.h"
-
-class btCollisionShape;
-struct btDefaultMotionState;
-class btRigidBody;
-class btTriangleMesh;
-
 namespace lambda
 {
   namespace components
@@ -37,10 +32,6 @@ namespace lambda
       void makeSphereCollider();
       void makeCapsuleCollider();
       void makeMeshCollider(asset::MeshHandle mesh, const uint32_t& sub_mesh_id);
-	  void setFriction(float friction);
-	  float getFriction() const;
-	  void setMass(float mass);
-	  float getMass() const;
 
     private:
       ColliderSystem* system_;
@@ -53,11 +44,9 @@ namespace lambda
       ColliderData& operator=(const ColliderData& other);
 
       ColliderType          type = ColliderType::kCapsule; // TODO (Hilze): Remove this
-      btCollisionShape*     collision_shape = nullptr;
-      btDefaultMotionState* motion_state = nullptr;
-      btRigidBody*          rigid_body = nullptr;
+	  physics::ICollisionBody* collision_body = nullptr;
       bool                  is_trigger = false;
-			bool                  valid = true;
+      bool                  valid = true;
 
       entity::Entity entity;
     };
@@ -74,17 +63,12 @@ namespace lambda
       void removeComponent(const entity::Entity& entity);
       virtual void initialize(world::IWorld& world) override;
       virtual void deinitialize() override;
-			virtual void collectGarbage() override;
-			virtual ~ColliderSystem() override {};
-      void make(const entity::Entity& entity, btCollisionShape* shape);
+      virtual void collectGarbage() override;
+      virtual ~ColliderSystem() override {};
       void makeBox(const entity::Entity& entity);
       void makeSphere(const entity::Entity& entity);
       void makeCapsule(const entity::Entity& entity);
       void makeMeshCollider(const entity::Entity& entity, asset::MeshHandle mesh, const uint32_t& sub_mesh_id);
-	  void setFriction(const entity::Entity& entity, float friction);
-	  float getFriction(const entity::Entity& entity) const;
-	  void setMass(const entity::Entity& entity, float mass);
-	  float getMass(const entity::Entity& entity) const;
 
     protected:
       ColliderData& lookUpData(const entity::Entity& entity);
@@ -92,13 +76,10 @@ namespace lambda
 
     private:
       Vector<ColliderData> data_;
-			Map<entity::Entity, uint32_t> entity_to_data_;
-			Map<uint32_t, entity::Entity> data_to_entity_;
-			Set<entity::Entity> marked_for_delete_;
-			Queue<uint32_t> unused_data_entries_;
-
-      Map<size_t, Map<uint64_t, btTriangleMesh*>> mesh_colliders_;
-
+      Map<entity::Entity, uint32_t> entity_to_data_;
+      Map<uint32_t, entity::Entity> data_to_entity_;
+      Set<entity::Entity> marked_for_delete_;
+      Queue<uint32_t> unused_data_entries_;
       foundation::SharedPointer<TransformSystem> transform_system_;
       foundation::SharedPointer<RigidBodySystem> rigid_body_system_;
     };
