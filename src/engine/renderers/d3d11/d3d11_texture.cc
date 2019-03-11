@@ -8,7 +8,6 @@ namespace lambda
   namespace windows
   {
     ///////////////////////////////////////////////////////////////////////////
-#pragma optimize("", off)
     DXGI_FORMAT formatToD3DFormat(const TextureFormat& format)
     {
       switch (format)

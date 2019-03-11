@@ -32,8 +32,7 @@ namespace lambda
       /** Init start */
       ColliderData& data = lookUpData(entity);
       
-	  data.collision_body = rigid_body_system_->getPhysicsWorld()->createCollisionBody(entity);
-	  data.collision_body->makeBoxCollider();
+	    data.collision_body = rigid_body_system_->getPhysicsWorld()->createCollisionBody(entity);
 
       return ColliderComponent(entity, this);
     }

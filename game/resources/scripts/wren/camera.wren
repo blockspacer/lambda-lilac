@@ -84,7 +84,7 @@ class FreeLookCamera is MonoBehaviour {
 
     var collider = gameObject.addComponent(Collider)
     _rigid_body = gameObject.addComponent(RigidBody)
-    _rigid_body.angularConstraints = 1 << 0 + 1 << 2
+    _rigid_body.angularConstraints = 5
     transform.localPosition = Vec3.new(0.0, 20.0, 0.0)
     collider.makeCapsuleCollider()
 

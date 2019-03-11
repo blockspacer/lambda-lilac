@@ -19,9 +19,20 @@ namespace lambda
   {
 	  struct Manifold
 	  {
-		  entity::Entity entity;
-		  glm::vec3 normal;
-		  glm::vec3 point;
+		  entity::Entity lhs;
+		  entity::Entity rhs;
+			struct ContactPoint
+			{
+				float depth;
+				glm::vec3 normal;
+				glm::vec3 point;
+			};
+			Vector<ContactPoint> contacts;
+
+			bool operator==(const Manifold& other)
+			{
+				return lhs == other.lhs && rhs == other.rhs;
+			}
 	  };
 
 	  class ICollisionBody

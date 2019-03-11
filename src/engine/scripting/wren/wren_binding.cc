@@ -2853,23 +2853,23 @@ class RigidBody {
         };
         if (strcmp(signature, "priv_velocityConstraints(_,_)") == 0) return [](WrenVM* vm) {
 					entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
-					uint8_t v = (uint8_t)wrenGetSlotDouble(vm, 2);
-					g_rigidBodySystem->setVelocityConstraints(e, v);
+					double v = wrenGetSlotDouble(vm, 2);
+					g_rigidBodySystem->setVelocityConstraints(e, (uint8_t)v);
         };
         if (strcmp(signature, "priv_velocityConstraints(_)") == 0) return [](WrenVM* vm) {
 					entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
 					uint8_t v = g_rigidBodySystem->getVelocityConstraints(e);
-					wrenSetSlotDouble(vm, 0, v);
+					wrenSetSlotDouble(vm, 0, (double)v);
 				};
 		if (strcmp(signature, "priv_angularConstraints(_,_)") == 0) return [](WrenVM* vm) {
 			entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
-			uint8_t v = (uint8_t)wrenGetSlotDouble(vm, 2);
-			g_rigidBodySystem->setAngularConstraints(e, v);
+			double v = wrenGetSlotDouble(vm, 2);
+			g_rigidBodySystem->setAngularConstraints(e, (uint8_t)v);
 		};
 		if (strcmp(signature, "priv_angularConstraints(_)") == 0) return [](WrenVM* vm) {
 			entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
 			uint8_t v = g_rigidBodySystem->getAngularConstraints(e);
-			wrenSetSlotDouble(vm, 0, v);
+			wrenSetSlotDouble(vm, 0, (double)v);
 		};
 		if (strcmp(signature, "priv_friction(_,_)") == 0) return [](WrenVM* vm) {
 			entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
@@ -4416,6 +4416,7 @@ class Debug {
 foreign class Manifold {
 	foreign gameObject
 	foreign normal
+	foreign depth
 	foreign point
 }
 )";
@@ -4461,13 +4462,16 @@ foreign class Manifold {
 			WrenForeignMethodFn Bind(const char* signature)
 			{
 				if (strcmp(signature, "gameObject") == 0) return [](WrenVM* vm) {
-					GameObject::make(vm, GetForeign<physics::Manifold>(vm, 0)->entity);
+					GameObject::make(vm, GetForeign<physics::Manifold>(vm, 0)->rhs);
 				};
 				if (strcmp(signature, "normal") == 0) return [](WrenVM* vm) {
-					Vec3::make(vm, GetForeign<physics::Manifold>(vm, 0)->normal);
+					Vec3::make(vm, GetForeign<physics::Manifold>(vm, 0)->contacts[0].normal);
+				};
+				if (strcmp(signature, "depth") == 0) return [](WrenVM* vm) {
+					wrenSetSlotDouble(vm, 0, (double)GetForeign<physics::Manifold>(vm, 0)->contacts[0].depth);
 				};
 				if (strcmp(signature, "point") == 0) return [](WrenVM* vm) {
-					Vec3::make(vm, GetForeign<physics::Manifold>(vm, 0)->point);
+					Vec3::make(vm, GetForeign<physics::Manifold>(vm, 0)->contacts[0].point);
 				};
 				return nullptr;
 			}

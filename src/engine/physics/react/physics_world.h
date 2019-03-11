@@ -26,6 +26,7 @@ namespace lambda
 
   namespace physics
   {
+		class MyEventListener;
 	  class ReactPhysicsWorld;
 	  enum class CollisionBodyType
 	  {
@@ -130,11 +131,12 @@ namespace lambda
       foundation::SharedPointer<components::RigidBodySystem> 
         rigid_body_system_;
       
-	  world::IWorld* world_;
-	  PhysicVisualizer physics_visualizer_;
+			world::IWorld* world_;
+			PhysicVisualizer physics_visualizer_;
+			MyEventListener* event_listener_;
 
-	  reactphysics3d::DynamicsWorld* dynamics_world_;
-	  Vector<CollisionBody*> collision_bodies_;
-    };
+			reactphysics3d::DynamicsWorld* dynamics_world_;
+			Vector<CollisionBody*> collision_bodies_;
+		};
   }
 }
