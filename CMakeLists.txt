@@ -38,11 +38,11 @@ ELSEIF (APPLE)
 ENDIF (WIN32)
 
 # Disable RTTI
-if (VIOLET_WIN32)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR-")
-elseif (VIOLET_LINUX || VIOLET_OSX)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
-endif()
+#if (VIOLET_WIN32)
+#  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR-")
+#elseif (VIOLET_LINUX || VIOLET_OSX)
+#  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
+#endif()
 
 # Do required things.
 IF (VIOLET_WIN32)
