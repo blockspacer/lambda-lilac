@@ -1,5 +1,4 @@
-#if VIOLET_PHYSICS_BULLET
-#include "physics_visualizer.h"
+#include "bullet_physics_visualizer.h"
 #include "platform/debug_renderer.h"
 #include <utils/console.h>
 
@@ -8,13 +7,13 @@ namespace lambda
   namespace physics
   {
     ///////////////////////////////////////////////////////////////////////////
-    void PhysicVisualizer::initialize(platform::DebugRenderer* debug_renderer)
+    void BulletPhysicVisualizer::initialize(platform::DebugRenderer* debug_renderer)
     {
       debug_renderer_ = debug_renderer;
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    void PhysicVisualizer::drawLine(
+    void BulletPhysicVisualizer::drawLine(
       const btVector3& from, 
       const btVector3& to, 
       const btVector3& fromColor, 
@@ -29,7 +28,7 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    void PhysicVisualizer::drawLine(
+    void BulletPhysicVisualizer::drawLine(
       const btVector3& from, 
       const btVector3& to, 
       const btVector3& color)
@@ -42,16 +41,16 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    void PhysicVisualizer::drawSphere(
+    void BulletPhysicVisualizer::drawSphere(
       const btVector3& /*p*/,
       btScalar /*radius*/,
       const btVector3& /*color*/)
     {
-      assert(false);
+		LMB_ASSERT(false, "PHYSICS: drawSphere not implemented");
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    void PhysicVisualizer::drawTriangle(
+    void BulletPhysicVisualizer::drawTriangle(
       const btVector3& a,
       const btVector3& b, 
       const btVector3& c, 
@@ -72,7 +71,7 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    void PhysicVisualizer::drawContactPoint(
+    void BulletPhysicVisualizer::drawContactPoint(
       const btVector3& /*PointOnB*/,
       const btVector3& /*normalOnB*/,
       btScalar /*distance*/,
@@ -83,13 +82,13 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    void PhysicVisualizer::reportErrorWarning(const char* warningString)
+    void BulletPhysicVisualizer::reportErrorWarning(const char* warningString)
     {
       foundation::Error("Physics: " + String(warningString) + "\n");
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    void PhysicVisualizer::draw3dText(
+    void BulletPhysicVisualizer::draw3dText(
       const btVector3& /*location*/,
       const char* /*textString*/)
     {
@@ -97,22 +96,21 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    void PhysicVisualizer::setDebugMode(int debug_mode) 
+    void BulletPhysicVisualizer::setDebugMode(int debug_mode) 
     { 
       debug_mode_ = debug_mode; 
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    int PhysicVisualizer::getDebugMode() const
+    int BulletPhysicVisualizer::getDebugMode() const
     { 
       return debug_mode_; 
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    glm::vec3 PhysicVisualizer::toGlm(const btVector3& v) const
+    glm::vec3 BulletPhysicVisualizer::toGlm(const btVector3& v) const
     {
       return glm::vec3(v.x(), v.y(), v.z()); 
     }
   }
 }
-#endif

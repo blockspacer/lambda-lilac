@@ -1,5 +1,4 @@
 #pragma once
-#if VIOLET_PHYSICS_BULLET
 #include <LinearMath/btIDebugDraw.h>
 #include <glm/glm.hpp>
 #include <iostream>
@@ -13,7 +12,7 @@ namespace lambda
   namespace physics
   {
     ///////////////////////////////////////////////////////////////////////////
-    class PhysicVisualizer : public btIDebugDraw
+    class BulletPhysicVisualizer : public btIDebugDraw
     {
     public:
       void initialize(platform::DebugRenderer* debug_renderer);
@@ -65,4 +64,3 @@ namespace lambda
     };
   }
 }
-#endif

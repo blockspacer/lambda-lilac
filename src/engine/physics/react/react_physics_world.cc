@@ -1,4 +1,12 @@
-#include "physics_world.h"
+#if VIOLET_WIN32
+#pragma warning(push, 0)
+#pragma warning(disable: 4996)
+#endif
+#include "react_physics_world.h"
+#if VIOLET_WIN32
+#pragma warning(pop)
+#endif
+
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtc/quaternion.hpp>
 #include "systems/transform_system.h"
@@ -9,6 +17,7 @@
 
 #if VIOLET_WIN32
 #pragma warning(push, 0)
+#pragma warning(disable: 4996)
 #endif
 #include <reactphysics3d.h>
 #include <collision/ContactManifold.h>
@@ -45,12 +54,18 @@ namespace lambda
 			return glm::quat(q.w, q.x, q.y, q.z);
 		}
 
+		///////////////////////////////////////////////////////////////////////////
+		inline static bool isNaN(const reactphysics3d::Vector3& v)
+		{
+			return std::isnan(v.x) || std::isnan(v.y) || std::isnan(v.z);
+		}
+
 
 
 
 
 		///////////////////////////////////////////////////////////////////////////
-		CollisionBody::CollisionBody(
+		ReactCollisionBody::ReactCollisionBody(
 			reactphysics3d::DynamicsWorld* dynamics_world,
 			world::IWorld* world,
 			ReactPhysicsWorld* physics_world,
@@ -59,7 +74,7 @@ namespace lambda
 			, dynamics_world_(dynamics_world)
 			, physics_world_(physics_world)
 			, world_(world)
-			, type_(CollisionBodyType::kNone)
+			, type_(ReactCollisionBodyType::kNone)
 			, entity_(entity)
 			, velocity_constraints_(0)
 			, angular_constraints_(0)
@@ -73,7 +88,7 @@ namespace lambda
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		CollisionBody::~CollisionBody()
+		ReactCollisionBody::~ReactCollisionBody()
 		{
 			destroyBody();
 			for (reactphysics3d::CollisionShape* shape : collision_shapes_)
@@ -81,13 +96,13 @@ namespace lambda
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		glm::vec3 CollisionBody::getPosition() const
+		glm::vec3 ReactCollisionBody::getPosition() const
 		{
 			return toGlm(body_->getTransform().getPosition());
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		void CollisionBody::setPosition(glm::vec3 position)
+		void ReactCollisionBody::setPosition(glm::vec3 position)
 		{
 			auto transform = body_->getTransform();
 			transform.setPosition(toRp(position));
@@ -95,13 +110,13 @@ namespace lambda
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		glm::quat CollisionBody::getRotation() const
+		glm::quat ReactCollisionBody::getRotation() const
 		{
 			return toGlm(body_->getTransform().getOrientation());
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		void CollisionBody::setRotation(glm::quat rotation)
+		void ReactCollisionBody::setRotation(glm::quat rotation)
 		{
 			auto transform = body_->getTransform();
 			transform.setOrientation(toRp(rotation));
@@ -109,115 +124,133 @@ namespace lambda
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		entity::Entity CollisionBody::getEntity() const
+		entity::Entity ReactCollisionBody::getEntity() const
 		{
 			return entity_;
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		float CollisionBody::getFriction() const
+		float ReactCollisionBody::getFriction() const
 		{
 			return body_->getMaterial().getFrictionCoefficient();
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		void CollisionBody::setFriction(float friction)
+		void ReactCollisionBody::setFriction(float friction)
 		{
 			body_->getMaterial().setFrictionCoefficient(friction);
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		float CollisionBody::getMass() const
+		float ReactCollisionBody::getMass() const
 		{
 			return body_->getMass();
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		void CollisionBody::setMass(float mass)
+		void ReactCollisionBody::setMass(float mass)
 		{
 			body_->setMass(mass);
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		uint8_t CollisionBody::getVelocityConstraints() const
+		uint16_t ReactCollisionBody::getLayers() const
+		{
+			for (reactphysics3d::ProxyShape* proxy_shape : proxy_shapes_)
+				return proxy_shape->getCollisionCategoryBits();
+			return 0;
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		void ReactCollisionBody::setLayers(uint16_t layers)
+		{
+			for (reactphysics3d::ProxyShape* proxy_shape : proxy_shapes_)
+			{
+				proxy_shape->setCollisionCategoryBits(layers);
+				proxy_shape->setCollideWithMaskBits(layers);
+			}
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		uint8_t ReactCollisionBody::getVelocityConstraints() const
 		{
 			return velocity_constraints_;
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		void CollisionBody::setVelocityConstraints(uint8_t velocity_constraints)
+		void ReactCollisionBody::setVelocityConstraints(uint8_t velocity_constraints)
 		{
 			velocity_constraints_ = velocity_constraints;
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		uint8_t CollisionBody::getAngularConstraints() const
+		uint8_t ReactCollisionBody::getAngularConstraints() const
 		{
 			return angular_constraints_;
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		void CollisionBody::setAngularConstraints(uint8_t angular_constraints)
+		void ReactCollisionBody::setAngularConstraints(uint8_t angular_constraints)
 		{
 			angular_constraints_ = angular_constraints;
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		glm::vec3 CollisionBody::getVelocity() const
+		glm::vec3 ReactCollisionBody::getVelocity() const
 		{
 			return toGlm(body_->getLinearVelocity());
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		void CollisionBody::setVelocity(glm::vec3 velocity)
+		void ReactCollisionBody::setVelocity(glm::vec3 velocity)
 		{
 			body_->setLinearVelocity(toRp(velocity));
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		glm::vec3 CollisionBody::getAngularVelocity() const
+		glm::vec3 ReactCollisionBody::getAngularVelocity() const
 		{
 			return toGlm(body_->getAngularVelocity());
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		void CollisionBody::setAngularVelocity(glm::vec3 velocity)
+		void ReactCollisionBody::setAngularVelocity(glm::vec3 velocity)
 		{
 			body_->setAngularVelocity(toRp(velocity));
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		void CollisionBody::applyImpulse(glm::vec3 impulse)
+		void ReactCollisionBody::applyImpulse(glm::vec3 impulse)
 		{
 			body_->applyForceToCenterOfMass(toRp(impulse));
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		void CollisionBody::applyImpulse(glm::vec3 impulse, glm::vec3 location)
+		void ReactCollisionBody::applyImpulse(glm::vec3 impulse, glm::vec3 location)
 		{
 			body_->applyForce(toRp(impulse), toRp(location));
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		bool CollisionBody::isCollider() const
+		bool ReactCollisionBody::isCollider() const
 		{
-			return type_ == CollisionBodyType::kCollider;
+			return type_ == ReactCollisionBodyType::kCollider;
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		bool CollisionBody::isRigidBody() const
+		bool ReactCollisionBody::isRigidBody() const
 		{
-			return type_ == CollisionBodyType::kRigidBody;
+			return type_ == ReactCollisionBodyType::kRigidBody;
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		reactphysics3d::RigidBody* CollisionBody::getBody() const
+		reactphysics3d::RigidBody* ReactCollisionBody::getBody() const
 		{
 			return body_;
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		void CollisionBody::makeBoxCollider()
+		void ReactCollisionBody::makeBoxCollider()
 		{
 			setShape(foundation::Memory::construct<reactphysics3d::BoxShape>(
 				toRp(world_->getScene().getSystem<components::TransformSystem>()->getWorldScale(entity_) * 0.5f))
@@ -225,7 +258,7 @@ namespace lambda
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		void CollisionBody::makeSphereCollider()
+		void ReactCollisionBody::makeSphereCollider()
 		{
 			setShape(foundation::Memory::construct<reactphysics3d::SphereShape>(
 				reactphysics3d::decimal(world_->getScene().getSystem<components::TransformSystem>()->getWorldScale(entity_).x * 0.5f))
@@ -233,7 +266,7 @@ namespace lambda
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		void CollisionBody::makeCapsuleCollider()
+		void ReactCollisionBody::makeCapsuleCollider()
 		{
 			setShape(foundation::Memory::construct<reactphysics3d::CapsuleShape>(
 				reactphysics3d::decimal(world_->getScene().getSystem<components::TransformSystem>()->getWorldScale(entity_).x * 0.5f),
@@ -242,7 +275,7 @@ namespace lambda
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		void CollisionBody::makeMeshCollider(asset::MeshHandle mesh, uint32_t sub_mesh_id)
+		void ReactCollisionBody::makeMeshCollider(asset::MeshHandle mesh, uint32_t sub_mesh_id)
 		{
 			// Get the indices.
 			glm::vec3 scale = world_->getScene().getSystem<components::TransformSystem>()->getWorldScale(entity_);
@@ -295,7 +328,7 @@ namespace lambda
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		void CollisionBody::setShape(reactphysics3d::CollisionShape* shape)
+		void ReactCollisionBody::setShape(reactphysics3d::CollisionShape* shape)
 		{
 			for (reactphysics3d::ProxyShape* proxy_shape : proxy_shapes_)
 				body_->removeCollisionShape(proxy_shape);
@@ -311,23 +344,23 @@ namespace lambda
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		void CollisionBody::makeCollider()
+		void ReactCollisionBody::makeCollider()
 		{
-			type_ = CollisionBodyType::kCollider;
+			type_ = ReactCollisionBodyType::kCollider;
 			body_->setType(reactphysics3d::BodyType::STATIC);
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		void CollisionBody::makeRigidBody()
+		void ReactCollisionBody::makeRigidBody()
 		{
-			type_ = CollisionBodyType::kRigidBody;
+			type_ = ReactCollisionBodyType::kRigidBody;
 			body_->setType(reactphysics3d::BodyType::DYNAMIC);
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		void CollisionBody::destroyBody()
+		void ReactCollisionBody::destroyBody()
 		{
-			if (type_ != CollisionBodyType::kNone)
+			if (type_ != ReactCollisionBodyType::kNone)
 			{
 				for (reactphysics3d::ProxyShape* proxy_shape : proxy_shapes_)
 					body_->removeCollisionShape(proxy_shape);
@@ -338,7 +371,7 @@ namespace lambda
 				dynamics_world_->destroyRigidBody(body_);
 
 				body_ = nullptr;
-				type_ = CollisionBodyType::kNone;
+				type_ = ReactCollisionBodyType::kNone;
 			}
 		}
 
@@ -358,7 +391,6 @@ namespace lambda
     }
 
 		///////////////////////////////////////////////////////////////////////////
-#pragma optimize("", off)
 		class MyEventListener : public reactphysics3d::EventListener
 		{
 		public:
@@ -482,7 +514,7 @@ namespace lambda
 			};
 			Vector<SavData> sav_data(collision_bodies_.size());
 
-			for (CollisionBody* rb : collision_bodies_)
+			for (ReactCollisionBody* rb : collision_bodies_)
 			{
 				if (!rb->isRigidBody())
 					continue;
@@ -509,7 +541,7 @@ namespace lambda
 
 			offset = 0;
 
-			for (CollisionBody* rb : collision_bodies_)
+			for (ReactCollisionBody* rb : collision_bodies_)
 			{
 				if (!rb->isRigidBody())
 					continue;
@@ -586,6 +618,9 @@ namespace lambda
 			virtual reactphysics3d::decimal notifyRaycastHit(
 				const reactphysics3d::RaycastInfo& raycastInfo) override
 			{
+				if (isNaN(raycastInfo.worldPoint) || isNaN(raycastInfo.worldNormal))
+					return reactphysics3d::decimal(0.0);
+
 				Manifold manifold;
 				manifold.rhs    = *(entity::Entity*)raycastInfo.body->getUserData();
 				manifold.contacts.resize(1);
@@ -615,7 +650,7 @@ namespace lambda
 	///////////////////////////////////////////////////////////////////////////
 	ICollisionBody* ReactPhysicsWorld::createCollisionBody(entity::Entity entity)
 	{
-		CollisionBody* rb = foundation::Memory::construct<CollisionBody>(
+		ReactCollisionBody* rb = foundation::Memory::construct<ReactCollisionBody>(
 			dynamics_world_,
 			world_,
 			this,

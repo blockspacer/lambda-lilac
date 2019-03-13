@@ -136,6 +136,14 @@ function(LinkDependencies)
       SetSolutionFolder("deps/physics" reactphysics3d)
     ENDIF()
 
+    IF(${VIOLET_PHYSICS_NEWTON})
+      SET(NEWTON_BUILD_SANDBOX_DEMOS OFF CACHE BOOL "" FORCE)
+      ADD_SUBDIRECTORY("deps/newton-dynamics")
+      TARGET_INCLUDE_DIRECTORIES(newton INTERFACE "deps/newton-dynamics/sdk")
+      SetSolutionFolder("deps/physics/newtonDynamics" dAnimation dContainers dCustomJoints dgCore dgNewtonAvx dgPhysics dMath dNewton dScene dVehicle tinyxml)
+      SetSolutionFolder("deps/physics" newton)
+    ENDIF()
+
   # /// FAST NOISE ////////////////////////////////////////////////
     SET(FastNoiseSources
       "deps/FastNoise/FastNoise.h"

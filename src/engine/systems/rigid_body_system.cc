@@ -8,10 +8,13 @@
 #include <glm/gtx/functions.hpp>
 
 #if VIOLET_PHYSICS_BULLET
-#include "physics/bullet/physics_world.h"
+#include "physics/bullet/bullet_physics_world.h"
 #endif
 #if VIOLET_PHYSICS_REACT
-#include "physics/react/physics_world.h"
+#include "physics/react/react_physics_world.h"
+#endif
+#if VIOLET_PHYSICS_NEWTON
+#include "physics/newton/newton_physics_world.h"
 #endif
 
 
@@ -91,11 +94,14 @@ namespace lambda
       transform_system_ = world.getScene().getSystem<TransformSystem>();
       collider_system_ = world.getScene().getSystem<ColliderSystem>().get();
 
+#if VIOLET_PHYSICS_BULLET
+	  physics_world_ = foundation::Memory::construct<physics::BulletPhysicsWorld>();
+#endif
 #if VIOLET_PHYSICS_REACT
 	  physics_world_ = foundation::Memory::construct<physics::ReactPhysicsWorld>();
 #endif
-#if VIOLET_PHYSICS_BULLET
-	  physics_world_ = foundation::Memory::construct<physics::BulletPhysicsWorld>();
+#if VIOLET_PHYSICS_NEWTON
+	  physics_world_ = foundation::Memory::construct<physics::NewtonPhysicsWorld>();
 #endif
 
 	  physics_world_->initialize(

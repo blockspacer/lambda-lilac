@@ -27,6 +27,8 @@ import "Core/Time" for Time
 import "Core/Debug" for Debug
 import "Core/Sort" for Sort
 
+import "resources/scripts/wren/physics_layers" for PhysicsLayers
+
 class Door is MonoBehaviour {
   construct new() { super() }
   static goGet(val) { MonoBehaviour.goGet(val) }
@@ -52,6 +54,7 @@ class Door is MonoBehaviour {
     
     var button_collider = gameObject.addComponent(Collider)
     button_collider.makeBoxCollider()
+    button_collider.layers = PhysicsLayers.General | PhysicsLayers.MovingObjects
 
     // Door.
     _door = GameObject.new()
@@ -68,5 +71,6 @@ class Door is MonoBehaviour {
   
     var door_collider = _door.addComponent(Collider)
     door_collider.makeBoxCollider()
+    door_collider.layers = PhysicsLayers.General | PhysicsLayers.MovingObjects
   }
 }

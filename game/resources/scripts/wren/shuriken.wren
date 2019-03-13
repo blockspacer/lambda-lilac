@@ -22,6 +22,8 @@ import "Core/Math" for Math
 
 import "Core/Time" for Time
 
+import "resources/scripts/wren/physics_layers" for PhysicsLayers
+
 class ShurikenBehaviour is MonoBehaviour {
   static goGet(val) { MonoBehaviour.goGet(val) }
   static goRemove(val) { MonoBehaviour.goRemove(val) }
@@ -46,6 +48,7 @@ class ShurikenBehaviour is MonoBehaviour {
     gameObject.addComponent(Collider)
     // Make it a sphere collider.
     gameObject.getComponent(Collider).makeSphereCollider()
+    gameObject.getComponent(Collider).layers = PhysicsLayers.MovingObjects
     
     // Add a rigid body.
     gameObject.addComponent(RigidBody)
@@ -63,7 +66,7 @@ class ShurikenBehaviour is MonoBehaviour {
     // Attach the mesh.
     _mesh_render.getComponent(MeshRender).attach(__mesh)
     // Set the parent.
-    _mesh_render.transform.parent = transform
+    _mesh_render.transform.parent = gameObject
     // Set the scale.
     _mesh_render.transform.worldScale = Vec3.new(1.0 / 0.5)
   }
@@ -88,13 +91,6 @@ class ShurikenBehaviour is MonoBehaviour {
 
   onCollisionEnter(other, normal) {
     if (!_collided) {
-
-      // The player cannot stop the shurikens.
-      for (tag in other.tags) {
-        if (tag == "player") {
-          return
-        }
-      }
 
       gameObject.removeComponent(RigidBody)
       gameObject.removeComponent(Collider)

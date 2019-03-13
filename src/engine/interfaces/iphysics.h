@@ -26,8 +26,8 @@ namespace lambda
 				float depth;
 				glm::vec3 normal;
 				glm::vec3 point;
-			};
-			Vector<ContactPoint> contacts;
+			} contacts[4];
+			uint32_t num_contacts = 0;
 
 			bool operator==(const Manifold& other)
 			{
@@ -38,6 +38,7 @@ namespace lambda
 	  class ICollisionBody
 	  {
 	  public:
+		  virtual ~ICollisionBody() {};
 		  virtual glm::vec3 getPosition() const = 0;
 		  virtual void setPosition(glm::vec3 position) = 0;
 		  virtual glm::quat getRotation() const = 0;
@@ -48,6 +49,8 @@ namespace lambda
 		  virtual void setFriction(float friction) = 0;
 		  virtual float getMass() const = 0;
 		  virtual void setMass(float mass) = 0;
+		  virtual uint16_t getLayers() const = 0;
+		  virtual void setLayers(uint16_t layers) = 0;
 		  
 		  virtual uint8_t getVelocityConstraints() const = 0;
 		  virtual void setVelocityConstraints(uint8_t velocity_constraints) = 0;

@@ -2,18 +2,12 @@
 #include "systems/entity.h"
 #include <glm/glm.hpp>
 #include <containers/containers.h>
-#include "physics_visualizer.h"
 #include <memory/memory.h>
 #include <interfaces/iphysics.h>
 #include <assets/mesh.h>
+#include <physics/newton/newton_physics_visualizer.h>
 
-namespace reactphysics3d
-{
-  class DynamicsWorld;
-  class RigidBody;
-  class ProxyShape;
-  class CollisionShape;
-}
+class NewtonWorld;
 
 namespace lambda
 {
@@ -26,25 +20,24 @@ namespace lambda
 
   namespace physics
   {
-		class MyEventListener;
-	  class ReactPhysicsWorld;
-	  enum class CollisionBodyType
+	  class NewtonPhysicsWorld;
+	  enum class NewtonCollisionBodyType
 	  {
 		  kNone,
 		  kCollider,
 		  kRigidBody
 	  };
 	  ///////////////////////////////////////////////////////////////////////////
-	  class CollisionBody : public ICollisionBody
+	  class NewtonCollisionBody : public ICollisionBody
 	  {
 	  public:
-		  CollisionBody(
-			reactphysics3d::DynamicsWorld* dynamics_world,
+		  NewtonCollisionBody(
 			world::IWorld* world,
-			ReactPhysicsWorld* physics_world,
-			entity::Entity entity
+			NewtonPhysicsWorld* physics_world,
+			NewtonWorld* dynamics_world,
+		  entity::Entity entity
 		  );
-		  ~CollisionBody();
+		  ~NewtonCollisionBody();
 		  virtual glm::vec3 getPosition() const override;
 		  virtual void setPosition(glm::vec3 position) override;
 		  virtual glm::quat getRotation() const override;
@@ -55,6 +48,8 @@ namespace lambda
 		  virtual void setFriction(float friction) override;
 		  virtual float getMass() const override;
 		  virtual void setMass(float mass) override;
+		  virtual uint16_t getLayers() const override;
+		  virtual void setLayers(uint16_t layers) override;
 
 		  virtual uint8_t getVelocityConstraints() const override;
 		  virtual void setVelocityConstraints(uint8_t velocity_constraints) override;
@@ -79,31 +74,24 @@ namespace lambda
 		  virtual void makeCapsuleCollider() override;
 		  virtual void makeMeshCollider(asset::MeshHandle mesh, uint32_t sub_mesh_id) override;
 
-		  void setShape(reactphysics3d::CollisionShape* shape);
-
-		  reactphysics3d::RigidBody* getBody() const;
-		  
 		  void destroyBody();
 
 	  private:
-		  reactphysics3d::RigidBody* body_;
-		  Vector<reactphysics3d::ProxyShape*> proxy_shapes_;
-		  Vector<reactphysics3d::CollisionShape*> collision_shapes_;
-		  reactphysics3d::DynamicsWorld* dynamics_world_;
 		  world::IWorld* world_;
-		  ReactPhysicsWorld* physics_world_;
-		  CollisionBodyType type_;
+		  NewtonPhysicsWorld* physics_world_;
+		  NewtonWorld* dynamics_world_;
+		  NewtonCollisionBodyType type_;
 		  entity::Entity entity_;
 		  uint8_t velocity_constraints_;
 		  uint8_t angular_constraints_;
 	  };
 
     ///////////////////////////////////////////////////////////////////////////
-    class ReactPhysicsWorld : public IPhysicsWorld
+    class NewtonPhysicsWorld : public IPhysicsWorld
     {
     public:
-      ReactPhysicsWorld();
-      ~ReactPhysicsWorld();
+      NewtonPhysicsWorld();
+      ~NewtonPhysicsWorld();
       
 	  virtual void initialize(
 				platform::DebugRenderer* debug_renderer,
@@ -131,12 +119,11 @@ namespace lambda
       foundation::SharedPointer<components::RigidBodySystem> 
         rigid_body_system_;
       
-			world::IWorld* world_;
-			PhysicVisualizer physics_visualizer_;
-			MyEventListener* event_listener_;
+	  world::IWorld* world_;
+	  NewtonPhysicVisualizer physics_visualizer_;
+	  NewtonWorld* dynamics_world_;
 
-			reactphysics3d::DynamicsWorld* dynamics_world_;
-			Vector<CollisionBody*> collision_bodies_;
-		};
+	  Vector<NewtonCollisionBody*> collision_bodies_;
+    };
   }
 }

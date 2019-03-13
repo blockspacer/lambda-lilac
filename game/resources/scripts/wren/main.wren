@@ -36,9 +36,11 @@ import "resources/scripts/wren/lighting" for Lighting
 import "resources/scripts/wren/trees" for Trees
 import "resources/scripts/wren/item_manager" for ItemManager
 import "resources/scripts/wren/door" for Door
+import "resources/scripts/wren/physics_layers" for PhysicsLayers
 
 class World {
     construct new() {}
+
     initialize() {
         _item_manager = GameObject.new().addComponent(ItemManager)
 
@@ -68,6 +70,7 @@ class World {
           model.addComponent(MeshRender).attach(mesh)
           var collider = model.addComponent(Collider)
           collider.makeMeshColliderRecursive(mesh)
+          collider.layersRecursive = PhysicsLayers.General | PhysicsLayers.MovingObjects
 
           new_position.y = 2.0
           _camera.transform.worldPosition = new_position

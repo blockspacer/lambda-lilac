@@ -1994,6 +1994,7 @@ foreign class Transform {
  
 	foreign parent
 	foreign parent=(parent)
+	foreign children
 
 	foreign worldPosition
 	foreign worldPosition=(p)
@@ -2079,15 +2080,26 @@ foreign class Transform {
           handle->entity = entity::Entity();
         };
         if (strcmp(signature, "parent") == 0) return [](WrenVM* vm) {
-          Transform::make(
+          GameObject::make(
             vm, 
-            GetForeign<TransformHandle>(vm)->handle.getParent()
+            GetForeign<TransformHandle>(vm)->handle.getParent().entity()
           );
         };
         if (strcmp(signature, "parent=(_)") == 0) return [](WrenVM* vm) {
           GetForeign<TransformHandle>(vm)->handle.setParent(
-            GetForeign<TransformHandle>(vm, 1)->handle
+            g_transformSystem->getComponent(*GetForeign<entity::Entity>(vm, 1))
           );
+        };
+        if (strcmp(signature, "children") == 0) return [](WrenVM* vm) {
+		  Vector<components::TransformComponent> children = 
+			  GetForeign<TransformHandle>(vm)->handle.getChildren();
+
+		  wrenSetSlotNewList(vm, 0);
+		  for (components::TransformComponent child : children)
+		  {
+			  GameObject::makeAt(vm, 1, 2, child.entity());
+			  wrenInsertInList(vm, 0, -1, 1);
+		  }
         };
         if (strcmp(signature, "worldPosition") == 0) return [](WrenVM* vm) {
           Vec3::make(
@@ -2737,7 +2749,7 @@ foreign class Lod {
 ///// rigidBody.wren //////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 class RigidBody {
-    construct new() {
+	construct new() {
     }
     toString { "[%(gameObject.id): RigidBody]" }
 
@@ -3136,6 +3148,10 @@ foreign class Collider {
     foreign makeCapsuleCollider()
     foreign makeMeshCollider(mesh, subMesh)
     foreign makeMeshColliderRecursive(mesh)
+
+    foreign layers
+    foreign layers=(layers)
+    foreign layersRecursive=(layers)
 }
 )";
         char* data = (char*)WREN_ALLOC(str.size() + 1u);
@@ -3184,6 +3200,14 @@ foreign class Collider {
         for (const auto& child : g_transformSystem->getChildren(entity))
           addMeshCollider(child, mesh);
       }
+      void setLayersRecursive(entity::Entity entity, uint16_t layers)
+      {
+        if (g_colliderSystem->hasComponent(entity))
+			g_colliderSystem->setLayers(entity, layers);
+        
+		for (const auto& child : g_transformSystem->getChildren(entity))
+			setLayersRecursive(child, layers);
+      }
       WrenForeignMethodFn Bind(const char* signature)
       {
         if (strcmp(signature, "gameObject") == 0) return [](WrenVM* vm) {
@@ -3221,6 +3245,15 @@ foreign class Collider {
         };
         if (strcmp(signature, "makeMeshColliderRecursive(_)") == 0) return [](WrenVM* vm) {
           addMeshCollider(GetForeign<ColliderHandle>(vm)->handle.entity(), *GetForeign<asset::MeshHandle>(vm, 1));
+        };
+        if (strcmp(signature, "layers") == 0) return [](WrenVM* vm) {
+          wrenSetSlotDouble(vm, 0, (double)GetForeign<ColliderHandle>(vm)->handle.getLayers());
+        };
+        if (strcmp(signature, "layers=(_)") == 0) return [](WrenVM* vm) {
+          GetForeign<ColliderHandle>(vm)->handle.setLayers((uint16_t)wrenGetSlotDouble(vm, 1));
+        };
+        if (strcmp(signature, "layersRecursive=(_)") == 0) return [](WrenVM* vm) {
+          setLayersRecursive(GetForeign<ColliderHandle>(vm)->entity, (uint16_t)wrenGetSlotDouble(vm, 1));
         };
         return nullptr;
       }
@@ -4320,6 +4353,26 @@ class Time {
 			return nullptr;
 		}
 	}
+	namespace PhysicsConstraints
+	{
+		char* Load()
+		{
+			String str = R"(
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///// physics constraints.wren ////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+class PhysicsConstraints {
+	static None { 0   }
+	static X { 1 << 0 }
+	static Y { 1 << 1 }
+	static Z { 1 << 2 }
+}
+)";
+			char* data = (char*)WREN_ALLOC(str.size() + 1u);
+			memcpy(data, str.data(), str.size() + 1u);
+			return data;
+		}
+	}
 	namespace Sort
 	{
 		char* Load()
@@ -4437,6 +4490,7 @@ foreign class Manifold {
 				wrenSetSlotHandle(vm, class_slot, handle);
 				physics::Manifold* data = MakeForeign<physics::Manifold>(vm, slot, class_slot);
 				memcpy(data, &val, sizeof(physics::Manifold));
+				
 				return data;
 			}
 
@@ -4471,7 +4525,8 @@ foreign class Manifold {
 					wrenSetSlotDouble(vm, 0, (double)GetForeign<physics::Manifold>(vm, 0)->contacts[0].depth);
 				};
 				if (strcmp(signature, "point") == 0) return [](WrenVM* vm) {
-					Vec3::make(vm, GetForeign<physics::Manifold>(vm, 0)->contacts[0].point);
+					physics::Manifold* data = GetForeign<physics::Manifold>(vm, 0);
+					Vec3::make(vm, data->contacts[0].point);
 				};
 				return nullptr;
 			}
@@ -5005,6 +5060,8 @@ class Assert {
 					return Math::Load();
 		if (hashEqual(name_cstr + 5u, "Time"))
 			return Time::Load();
+		if (hashEqual(name_cstr + 5u, "PhysicsConstraints"))
+			return PhysicsConstraints::Load();
 		if (hashEqual(name_cstr + 5u, "Sort"))
 			return Sort::Load();
 		if (hashEqual(name_cstr + 5u, "Debug"))

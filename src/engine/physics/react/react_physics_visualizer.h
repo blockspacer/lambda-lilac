@@ -11,7 +11,7 @@ namespace lambda
   namespace physics
   {
     ///////////////////////////////////////////////////////////////////////////
-    class PhysicVisualizer
+    class ReactPhysicVisualizer
     {
     public:
       void initialize(

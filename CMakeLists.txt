@@ -151,7 +151,8 @@ IF(${VIOLET_CONFIG_ENGINE})
 
 # /// PHYSICS ///////////////////////////////////////////////////
   SET(VIOLET_PHYSICS_BULLET FALSE CACHE BOOL "[PHYSICS] Should Bullet3 be used?")
-  SET(VIOLET_PHYSICS_REACT TRUE CACHE BOOL "[PHYSICS] Should React be used?")
+  SET(VIOLET_PHYSICS_REACT TRUE CACHE BOOL "[PHYSICS] Should ReactPhysics3D be used?")
+  SET(VIOLET_PHYSICS_NEWTON FALSE CACHE BOOL "[PHYSICS] Should Newton Dynamics be used?")
   
 ENDIF()
 

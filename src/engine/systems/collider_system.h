@@ -32,6 +32,8 @@ namespace lambda
       void makeSphereCollider();
       void makeCapsuleCollider();
       void makeMeshCollider(asset::MeshHandle mesh, const uint32_t& sub_mesh_id);
+	  uint16_t getLayers() const;
+	  void setLayers(const uint16_t& layers);
 
     private:
       ColliderSystem* system_;
@@ -69,6 +71,8 @@ namespace lambda
       void makeSphere(const entity::Entity& entity);
       void makeCapsule(const entity::Entity& entity);
       void makeMeshCollider(const entity::Entity& entity, asset::MeshHandle mesh, const uint32_t& sub_mesh_id);
+	  uint16_t getLayers(const entity::Entity& entity) const;
+	  void setLayers(const entity::Entity& entity, const uint16_t& layers);
 
     protected:
       ColliderData& lookUpData(const entity::Entity& entity);

@@ -1,52 +1,45 @@
-import "Core/Vec2" for Vec2
-import "Core/Vec3" for Vec3
-import "Core/Vec4" for Vec4
-
-import "Core/Texture" for Texture
-import "Core/Shader" for Shader
-import "Core/Mesh" for Mesh
-import "Core/Console" for Console
-
-import "Core/GameObject" for GameObject
-
-import "Core/Transform" for Transform
-import "Core/Camera" for Camera
-import "Core/Lod" for Lod
-import "Core/RigidBody" for RigidBody
-import "Core/WaveSource" for WaveSource
-import "Core/Collider" for Collider
-import "Core/MonoBehaviour" for MonoBehaviour
-import "Core/Physics" for Physics
-import "Core/Manifold" for Manifold
-
-import "Core/Input" for Input, Keys, Buttons, Axes
-import "Core/Math" for Math
-
-import "Core/Time" for Time
-import "Core/Debug" for Debug
-import "Core/Sort" for Sort
+import "Core/Vec2"               for Vec2
+import "Core/Vec3"               for Vec3
+import "Core/Vec4"               for Vec4
+import "Core/Texture"            for Texture
+import "Core/Shader"             for Shader
+import "Core/Mesh"               for Mesh
+import "Core/Console"            for Console
+import "Core/GameObject"         for GameObject
+import "Core/Transform"          for Transform
+import "Core/Camera"             for Camera
+import "Core/Lod"                for Lod
+import "Core/RigidBody"          for RigidBody
+import "Core/PhysicsConstraints" for PhysicsConstraints
+import "Core/WaveSource"         for WaveSource
+import "Core/Collider"           for Collider
+import "Core/MonoBehaviour"      for MonoBehaviour
+import "Core/Physics"            for Physics
+import "Core/Manifold"           for Manifold
+import "Core/Input"              for Input
+import "Core/Input"              for Keys
+import "Core/Input"              for Buttons
+import "Core/Input"              for Axes
+import "Core/Math"               for Math
+import "Core/Time"               for Time
+import "Core/Debug"              for Debug
+import "Core/Sort"               for Sort
 
 import "resources/scripts/wren/input_controller" for InputController
-import "resources/scripts/wren/shuriken" for ShurikenBehaviour
+import "resources/scripts/wren/shuriken"         for ShurikenBehaviour
+import "resources/scripts/wren/physics_layers"   for PhysicsLayers
 
 class Sorter {
-  construct new(pos) {
-    _pos = pos
-  }
-
-  greater(lhs, rhs) {
-    var llhs = (_pos - lhs.point).length
-    var lrhs = (_pos - rhs.point).length
-    return llhs > lrhs
-  }
+  construct new(pos) {  _pos = pos                                                 }
+  greater(lhs, rhs)  { (_pos - lhs.point).lengthSqr > (_pos - rhs.point).lengthSqr }
 }
 
 class FreeLookCamera is MonoBehaviour {
-  construct new() { super() }
-  static goGet(val) { MonoBehaviour.goGet(val) }
+  construct new()      { super()                     }
+  static goGet(val)    { MonoBehaviour.goGet(val)    }
   static goRemove(val) { MonoBehaviour.goRemove(val) }
 
-  hasInput { _has_input }
+  hasInput             { _has_input             }
   hasInput=(has_input) { _has_input = has_input }
 
   initializeVariables() {
@@ -77,16 +70,17 @@ class FreeLookCamera is MonoBehaviour {
 
     _camera = _entity_camera.addComponent(Camera)
     _camera_transform.localPosition = Vec3.new(0.0, 0.75, 0.0)
-    _camera_transform.parent = transform
+    _camera_transform.parent = gameObject
     var listener = _entity_camera.addComponent(WaveSource)
     listener.makeMainListener()
     _camera.far = 250.0
 
     var collider = gameObject.addComponent(Collider)
     _rigid_body = gameObject.addComponent(RigidBody)
-    _rigid_body.angularConstraints = 5
-    transform.localPosition = Vec3.new(0.0, 20.0, 0.0)
+    _rigid_body.angularConstraints = PhysicsConstraints.X | PhysicsConstraints.Z
+    transform.localPosition = Vec3.new(0.0, 200.0, 0.0)
     collider.makeCapsuleCollider()
+    collider.layers = PhysicsLayers.General
 
     var output_opaque = [ "albedo", "position", "normal", "metallic_roughness", "depth_buffer" ]
     var deferred_shader_opaque = Shader.load("resources/shaders/default_opaque.fx")
@@ -147,57 +141,23 @@ class FreeLookCamera is MonoBehaviour {
     }
 
     if (_cObject) {
-      var dist = 5
-      var pFrom = _camera_transform.worldPosition + _camera_transform.worldForward * dist
-
-      // var from = _camera_transform.worldPosition
-      // var to = from + _camera_transform.worldForward * 5
-      // for(v in Physics.castRay(from, to)) {
-      //   if (v.gameObject.name == "ground") {
-      //     var l = (_camera_transform.worldPosition - (v.point + v.normal)).length
-
-      //     if (l < dist) {
-      //       dist = l
-      //       pFrom = v.point + v.normal
-      //     }
-      //   }
-      // }
+      var pFrom = _camera_transform.worldPosition + _camera_transform.worldForward * 5
 
       var speed = 75
       var rotSpeed = 10
       var diff = pFrom - _cObject.transform.worldPosition
-      var len = Math.min(diff.length, speed)
-      if (len > 0) {
-        len = Math.sqrt(len / speed) * speed
-        diff = diff.normalized * len
-      }
-      _cObject.getComponent(RigidBody).velocity = diff
+      //var len = Math.min(diff.length, speed)
+      //if (len > 0) {
+      //  len = Math.sqrt(len / speed) * speed
+      //  diff = diff.normalized * len
+      //}
+      _cObject.getComponent(RigidBody).applyImpulse(diff - _cObject.getComponent(RigidBody).velocity)
 
       var camForward = _camera_transform.worldForward
       var objForward = _cObject.transform.worldForward
 
       if (_cObject.name == "cube") {
         _cObject.getComponent(RigidBody).angularVelocity = _cObject.getComponent(RigidBody).angularVelocity * 0.75
-      } else {
-        var cF = camForward
-        var oF = objForward
-        
-      {
-        var p1 = Vec2.new(cF.x, cF.z).normalized
-        var p2 = Vec2.new(oF.x, oF.z).normalized
-
-        var dot = p1.x * p2.x + p1.y * p2.y
-        var det = p1.x * p2.y - p1.y * p2.x
-        
-        pEuler.y = Math.atan2(det, dot)
-        if (Math.abs(pEuler.y) > 0.001) {
-          pEuler.y = pEuler.y * rotSpeed
-        }
-      }
-
-
-        _cObject.getComponent(RigidBody).angularVelocity = Vec3.new(0.0)
-        _cObject.transform.worldEuler = _cObject.transform.worldEuler + dR
       }
     }
   }

@@ -103,6 +103,16 @@ namespace lambda
 		lookUpData(entity).collision_body->makeMeshCollider(mesh, sub_mesh_id);
 	}
 
+	uint16_t ColliderSystem::getLayers(const entity::Entity& entity) const
+	{
+		return lookUpData(entity).collision_body->getLayers();
+	}
+
+	void ColliderSystem::setLayers(const entity::Entity& entity, const uint16_t& layers)
+	{
+		lookUpData(entity).collision_body->setLayers(layers);
+	}
+
 	ColliderData& ColliderSystem::lookUpData(const entity::Entity& entity)
     {
       assert(entity_to_data_.find(entity) != entity_to_data_.end());
@@ -144,22 +154,32 @@ namespace lambda
 		system_->makeMeshCollider(entity_, mesh, sub_mesh_id);
     }
 
+	uint16_t ColliderComponent::getLayers() const
+	{
+		return system_->getLayers(entity_);
+	}
+
+	void ColliderComponent::setLayers(const uint16_t& layers)
+	{
+		system_->setLayers(entity_, layers);
+	}
+
 	ColliderData::ColliderData(const ColliderData& other)
     {
-      type            = other.type;
-	  collision_body  = other.collision_body;
-      is_trigger      = other.is_trigger;
-      entity          = other.entity;
-			valid           = other.valid;
+      type           = other.type;
+	  collision_body = other.collision_body;
+      is_trigger     = other.is_trigger;
+      entity         = other.entity;
+	  valid          = other.valid;
     }
     ColliderData & ColliderData::operator=(const ColliderData & other)
     {
-      type            = other.type;
+      type           = other.type;
 	  collision_body = other.collision_body;
-	  is_trigger      = other.is_trigger;
-      entity          = other.entity;
-			valid           = other.valid;
-			return *this;
+	  is_trigger     = other.is_trigger;
+	  entity         = other.entity;
+	  valid          = other.valid;
+	  return *this;
     }
 }
 }

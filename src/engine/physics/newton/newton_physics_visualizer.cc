@@ -1,4 +1,4 @@
-#include "physics_visualizer.h"
+#include "newton_physics_visualizer.h"
 #include "platform/debug_renderer.h"
 #include <utils/console.h>
 
@@ -7,7 +7,7 @@ namespace lambda
   namespace physics
   {
     ///////////////////////////////////////////////////////////////////////////
-    void PhysicVisualizer::initialize(
+    void NewtonPhysicVisualizer::initialize(
 		platform::DebugRenderer* debug_renderer, 
 		bool draw_enabled)
     {
@@ -16,7 +16,7 @@ namespace lambda
     }
 
 	///////////////////////////////////////////////////////////////////////////
-	void PhysicVisualizer::draw()
+	void NewtonPhysicVisualizer::draw()
 	{
 		if (draw_enabled_)
 		{
@@ -25,13 +25,13 @@ namespace lambda
 	}
 
 	///////////////////////////////////////////////////////////////////////////
-	bool PhysicVisualizer::getDrawEnabled() const
+	bool NewtonPhysicVisualizer::getDrawEnabled() const
 	{
 		return draw_enabled_;
 	}
 
 	///////////////////////////////////////////////////////////////////////////
-	void PhysicVisualizer::setDrawEnabled(bool draw_enabled)
+	void NewtonPhysicVisualizer::setDrawEnabled(bool draw_enabled)
 	{
 		draw_enabled_ = draw_enabled;
 	}

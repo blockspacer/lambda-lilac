@@ -28,6 +28,8 @@ import "Core/PostProcess" for PostProcess
 import "Core/Console" for Console
 import "Core/Noise" for Noise, NoiseInterpolation
 
+import "resources/scripts/wren/physics_layers" for PhysicsLayers
+
 class ItemManager is MonoBehaviour {
     construct new()      { super() }
     static goGet(val)    { MonoBehaviour.goGet(val) }
@@ -57,6 +59,7 @@ class ItemManager is MonoBehaviour {
         var collider  = c.addComponent(Collider)
         var rigidBody = c.addComponent(RigidBody)
         collider.makeBoxCollider()
+        collider.layers    = PhysicsLayers.General | PhysicsLayers.MovingObjects
         rigidBody.mass     = 1.0
         rigidBody.friction = 2.0
 
@@ -81,6 +84,7 @@ class ItemManager is MonoBehaviour {
         var collider  = c.addComponent(Collider)
         var rigidBody = c.addComponent(RigidBody)
         collider.makeBoxCollider()
+        collider.layers    = PhysicsLayers.General | PhysicsLayers.MovingObjects
         rigidBody.mass     = 1.0
         rigidBody.friction = 2.0
 
