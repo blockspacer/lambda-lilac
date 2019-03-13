@@ -78,12 +78,6 @@ SET(PhysicsReactSources
   "physics/react/react_physics_world.h"
   "physics/react/react_physics_world.cc"
 )
-SET(PhysicsNewtonSources
-  "physics/newton/newton_physics_visualizer.h"
-  "physics/newton/newton_physics_visualizer.cc"
-  "physics/newton/newton_physics_world.h"
-  "physics/newton/newton_physics_world.cc"
-)
 SET(PlatformSources
   "platform/blend_state.h"
   "platform/depth_stencil_state.h"
@@ -338,7 +332,6 @@ SOURCE_GROUP("gui\\gui" FILES ${UltralightGuiSources})
 SOURCE_GROUP("interfaces" FILES ${InterfacesSources})
 SOURCE_GROUP("physics\\bullet" FILES ${PhysicsBulletSources})
 SOURCE_GROUP("physics\\react" FILES ${PhysicsReactSources})
-SOURCE_GROUP("physics\\newton" FILES ${PhysicsNewtonSources})
 SOURCE_GROUP("platform" FILES ${PlatformSources})
 SOURCE_GROUP("renderers\\d3d11" FILES ${D3D11RendererSources})
 SOURCE_GROUP("renderers\\metal" FILES ${MetalRendererSources})
@@ -415,9 +408,6 @@ IF(${VIOLET_PHYSICS_BULLET})
 ENDIF()
 IF(${VIOLET_PHYSICS_REACT})
 	SET(Sources ${Sources} ${PhysicsReactSources})
-ENDIF()
-IF(${VIOLET_PHYSICS_NEWTON})
-	SET(Sources ${Sources} ${PhysicsNewtonSources})
 ENDIF()
 
 # ///////////////////////////////////////////////////////////////
@@ -558,8 +548,4 @@ ENDIF()
 IF(${VIOLET_PHYSICS_REACT})
   TARGET_LINK_LIBRARIES(lambda-engine PUBLIC reactphysics3d)
   TARGET_COMPILE_DEFINITIONS(lambda-engine PRIVATE VIOLET_PHYSICS_REACT)
-ENDIF()
-IF(${VIOLET_PHYSICS_NEWTON})
-  TARGET_LINK_LIBRARIES(lambda-engine PUBLIC newton)
-  TARGET_COMPILE_DEFINITIONS(lambda-engine PRIVATE VIOLET_PHYSICS_NEWTON)
 ENDIF()
