@@ -146,11 +146,13 @@ class FreeLookCamera is MonoBehaviour {
       var speed = 75
       var rotSpeed = 10
       var diff = pFrom - _cObject.transform.worldPosition
-      //var len = Math.min(diff.length, speed)
-      //if (len > 0) {
-      //  len = Math.sqrt(len / speed) * speed
-      //  diff = diff.normalized * len
-      //}
+      var len = Math.min(diff.length, speed)
+      if (len > 0) {
+        len = Math.sqrt(len / speed) * speed
+        diff = diff.normalized * len
+      }
+
+      //_cObject.getComponent(RigidBody).velocity = diff
       _cObject.getComponent(RigidBody).applyImpulse(diff - _cObject.getComponent(RigidBody).velocity)
 
       var camForward = _camera_transform.worldForward

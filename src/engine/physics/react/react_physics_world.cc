@@ -222,13 +222,13 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		void ReactCollisionBody::applyImpulse(glm::vec3 impulse)
 		{
-			body_->applyForceToCenterOfMass(toRp(impulse));
+			body_->applyForceToCenterOfMass(toRp(impulse * (1.0f / (float)physics_world_->getTimeStep())));
 		}
 
 		///////////////////////////////////////////////////////////////////////////
 		void ReactCollisionBody::applyImpulse(glm::vec3 impulse, glm::vec3 location)
 		{
-			body_->applyForce(toRp(impulse), toRp(location));
+			body_->applyForce(toRp(impulse * (1.0f / (float)physics_world_->getTimeStep())), toRp(location));
 		}
 
 		///////////////////////////////////////////////////////////////////////////
@@ -399,9 +399,9 @@ namespace lambda
 				Manifold manifold;
 				manifold.lhs = *((entity::Entity*)collisionInfo.body1->getUserData());
 				manifold.rhs = *((entity::Entity*)collisionInfo.body2->getUserData());
-				manifold.contacts.resize(collisionInfo.contactManifoldElements->getContactManifold()->getNbContactPoints());
+				manifold.num_contacts = std::min((uint32_t)collisionInfo.contactManifoldElements->getContactManifold()->getNbContactPoints(), Manifold::kMaxContacts);
 
-				for (uint32_t i = 0u; i < (uint32_t)collisionInfo.contactManifoldElements->getContactManifold()->getNbContactPoints(); ++i)
+				for (uint32_t i = 0u; i < manifold.num_contacts; ++i)
 				{
 					const reactphysics3d::ContactPoint& contact_point = collisionInfo.contactManifoldElements->getContactManifold()->getContactPoints()[i];
 					manifold.contacts[i].normal = toGlm(contact_point.getNormal());
@@ -413,7 +413,7 @@ namespace lambda
 
 				manifold.rhs = *((entity::Entity*)collisionInfo.body1->getUserData());
 				manifold.lhs = *((entity::Entity*)collisionInfo.body2->getUserData());
-				for (uint32_t i = 0u; i < (uint32_t)collisionInfo.contactManifoldElements->getContactManifold()->getNbContactPoints(); ++i)
+				for (uint32_t i = 0u; i < manifold.num_contacts; ++i)
 				{
 					const reactphysics3d::ContactPoint& contact_point = collisionInfo.contactManifoldElements->getContactManifold()->getContactPoints()[i];
 					manifold.contacts[i].normal = -toGlm(contact_point.getNormal());
@@ -504,6 +504,7 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
 		void ReactPhysicsWorld::update(const double& time_step)
 		{
+			time_step_ = time_step;
 			uint32_t offset = 0u;
 			struct SavData
 			{
@@ -623,7 +624,7 @@ namespace lambda
 
 				Manifold manifold;
 				manifold.rhs    = *(entity::Entity*)raycastInfo.body->getUserData();
-				manifold.contacts.resize(1);
+				manifold.num_contacts = 1;
 				manifold.contacts[0].normal = toGlm(raycastInfo.worldNormal);
 				manifold.contacts[0].point  = toGlm(raycastInfo.worldPoint);
 				manifolds.push_back(manifold);
@@ -695,5 +696,9 @@ namespace lambda
 	{
 		return toGlm(dynamics_world_->getGravity());
     }
+	double ReactPhysicsWorld::getTimeStep() const
+	{
+		return time_step_;
+	}
   }
 }

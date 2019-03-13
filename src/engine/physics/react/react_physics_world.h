@@ -128,6 +128,7 @@ namespace lambda
 
 	  virtual void setGravity(glm::vec3 gravity) override;
 	  virtual glm::vec3 getGravity() const override;
+	  double getTimeStep() const;
 
     private:
       foundation::SharedPointer<components::RigidBodySystem> 
@@ -139,6 +140,7 @@ namespace lambda
 
 			reactphysics3d::DynamicsWorld* dynamics_world_;
 			Vector<ReactCollisionBody*> collision_bodies_;
+			double time_step_;
 		};
   }
 }

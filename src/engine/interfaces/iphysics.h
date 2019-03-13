@@ -26,8 +26,10 @@ namespace lambda
 				float depth;
 				glm::vec3 normal;
 				glm::vec3 point;
-			} contacts[4];
+			};
 			uint32_t num_contacts = 0;
+			static constexpr uint32_t kMaxContacts = 4;
+			ContactPoint contacts[kMaxContacts];
 
 			bool operator==(const Manifold& other)
 			{
