@@ -14,13 +14,14 @@ Some of the features that we have currently implemented are:<br>
   <tr><th><p>GUI</th><td><b>UltraLight</b></p></td></tr>
   <tr><th><p>Scripting</th><td><b>Wren</b> and <b>AngelScript</b><sup>3</sup></p></td></tr>
   <tr><th><p>Audio</th><td><b>SoLoud</b></p></td></tr>
-  <tr><th><p>Physics</th><td><b>Bullet3</b></p></td></tr>
+  <tr><th><p>Physics</th><td><b>Bullet3</b> and <b>ReactPhysics3D</b></p></td></tr>
   <tr><th><p>Networking</th><td><b>ENet</b><sup>3</sup></p></td></tr>
-  <tr><th><p>Tools</th><td><b>ShaderConductor</b>, <b>DirectXTex</b>, <b>TinyGLTF</b><sup>1</sup> and <b>Assimp</b><sup>3</sup></p></td></tr>
+  <tr><th><p>Tools</th><td><b>ShaderConductor</b><sup>4</sup>, <b>DirectXTex</b>, <b>TinyGLTF</b><sup>1</sup> and <b>Assimp</b><sup>3</sup></p></td></tr>
 </table>
 <b>1)</b> In progress<br/>
 <b>2)</b> Does not work on Windows<br/>
 <b>3)</b> Deprecated<br/>
+<b>4)</b> Requires 16GB of RAM<br/>
 <br/>
 I however have not skipped on the graphics department. These are the post processing effects that I have currently implemented:<br>
 <li>Physically Based Rendering (PBR)</li>
@@ -98,7 +99,7 @@ You can check out the documentation for our scripting implementation <a href="do
     <td>git submodule update --recursive --remote</td>
   </tr>
   <tr>
-    <td>If you want to build tools</td>
+    <td>If you want to use <b>ShaderConductor</b></td>
     <td>Install Python 2.7.x</td>
   </tr>
   <tr>
