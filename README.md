@@ -16,12 +16,13 @@ Some of the features that we have currently implemented are:<br>
   <tr><th><p>Audio</th><td><b>SoLoud</b></p></td></tr>
   <tr><th><p>Physics</th><td><b>Bullet3</b> and <b>ReactPhysics3D</b></p></td></tr>
   <tr><th><p>Networking</th><td><b>ENet</b><sup>3</sup></p></td></tr>
-  <tr><th><p>Tools</th><td><b>ShaderConductor</b><sup>4</sup>, <b>DirectXTex</b>, <b>TinyGLTF</b><sup>1</sup> and <b>Assimp</b><sup>3</sup></p></td></tr>
+  <tr><th><p>Tools</th><td><b>ShaderConductor</b><sup>4</sup>, <b>DirectXTex</b><sup>5</sup>, <b>TinyGLTF</b><sup>1</sup> and <b>Assimp</b><sup>3</sup></p></td></tr>
 </table>
 <b>1)</b> In progress<br/>
 <b>2)</b> Does not work on Windows<br/>
 <b>3)</b> Deprecated<br/>
 <b>4)</b> Requires 16GB of RAM<br/>
+<b>5)</b> Only works on Windows<br/>
 <br/>
 I however have not skipped on the graphics department. These are the post processing effects that I have currently implemented:<br>
 <li>Physically Based Rendering (PBR)</li>
