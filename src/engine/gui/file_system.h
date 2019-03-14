@@ -13,7 +13,7 @@ namespace lambda
 		{
 		public:
 			MyFileSystem();
-			virtual ~MyFileSystem();
+			virtual ~MyFileSystem() override;
 
 			virtual bool FileExists(
 				const ultralight::String16& path) override;

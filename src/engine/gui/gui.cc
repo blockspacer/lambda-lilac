@@ -27,11 +27,11 @@ namespace lambda
 			{}
 
 			/////////////////////////////////////////////////////////////////////////
-			virtual ~LoadListenerImpl()
+			virtual ~LoadListenerImpl() override
 			{}
 
 			/////////////////////////////////////////////////////////////////////////
-			virtual void OnFinishLoading(ultralight::View* caller)
+			virtual void OnFinishLoading(ultralight::View* caller) override
 			{
 				finished_ = true;
 			}
@@ -57,7 +57,7 @@ namespace lambda
 		{
 		public:
 			/////////////////////////////////////////////////////////////////////////
-			virtual ~ViewListenerImpl()
+			virtual ~ViewListenerImpl() override
 			{}
 
 			/////////////////////////////////////////////////////////////////////////
@@ -65,12 +65,38 @@ namespace lambda
 				ultralight::View* caller,
 				ultralight::MessageSource source,
 				ultralight::MessageLevel level,
-				const String& message,
+				const ultralight::String& message,
 				uint32_t line_number,
 				uint32_t column_number,
-				const String& source_id)
+				const ultralight::String& source_id) override
 			{
-				foundation::Warning(message.c_str());
+				String msg = " <" + String(source_id.utf8().data()) + ", ";
+
+				switch (source)
+				{
+				case ultralight::kMessageSource_XML:            msg += "XML"; break;
+				case ultralight::kMessageSource_JS:             msg += "JS"; break;
+				case ultralight::kMessageSource_Network:        msg += "NETWORK"; break;
+				case ultralight::kMessageSource_ConsoleAPI:     msg += "CONSOLE"; break;
+				case ultralight::kMessageSource_Storage:        msg += "STORAGE"; break;
+				case ultralight::kMessageSource_AppCache:       msg += "APP CACHE"; break;
+				case ultralight::kMessageSource_Rendering:      msg += "RENDERING"; break;
+				case ultralight::kMessageSource_CSS:            msg += "CSS"; break;
+				case ultralight::kMessageSource_Security:       msg += "SECURITY"; break;
+				case ultralight::kMessageSource_ContentBlocker: msg += "CONTENT BLOCKER"; break;
+				case ultralight::kMessageSource_Other:          msg += "OTHER"; break;
+				}
+
+				msg += ", " + toString(line_number) + ", " + toString(column_number) + "> " + message.utf8().data();
+
+				switch (level)
+				{
+				case ultralight::kMessageLevel_Log:     foundation::InfoNP("[LOG]" + msg); break;
+				case ultralight::kMessageLevel_Warning: foundation::Warning(msg); break;
+				case ultralight::kMessageLevel_Error:   foundation::Error(msg); break;
+				case ultralight::kMessageLevel_Debug:   foundation::Debug(msg); break;
+				case ultralight::kMessageLevel_Info:    foundation::Info(msg); break;
+				}
 			}
 		};
 
@@ -103,6 +129,9 @@ namespace lambda
 				platform.set_font_loader(nullptr);
 			}
 
+			view_->ptr->Release();
+			renderer_->ptr->Release();
+			foundation::Memory::destruct(view_->ptr->view_listener());
 			foundation::Memory::destruct(view_);
 			foundation::Memory::destruct(renderer_);
 		}
@@ -135,7 +164,9 @@ namespace lambda
 
 			renderer_ = foundation::Memory::construct<RW>(ultralight::Renderer::Create());
 			view_     = foundation::Memory::construct<VW>(renderer_->ptr->CreateView(1280u, 720u, true));
-
+			ViewListenerImpl* view_listener =
+				foundation::Memory::construct<ViewListenerImpl>();
+			view_->ptr->set_view_listener(view_listener);
 
 			texture_ = asset::TextureManager::getInstance()->create(Name("__gui"));
 

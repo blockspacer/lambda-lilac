@@ -14,7 +14,7 @@ namespace lambda
 		{
 		public:
 			MyFontLoader();
-			virtual ~MyFontLoader();
+			virtual ~MyFontLoader() override;
 
 			virtual ultralight::String16 fallback_font() const override;
 			
