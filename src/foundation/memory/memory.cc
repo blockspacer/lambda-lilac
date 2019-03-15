@@ -45,7 +45,11 @@ namespace lambda
     {
       // Early out.
       if (size == 0u)
+	  {
+        if (data != nullptr)
+          deallocate(data);
         return nullptr;
+	  }
 
       void* new_data = allocate(size, allocator);
 
