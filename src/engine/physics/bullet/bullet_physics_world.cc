@@ -121,14 +121,14 @@ namespace lambda
 	  ///////////////////////////////////////////////////////////////////////////
 	  glm::vec3 BulletCollisionBody::getPosition() const
 	  {
-		  return toGlm(body_->getWorldTransform().getOrigin());
+		  return toGlm(body_->getWorldTransform().getOrigin() * VIOLET_INV_PHYSICS_SCALE);
 	  }
 
 	  ///////////////////////////////////////////////////////////////////////////
 	  void BulletCollisionBody::setPosition(glm::vec3 position)
 	  {
 		  auto transform = body_->getWorldTransform();
-		  transform.setOrigin(toBt(position));
+		  transform.setOrigin(toBt(position * VIOLET_PHYSICS_SCALE));
 		  body_->setWorldTransform(transform);
 	  }
 
@@ -240,39 +240,39 @@ namespace lambda
 	  ///////////////////////////////////////////////////////////////////////////
 	  glm::vec3 BulletCollisionBody::getVelocity() const
 	  {
-		  return toGlm(body_->getLinearVelocity());
+		  return toGlm(body_->getLinearVelocity()) * VIOLET_INV_PHYSICS_SCALE;
 	  }
 
 	  ///////////////////////////////////////////////////////////////////////////
 	  void BulletCollisionBody::setVelocity(glm::vec3 velocity)
 	  {
-		  body_->setLinearVelocity(toBt(velocity));
+		  body_->setLinearVelocity(toBt(velocity * VIOLET_PHYSICS_SCALE));
 	  }
 
 	  ///////////////////////////////////////////////////////////////////////////
 	  glm::vec3 BulletCollisionBody::getAngularVelocity() const
 	  {
-		  return toGlm(body_->getAngularVelocity());
+		  return toGlm(body_->getAngularVelocity() * VIOLET_INV_PHYSICS_SCALE);
 	  }
 
 	  ///////////////////////////////////////////////////////////////////////////
 	  void BulletCollisionBody::setAngularVelocity(glm::vec3 velocity)
 	  {
-		  body_->setAngularVelocity(toBt(velocity));
+		  body_->setAngularVelocity(toBt(velocity * VIOLET_PHYSICS_SCALE));
 		  body_->activate();
 	  }
 
 	  ///////////////////////////////////////////////////////////////////////////
 	  void BulletCollisionBody::applyImpulse(glm::vec3 impulse)
 	  {
-		  body_->applyCentralImpulse(toBt(impulse));
+		  body_->applyCentralImpulse(toBt(impulse * VIOLET_PHYSICS_SCALE));
 		  body_->activate();
 	  }
 
 	  ///////////////////////////////////////////////////////////////////////////
 	  void BulletCollisionBody::applyImpulse(glm::vec3 impulse, glm::vec3 location)
 	  {
-		  body_->applyImpulse(toBt(impulse), toBt(location));
+		  body_->applyImpulse(toBt(impulse * VIOLET_PHYSICS_SCALE), toBt(location * VIOLET_PHYSICS_SCALE));
 		  body_->activate();
 	  }
 
@@ -291,7 +291,7 @@ namespace lambda
 	  ///////////////////////////////////////////////////////////////////////////
 	  void BulletCollisionBody::makeBoxCollider()
 	  {
-		  glm::vec3 scale = world_->getScene().getSystem<components::TransformSystem>()->getWorldScale(entity_);
+		  glm::vec3 scale = world_->getScene().getSystem<components::TransformSystem>()->getWorldScale(entity_) * VIOLET_PHYSICS_SCALE;
 		  btVector3 half_extends(scale.x * 0.5f, scale.y * 0.5f, scale.z * 0.5f);
 		  btCollisionShape* shape = foundation::Memory::construct<btBoxShape>(half_extends);
 		  makeShape(shape);
@@ -300,7 +300,7 @@ namespace lambda
 	  ///////////////////////////////////////////////////////////////////////////
 	  void BulletCollisionBody::makeSphereCollider()
 	  {
-		  glm::vec3 scale = world_->getScene().getSystem<components::TransformSystem>()->getWorldScale(entity_);
+		  glm::vec3 scale = world_->getScene().getSystem<components::TransformSystem>()->getWorldScale(entity_) * VIOLET_INV_PHYSICS_SCALE;
 		  btScalar radius = (scale.x + scale.z) / 4.0f;
 		  btCollisionShape* shape = foundation::Memory::construct<btSphereShape>(radius);
 		  makeShape(shape);
@@ -309,11 +309,30 @@ namespace lambda
 	  ///////////////////////////////////////////////////////////////////////////
 	  void BulletCollisionBody::makeCapsuleCollider()
 	  {
-		  glm::vec3 scale = world_->getScene().getSystem<components::TransformSystem>()->getWorldScale(entity_);
+		  glm::vec3 scale = world_->getScene().getSystem<components::TransformSystem>()->getWorldScale(entity_) * VIOLET_PHYSICS_SCALE;
 		  btScalar radius = (scale.x * 0.5f + scale.z * 0.5f) * 0.5f;
 		  btScalar height = scale.y * 0.5f;
 		  btCollisionShape* shape = foundation::Memory::construct<btCapsuleShape>(radius, height);
 		  makeShape(shape);
+	  }
+
+	  bool closeEnough(const glm::vec3& lhs, const glm::vec3& rhs)
+	  {
+		  float epsilon = 0.0001f;
+		  glm::vec3 diff = lhs - rhs;
+		  return (abs(diff.x) < epsilon) && (abs(diff.y) < epsilon) && (abs(diff.z) < epsilon);
+	  }
+
+	  bool allCornersClose(const glm::vec3& point, const glm::vec3& min, const glm::vec3& max)
+	  {
+		  return  closeEnough(point, glm::vec3(min.x, min.y, min.z)) ||
+			  closeEnough(point, glm::vec3(min.x, min.y, max.z)) ||
+			  closeEnough(point, glm::vec3(min.x, max.y, min.z)) ||
+			  closeEnough(point, glm::vec3(min.x, max.y, max.z)) ||
+			  closeEnough(point, glm::vec3(max.x, min.y, min.z)) ||
+			  closeEnough(point, glm::vec3(max.x, min.y, max.z)) ||
+			  closeEnough(point, glm::vec3(max.x, max.y, min.z)) ||
+			  closeEnough(point, glm::vec3(max.x, max.y, max.z));
 	  }
 
 	  ///////////////////////////////////////////////////////////////////////////
@@ -334,7 +353,6 @@ namespace lambda
 		  for (uint32_t i = 0; i < vertex_offset.count; ++i)
 			  vertices[i] *= scale;
 
-
 		  if (sizeof(uint16_t) == mii.size)
 		  {
 			  Vector<uint16_t> idx(index_offset.count);
@@ -352,6 +370,28 @@ namespace lambda
 				  indices[i] = (int)idx.at(i);
 		  }
 
+		  bool is_aabb = true;
+		  glm::vec3 min = sub_mesh.min * scale;
+		  glm::vec3 max = sub_mesh.max * scale;
+		  for (uint32_t i = 0; i < index_offset.count; ++i)
+		  {
+			  const glm::vec3& vertex = vertices[indices[i]];
+			  if (!allCornersClose(vertex, min, max))
+				  is_aabb = false;
+		  }
+
+		  if (is_aabb)
+		  {
+			  glm::vec3 center = (max + min) * 0.5f;
+			  glm::vec3 size = (max - min) * 0.5f;
+			  setPosition(getPosition() + center);
+			  btCollisionShape* shape = foundation::Memory::construct<btBoxShape>(toBt(size * VIOLET_PHYSICS_SCALE));
+			  makeShape(shape);
+			  return;
+		  }
+
+		  for (uint32_t i = 0; i < vertex_offset.count; ++i)
+			  vertices[i] *= VIOLET_PHYSICS_SCALE;
 
 		  auto* triangle_mesh = foundation::Memory::construct<btTriangleMesh>(false, false);
 
@@ -446,7 +486,7 @@ namespace lambda
 		  destroyBody();
 
 		  glm::quat rotation = world_->getScene().getSystem<components::TransformSystem>()->getWorldRotation(entity_);
-		  glm::vec3 translation = world_->getScene().getSystem<components::TransformSystem>()->getWorldTranslation(entity_);
+		  glm::vec3 translation = world_->getScene().getSystem<components::TransformSystem>()->getWorldTranslation(entity_) * VIOLET_PHYSICS_SCALE;
 
 		  motion_state_ = foundation::Memory::construct<btDefaultMotionState>(btTransform(toBt(rotation), toBt(translation)));
 		  btRigidBody::btRigidBodyConstructionInfo rigid_body_ci(
@@ -616,7 +656,7 @@ namespace lambda
 	  world::IWorld* world)
     {
 		physics_visualizer_.setDebugMode(
-#if defined(_DEBUG) || defined(DEBUG)
+#if defined(_DEBUG) || defined(DEBUG) || true
 			btIDebugDraw::DBG_DrawWireframe
 #else
 			btIDebugDraw::DBG_NoDebug
@@ -644,7 +684,7 @@ namespace lambda
 			  constraint_solver_,
 			  collision_configuration_
 			  );
-	  dynamics_world_->setGravity(btVector3(0.0f, -9.81f, 0.0f));
+	  dynamics_world_->setGravity(btVector3(0.0f, -9.81f * VIOLET_PHYSICS_SCALE, 0.0f));
 	  dynamics_world_->setDebugDrawer(&physics_visualizer_);
 
 	  gContactStartedCallback = ContactStarted;
@@ -682,7 +722,7 @@ namespace lambda
 		  bool activate = false;
 
 		  {
-			  glm::vec3 pos = world_->getScene().getSystem<components::TransformSystem>()->getWorldTranslation(entity);
+			  glm::vec3 pos = world_->getScene().getSystem<components::TransformSystem>()->getWorldTranslation(entity) * VIOLET_PHYSICS_SCALE;
 			  glm::quat rot = world_->getScene().getSystem<components::TransformSystem>()->getWorldRotation(entity);
 
 			  transform = rigid_body->getWorldTransform();
@@ -758,12 +798,12 @@ namespace lambda
           );
           if (isValid(pos))
           {
-            world_->getScene().getSystem<components::TransformSystem>()->setWorldTranslation(entity, pos);
+            world_->getScene().getSystem<components::TransformSystem>()->setWorldTranslation(entity, pos * VIOLET_INV_PHYSICS_SCALE);
           }
           else
           {
             reset = true;
-            pos = world_->getScene().getSystem<components::TransformSystem>()->getWorldTranslation(entity);
+            pos = world_->getScene().getSystem<components::TransformSystem>()->getWorldTranslation(entity) * VIOLET_PHYSICS_SCALE;
             transform.setOrigin(btVector3(pos.x, pos.y, pos.z));
           }
 
@@ -786,8 +826,8 @@ namespace lambda
       const glm::vec3& start, 
       const glm::vec3& end)
     {
-	  btVector3 f(start.x, start.y, start.z);
-	  btVector3 t(end.x, end.y, end.z);
+	  btVector3 f = btVector3(start.x, start.y, start.z) * VIOLET_PHYSICS_SCALE;
+	  btVector3 t = btVector3(end.x, end.y, end.z) * VIOLET_PHYSICS_SCALE;
 	  
 	  btCollisionWorld::AllHitsRayResultCallback callback(f, t);
       dynamics_world_->rayTest(f, t, callback);
@@ -801,7 +841,7 @@ namespace lambda
 
 		  BulletCollisionBody* rb = (BulletCollisionBody*)callback.m_collisionObjects[i]->getUserPointer();
 		  manifold.rhs                = rb->getEntity();
-		  manifold.contacts[0].point  = glm::vec3(callback.m_hitPointWorld[i].x(), callback.m_hitPointWorld[i].y(), callback.m_hitPointWorld[i].z());
+		  manifold.contacts[0].point  = glm::vec3(callback.m_hitPointWorld[i].x(), callback.m_hitPointWorld[i].y(), callback.m_hitPointWorld[i].z()) * VIOLET_PHYSICS_SCALE;
 		  manifold.contacts[0].normal = glm::vec3(callback.m_hitNormalWorld[i].x(), callback.m_hitNormalWorld[i].y(), callback.m_hitNormalWorld[i].z());
 
 		  if (isValid(manifold.contacts[0].point) && isValid(manifold.contacts[0].normal))
@@ -859,14 +899,14 @@ namespace lambda
 			gravity.x,
 			gravity.y,
 			gravity.z
-		));
+		) * VIOLET_PHYSICS_SCALE);
 	}
 
 	///////////////////////////////////////////////////////////////////////////
 	glm::vec3 physics::BulletPhysicsWorld::getGravity() const
 	{
 		btVector3 gravity = dynamics_world_->getGravity();
-		return glm::vec3(gravity.x(), gravity.y(), gravity.z());
+		return glm::vec3(gravity.x(), gravity.y(), gravity.z()) * VIOLET_INV_PHYSICS_SCALE;
 	}
   }
 }

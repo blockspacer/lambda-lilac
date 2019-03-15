@@ -6,6 +6,9 @@
 
 namespace lambda
 {
+#define VIOLET_PHYSICS_SCALE (1000.0f)
+#define VIOLET_INV_PHYSICS_SCALE (1.0f / 1000.0f)
+
   namespace world
   {
     class IWorld;

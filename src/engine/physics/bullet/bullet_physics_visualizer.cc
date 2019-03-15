@@ -1,6 +1,7 @@
 #include "bullet_physics_visualizer.h"
 #include "platform/debug_renderer.h"
 #include <utils/console.h>
+#include <interfaces/iphysics.h>
 
 namespace lambda
 {
@@ -20,8 +21,8 @@ namespace lambda
       const btVector3& toColor)
     {
       debug_renderer_->DrawLine(platform::DebugLine(
-        toGlm(from),
-        toGlm(to),
+        toGlm(from) * VIOLET_INV_PHYSICS_SCALE,
+        toGlm(to) * VIOLET_INV_PHYSICS_SCALE,
         glm::vec4(toGlm(fromColor), 1.0f),
         glm::vec4(toGlm(toColor), 1.0f)
       )); 
@@ -34,8 +35,8 @@ namespace lambda
       const btVector3& color)
     {
       debug_renderer_->DrawLine(platform::DebugLine(
-        toGlm(from),
-        toGlm(to),
+        toGlm(from) * VIOLET_INV_PHYSICS_SCALE,
+        toGlm(to) * VIOLET_INV_PHYSICS_SCALE,
         glm::vec4(toGlm(color), 1.0f)
       ));
     }
@@ -58,15 +59,15 @@ namespace lambda
       btScalar alpha)
     {
       debug_renderer_->DrawLine(
-        platform::DebugLine(toGlm(a), toGlm(b), glm::vec4(toGlm(color), alpha))
+        platform::DebugLine(toGlm(a) * VIOLET_INV_PHYSICS_SCALE, toGlm(b) * VIOLET_INV_PHYSICS_SCALE, glm::vec4(toGlm(color), alpha))
       );
       
       debug_renderer_->DrawLine(
-        platform::DebugLine(toGlm(b), toGlm(c), glm::vec4(toGlm(color), alpha))
+        platform::DebugLine(toGlm(b) * VIOLET_INV_PHYSICS_SCALE, toGlm(c) * VIOLET_INV_PHYSICS_SCALE, glm::vec4(toGlm(color), alpha))
       );
       
       debug_renderer_->DrawLine(
-        platform::DebugLine(toGlm(c), toGlm(a), glm::vec4(toGlm(color), alpha))
+        platform::DebugLine(toGlm(c) * VIOLET_INV_PHYSICS_SCALE, toGlm(a) * VIOLET_INV_PHYSICS_SCALE, glm::vec4(toGlm(color), alpha))
       );
     }
 
