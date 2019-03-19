@@ -25,7 +25,7 @@ float calcShadow(float3 moments, float compare, float light_far)
   return min(max(p, compare <= moments.x ), 1.0f);
 #else
   float p = step(compare, moments.x);
-  float variance = max(moments.y - moments.x * moments.x, 50.0f / light_far);
+  float variance = max(moments.y - moments.x * moments.x, 0.075f);
 
   float d = (compare - moments.x);
   float p_max = linearStep(0.2f, 1.0f, variance / (variance + d * d));

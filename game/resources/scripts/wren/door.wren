@@ -48,9 +48,9 @@ class Door is MonoBehaviour {
 
     gameObject.addComponent(MeshRender).mesh              = Mesh.generate("cube")
     gameObject.getComponent(MeshRender).subMesh           = 0
-    gameObject.getComponent(MeshRender).albedo            = Texture.load("resources/textures/woodframe1b-albedo.png")
-    gameObject.getComponent(MeshRender).normal            = Texture.load("resources/textures/woodframe1-normal2.png")
-    gameObject.getComponent(MeshRender).metallicRoughness = Texture.load("resources/textures/woodframe1-metallic-roughness.png")
+    gameObject.getComponent(MeshRender).albedo            = Texture.load("resources/textures/wood/FloorMahogany_alb.jpg")
+    gameObject.getComponent(MeshRender).normal            = Texture.load("resources/textures/wood/FloorMahogany_nrm.jpg")
+    gameObject.getComponent(MeshRender).metallicRoughness = Texture.load("resources/textures/wood/FloorMahogany_dmra.png")
     
     var button_collider = gameObject.addComponent(Collider)
     button_collider.makeBoxCollider()
@@ -65,9 +65,9 @@ class Door is MonoBehaviour {
 
     _door.addComponent(MeshRender).mesh              = Mesh.generate("cube")
     _door.getComponent(MeshRender).subMesh           = 0
-    _door.getComponent(MeshRender).albedo            = Texture.load("resources/textures/woodframe1b-albedo.png")
-    _door.getComponent(MeshRender).normal            = Texture.load("resources/textures/woodframe1-normal2.png")
-    _door.getComponent(MeshRender).metallicRoughness = Texture.load("resources/textures/woodframe1-metallic-roughness.png")
+    _door.getComponent(MeshRender).albedo            = Texture.load("resources/textures/wood/FloorMahogany_alb.jpg")
+    _door.getComponent(MeshRender).normal            = Texture.load("resources/textures/wood/FloorMahogany_nrm.jpg")
+    _door.getComponent(MeshRender).metallicRoughness = Texture.load("resources/textures/wood/FloorMahogany_dmra.png")
   
     var door_collider = _door.addComponent(Collider)
     door_collider.makeBoxCollider()

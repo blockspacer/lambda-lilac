@@ -28,6 +28,8 @@ import "Core/PostProcess" for PostProcess
 import "Core/Console" for Console
 import "Core/Noise" for Noise, NoiseInterpolation
 
+import "Core/Light" for Light, LightTypes, ShadowTypes
+
 import "resources/scripts/wren/physics_layers" for PhysicsLayers
 
 class ItemManager is MonoBehaviour {
@@ -52,10 +54,20 @@ class ItemManager is MonoBehaviour {
 
         c.addComponent(MeshRender).mesh              = _meshes[0]
         c.getComponent(MeshRender).subMesh           = 0
-        c.getComponent(MeshRender).albedo            = Texture.load("resources/textures/woodframe1b-albedo.png")
-        c.getComponent(MeshRender).normal            = Texture.load("resources/textures/woodframe1-normal2.png")
-        c.getComponent(MeshRender).metallicRoughness = Texture.load("resources/textures/woodframe1-metallic-roughness.png")
+        c.getComponent(MeshRender).albedo            = Texture.load("resources/textures/wood/FloorMahogany_alb.jpg")
+        c.getComponent(MeshRender).normal            = Texture.load("resources/textures/wood/FloorMahogany_nrm.jpg")
+        c.getComponent(MeshRender).metallicRoughness = Texture.load("resources/textures/wood/FloorMahogany_dmra.png")
        
+
+        // Add a spot light.
+        var light = c.addComponent(Light)
+        light.type = LightTypes.Point
+
+        light.lightColour = Vec3.new(1.0, 1.0, 0.5)
+        light.lightIntensity = 20.0
+        light.depth = 1.0
+        light.size = 1.0
+
         var collider  = c.addComponent(Collider)
         var rigidBody = c.addComponent(RigidBody)
         collider.makeBoxCollider()
@@ -77,9 +89,9 @@ class ItemManager is MonoBehaviour {
 
         c.addComponent(MeshRender).mesh              = _meshes[0]
         c.getComponent(MeshRender).subMesh           = 0
-        c.getComponent(MeshRender).albedo            = Texture.load("resources/textures/mossy-ground1-albedo.png")
-        c.getComponent(MeshRender).normal            = Texture.load("resources/textures/mossy-ground1-normal.png")
-        c.getComponent(MeshRender).metallicRoughness = Texture.load("resources/textures/mossy-ground1-metallic-roughness.png")
+        c.getComponent(MeshRender).albedo            = Texture.load("resources/textures/FloorMahogany_alb.jpg")
+        c.getComponent(MeshRender).normal            = Texture.load("resources/textures/FloorMahogany_nrm.jpg")
+        c.getComponent(MeshRender).metallicRoughness = Texture.load("resources/textures/FloorMahogany_dmra.png")
         
         var collider  = c.addComponent(Collider)
         var rigidBody = c.addComponent(RigidBody)

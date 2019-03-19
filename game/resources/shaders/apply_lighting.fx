@@ -15,7 +15,7 @@ float3 FresnelSchlickRoughness(float cosTheta, float3 F0, float roughness)
 Texture2D tex_albedo      : register(t0);
 Texture2D tex_position    : register(t1);
 Texture2D tex_normal      : register(t2);
-Texture2D tex_metallic_roughness : register(t3);
+Texture2D tex_mra         : register(t3);
 
 Texture2D tex_light_map   : register(t4);
 
@@ -69,12 +69,12 @@ float4 PS(VSOutput pIn) : SV_TARGET0
   float3 N = normalize(Sample(tex_normal, SamLinearClamp, pIn.tex).rgb * 2.0f - 1.0f);
   float3 V = normalize(camera_position - Sample(tex_position, SamLinearClamp, pIn.tex).rgb);
   float3 R = reflect(-V, N);
-  float2 metallic_roughness = Sample(tex_metallic_roughness, SamLinearClamp, pIn.tex).rg;
-  float  metallic  = metallic_roughness.r;
-  float  roughness = metallic_roughness.g;
+  float3 mra = Sample(tex_mra, SamLinearClamp, pIn.tex).rgb;
+  float  metallic  = mra.r;
+  float  roughness = mra.g;
+  float  ao        = mra.b;
   float3 F0 = lerp(0.04f, 1.0f, metallic);
 
-  float ao  = 1.0f;
   float3 F  = FresnelSchlickRoughness(max(dot(N, V), 0.0f), F0, roughness);
 
   float3 kS = F;
@@ -102,6 +102,6 @@ float4 PS(VSOutput pIn) : SV_TARGET0
   //ambient.rgb = EvalSH(N, g_coefficients, g_transfer_func);
   //light   = 1.0f; // Get rid of light so we can debug the SH.
   //ambient = 0.0f;
-  
+
   return float4(pow(abs(albedo.rgb), 2.2f) * (light + ambient), albedo.a);
 }

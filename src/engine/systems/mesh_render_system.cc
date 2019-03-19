@@ -336,11 +336,11 @@ namespace lambda
         Vector<unsigned char>{ 128u, 128u, 255u, 255u }
       );
       default_metallic_roughness_ = asset::TextureManager::getInstance()->create(
-        Name("__default_metallic_roughness__"),
+        Name("__default_dmra__"),
         1u, 1u, 1u,
         TextureFormat::kR8G8B8A8,
         0u,
-        Vector<unsigned char>{ 0u, 0u, 255u, 0u }
+        Vector<unsigned char>{ 255u, 0u, 0u, 255u }
       );
     }
     void MeshRenderSystem::deinitialize()

@@ -40,19 +40,6 @@ namespace lambda
 
 #if FLUSH_METHOD
     ///////////////////////////////////////////////////////////////////////////
-    struct RenderActionSetImGUI : public IRenderAction
-    {
-      RenderActionSetImGUI() :
-        imgui(nullptr) {};
-      ~RenderActionSetImGUI() {};
-      virtual void execute(D3D11Context* context) const override
-      {
-        context->setImGUI(imgui);
-      }
-      foundation::SharedPointer<platform::IImGUI> imgui;
-    };
-
-    ///////////////////////////////////////////////////////////////////////////
     struct RenderActionSetWindow : public IRenderAction
     {
       RenderActionSetWindow() :
@@ -63,19 +50,6 @@ namespace lambda
         context->setWindow(window);
       }
       foundation::SharedPointer<platform::IWindow> window;
-    };
-
-    ///////////////////////////////////////////////////////////////////////////
-    struct RenderActionSetShaderVariableManager : public IRenderAction
-    {
-      RenderActionSetShaderVariableManager() :
-        shader_variable_manager(nullptr) {};
-      ~RenderActionSetShaderVariableManager() {};
-      virtual void execute(D3D11Context* context) const override
-      {
-        context->setShaderVariableManager(*shader_variable_manager);
-      }
-      platform::ShaderVariableManager* shader_variable_manager;
     };
 
     ///////////////////////////////////////////////////////////////////////////
@@ -216,18 +190,32 @@ namespace lambda
       asset::VioletTextureHandle texture;
     };
 
-    ///////////////////////////////////////////////////////////////////////////
-    struct RenderActionCopyToScreen : public IRenderAction
-    {
-      RenderActionCopyToScreen() :
-        texture() {};
-      ~RenderActionCopyToScreen() {};
-      virtual void execute(D3D11Context* context) const override
-      {
-        context->copyToScreen(texture);
-      }
-      asset::VioletTextureHandle texture;
-    };
+		///////////////////////////////////////////////////////////////////////////
+		struct RenderActionCopyToScreen : public IRenderAction
+		{
+			RenderActionCopyToScreen() :
+				texture() {};
+			~RenderActionCopyToScreen() {};
+			virtual void execute(D3D11Context* context) const override
+			{
+				context->copyToScreen(texture);
+			}
+			asset::VioletTextureHandle texture;
+		};
+
+		///////////////////////////////////////////////////////////////////////////
+		struct RenderActionCopyToTexture : public IRenderAction
+		{
+			RenderActionCopyToTexture() :
+				src(), dst() {};
+			~RenderActionCopyToTexture() {};
+			virtual void execute(D3D11Context* context) const override
+			{
+				context->copyToTexture(src, dst);
+			}
+			asset::VioletTextureHandle src;
+			asset::VioletTextureHandle dst;
+		};
 
     ///////////////////////////////////////////////////////////////////////////
     struct RenderActionBindShaderPass : public IRenderAction
@@ -514,7 +502,11 @@ namespace lambda
 		void D3D11Renderer::copyToTexture(const asset::VioletTextureHandle& src,
 			const asset::VioletTextureHandle& dst)
 		{
-			LMB_ASSERT(false, "TODO (Hilze): Implement");
+			RenderActionCopyToTexture* action =
+				foundation::GetFrameHeap()->construct<RenderActionCopyToTexture>();
+			action->src = src;
+			action->dst = dst;
+			queue_actions_.push_back(action);
 		}
 
     ///////////////////////////////////////////////////////////////////////////
@@ -566,7 +558,7 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::setSubMesh(const uint32_t & sub_mesh_idx)
+    void D3D11Renderer::setSubMesh(const uint32_t& sub_mesh_idx)
     {
       RenderActionSetSubMesh* action = 
         foundation::GetFrameHeap()->construct<RenderActionSetSubMesh>();
@@ -600,7 +592,7 @@ namespace lambda
 			Vector<asset::VioletTextureHandle> render_targets, 
 			asset::VioletTextureHandle depth_buffer)
 		{
-			LMB_ASSERT(false, "TODO (Hilze): Implement");
+			//LMB_ASSERT(false, "TODO (Hilze): Implement");
 		}
 
     ///////////////////////////////////////////////////////////////////////////
@@ -632,19 +624,19 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     void D3D11Renderer::beginTimer(const String& name)
     {
-      LMB_ASSERT(false, "Timers are not supported in deferred mode!");
+			//LMB_ASSERT(false, "Timers are not supported in deferred mode!");
     }
 
     ///////////////////////////////////////////////////////////////////////////
     void D3D11Renderer::endTimer(const String& name)
     {
-      LMB_ASSERT(false, "Timers are not supported in deferred mode!");
+			//LMB_ASSERT(false, "Timers are not supported in deferred mode!");
     }
 
     ///////////////////////////////////////////////////////////////////////////
     uint64_t D3D11Renderer::getTimerMicroSeconds(const String& name)
     {
-      LMB_ASSERT(false, "Timers are not supported in deferred mode!");
+			//LMB_ASSERT(false, "Timers are not supported in deferred mode!");
       return 0u;
     }
 

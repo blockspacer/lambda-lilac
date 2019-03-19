@@ -103,7 +103,7 @@ class Lighting {
     light_flashlight.outerCutOff = Math.deg2Rad * 50.0
     light_flashlight.shadowType = ShadowTypes.Dynamic
     //light_flashlight.renderTargets = [ "flash_light_rt" ]
-    light_flashlight.texture = Texture.load("resources/textures/flashlight.png")
+    //light_flashlight.texture = Texture.load("resources/textures/flashlight.png")
     light_flashlight.enabled = false
 
 
@@ -136,8 +136,8 @@ class Lighting {
     light_rsm.shadowType = ShadowTypes.Dynamic
     //light_rsm.renderTargets = [ "rsm_shad", "rsm_posi", "rsm_norm", "rsm_flux" ]
     light_rsm.renderTargets = [ "rsm_shad" ]
-    light_rsm.depth = 200.0
-    light_rsm.size = 100.0
+    light_rsm.depth = 75.0
+    light_rsm.size = 50.0
     //light_rsm.enabled = false
   }
 }

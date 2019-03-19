@@ -376,7 +376,7 @@ int main(int argc, char** argv)
   else if (argc == 2)
     LMB_ASSERT(false, "No entry script was specified!")
 
-  lambda::FileSystem::	SetBaseDir(argv[1]);
+  lambda::FileSystem::SetBaseDir(argv[1]);
   String script(argv[2]);
 
   {

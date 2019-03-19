@@ -28,8 +28,8 @@ class PostProcessor {
     PostProcess.setFinalRenderTarget("post_process_buffer")
 
     // Add and generate the environment maps.
-    PostProcess.addRenderTarget("brdf_lut", Texture.load("resources/textures/ibl_brdf_lut.png"))
-    PostProcess.addRenderTarget("environment_map", Texture.load("resources/textures/bell_park_dawn.hdr"))
+    PostProcess.addRenderTarget("brdf_lut", Texture.load("resources/textures/lighting/ibl_brdf_lut.png"))
+    PostProcess.addRenderTarget("environment_map", Texture.load("resources/textures/hdr/Serpentine_Valley_3k.hdr"))
     PostProcess.irradianceConvolution("environment_map", "irradiance_map")
     PostProcess.hammerhead("environment_map", "prefiltered")
 
@@ -116,7 +116,7 @@ class PostProcessor {
 
     // Add the required render targets.
     PostProcess.addRenderTarget("ssao_target", render_target_scale, TextureFormat.R32G32B32A32)
-    PostProcess.addRenderTarget("random_texture", Texture.load("resources/textures/noise.png"))
+    PostProcess.addRenderTarget("random_texture", Texture.load("resources/textures/lighting/noise.png"))
 
     // Add the main SSAO pass.
     PostProcess.addShaderPass("ssao", Shader.load("resources/shaders/ssao.fx"), [ "position", "normal", "random_texture", "depth_buffer" ], [ "ssao_target" ])

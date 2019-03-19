@@ -24,6 +24,7 @@ import "Core/Math"               for Math
 import "Core/Time"               for Time
 import "Core/Debug"              for Debug
 import "Core/Sort"               for Sort
+import "Core/PostProcess"        for PostProcess
 
 import "resources/scripts/wren/input_controller" for InputController
 import "resources/scripts/wren/shuriken"         for ShurikenBehaviour
@@ -61,6 +62,7 @@ class FreeLookCamera is MonoBehaviour {
 
     _cObject          = null
     _cHolding         = false
+    _useNormalMapping = 0.0
   }
 
   initialize() {
@@ -180,7 +182,10 @@ class FreeLookCamera is MonoBehaviour {
     var last_held_attack = _held_attack
     _held_attack = getHeldAttack
     if (_held_attack && !last_held_attack) {
-      _shurikens.add(ShurikenBehaviour.create(_camera_transform.worldPosition, _camera_transform.worldForward))
+      _useNormalMapping = _useNormalMapping + 1.0
+      if (_useNormalMapping >= 4.0) _useNormalMapping = 0.0
+      PostProcess.setShaderVariableFloat1("useNormalMapping", _useNormalMapping)
+      //_shurikens.add(ShurikenBehaviour.create(_camera_transform.worldPosition, _camera_transform.worldForward))
     }
 
     // Get all data required to move the player / rotate the camera.

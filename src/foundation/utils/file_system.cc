@@ -280,8 +280,14 @@ namespace lambda
   //////////////////////////////////////////////////////////////////////////////
   String FileSystem::GetExtension(const String& file)
   {
-    if (file.find_last_of(".") != String::npos)
-      return file.substr(file.find_last_of(".") + 1);
+		String f = file;
+		eastl::replace(f.begin(), f.end(), '\\', '/');
+
+		eastl_size_t last_dot   = f.find_last_of(".");
+		eastl_size_t last_slash = f.find_last_of("/");
+
+		if (last_dot != String::npos && (last_dot > last_slash))
+			return f.substr(last_dot + 1);
     return "";
   }
   

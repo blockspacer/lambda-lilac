@@ -78,7 +78,7 @@ namespace lambda
 
     inline void AssetManager::destroyAsset(size_t asset)
     {
-      if (assets_.empty())
+      /*if (assets_.empty())
       {
         return;
       }
@@ -87,7 +87,7 @@ namespace lambda
       {
         renderer_->destroyAsset(it->second);
         assets_.erase(asset);
-      }
+      }*/
     }
   }
 }

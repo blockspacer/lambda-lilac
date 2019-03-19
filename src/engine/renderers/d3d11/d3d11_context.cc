@@ -14,6 +14,8 @@
 #include "d3d11_renderer.h"
 #include <memory/frame_heap.h>
 #include "interfaces/iworld.h"
+#include <thread>
+#include <atomic>
 
 namespace lambda
 {
@@ -1550,8 +1552,8 @@ namespace lambda
 
 
     ///////////////////////////////////////////////////////////////////////////
-#include <thread>
-    std::mutex k_flush_mutex;
+		std::atomic<int> k_can_read;
+		std::atomic<int> k_can_write;
     static Vector<IRenderAction*> k_flush_actions;
   
     ///////////////////////////////////////////////////////////////////////////
@@ -1559,24 +1561,20 @@ namespace lambda
     {
       while (true)
       {
-        bool can_continue = false;
-        while (can_continue)
-        {
-          k_flush_mutex.lock();
-          can_continue = !k_flush_actions.empty();
-          k_flush_mutex.unlock();
-          if (!can_continue)
-            std::this_thread::sleep_for(std::chrono::microseconds(10u));
-        }
-        k_flush_mutex.lock();
-        for (uint32_t i = 0u; i < k_flush_actions.size(); ++i)
-        {
-          IRenderAction* action = k_flush_actions[i];
-          action->execute(context);
-          action->~IRenderAction();
-        }
-        k_flush_actions.clear();
-        k_flush_mutex.unlock();
+				while (k_can_read.load() == 0) {
+					std::this_thread::sleep_for(std::chrono::microseconds(10u));
+				}
+					
+				k_can_read = 0;
+
+				for (uint32_t i = 0u; i < k_flush_actions.size(); ++i)
+				{
+					IRenderAction* action = k_flush_actions[i];
+					action->execute(context);
+					action->~IRenderAction();
+				}
+
+				k_can_write = 1;
       }
     }
 
@@ -1586,20 +1584,20 @@ namespace lambda
       static std::thread thead;
       if (!thead.joinable())
       {
+				k_can_read  = 0;
+				k_can_write = 1;
         thead = std::thread(lambda::windows::flush, this);
       }
-      bool can_continue = false;
-      while (can_continue)
-      {
-        k_flush_mutex.lock();
-        can_continue = k_flush_actions.empty();
-        k_flush_mutex.unlock();
-        if (!can_continue)
-          std::this_thread::sleep_for(std::chrono::microseconds(10u));
-      }
-      k_flush_mutex.lock();
-      k_flush_actions = eastl::move(actions);
-      k_flush_mutex.unlock();
+
+			while (k_can_write.load() == 0) {
+				std::this_thread::sleep_for(std::chrono::microseconds(10u));
+			}
+
+			k_can_write = 0;
+
+			k_flush_actions = eastl::move(actions);
+
+			k_can_read = 1;
     }
 
     ///////////////////////////////////////////////////////////////////////////

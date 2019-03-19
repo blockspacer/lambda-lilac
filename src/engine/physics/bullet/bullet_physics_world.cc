@@ -656,7 +656,7 @@ namespace lambda
 	  world::IWorld* world)
     {
 		physics_visualizer_.setDebugMode(
-#if defined(_DEBUG) || defined(DEBUG) || true
+#if defined(_DEBUG) || defined(DEBUG)
 			btIDebugDraw::DBG_DrawWireframe
 #else
 			btIDebugDraw::DBG_NoDebug

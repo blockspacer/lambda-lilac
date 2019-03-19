@@ -5,6 +5,9 @@
 #include <compilers/wave_compiler.h>
 #include <compilers/shader_compiler.h>
 #include <thread>
+#include <stb_image.h>
+#include <stb_image_write.h>
+#include <algorithm>
 
 enum class Type : uint32_t
 {
@@ -383,6 +386,104 @@ void removeFile(
     Error("[---] " + file + " removed!\n");
 }
 
+bool doesTextureExist(const lambda::String& file)
+{
+	if (lambda::FileSystem::DoesFileExist(file + ".png"))
+		return true;
+	if (lambda::FileSystem::DoesFileExist(file + ".jpg"))
+		return true;
+	if (lambda::FileSystem::DoesFileExist(file + ".jpeg"))
+		return true;
+	return false;
+}
+
+class Image
+{
+public:
+	Image(lambda::String file)
+	{
+		FILE* fp = nullptr;
+		if (lambda::FileSystem::DoesFileExist(file + ".png"))
+			fp = lambda::FileSystem::fopen(file + ".png");
+		if (!fp && lambda::FileSystem::DoesFileExist(file + ".jpg"))
+			fp = lambda::FileSystem::fopen(file + ".jpg");
+		if (!fp && lambda::FileSystem::DoesFileExist(file + ".jpeg"))
+			fp = lambda::FileSystem::fopen(file + ".jpeg");
+
+		if (fp)
+		{
+			lambda::Vector<char> mem = lambda::FileSystem::FileToVector(fp);
+			lambda::FileSystem::fclose(fp);
+			data = stbi_load_from_memory((unsigned char*)mem.data(), (int)mem.size(), &w, &h, &c, STBI_rgb_alpha);
+		}
+	}
+	void dummyData(int dw, int dh, int def)
+	{
+		if (!data)
+		{
+			data = lambda::foundation::Memory::allocate(dw * dh * 4);
+			memset(data, def, dw * dh * 4);
+			w = dw;
+			h = dh;
+		}
+	}
+	~Image()
+	{
+		if (data)
+		{
+			if (c)
+				stbi_image_free(data);
+			else
+				lambda::foundation::Memory::deallocate(data);
+		}
+	}
+
+	void* data = nullptr;
+	int w = 0, h = 0, c = 0;
+};
+
+#pragma optimize("", off)
+void handleDMRA(const lambda::String& file, const lambda::String& extension)
+{
+	bool is_ao  = file.find("_ao."  + extension) != lambda::String::npos;
+	bool is_dis = file.find("_dis." + extension) != lambda::String::npos;
+	bool is_met = file.find("_met." + extension) != lambda::String::npos;
+	bool is_rgh = file.find("_rgh." + extension) != lambda::String::npos;
+
+	if (is_ao || is_dis || is_met || is_rgh)
+	{
+		lambda::String file_base = file.substr(0, file.find_last_of("_"));
+		
+		Image ao (file_base + "_ao");
+		Image dis(file_base + "_dis");
+		Image met(file_base + "_met");
+		Image rgh(file_base + "_rgh");
+		int w = std::max(ao.w, std::max(dis.w, std::max(met.w, rgh.w)));
+		int h = std::max(ao.h, std::max(dis.h, std::max(met.h, rgh.h)));
+		ao.dummyData (w, h, 255);
+		dis.dummyData(w, h, 255);
+		met.dummyData(w, h, 0);
+		rgh.dummyData(w, h, 0);
+		LMB_ASSERT((ao.w == dis.w) && (dis.w == met.w) && (met.w == rgh.w), "Not all widths match!");
+		LMB_ASSERT((ao.h == dis.h) && (dis.h == met.h) && (met.h == rgh.h), "Not all widths match!");
+		
+		void* data = lambda::foundation::Memory::allocate(w * h * 4);
+
+		for (int i = 0; i < w * h * 4; i += 4)
+		{
+			((unsigned char*)data)[i + 0] = ((unsigned char*)dis.data)[i];
+			((unsigned char*)data)[i + 1] = ((unsigned char*)met.data)[i];
+			((unsigned char*)data)[i + 2] = ((unsigned char*)rgh.data)[i];
+			((unsigned char*)data)[i + 3] = ((unsigned char*)ao.data)[i];
+		}
+
+		lambda::String output_file = lambda::FileSystem::FullFilePath(file_base + "_dmra.png");
+		stbi_write_png(output_file.c_str(), w, h, 4, data, w * 4);
+		lambda::foundation::Memory::deallocate(data);
+	}
+}
+
+
 bool updateFile(
 	const lambda::String& file, 
 	lambda::VioletTextureCompiler texture_compiler, 
@@ -392,6 +493,8 @@ bool updateFile(
   lambda::String extension = lambda::FileSystem::GetExtension(file);
   if (extension == "png" || extension == "jpg" || extension == "jpeg" || extension == "hdr")
   {
+		handleDMRA(file, extension);
+
     lambda::foundation::Info("[TEX] " + file + "\n");
     lambda::foundation::Info("\tCompiling...\n");
 
@@ -471,7 +574,7 @@ bool updateFile(
 int main(int argc, char** argv)
 {
   //SendMessage();
-   
+ 
   if (argc == 1)
     LMB_ASSERT(false, "No project folder was speficied!");
   lambda::FileSystem::SetBaseDir(argv[1]);

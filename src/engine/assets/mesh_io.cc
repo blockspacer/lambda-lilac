@@ -24,6 +24,7 @@
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
 #define TINYGLTF_NO_STB_IMAGE_WRITE
+//#define TINYGLTF_NO_STB_IMAGE
 #include <tiny_gltf.h>
 #if VIOLET_WIN32
 #pragma warning(pop)
@@ -80,25 +81,6 @@ namespace lambda
         write(data, segment_header);
       }
     }
-    void writeHeader(Vector<char>& data, const MeshIO::TextureInfo& info)
-    {
-      MeshIO::Format::DataHeader header;
-      header.data_size = info.data.size();
-      header.segment_count = info.segments.size();
-      write(data, header);
-
-      write(data, (const char*)info.data.data(), info.data.size());
-
-      for (const MeshIO::TextureSegment& segment : info.segments)
-      {
-        MeshIO::Format::TextureHeader segment_header;
-        segment_header.offset = segment.offset;
-        segment_header.width = segment.width;
-        segment_header.height = segment.height;
-        segment_header.bpp = segment.bpp;
-        write(data, segment_header);
-      }
-    }
     void writeHeader(Vector<char>& data, const Vector<MeshIO::SubMesh>& meshes)
     {
       MeshIO::Format::ModelHeader header;
@@ -132,9 +114,6 @@ namespace lambda
       writeHeader(data, mesh.data.joi);
       writeHeader(data, mesh.data.wei);
       writeHeader(data, mesh.data.idx);
-      writeHeader(data, mesh.data.tex_alb);
-      writeHeader(data, mesh.data.tex_nor);
-      writeHeader(data, mesh.data.tex_mrt);
       writeHeader(data, mesh.meshes);
 
       finalizeWriting(data);
@@ -171,9 +150,7 @@ namespace lambda
       Vector<uint32_t>  idx = eastl::move(copy<uint32_t>(mesh.data.idx));
       Vector<glm::vec3> tan(ltn.size());
       for (uint64_t i = 0u; i < tan.size(); ++i)
-      {
         memcpy((glm::vec3*)tan.data() + i, (glm::vec4*)ltn.data() + i, sizeof(float) * 3u);
-      }
       ltn.resize(0u);
 #else
     asset::Mesh MeshIO::asAsset(Mesh& mesh)
@@ -197,27 +174,25 @@ namespace lambda
       memcpy((void*)wei.data(), mesh.data.wei.data.data(), mesh.data.wei.data.size());
       memcpy((void*)idx.data(), mesh.data.idx.data.data(), mesh.data.idx.data.size());
       for (uint64_t i = 0u; i < tan.size(); ++i)
-      {
         memcpy((glm::vec3*)tan.data() + i, (glm::vec4*)ltn.data() + i, sizeof(float) * 3u);
-      }
 #endif
 
       Vector<asset::SubMesh> sub_meshes;
       for (const MeshIO::SubMesh& m : mesh.meshes)
       {
         asset::SubMesh sm;
-        sm.io.parent = m.parent;
-        sm.io.topology = m.topology;
-        sm.io.translation = m.translation;
-        sm.io.rotation = m.rotation;
-        sm.io.scale = m.scale;
-        sm.io.tex_alb = m.tex_alb;
-        sm.io.tex_nor = m.tex_nor;
-        sm.io.tex_mrt = m.tex_mrt;
+        sm.io.parent       = m.parent;
+        sm.io.topology     = m.topology;
+        sm.io.translation  = m.translation;
+        sm.io.rotation     = m.rotation;
+        sm.io.scale        = m.scale;
+        sm.io.tex_alb      = m.tex_alb;
+        sm.io.tex_nor      = m.tex_nor;
+        sm.io.tex_mrt      = m.tex_mrt;
         sm.io.double_sided = m.double_sided;
-        sm.io.metallic = m.metallic;
-        sm.io.roughness = m.roughness;
-        sm.io.colour = m.colour;
+        sm.io.metallic     = m.metallic;
+        sm.io.roughness    = m.roughness;
+        sm.io.colour       = m.colour;
 
         if (m.pos >= 0) sm.offsets[asset::MeshElements::kPositions] = asset::SubMesh::Offset{
             mesh.data.pos.segments.at(m.pos).offset,
@@ -265,61 +240,26 @@ namespace lambda
         sub_meshes.push_back(sm);
       }
 
-      Vector<asset::VioletTextureHandle> textures(
-        mesh.data.tex_alb.segments.size() +
-        mesh.data.tex_nor.segments.size() +
-        mesh.data.tex_mrt.segments.size()
-      );
-
-      for (size_t i = 0; i < mesh.data.tex_alb.segments.size(); ++i)
-      {
-        static size_t texture_name = 0;
-        const io::MeshIO::TextureSegment& segment = mesh.data.tex_alb.segments.at(i);
-        size_t size = segment.width* segment.height * segment.bpp;
-        Vector<char> data(mesh.data.tex_alb.data.begin() + (segment.offset), mesh.data.tex_alb.data.begin() + (segment.offset + size));
-        textures.at(i) = asset::TextureManager::getInstance()->create(
-          Name("texture_alb_" + toString(texture_name++)),
-          (uint32_t)segment.width, (uint32_t)segment.height, 1u, TextureFormat::kR8G8B8A8, 0u/*kTextureFlagMipMaps*/, data
-        );
-      }
-      for (size_t i = 0; i < mesh.data.tex_nor.segments.size(); ++i)
-      {
-        static size_t texture_name = 0;
-        const io::MeshIO::TextureSegment& segment = mesh.data.tex_nor.segments.at(i);
-        size_t size = segment.width* segment.height * segment.bpp;
-        Vector<char> data(mesh.data.tex_nor.data.begin() + (segment.offset), mesh.data.tex_nor.data.begin() + (segment.offset + size));
-        textures.at(i + mesh.data.tex_alb.segments.size()) = asset::TextureManager::getInstance()->create(
-          Name("texture_nor_" + toString(texture_name++)),
-          (uint32_t)segment.width, (uint32_t)segment.height, 1u, TextureFormat::kR8G8B8A8, 0u/*kTextureFlagMipMaps*/, data
-        );
-      }
-      for (size_t i = 0; i < mesh.data.tex_mrt.segments.size(); ++i)
-      {
-        static size_t texture_name = 0;
-        const io::MeshIO::TextureSegment& segment = mesh.data.tex_mrt.segments.at(i);
-        size_t size = segment.width* segment.height * segment.bpp;
-        Vector<char> data(mesh.data.tex_mrt.data.begin() + (segment.offset), mesh.data.tex_mrt.data.begin() + (segment.offset + size));
-        textures.at(i + mesh.data.tex_alb.segments.size() + mesh.data.tex_nor.segments.size()) = asset::TextureManager::getInstance()->create(
-          Name("texture_mrt_" + toString(texture_name++)),
-          (uint32_t)segment.width, (uint32_t)segment.height, 1u, TextureFormat::kR8G8B8A8, 0u/*kTextureFlagMipMaps*/, data
-        );
-      }
+			Vector<asset::VioletTextureHandle> textures;
+			textures.insert(textures.end(), mesh.data.tex_alb.begin(),  mesh.data.tex_alb.end());
+			textures.insert(textures.end(), mesh.data.tex_nrm.begin(),  mesh.data.tex_nrm.end());
+			textures.insert(textures.end(), mesh.data.tex_dmra.begin(), mesh.data.tex_dmra.end());
 
       asset::Mesh m;
       m.set(asset::MeshElements::kPositions, eastl::move(pos));
-      m.set(asset::MeshElements::kNormals, eastl::move(nor));
+      m.set(asset::MeshElements::kNormals,   eastl::move(nor));
       m.set(asset::MeshElements::kTexCoords, eastl::move(tex));
-      m.set(asset::MeshElements::kColours, eastl::move(col));
-      m.set(asset::MeshElements::kTangents, eastl::move(tan));
-      m.set(asset::MeshElements::kJoints, eastl::move(joi));
-      m.set(asset::MeshElements::kWeights, eastl::move(wei));
-      m.set(asset::MeshElements::kIndices, eastl::move(idx));
+      m.set(asset::MeshElements::kColours,   eastl::move(col));
+      m.set(asset::MeshElements::kTangents,  eastl::move(tan));
+      m.set(asset::MeshElements::kJoints,    eastl::move(joi));
+      m.set(asset::MeshElements::kWeights,   eastl::move(wei));
+      m.set(asset::MeshElements::kIndices,   eastl::move(idx));
       m.setSubMeshes(eastl::move(sub_meshes));
       m.setAttachedTextures(eastl::move(textures));
       m.setAttachedTextureCount(glm::uvec3(
-        mesh.data.tex_alb.segments.size(),
-        mesh.data.tex_nor.segments.size(),
-        mesh.data.tex_mrt.segments.size()
+        mesh.data.tex_alb.size(),
+        mesh.data.tex_nrm.size(),
+        mesh.data.tex_dmra.size()
       ));
 
       return m;
@@ -336,7 +276,7 @@ namespace lambda
     {
       String extension(getPathExtension(path));
       eastl::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
-      String full_path = FileSystem::GetBaseDir() + path;
+      String full_path = FileSystem::FullFilePath(path);
 
       if (extension == "gltf" || extension == "glb")
       {
@@ -393,27 +333,6 @@ namespace lambda
         info.segments.push_back(segment);
       }
     }
-    void readHeader(const Vector<char>& data, size_t& offset, MeshIO::TextureInfo& info)
-    {
-      MeshIO::Format::DataHeader header;
-      read(data, offset, header);
-
-      info.data.resize(header.data_size);
-      read(data, offset, (char*)info.data.data(), header.data_size);
-
-      for (size_t i = 0; i < header.segment_count; ++i)
-      {
-        MeshIO::Format::TextureHeader segment_header;
-        read(data, offset, segment_header);
-
-        MeshIO::TextureSegment segment;
-        segment.offset = segment_header.offset;
-        segment.width = segment_header.width;
-        segment.height = segment_header.height;
-        segment.bpp = segment_header.bpp;
-        info.segments.push_back(segment);
-      }
-    }
     void readHeader(const Vector<char>& data, size_t& offset, Vector<MeshIO::SubMesh>& meshes)
     {
       MeshIO::Format::ModelHeader header;
@@ -459,9 +378,6 @@ namespace lambda
       readHeader(data, offset, mesh.data.joi);
       readHeader(data, offset, mesh.data.wei);
       readHeader(data, offset, mesh.data.idx);
-      readHeader(data, offset, mesh.data.tex_alb);
-      readHeader(data, offset, mesh.data.tex_nor);
-      readHeader(data, offset, mesh.data.tex_mrt);
       readHeader(data, offset, mesh.meshes);
 
       return true;
@@ -637,7 +553,7 @@ namespace lambda
     void addNode(const tinygltf::Model& model, const int& n, const int& current_mesh, Vector<MeshIO::SubMesh>& meshes, const AccessorMemoryConverter& converter);
     void getData(const tinygltf::Model& model, const Vector<int>& accessors, MeshIO::DataInfo& info);
     void getDataIdx(const tinygltf::Model& model, const Vector<int>& accessors, MeshIO::DataInfo& info);
-    void getTexture(const tinygltf::Model& model, const Vector<int>& textures, MeshIO::TextureInfo& info);
+    void getTexture(const String& base_path, const tinygltf::Model& model, const Vector<int>& textures, Vector<asset::VioletTextureHandle>& handles);
 
 #ifdef ANIMATIONS
     struct Channel
@@ -715,14 +631,15 @@ namespace lambda
       tinygltf::Model model = loadWorld(path);
       
       // Fill the accessor memory by looping over all nodes.
-      assert(model.scenes.size() > 0&& "GLTF file did not contain a scene");
+			LMB_ASSERT(model.scenes.size() > 0, "GLTF file did not contain a scene");
       for (tinygltf::Scene scene : model.scenes)
-      {
         for (int node : scene.nodes)
-        {
           addNode(model, memory, node);
-        }
-      }
+
+			String base_path = path;
+			eastl_size_t last_slash = base_path.find_last_of("/");
+			if (last_slash != String::npos)
+				base_path = base_path.substr(0, last_slash + 1);
 
       // Erase the invalid accessors.
       eraseIf(memory.pos, -1);
@@ -746,9 +663,9 @@ namespace lambda
       getData(model, memory.joi, converted_mesh.data.joi);
       getData(model, memory.wei, converted_mesh.data.wei);
       getDataIdx(model, memory.idx, converted_mesh.data.idx);
-      getTexture(model, memory.tex_alb, converted_mesh.data.tex_alb);
-      getTexture(model, memory.tex_nor, converted_mesh.data.tex_nor);
-      getTexture(model, memory.tex_mrt, converted_mesh.data.tex_mrt);
+      getTexture(base_path, model, memory.tex_alb, converted_mesh.data.tex_alb);
+      getTexture(base_path, model, memory.tex_nor, converted_mesh.data.tex_nrm);
+      getTexture(base_path, model, memory.tex_mrt, converted_mesh.data.tex_dmra);
 
       auto convert = [](const Vector<int>& v, UnorderedMap<int, int>& m) { m.insert(eastl::make_pair(-1, -1)); for (int i = 0; i < (int)v.size(); ++i) { m.insert(eastl::make_pair(v.at(i), i)); } };
       convert(memory.pos, converter.pos);
@@ -983,7 +900,7 @@ namespace lambda
       }
     }
 
-    void getTexture(const tinygltf::Model& model, const Vector<int>& textures, MeshIO::TextureInfo& info)
+    void getTexture(const String& base_path, const tinygltf::Model& model, const Vector<int>& textures, Vector<asset::VioletTextureHandle>& handles)
     {
       for (const int& t : textures)
       {
@@ -994,43 +911,43 @@ namespace lambda
         size_t height = image.height;
         size_t bpp    = image.component;
 
+				String uri = lmbString(image.uri);
 
-        size_t total_size = width * height * 4;
+				asset::VioletTextureHandle handle;
 
-        Vector<unsigned char> bytes(total_size);
+				if (uri.empty())
+				{
+					VioletTexture tex;
+					tex.width  = (uint16_t)width;
+					tex.height = (uint16_t)height;
+					tex.format = TextureFormat::kR8G8B8A8;
 
-        if (bpp == 4)
-        {
-          memcpy(bytes.data(), image.image.data(), total_size);
-        }
-        else if (bpp == 3)
-        {
-          uint32_t  idx = 0;
-          for (uint32_t i = 0; i < width * height * 3; i += 3)
-          {
-            memcpy(bytes.data() + idx,&image.image.at(i + 0), sizeof(bytes[0] * 3));
-            bytes[idx + 3] = 255;
-            idx += 4;
-          }
-          bpp = 4u;
-        }
-        else
-        {
-          assert(false&& "BPP is neither 3 or 4");
-        }
+					size_t total_size = width * height * 4;
 
-        info.segments.push_back({
-          /* offset */ info.data.size(),
-          /* width  */ width,
-          /* height */ height,
-          /* bpp    */ bpp
-        });
+					tex.data.resize(total_size);
 
-        info.data.insert(
-          info.data.end(),
-          bytes.begin(),
-          bytes.end()
-        );
+					if (bpp == 4)
+						memcpy(tex.data.data(), image.image.data(), total_size);
+					else if (bpp == 3)
+					{
+						for (uint32_t i = 0, idx = 0; i < width * height * 3; i += 3, idx += 4)
+						{
+							memcpy(tex.data.data() + idx, &image.image.at(i), sizeof(tex.data[0] * 3u));
+							*((unsigned char*)&tex.data[idx + 3]) = 255;
+						}
+					}
+					else
+						LMB_ASSERT(false, "BPP is neither 3 or 4");
+					
+					static int s_index = 0;
+					handle = asset::TextureManager::getInstance()->create(Name("__mesh_io_" + toString(s_index) + "__"), tex);
+				}
+				else
+				{
+					handle = asset::TextureManager::getInstance()->get(Name(base_path + uri));
+				}
+
+				handles.push_back(handle);
       }
     }
 

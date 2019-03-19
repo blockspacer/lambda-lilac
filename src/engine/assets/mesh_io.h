@@ -18,22 +18,10 @@ namespace lambda
         size_t count;
         size_t stride;
       };
-      struct TextureSegment
-      {
-        size_t offset;
-        size_t width;
-        size_t height;
-        size_t bpp;
-      };
       struct DataInfo
       {
         Vector<unsigned char> data;
         Vector<DataSegment> segments;
-      };
-      struct TextureInfo
-      {
-        Vector<unsigned char> data;
-        Vector<TextureSegment> segments;
       };
       struct SubMesh
       {
@@ -75,9 +63,9 @@ namespace lambda
         DataInfo joi;
         DataInfo wei;
         DataInfo idx;
-        TextureInfo tex_alb;
-        TextureInfo tex_nor;
-        TextureInfo tex_mrt;
+				Vector<asset::VioletTextureHandle> tex_alb;
+				Vector<asset::VioletTextureHandle> tex_nrm;
+				Vector<asset::VioletTextureHandle> tex_dmra;
       };
       struct Mesh
       {
@@ -112,13 +100,6 @@ namespace lambda
           size_t offset;
           size_t count;
           size_t stride;
-        };
-        struct TextureHeader
-        {
-          size_t offset;
-          size_t width;
-          size_t height;
-          size_t bpp;
         };
         struct ModelHeader
         {

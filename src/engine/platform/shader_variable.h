@@ -35,6 +35,7 @@ namespace lambda
         const Vector<float>& v, 
         const Type& type
       );
+			void operator=(const ShaderVariable& other);
 
       size_t getSize() const;
       void update(const ShaderVariable& other);
@@ -113,18 +114,26 @@ namespace lambda
                v[2].z, v[2].w, v[3].x, v[3].y, v[3].z, v[3].w })
     {
     }
-    
-    ///////////////////////////////////////////////////////////////////////////
-    inline ShaderVariable::ShaderVariable(
-      const Name& name, 
-      const Vector<float>& v, 
-      const Type& type) 
-      : name(name)
-      , type(type)
-      , data(v)
-    {
-    }
-  
+
+		///////////////////////////////////////////////////////////////////////////
+		inline ShaderVariable::ShaderVariable(
+			const Name& name,
+			const Vector<float>& v,
+			const Type& type)
+			: name(name)
+			, type(type)
+			, data(v)
+		{
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		inline void ShaderVariable::operator=(const ShaderVariable& other)
+		{
+			name = other.name;
+			type = other.type;
+			data = other.data;
+		}
+		
     ///////////////////////////////////////////////////////////////////////////
     inline size_t ShaderVariable::getSize() const
     {

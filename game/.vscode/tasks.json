@@ -6,13 +6,13 @@
         {
             "label": "engine",
             "type": "shell",
-            "command": "C:/git/lambda-lilac/bin/bin/RelWithDebInfo/lambda-engine.exe C:/git/lambda-lilac/game x",
+            "command": "../bin/bin/RelWithDebInfo/lambda-engine.exe . x",
             "problemMatcher": []
         },
         {
             "label": "builder",
             "type": "shell",
-            "command": "C:/git/lambda-lilac/bin/bin/RelWithDebInfo/lambda-builder.exe C:/git/lambda-lilac/game",
+            "command": "../bin/bin/RelWithDebInfo/lambda-builder.exe .",
             "problemMatcher": []
         }
     ]

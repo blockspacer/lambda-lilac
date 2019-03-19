@@ -66,7 +66,7 @@ class World {
         {
           var model = GameObject.new()
           model.transform.worldScale = Vec3.new(2.5)
-          var mesh = Mesh.load("resources/gltf/lvl.glb")
+          var mesh = Mesh.load("resources/gltf/lvl/lvl.gltf")
           model.addComponent(MeshRender).attach(mesh)
           var collider = model.addComponent(Collider)
           collider.makeMeshColliderRecursive(mesh)
@@ -88,7 +88,7 @@ class World {
         // Update the RSM light.
         var sin_y_rot = -Math.sin(Math.deg2Rad * _camera.getComponent(FreeLookCamera).rotation.y)
         var cos_y_rot = -Math.cos(Math.deg2Rad * _camera.getComponent(FreeLookCamera).rotation.y)
-        var offset = Vec3.new(sin_y_rot, 0.0, cos_y_rot).normalized * 25.0
+        var offset = Vec3.new(sin_y_rot, 0.0, cos_y_rot).normalized * 12.5
         var transform = _lighting.rsm.getComponent(Transform)
         transform.worldPosition = _camera.transform.worldPosition + offset
     }
