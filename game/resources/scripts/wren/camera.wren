@@ -25,6 +25,10 @@ import "Core/Time"               for Time
 import "Core/Debug"              for Debug
 import "Core/Sort"               for Sort
 import "Core/PostProcess"        for PostProcess
+import "Core/Light"              for Light
+import "Core/Light"              for LightTypes
+import "Core/Light"              for ShadowTypes
+
 
 import "resources/scripts/wren/input_controller" for InputController
 import "resources/scripts/wren/shuriken"         for ShurikenBehaviour
@@ -89,6 +93,16 @@ class FreeLookCamera is MonoBehaviour {
     _camera.addShaderPass("deferred_shader_opaque", deferred_shader_opaque, [], output_opaque)
 
     gameObject.name = "player"
+
+
+    // Add a spot light.
+    var light = _entity_camera.addComponent(Light)
+    light.type = LightTypes.Point
+
+    light.lightColour = Vec3.new(1.0, 1.0, 1.0)
+    light.lightIntensity = 1.0
+    light.depth = 1.0
+    light.size = 1.0
   }
 
   rotation { _rotation }
