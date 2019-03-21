@@ -207,28 +207,58 @@ namespace lambda
 
     void LightSystem::onRender()
     {
-      world_->getRenderer()->beginTimer("Lighting");
       foundation::SharedPointer<platform::IRenderer> renderer = world_->getRenderer();
+      renderer->beginTimer("Lighting");
       
       // Prepare the light buffer.
-      world_->getRenderer()->pushMarker("Clear Light Buffer");
+	  renderer->pushMarker("Clear Light Buffer");
       renderer->clearRenderTarget(
         world_->getPostProcessManager().getTarget(Name("light_map")).getTexture(),
         glm::vec4(0.0f)
       );
       world_->getRenderer()->popMarker();
 
-      for (LightData& data : data_)
-      {
+
+	  auto main_camera = camera_system_->getMainCamera();
+	  TransformComponent transform = transform_system_->getComponent(main_camera);
+	  const glm::mat4x4 view = glm::inverse(transform.getWorld());
+	  const glm::mat4x4 projection = glm::perspective(
+		  camera_system_->getFov(main_camera).asRad(),
+		  (float)world_->getWindow()->getSize().x / (float)world_->getWindow()->getSize().y,
+		  camera_system_->getNearPlane(main_camera).asMeter(),
+		  camera_system_->getFarPlane(main_camera).asMeter()
+	  );
+
+	  utilities::Frustum frustum;
+	  frustum.construct(projection, view);
+
+	  for (LightData& data : data_)
+	  {
+		  bool enabled = data.enabled;
+
+		  if (enabled)
+		  {
+            switch (data.type)
+		    {
+			case LightType::kPoint:
+			{
+			  glm::vec3 position = transform_system_->getWorldTranslation(data.entity);
+			  float radius = data.depth.back() * 2.0f;
+			  if (!frustum.ContainsSphere(position, radius))
+			    enabled = false;
+			}
+		    }
+		  }
+
         // Skip disabled lights.
-        if (data.enabled == false)
+        if (!enabled)
         {
           switch (data.type)
           {
-          case LightType::kDirectional: world_->getRenderer()->setMarker("Directional Light - Disabled"); break;
-          case LightType::kSpot:        world_->getRenderer()->setMarker("Spot Light - Disabled"); break;
-          case LightType::kPoint:       world_->getRenderer()->setMarker("Point Light - Disabled"); break;
-          case LightType::kCascade:     world_->getRenderer()->setMarker("Cascade Light - Disabled"); break;
+          case LightType::kDirectional: renderer->setMarker("Directional Light - Disabled"); break;
+          case LightType::kSpot:        renderer->setMarker("Spot Light - Disabled"); break;
+          case LightType::kPoint:       renderer->setMarker("Point Light - Disabled"); break;
+          case LightType::kCascade:     renderer->setMarker("Cascade Light - Disabled"); break;
           default:
             break;
           }
@@ -240,33 +270,33 @@ namespace lambda
         case LightType::kDirectional:
           if (shaders_directional_.shader_generate != nullptr && shaders_directional_.shader_publish != nullptr)
           {
-            world_->getRenderer()->pushMarker("Directional Light");
+            renderer->pushMarker("Directional Light");
             renderDirectional(data.entity);
-            world_->getRenderer()->popMarker();
+            renderer->popMarker();
           }
           break;
         case LightType::kSpot:
           if (shaders_spot_.shader_generate != nullptr && shaders_spot_.shader_publish != nullptr)
           {
-            world_->getRenderer()->pushMarker("Spot Light");
+            renderer->pushMarker("Spot Light");
             renderSpot(data.entity);
-            world_->getRenderer()->popMarker();
+			renderer->popMarker();
           }
           break;
         case LightType::kPoint:
           if (shaders_point_.shader_generate != nullptr && shaders_point_.shader_publish != nullptr)
           {
-            world_->getRenderer()->pushMarker("Point Light");
+            renderer->pushMarker("Point Light");
             renderPoint(data.entity);
-            world_->getRenderer()->popMarker();
+			renderer->popMarker();
           }
           break;
         case LightType::kCascade:
           if (shaders_cascade_.shader_generate != nullptr && shaders_cascade_.shader_publish != nullptr)
           {
-            world_->getRenderer()->pushMarker("Cascade Light");
+            renderer->pushMarker("Cascade Light");
             renderCascade(data.entity);
-            world_->getRenderer()->popMarker();
+			renderer->popMarker();
           }
           break;
         default:
@@ -278,7 +308,7 @@ namespace lambda
       renderer->setRasterizerState(platform::RasterizerState::SolidFront());
       camera_system_->bindCamera(camera_system_->getMainCamera());
 
-      world_->getRenderer()->endTimer("Lighting");
+	  renderer->endTimer("Lighting");
     }
     void LightSystem::setColour(const entity::Entity& entity, const glm::vec3& colour)
     {
