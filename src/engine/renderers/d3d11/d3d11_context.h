@@ -251,14 +251,17 @@ namespace lambda
       void present();
 
     protected:
-      ID3D11RenderTargetView* getRenderTargetView(
+      ID3D11RenderTargetView* getRTV(
         asset::VioletTextureHandle texture, 
-        int idx = -1, 
+        int idx = -1,
+        int layer = 0,
         int mip_map = 0
       );
-      ID3D11DepthStencilView* getDepthStencilView(
+      ID3D11DepthStencilView* getDSV(
         asset::VioletTextureHandle texture, 
-        int idx = -1
+        int idx = -1,
+        int layer = 0,
+        int mip_map = 0
       );
 
     protected:

@@ -184,7 +184,7 @@ namespace lambda
       default_shadow_map_ = platform::RenderTarget(Name("__default_shadow_map__"),
         asset::TextureManager::getInstance()->create(
           Name("__default_shadow_map__"),
-          1u, 1u, 1u, TextureFormat::kR16G16B16A16
+          1u, 1u, 6u, TextureFormat::kR16G16B16A16
           , kTextureFlagIsRenderTarget // TODO (Hilze): Remove!
         )
       );
@@ -205,6 +205,7 @@ namespace lambda
       transform_system_.reset();
     }
 
+#pragma optimize("", off)
     void LightSystem::onRender()
     {
       foundation::SharedPointer<platform::IRenderer> renderer = world_->getRenderer();
@@ -337,44 +338,21 @@ namespace lambda
     void LightSystem::setShadowType(const entity::Entity& entity, const ShadowType& shadow_type)
     {
       lookUpData(entity).shadow_type = shadow_type;
+	  createShadowMaps(entity);
     }
     ShadowType LightSystem::getShadowType(const entity::Entity& entity) const
     {
       return lookUpData(entity).shadow_type;
     }
-    void LightSystem::setRenderTarget(const entity::Entity& entity, Vector<platform::RenderTarget> render_target)
-    {
-      auto& data = lookUpData(entity);
-      data.render_target = render_target;
-      static unsigned int idx = 0u;
-
-      data.depth_target.resize(data.render_target.size());
-      data.culler.resize(data.render_target.size());
-      data.view_position.resize(data.render_target.size(), glm::vec3(0.0f));
-      data.projection.resize(data.render_target.size(), glm::mat4x4(1.0f));
-      data.view.resize(data.render_target.size(), glm::mat4x4(1.0f));
-      data.depth.resize(data.render_target.size(), data.depth.back());
-
-      for (uint32_t i = 0u; i < (data.rsm ? 1u : data.render_target.size()); ++i)
-      {
-        Name name = Name("shadow_map_depth_" + toString(i) + "_" + toString(idx));
-        data.depth_target.at(i) = platform::RenderTarget(name,
-          asset::TextureManager::getInstance()->create(
-            name,
-            data.render_target.at(i).getTexture()->getLayer(0u).getWidth(),
-            data.render_target.at(i).getTexture()->getLayer(0u).getHeight(),
-            1u,
-            TextureFormat::kR24G8,
-            kTextureFlagIsRenderTarget // TODO (Hilze): Remove!
-          )
-        );
-      }
-      idx++;
-    }
-    Vector<platform::RenderTarget> LightSystem::getRenderTarget(const entity::Entity& entity) const
-    {
-      return lookUpData(entity).render_target;
-    }
+	void LightSystem::setShadowMapSizePx(const entity::Entity & entity, uint32_t shadow_map_size_px)
+	{
+		lookUpData(entity).shadow_map_size_px = shadow_map_size_px;
+		createShadowMaps(entity);
+	}
+	uint32_t LightSystem::getShadowMapSizePx(const entity::Entity & entity) const
+	{
+		return lookUpData(entity).shadow_map_size_px;
+	}
     void LightSystem::setCutOff(const entity::Entity& entity, const utilities::Angle& cut_off)
     {
       lookUpData(entity).cut_off = cut_off;
@@ -434,6 +412,7 @@ namespace lambda
     void LightSystem::setRSM(const entity::Entity& entity, bool rsm)
     {
       lookUpData(entity).rsm = rsm;
+	  createShadowMaps(entity);
     }
     bool LightSystem::getRSM(const entity::Entity& entity) const
     {
@@ -442,7 +421,8 @@ namespace lambda
     void LightSystem::setLightType(const entity::Entity& entity, LightType type)
     {
       lookUpData(entity).type = type;
-    }
+	  createShadowMaps(entity);
+	}
     LightType LightSystem::getLightType(const entity::Entity& entity) const
     {
       return lookUpData(entity).type;
@@ -459,6 +439,52 @@ namespace lambda
 			assert(data_.at(entity_to_data_.at(entity)).valid);
 			return data_.at(entity_to_data_.at(entity));
     }
+	void LightSystem::createShadowMaps(const entity::Entity& entity)
+	{
+      LightData& data = lookUpData(entity);
+
+	  for (platform::RenderTarget render_target : data.render_target)
+        asset::TextureManager::getInstance()->destroy(render_target.getTexture());
+      for (platform::RenderTarget depth_target : data.depth_target)
+        asset::TextureManager::getInstance()->destroy(depth_target.getTexture());
+		
+	  uint32_t size   = 1u; // TODO (Hilze): Do RSM stuff here.
+	  uint32_t layers = (data.type == LightType::kPoint) ? 6u : 1u;
+
+	  data.depth_target.resize(size * layers);
+	  data.render_target.resize(size * layers);
+      data.culler.resize(size * layers);
+      data.view_position.resize(size * layers, glm::vec3(0.0f));
+      data.projection.resize(size * layers, glm::mat4x4(1.0f));
+      data.view.resize(size * layers, glm::mat4x4(1.0f));
+      data.depth.resize(size * layers, data.depth.back());
+
+      for (uint32_t i = 0u; i < size; ++i)
+      {
+        Name depth_name = Name("shadow_map_depth_" + toString(i) + "_" + toString(entity));
+        Name color_name = Name("shadow_map_color_" + toString(i) + "_" + toString(entity));
+        data.render_target.at(i) = platform::RenderTarget(color_name,
+          asset::TextureManager::getInstance()->create(
+            color_name,
+            data.shadow_map_size_px,
+            data.shadow_map_size_px,
+            layers,
+            TextureFormat::kR32G32B32A32,
+            kTextureFlagIsRenderTarget
+          )
+        );
+		data.depth_target.at(i) = platform::RenderTarget(depth_name,
+          asset::TextureManager::getInstance()->create(
+            depth_name,
+            data.shadow_map_size_px,
+            data.shadow_map_size_px,
+            layers,
+            TextureFormat::kR24G8,
+            kTextureFlagIsRenderTarget
+          )
+        );
+      }
+	}
     void LightSystem::renderDirectional(const entity::Entity& entity)
     {
       foundation::SharedPointer<platform::IRenderer> renderer = world_->getRenderer();
@@ -634,10 +660,7 @@ namespace lambda
       const bool update = (data.shadow_type == ShadowType::kDynamic) ? (++data.dynamic_index >= data.dynamic_frequency) : (data.shadow_type != ShadowType::kGenerated);
 
       if (data.dynamic_index >= data.dynamic_frequency)
-      {
         data.dynamic_index = 0u;
-      }
-
 
       // Setup camera.
       if (update)
@@ -784,114 +807,120 @@ namespace lambda
       renderer->draw();
       renderer->setBlendState(platform::BlendState::Alpha());
     }
-    void LightSystem::renderPoint(const entity::Entity& entity)
+
+#pragma optimize ("", off)
+	void LightSystem::renderPoint(const entity::Entity& entity)
     {
       foundation::SharedPointer<platform::IRenderer> renderer = world_->getRenderer();
       LightData& data = lookUpData(entity);
       
       const TransformComponent transform = transform_system_->getComponent(entity);
-      const glm::vec3 forward = glm::normalize(transform.getWorldForward());
 
-      const platform::RenderTarget shadow_map = (data.render_target.empty()) ? default_shadow_map_ : data.render_target.at(0u);
+	  static const glm::vec3 g_forwards[6u] = {
+		  glm::vec3( 1.0f, 0.0f, 0.0f),
+		  glm::vec3(-1.0f, 0.0f, 0.0f),
+		  glm::vec3(0.0f,  1.0f, 0.0f),
+		  glm::vec3(0.0f, -1.0f, 0.0f),
+		  glm::vec3(0.0f, 0.0f,  1.0f),
+		  glm::vec3(0.0f, 0.0f, -1.0f)
+	  };
+
+      platform::RenderTarget shadow_map = (data.render_target.empty()) ? default_shadow_map_ : data.render_target.at(0u);
       const bool update = (data.shadow_type == ShadowType::kDynamic) ? (++data.dynamic_index >= data.dynamic_frequency) : (data.shadow_type != ShadowType::kGenerated);
 
       if (data.dynamic_index >= data.dynamic_frequency)
-      {
         data.dynamic_index = 0u;
-      }
-
 
       // Setup camera.
       if (update)
       {
-        // Set everything up.
-        glm::vec3 translation = transform.getWorldTranslation();
-        translation += -forward * (data.depth.back() * 0.5f);
+        for (uint32_t i = 0; i < 6; ++i)
+        {
+          // Set everything up.
+          glm::vec3 translation = transform.getWorldTranslation();
 
+		  auto view_size = data.view.size();
+		  auto view_position_size = data.view_position.size();
+		  auto projection_size = data.projection.size();
 
-        // Remove shimmering
-        float texels_per_unit = (float)shadow_map.getTexture()->getLayer(0u).getWidth() / data.size;
-        glm::vec3 scalar(texels_per_unit);
-
-        glm::vec3 base_look_at = -forward;
-
-        glm::mat4x4 look_at = glm::lookAtRH(glm::vec3(0.0f), base_look_at, glm::vec3(0.0f, 1.0f, 0.0f));
-        look_at *= glm::vec4(scalar, 1.0f);
-        glm::mat4x4 look_at_inv = glm::inverse(look_at);
-
-        translation = glm::vec3(glm::vec4(translation, 1.0f) * look_at);
-        translation.x = std::floorf(translation.x);
-        translation.y = std::floorf(translation.y);
-        translation = glm::vec3(glm::vec4(translation, 1.0f) * look_at_inv);
-
-        data.view.back()          = glm::lookAtRH(translation, translation + forward, glm::vec3(0.0f, 1.0f, 0.0f));
-        data.view_position.back() = translation;
-        data.projection.back()    = glm::orthoRH(-data.size * 0.5f, data.size * 0.5f, -data.size * 0.5f, data.size * 0.5f, -data.depth.back() * 0.5f, data.depth.back() * 0.5f);
+          data.view[i]          = glm::lookAtRH(translation, translation + g_forwards[i], glm::vec3(0.0f, 1.0f, 0.0f));
+          data.view_position[i] = translation;
+          data.projection[i]    = glm::perspectiveRH(1.5708f, 1.0f, 0.001f, data.depth[i]); // 1.5708f radians == 90 degrees.
+        }
       }
 
-      world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("light_view_projection_matrix"), data.projection.back() * data.view.back()));
       world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("light_camera_position"), data.view_position.back()));
-
+	  
       // Generate shadow maps.
       if (update && data.shadow_type != ShadowType::kNone)
       {
         if (data.shadow_type == ShadowType::kGenerateOnce)
-        {
           data.shadow_type = ShadowType::kGenerated;
-        }
 
         // Clear the shadow map.
-        const platform::RenderTarget depth_map = data.depth_target.at(0u);
+        platform::RenderTarget depth_map = data.depth_target.at(0u);
 
         renderer->clearRenderTarget(shadow_map.getTexture(), glm::vec4(0.0f));
         renderer->clearRenderTarget(depth_map.getTexture(), glm::vec4(1.0f));
 
-        // Render to the shadow map.
-        renderer->bindShaderPass(
-          platform::ShaderPass(
-            Name("shadow_generate"),
-            shaders_point_.shader_generate,
-            {},
-            { shadow_map, depth_map }
-          )
-        );
+		for (uint32_t i = 0; i < 6; ++i)
+		{
+          world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("light_view_projection_matrix"), data.projection[i] * data.view[i]));
+          
+		  // Render to the shadow map.
+		  shadow_map.setLayer(i);
+		  depth_map.setLayer(i);
+		  renderer->bindShaderPass(
+            platform::ShaderPass(
+              Name("shadow_generate"),
+              shaders_point_.shader_generate,
+              {},
+			  { shadow_map, depth_map }
+			)
+		  );
 
           
-        // Handle frustum culling.
-        if (data.shadow_type == ShadowType::kDynamic)
-        {
-          data.culler.back().setCullFrequency(std::max(1u, 10u / data.dynamic_frequency));
-        }
-        else
-        {
-          data.culler.back().setCullFrequency(1u);
-        }
+          // Handle frustum culling.
+		  if (data.shadow_type == ShadowType::kDynamic)
+            data.culler[i].setCullFrequency(std::max(1u, 10u / data.dynamic_frequency));
+		  else
+            data.culler[i].setCullFrequency(1u);
+		  utilities::Frustum frustum;
+		  frustum.construct(data.projection[i], data.view[i]);
 
-        utilities::Frustum frustum;
-        frustum.construct(data.projection.back(), data.view.back());
+		  // Render to the shadow map.
+		  mesh_render_system_->renderAll(data.culler[i], frustum);
 
-        // Render to the shadow map.
-        mesh_render_system_->renderAll(data.culler.back(), frustum);
+          // Set up the post processing passes.
+          renderer->setMesh(full_screen_mesh_);
+          renderer->setSubMesh(0u);
+		  renderer->setRasterizerState(platform::RasterizerState::SolidBack());
+          renderer->setBlendState(platform::BlendState::Alpha());
 
-        // Set up the post processing passes.
-        renderer->setMesh(full_screen_mesh_);
-        renderer->setSubMesh(0u);
-        renderer->setRasterizerState(platform::RasterizerState::SolidBack());
-        renderer->setBlendState(platform::BlendState::Alpha());
-
-        for (const asset::VioletShaderHandle& it : shaders_point_.shader_modify)
-        {
-          renderer->bindShaderPass(
-            platform::ShaderPass(
-              Name("shadow_modify"),
-              it,
-              { shadow_map },
-              { shadow_map }
-            )
-          );
-          renderer->draw();
-        }
+          for (const asset::VioletShaderHandle& it : shaders_point_.shader_modify)
+		  {
+            renderer->bindShaderPass(
+              platform::ShaderPass(
+                Name("shadow_modify"),
+                it,
+                { shadow_map },
+                { shadow_map }
+              )
+            );
+		    renderer->draw();
+          }
+		}
+		
+		shadow_map.setLayer(0);
+		depth_map.setLayer(0);
       }
+
+	  //world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("light_view_projection_matrix_00"), data.projection[0] * data.view[0]));
+	  //world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("light_view_projection_matrix_01"), data.projection[1] * data.view[1]));
+	  //world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("light_view_projection_matrix_02"), data.projection[2] * data.view[2]));
+	  //world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("light_view_projection_matrix_03"), data.projection[3] * data.view[3]));
+	  //world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("light_view_projection_matrix_04"), data.projection[4] * data.view[4]));
+	  //world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("light_view_projection_matrix_05"), data.projection[5] * data.view[5]));
 
       // Render lights to the light map.
       // Set up the post processing passes.
@@ -917,7 +946,7 @@ namespace lambda
       );
 
       // Required by: dir, point and spot.
-      world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("light_direction"), -forward));
+      world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("light_direction"),  glm::vec3(0.0f)));
       world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("light_colour"),     data.colour * data.intensity));
       world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("light_ambient"),    data.ambient));
       world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("light_far"),        data.depth.back()));
@@ -1235,14 +1264,14 @@ namespace lambda
     {
       return system_->getIntensity(entity_);
     }
-    void BaseLightComponent::setRenderTarget(Vector<platform::RenderTarget> render_target)
-    {
-      system_->setRenderTarget(entity_, render_target);
-    }
-    Vector<platform::RenderTarget> BaseLightComponent::getRenderTarget() const
-    {
-      return system_->getRenderTarget(entity_);
-    }
+	void BaseLightComponent::setShadowMapSizePx(uint32_t shadow_map_size_px)
+	{
+		system_->setShadowMapSizePx(entity_, shadow_map_size_px);
+	}
+	uint32_t BaseLightComponent::getShadowMapSizePx() const
+	{
+		return system_->getShadowMapSizePx(entity_);
+	}
     void BaseLightComponent::setTexture(asset::VioletTextureHandle texture)
     {
       system_->setTexture(entity_, texture);

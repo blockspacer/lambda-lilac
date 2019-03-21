@@ -86,7 +86,8 @@ namespace lambda
           for (uint32_t i = 0u; i < maps.size(); ++i)
             maps.at(i) = g_world->getPostProcessManager().getTarget(input_values.vec_string.at(i));
 
-          g_light_system->setRenderTarget((entity::Entity)id, maps);
+		  LMB_ASSERT(false, "Light::SetRenderTargets is not implemented!");
+          //g_light_system->setRenderTarget((entity::Entity)id, maps);
         }
         void SetTexture(const uint64_t& id, const uint64_t& texture_id)
         {

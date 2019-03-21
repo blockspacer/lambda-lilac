@@ -47,9 +47,9 @@ namespace lambda
       glm::vec3 getAmbient() const;
       void setIntensity(const float& intensity);
       float getIntensity() const;
-      void setRenderTarget(Vector<platform::RenderTarget> render_target);
-      Vector<platform::RenderTarget> getRenderTarget() const;
-      void setTexture(asset::VioletTextureHandle texture);
+	  void setShadowMapSizePx(uint32_t shadow_map_size_px);
+	  uint32_t getShadowMapSizePx() const;
+	  void setTexture(asset::VioletTextureHandle texture);
       asset::VioletTextureHandle getTexture() const;
       void setDepth(const float& depth);
       float getDepth() const;
@@ -108,8 +108,6 @@ namespace lambda
       glm::vec3 colour = glm::vec3(1.0f);
       glm::vec3 ambient = glm::vec3(0.0f);
       float intensity = 1.0f;
-      Vector<platform::RenderTarget> render_target;
-      Vector<platform::RenderTarget> depth_target;
       asset::VioletTextureHandle texture;
       Vector<utilities::Culler> culler;
       entity::Entity    entity;
@@ -119,13 +117,18 @@ namespace lambda
       bool enabled = true;
       bool rsm = false;
       uint8_t dynamic_frequency = 3u;
-      uint8_t dynamic_index = 255u;
-			bool valid = true;
+	  uint8_t dynamic_index = 255u;
+	  bool valid = true;
 
       Vector<float>       depth;
       Vector<glm::mat4x4> projection;
       Vector<glm::mat4x4> view;
       Vector<glm::vec3>   view_position;
+	  
+	  // Shadow maps.
+	  uint32_t shadow_map_size_px = 1024u;
+	  Vector<platform::RenderTarget> render_target;
+	  Vector<platform::RenderTarget> depth_target;
     };
 
     class LightSystem : public ISystem
@@ -176,8 +179,8 @@ namespace lambda
       float getIntensity(const entity::Entity& entity) const;
       void setShadowType(const entity::Entity& entity, const ShadowType& shadow_type);
       ShadowType getShadowType(const entity::Entity& entity) const;
-      void setRenderTarget(const entity::Entity& entity, Vector<platform::RenderTarget> render_target);
-      Vector<platform::RenderTarget> getRenderTarget(const entity::Entity& entity) const;
+      void setShadowMapSizePx(const entity::Entity& entity, uint32_t shadow_map_size_px);
+	  uint32_t getShadowMapSizePx(const entity::Entity& entity) const;
       void setCutOff(const entity::Entity& entity, const utilities::Angle& cut_off);
       utilities::Angle getCutOff(const entity::Entity& entity) const;
       void setOuterCutOff(const entity::Entity& entity, const utilities::Angle& outer_cut_off);
@@ -200,6 +203,7 @@ namespace lambda
     private:
       LightData& lookUpData(const entity::Entity& entity);
       const LightData& lookUpData(const entity::Entity& entity) const;
+	  void createShadowMaps(const entity::Entity& entity);
 
     private:
       void renderDirectional(const entity::Entity& entity);

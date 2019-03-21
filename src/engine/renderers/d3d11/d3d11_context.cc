@@ -427,7 +427,7 @@ namespace lambda
         D3D_FEATURE_LEVEL supported_level;
 
         UINT create_device_flags = 0;
-#ifdef NDEBUG
+#if VIOLET_DEBUG
         create_device_flags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
         D3D_DRIVER_TYPE driver_types[] = {
@@ -711,11 +711,11 @@ namespace lambda
       setSamplerState(platform::SamplerState::LinearClamp(),        7u);
       setSamplerState(platform::SamplerState::AnisotrophicClamp(),  8u);
       setSamplerState(platform::SamplerState::PointBorder(),        9u);
-			setSamplerState(platform::SamplerState::LinearBorder(),       10u);
-			setSamplerState(platform::SamplerState::AnisotrophicBorder(), 11u);
+	  setSamplerState(platform::SamplerState::LinearBorder(),       10u);
+	  setSamplerState(platform::SamplerState::AnisotrophicBorder(), 11u);
       setSamplerState(platform::SamplerState::PointWrap(),          12u);
-			setSamplerState(platform::SamplerState::LinearWrap(),         13u);
-			setSamplerState(platform::SamplerState::AnisotrophicWrap(),   14u);
+	  setSamplerState(platform::SamplerState::LinearWrap(),         13u);
+	  setSamplerState(platform::SamplerState::AnisotrophicWrap(),   14u);
       setRasterizerState(platform::RasterizerState::SolidBack());
       setBlendState(platform::BlendState::Default());
       setDepthStencilState(platform::DepthStencilState::Default());
@@ -981,7 +981,7 @@ namespace lambda
 			setViewports({ viewport });
 			setRasterizerState(platform::RasterizerState::SolidBack());
 			setBlendState(platform::BlendState::Default());
-			auto rtv = getRenderTargetView(dst);
+			auto rtv = getRTV(dst);
 			context_.context->OMSetRenderTargets(
 				1u,
 				&rtv,
@@ -1049,7 +1049,12 @@ namespace lambda
         else if (output.getTexture()->getLayer(0u).getFormat() == 
           TextureFormat::kR24G8)
         {
-          dsv = getDepthStencilView(output.getTexture());
+          dsv = getDSV(
+            output.getTexture(),
+            -1,
+            output.getLayer(),
+            output.getMipMap()
+		  );
         }
         else
         {
@@ -1063,9 +1068,10 @@ namespace lambda
             }
           }
 
-          rtvs.push_back(getRenderTargetView(
+          rtvs.push_back(getRTV(
             output.getTexture(),
             -1,
+            output.getLayer(),
             output.getMipMap())
           );
 
@@ -1135,24 +1141,32 @@ namespace lambda
       
       if (texture->getLayer(0u).getFormat() == TextureFormat::kR24G8)
       {
-        for (int i = 0; i < 2; ++i)
-          context_.context->ClearDepthStencilView(
-            getDepthStencilView(texture, i),
-            D3D11_CLEAR_DEPTH /*| D3D11_CLEAR_STENCIL*/, 
-            1.0f, 
-            0
-          );
+		  for (int i = 0; i < 2; ++i)
+		  {
+			  for (int l = 0; l < (int)texture->getLayerCount(); ++l)
+			  {
+				  context_.context->ClearDepthStencilView(
+					  getDSV(texture, i, l, 0),
+					  D3D11_CLEAR_DEPTH /*| D3D11_CLEAR_STENCIL*/,
+					  1.0f,
+					  0
+				  );
+			  }
+		  }
       }
       else
       {
         float c[]{ colour.x, colour.y, colour.z, colour.w };
-        for (int i = 0; i < 2; ++i)
-        {
-          context_.context->ClearRenderTargetView(
-            getRenderTargetView(texture, i), 
-            c
-          );
-        }
+		for (int i = 0; i < 2; ++i)
+		{
+			for (int l = 0; l < (int)texture->getLayerCount(); ++l)
+			{
+				context_.context->ClearRenderTargetView(
+					getRTV(texture, i, l, 0),
+					c
+				);
+			}
+		}
       }
     }
     
@@ -1263,9 +1277,9 @@ namespace lambda
 		{
 			Vector<ID3D11RenderTargetView*> rtvs(render_targets.size());
 			for (uint32_t i = 0; i < render_targets.size(); ++i)
-				rtvs[i] = getRenderTargetView(render_targets[i]);
+				rtvs[i] = getRTV(render_targets[i]);
 
-			setRenderTargets(rtvs, getDepthStencilView(depth_buffer));
+			setRenderTargets(rtvs, getDSV(depth_buffer));
 		}
 
 		///////////////////////////////////////////////////////////////////////////
@@ -1466,32 +1480,35 @@ namespace lambda
     }
     
     ///////////////////////////////////////////////////////////////////////////
-    ID3D11RenderTargetView* D3D11Context::getRenderTargetView(
+    ID3D11RenderTargetView* D3D11Context::getRTV(
       asset::VioletTextureHandle texture, 
       int idx, 
+      int layer,
       int mip_map)
     {
-			if (!texture)
-				return nullptr;
+      if (!texture)
+        return nullptr;
 
       D3D11RenderTexture* tex = asset_manager_.getTexture(texture);
       if (idx == -1)
         idx = tex->getTexture()->pingPongIdx();
-      return tex->getTexture()->getRTV(idx, mip_map);
+      return tex->getTexture()->getRTV(idx, layer, mip_map);
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    ID3D11DepthStencilView* D3D11Context::getDepthStencilView(
-      asset::VioletTextureHandle texture, 
-      int idx)
+    ID3D11DepthStencilView* D3D11Context::getDSV(
+      asset::VioletTextureHandle texture,
+      int idx,
+      int layer,
+      int mip_map)
     {
-			if (!texture)
-				return nullptr;
+      if (!texture)
+        return nullptr;
 
       D3D11RenderTexture* tex = asset_manager_.getTexture(texture);
-      if(idx == -1)
+      if (idx == -1)
         idx = tex->getTexture()->pingPongIdx();
-      return tex->getTexture()->getDSV(idx);
+      return tex->getTexture()->getDSV(idx, layer, mip_map);
     }
 
     ///////////////////////////////////////////////////////////////////////////

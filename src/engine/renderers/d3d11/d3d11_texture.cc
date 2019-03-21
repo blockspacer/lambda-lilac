@@ -62,27 +62,26 @@ namespace lambda
       LMB_ASSERT(texture->getLayerCount() > 0,
         "D3D11 TEXTURE: No layers were added to this texture.");
       
-      texture_[0u] = texture_[1u] = nullptr;
-      srv_[0u] = srv_[1u] = nullptr;
-      dsv_[0u] = dsv_[1u] = nullptr;
+	  textures_[0u] = textures_[1u] = nullptr;
+	  srvs_[0u] = srvs_[1u] = nullptr;
 
       if (texture->getLayer(0u).getWidth() == 0u || 
         texture->getLayer(0u).getHeight() == 0u)
       {
-        //LMB_ASSERT(false, "D3D11 TEXTURE: Provided Width and/or Height was 0.");
+        LMB_ASSERT(false, "D3D11 TEXTURE: Provided Width and/or Height was 0.");
         return;
       }
 
       D3D11_TEXTURE2D_DESC desc{};
       Vector<D3D11_SUBRESOURCE_DATA> datas;
       
-      is_render_target = (texture->getLayer(0u).getFlags() & 
+      is_render_target_ = (texture->getLayer(0u).getFlags() & 
         kTextureFlagIsRenderTarget) ? true : false;
-			is_dynamic = ((texture->getLayer(0u).getFlags() &
-				kTextureFlagDynamicData) && !is_render_target) ? true : false;
-			bool from_dds = (texture->getLayer(0u).getFlags() & kTextureFlagFromDDS)
+	  is_dynamic_ = ((texture->getLayer(0u).getFlags() &
+				kTextureFlagDynamicData) && !is_render_target_) ? true : false;
+	  bool from_dds = (texture->getLayer(0u).getFlags() & kTextureFlagFromDDS)
 				? true : false;
-      UINT bind_flags    = is_render_target ? 
+      UINT bind_flags    = is_render_target_ ? 
         (format_ == DXGI_FORMAT_R24G8_TYPELESS ? D3D11_BIND_DEPTH_STENCIL : 
           D3D11_BIND_RENDER_TARGET) : 0u;
       bool contains_data = !texture->getLayer(0u).getData().empty() || from_dds;
@@ -94,17 +93,17 @@ namespace lambda
       desc.Format             = format_;
       desc.SampleDesc.Count   = 1u;
       desc.SampleDesc.Quality = 0u;
-      desc.Usage              = is_dynamic ? D3D11_USAGE_DYNAMIC :
-				(is_render_target || !contains_data) ?
-				D3D11_USAGE_DEFAULT : D3D11_USAGE_IMMUTABLE;
+      desc.Usage              = is_dynamic_ ? D3D11_USAGE_DYNAMIC :
+        (is_render_target_ || !contains_data) ?
+        D3D11_USAGE_DEFAULT : D3D11_USAGE_IMMUTABLE;
       desc.BindFlags          = D3D11_BIND_SHADER_RESOURCE | bind_flags;
-      desc.CPUAccessFlags     = is_dynamic ? D3D11_CPU_ACCESS_WRITE : 0u;
+      desc.CPUAccessFlags     = is_dynamic_ ? D3D11_CPU_ACCESS_WRITE : 0u;
       desc.MiscFlags          = 0u | 
         (desc.ArraySize == 6u ? D3D11_RESOURCE_MISC_TEXTURECUBE : 0u);
 
       datas.resize(contains_data ? desc.ArraySize * desc.MipLevels : 0u);
 
-			Vector<Vector<char>> dds_data(desc.ArraySize);
+	  Vector<Vector<char>> dds_data(desc.ArraySize);
 
       for (uint32_t layer = 0u; layer < desc.ArraySize && 
         contains_data; ++layer)
@@ -113,12 +112,12 @@ namespace lambda
         uint32_t h = texture->getLayer(layer).getHeight();
 
 
-				const char* data = texture->getLayer(layer).getData().data();
-				if (!data && from_dds)
-				{
-					dds_data[layer] = asset::TextureManager::getInstance()->getData(texture);
-					data = dds_data[layer].data();
-				}
+		const char* data = texture->getLayer(layer).getData().data();
+		if (!data && from_dds)
+		{
+          dds_data[layer] = asset::TextureManager::getInstance()->getData(texture);
+		  data = dds_data[layer].data();
+		}
 					
 
         uint32_t offset = 0u;
@@ -157,53 +156,29 @@ namespace lambda
       }
 
       // Create the textures.
-      for (unsigned char i = 0u; i < (is_render_target ? 2u : 1u); ++i)
+      for (unsigned char i = 0u; i < (is_render_target_ ? 2u : 1u); ++i)
       {
         HRESULT result = device->CreateTexture2D(
           &desc, 
           datas.data(), 
-          &texture_[i]
+          &textures_[i]
         );
 
         LMB_ASSERT(SUCCEEDED(result), 
           "D3D11 TEXTURE: Failed to create texture!");
       }
 
-      // SRV.
-      DXGI_FORMAT srv_format = format_;
-      if (format_ == DXGI_FORMAT_R24G8_TYPELESS)
-        srv_format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-
-      D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc{};
-      if (texture->getLayerCount() == 1)
-        srv_desc.ViewDimension = D3D_SRV_DIMENSION_TEXTURE2D;
-      else if ((desc.MiscFlags | D3D11_RESOURCE_MISC_TEXTURECUBE) != 0)
-        srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
-      else
-        srv_desc.ViewDimension = D3D_SRV_DIMENSION_TEXTURE2DARRAY;
-
-      srv_desc.Format                   = srv_format;
-      srv_desc.Texture2D.MipLevels      = desc.MipLevels;
-      srv_desc.Texture2DArray.MipLevels = desc.MipLevels;
-      srv_desc.Texture2DArray.ArraySize = texture->getLayerCount();
-
       // Create shader resource view.
-      for (unsigned char i = 0u; i < (is_render_target ? 2u : 1u); ++i)
-      {
-        HRESULT result = device->CreateShaderResourceView(
-          texture_[i], 
-          &srv_desc, 
-          &srv_[i]
-        );
-        LMB_ASSERT(SUCCEEDED(result), "D3D11 TEXTURE: Failed to create srv!");
-      }
+	  createSRVs(device, desc.ArraySize, desc.MipLevels);
 
-      if (is_render_target)
+	  layers_[0].resize(desc.ArraySize);
+	  layers_[1].resize(desc.ArraySize);
+      if (is_render_target_)
       {
         if (format_ == DXGI_FORMAT_R24G8_TYPELESS)
-          createDepthStencilView(device);
+          createDSVs(device, desc.ArraySize, desc.MipLevels);
         else
-          createRenderTargetView(device, desc.MipLevels);
+          createRTVs(device, desc.ArraySize, desc.MipLevels);
       }
     }
 
@@ -212,15 +187,18 @@ namespace lambda
     {
       for (uint32_t i = 0u; i < 2u; ++i)
       {
-        if (srv_[i] != nullptr)
-          srv_[i]->Release();
-        for (auto& rtv : rtv_[i])
-          if (rtv != nullptr)
-            rtv->Release();
-        if (dsv_[i] != nullptr)
-          dsv_[i]->Release();
-        if (texture_[i] != nullptr)
-          texture_[i]->Release();
+        if (srvs_[i] != nullptr)
+          srvs_[i]->Release();
+		for (auto& layer : layers_[i])
+		{
+			for (auto dsv : layer.dsvs)
+				dsv->Release();
+			for (auto rtv : layer.rtvs)
+				rtv->Release();
+		}
+		layers_[i].clear();
+        if (textures_[i] != nullptr)
+          textures_[i]->Release();
       }
     }
 
@@ -238,10 +216,10 @@ namespace lambda
 				if (layer.isDirty() && !(layer.getFlags() & kTextureFlagFromDDS))
 				{
 					D3D11_MAPPED_SUBRESOURCE mapped_resource;
-					HRESULT result = context->Map(texture_[0], i, D3D11_MAP_WRITE_DISCARD, 0, &mapped_resource);
+					HRESULT result = context->Map(textures_[0], i, D3D11_MAP_WRITE_DISCARD, 0, &mapped_resource);
 					LMB_ASSERT(SUCCEEDED(result), "D3D11 TEXTURE: Could not bind texture!");
 					memcpy(mapped_resource.pData, layer.getData().data(), mapped_resource.DepthPitch);
-					context->Unmap(texture_[0], i);
+					context->Unmap(textures_[0], i);
 
 					layer.clean();
 				}
@@ -251,7 +229,7 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     void D3D11Texture::bind(ID3D11DeviceContext* context, uint8_t slot)
     {
-      context->PSSetShaderResources(slot, 1u, &srv_[texture_index_]);
+      context->PSSetShaderResources(slot, 1u, &srvs_[texture_index_]);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -263,35 +241,39 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     ID3D11ShaderResourceView* D3D11Texture::getSRV() const
     {
-      return srv_[texture_index_];
+      return srvs_[texture_index_];
     }
 
     ///////////////////////////////////////////////////////////////////////////
     void D3D11Texture::generateMips(ID3D11DeviceContext* context) const
     {
-      context->GenerateMips(srv_[texture_index_]);
+      context->GenerateMips(srvs_[texture_index_]);
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    ID3D11DepthStencilView* D3D11Texture::getDSV(unsigned char idx) const
+    ID3D11DepthStencilView* D3D11Texture::getDSV(
+	  unsigned char idx,
+	  unsigned char layer,
+	  unsigned char mip_map) const
     {
-      LMB_ASSERT(dsv_[idx] != nullptr, "TODO (Hilze): Fill in");
-      return dsv_[idx];
+      LMB_ASSERT(layers_[idx].size() >= layer && layers_[idx][layer].dsvs.size() >= mip_map, "getDSV(Idx: %i, Layer: %i, MipMap: %i)", idx, layer, mip_map);
+      return layers_[idx][layer].dsvs[mip_map];
     }
 
     ///////////////////////////////////////////////////////////////////////////
     ID3D11RenderTargetView* D3D11Texture::getRTV(
-      unsigned char idx, 
+	  unsigned char idx,
+      unsigned char layer, 
       unsigned char mip_map) const
     {
-      LMB_ASSERT(rtv_[idx][mip_map] != nullptr, "TODO (Hilze): Fill in");
-      return rtv_[idx][mip_map];
+      LMB_ASSERT(layers_[idx].size() >= layer && layers_[idx][layer].rtvs.size() >= mip_map, "getRTV(Idx: %i, Layer: %i, MipMap: %i)", idx, layer, mip_map);
+      return layers_[idx][layer].rtvs[mip_map];
     }
 
     ///////////////////////////////////////////////////////////////////////////
     void D3D11Texture::pingPong()
     {
-      LMB_ASSERT(srv_[1u] != nullptr, "TODO (Hilze): Fill in");
+      LMB_ASSERT(srvs_[1u] != nullptr, "Only one texture was created");
       texture_index_ = (texture_index_ == 0u) ? 1u : 0u;
     }
 
@@ -304,56 +286,112 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     const ID3D11Texture2D* D3D11Texture::getTexture(unsigned char idx) const
     {
-      LMB_ASSERT(srv_[idx] != nullptr, "TODO (Hilze): Fill in");
-      return texture_[idx];
+      LMB_ASSERT(srvs_[idx] != nullptr, "getTexture(%i) : Texture at index was nullptr", idx);
+      return textures_[idx];
     }
 
     ///////////////////////////////////////////////////////////////////////////
     ID3D11Texture2D* D3D11Texture::getTexture(unsigned char idx)
     {
-      LMB_ASSERT(srv_[idx] != nullptr, "TODO (Hilze): Fill in");
-      return texture_[idx];
+      LMB_ASSERT(srvs_[idx] != nullptr, "getTexture(%i) : Texture at index was nullptr", idx);
+      return textures_[idx];
     }
 
+	///////////////////////////////////////////////////////////////////////////
+	void D3D11Texture::createSRVs(
+      ID3D11Device* device,
+      unsigned char layer_count,
+      unsigned char mip_count)
+	{
+		
+      // SRV.
+      DXGI_FORMAT format = format_;
+      if (format_ == DXGI_FORMAT_R24G8_TYPELESS)
+        format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+
+      D3D11_SHADER_RESOURCE_VIEW_DESC desc{};
+      if (layer_count == 1)
+        desc.ViewDimension = D3D_SRV_DIMENSION_TEXTURE2D;
+      else if (layer_count == 6)
+        desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
+      else
+        desc.ViewDimension = D3D_SRV_DIMENSION_TEXTURE2DARRAY;
+
+	  desc.Format                   = format;
+	  desc.Texture2D.MipLevels      = mip_count;
+	  desc.Texture2DArray.MipLevels = mip_count;
+	  desc.Texture2DArray.ArraySize = layer_count;
+
+	  for (unsigned char i = 0u; i < (is_render_target_ ? 2u : 1u); ++i)
+	  {
+		  HRESULT result = device->CreateShaderResourceView(
+			  textures_[i],
+			  &desc,
+			  &srvs_[i]
+		  );
+		  LMB_ASSERT(SUCCEEDED(result), "D3D11 TEXTURE: Failed to create srv!");
+	  }
+	}
 
     ///////////////////////////////////////////////////////////////////////////
-    void D3D11Texture::createRenderTargetView(
-      ID3D11Device* device, 
+    void D3D11Texture::createRTVs(
+      ID3D11Device* device,
+      unsigned char layer_count,
       unsigned char mip_count)
     {
       D3D11_RENDER_TARGET_VIEW_DESC desc{};
       desc.Format        = format_;
-      desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
-      
-      for (unsigned char i = 0u; i < 2u; ++i)
-      {
-        rtv_[i].resize(mip_count);
-        for (unsigned char m = 0u; m < mip_count; ++m)
-        {
-          desc.Texture2D.MipSlice = m;
-          HRESULT result = device->CreateRenderTargetView(
-            texture_[i], 
-            &desc, 
-            &rtv_[i][m]
-          );
-          LMB_ASSERT(SUCCEEDED(result), 
-            "D3D11 TEXTURE: Failed to create rtv!");
-        }
+      desc.ViewDimension = layer_count == 1 ? D3D11_RTV_DIMENSION_TEXTURE2D : D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
+
+	  for (unsigned char i = 0u; i < (is_render_target_ ? 2u : 1u); ++i)
+	  {
+		  for (unsigned char l = 0u; l < layer_count; ++l)
+		  {
+			  layers_[i][l].rtvs.resize(mip_count);
+			  for (unsigned char m = 0u; m < mip_count; ++m)
+			  {
+				  desc.Texture2DArray.MipSlice = desc.Texture2D.MipSlice = m;
+				  desc.Texture2DArray.ArraySize = 1;
+				  desc.Texture2DArray.FirstArraySlice = l;
+				  HRESULT result = device->CreateRenderTargetView(
+					  textures_[i],
+					  &desc,
+					  &layers_[i][l].rtvs[m]
+				  );
+				  LMB_ASSERT(SUCCEEDED(result), "D3D11 TEXTURE: Failed to create rtv!");
+			  }
+		  }
       }
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    void D3D11Texture::createDepthStencilView(ID3D11Device* device)
+    void D3D11Texture::createDSVs(
+      ID3D11Device* device,
+      unsigned char layer_count,
+      unsigned char mip_count)
     {
       D3D11_DEPTH_STENCIL_VIEW_DESC desc{};
       desc.Format        = DXGI_FORMAT_D24_UNORM_S8_UINT;
-      desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-
-      for (unsigned char i = 0u; i < 2u; ++i)
-      {
-        HRESULT result = 
-          device->CreateDepthStencilView(texture_[i], &desc, &dsv_[i]);
-        LMB_ASSERT(SUCCEEDED(result), "D3D11 TEXTURE: Failed to create dsv!");
+      desc.ViewDimension = layer_count == 1 ? D3D11_DSV_DIMENSION_TEXTURE2D : D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
+	  
+	  for (unsigned char i = 0u; i < (is_render_target_ ? 2u : 1u); ++i)
+	  {
+		  for (unsigned char l = 0u; l < layer_count; ++l)
+		  {
+			  layers_[i][l].dsvs.resize(mip_count);
+			  for (unsigned char m = 0u; m < mip_count; ++m)
+			  {
+				  desc.Texture2DArray.MipSlice = desc.Texture2D.MipSlice = m;
+				  desc.Texture2DArray.ArraySize = 1;
+				  desc.Texture2DArray.FirstArraySlice = l;
+				  HRESULT result = device->CreateDepthStencilView(
+					  textures_[i],
+					  &desc,
+					  &layers_[i][l].dsvs[m]
+				  );
+				  LMB_ASSERT(SUCCEEDED(result), "D3D11 TEXTURE: Failed to create dsv!");
+			  }
+		  }
       }
     }
   }

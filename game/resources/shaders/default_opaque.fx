@@ -74,8 +74,8 @@ cbuffer cbPerMesh
 
 #if VIOLET_PARALLAX_MAPPING
 static const float height_scale = 0.03f;
-static const int maxLayers = 32;
-static const int minLayers = 8;
+static const int maxLayers = 8;
+static const int minLayers = 4;
 
 float2 parallaxMapping(float2 tex, float3 eye)
 {

@@ -178,16 +178,19 @@ namespace lambda
       : render_scale_(1.0f)
       , name_("back_buffer")
       , mip_map_(0)
+      , layer_(0)
       , is_back_buffer_(true)
       , from_texture_(false)
     {
     }
 
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     RenderTarget::RenderTarget(const RenderTarget& other)
       : render_scale_(other.render_scale_)
       , texture_(other.texture_)
       , name_(other.name_)
       , mip_map_(other.mip_map_)
+      , layer_(other.layer_)
       , is_back_buffer_(other.is_back_buffer_)
       , from_texture_(other.from_texture_)
     {
@@ -199,6 +202,7 @@ namespace lambda
       , texture_(asset::TextureManager::getInstance()->create(name, 1u, 1u, 1u, format, kTextureFlagIsRenderTarget | kTextureFlagResize | kTextureFlagClear | kTextureFlagDynamicScale /*// TODO (Hilze): Remove!*/))
       , name_(name)
       , mip_map_(0)
+      , layer_(0)
       , is_back_buffer_(false)
       , from_texture_(false)
     {
@@ -210,6 +214,7 @@ namespace lambda
       , texture_(texture)
       , name_(name)
       , mip_map_(0)
+      , layer_(0)
       , is_back_buffer_(false)
       , from_texture_(true)
     {
@@ -221,6 +226,7 @@ namespace lambda
       , texture_(texture)
       , name_(name)
       , mip_map_(0)
+      , layer_(0)
       , is_back_buffer_(false)
       , from_texture_(from_texture)
     {
@@ -273,13 +279,29 @@ namespace lambda
     {
       return from_texture_;
     }
-    int RenderTarget::getMipMap() const
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	int RenderTarget::getMipMap() const
     {
       return mip_map_;
     }
-    void RenderTarget::setMipMap(int mip_map)
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	void RenderTarget::setMipMap(int mip_map)
     {
       mip_map_ = mip_map;
     }
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	int RenderTarget::getLayer() const
+	{
+		return layer_;
+	}
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	void RenderTarget::setLayer(int layer)
+	{
+		layer_ = layer;
+	}
   }
 }

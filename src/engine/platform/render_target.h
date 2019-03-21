@@ -35,14 +35,17 @@ namespace lambda
       Name getName() const;
       float getRenderScale() const;
       bool fromTexture() const;
-      int getMipMap() const;
-      void setMipMap(int mip_map);
+	  int getMipMap() const;
+	  void setMipMap(int mip_map);
+	  int getLayer() const;
+	  void setLayer(int layer);
 
     private:
       float render_scale_;
       asset::VioletTextureHandle texture_;
       Name name_;
-      int mip_map_;
+	  int mip_map_;
+	  int layer_;
 
       // flags.
       bool is_back_buffer_;

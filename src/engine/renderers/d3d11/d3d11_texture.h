@@ -29,9 +29,14 @@ namespace lambda
       DXGI_FORMAT getFormat() const;
       ID3D11ShaderResourceView* getSRV() const;
       void generateMips(ID3D11DeviceContext* context) const;
-      ID3D11DepthStencilView* getDSV(unsigned char idx) const;
+      ID3D11DepthStencilView* getDSV(
+        unsigned char idx,
+        unsigned char layer,
+        unsigned char mip_map
+	  ) const;
       ID3D11RenderTargetView* getRTV(
-        unsigned char idx, 
+        unsigned char idx,
+        unsigned char layer,
         unsigned char mip_map
       ) const;
 
@@ -43,21 +48,36 @@ namespace lambda
       ID3D11Texture2D* getTexture(unsigned char idx);
     
     private:
-      void createRenderTargetView(
-        ID3D11Device* device, 
+	  void createSRVs(
+        ID3D11Device* device,
+        unsigned char layer_count,
         unsigned char mip_count
       );
-      void createDepthStencilView(ID3D11Device* device);
+      void createRTVs(
+        ID3D11Device* device,
+        unsigned char layer_count,
+        unsigned char mip_count
+      );
+	  void createDSVs(
+        ID3D11Device* device,
+        unsigned char layer_count,
+        unsigned char mip_count
+      );
 
     private:
+      struct Layer
+	  {
+		Vector<ID3D11DepthStencilView*> dsvs;
+		Vector<ID3D11RenderTargetView*> rtvs;
+	  };
       DXGI_FORMAT format_;
-      ID3D11Texture2D* texture_[2];
-      ID3D11ShaderResourceView* srv_[2];
-      ID3D11DepthStencilView* dsv_[2u];
-      Vector<ID3D11RenderTargetView*> rtv_[2u];
-      unsigned char texture_index_;
-			bool is_render_target;
-			bool is_dynamic;
+	  ID3D11ShaderResourceView* srvs_[2];
+	  ID3D11Texture2D* textures_[2];
+	  Vector<Layer> layers_[2];
+	  
+	  unsigned char texture_index_;
+	  bool is_render_target_;
+	  bool is_dynamic_;
     };
   }
 }

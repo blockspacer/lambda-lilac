@@ -3289,8 +3289,8 @@ foreign class Light {
     foreign lightIntensity=(intensity)
     foreign shadowType
     foreign shadowType=(shadowType)
-    foreign renderTargets
-    foreign renderTargets=(renderTargets)
+    foreign shadowMapSizePx
+    foreign shadowMapSizePx=(shadowMapSizePx)
     foreign depth
     foreign depth=(depth)
     foreign size
@@ -3504,30 +3504,11 @@ class ShadowTypes {
         if (strcmp(signature, "texture=(_)") == 0) return [](WrenVM* vm) {
           GetForeign<LightHandle>(vm)->handle.setTexture(*GetForeign<asset::VioletTextureHandle>(vm, 1));
         };
-        if (strcmp(signature, "renderTargets") == 0) return [](WrenVM* vm) {
-          
-          Vector<platform::RenderTarget> render_targets = GetForeign<LightHandle>(vm)->handle.getRenderTarget();
-          wrenSetSlotNewList(vm, 0);
-
-          for (uint32_t i = 0u; i < render_targets.size(); ++i)
-          {
-            String str = render_targets[i].getName().getName();
-            const char* c_str = (const char*)WREN_ALLOC(str.size() + 1u);
-            memcpy((void*)c_str, str.data(), str.size() + 1u);
-            wrenSetSlotString(vm, 1, c_str);
-            wrenInsertInList(vm, 0, -1, 1);
-          }
+        if (strcmp(signature, "shadowMapSizePx") == 0) return [](WrenVM* vm) {
+          wrenSetSlotDouble(vm, 0, (double)GetForeign<LightHandle>(vm)->handle.getShadowMapSizePx());
         };
-        if (strcmp(signature, "renderTargets=(_)") == 0) return [](WrenVM* vm) {
-          Vector<platform::RenderTarget> render_targets(wrenGetListCount(vm, 1));
-
-          for (uint32_t i = 0u; i < render_targets.size(); ++i)
-          {
-            wrenGetListElement(vm, 1, i, 2);
-            render_targets[i] = g_world->getPostProcessManager().getTarget(Name(wrenGetSlotString(vm, 2)));
-          }
-
-          GetForeign<LightHandle>(vm)->handle.setRenderTarget(render_targets);
+        if (strcmp(signature, "shadowMapSizePx=(_)") == 0) return [](WrenVM* vm) {
+          GetForeign<LightHandle>(vm)->handle.setShadowMapSizePx((uint32_t)wrenGetSlotDouble(vm, 1));
         };
         return nullptr;
       }
@@ -3897,7 +3878,7 @@ class PostProcess {
           String output = wrenGetSlotString(vm, 2);
 
           platform::RenderTarget& rt_input = g_world->getPostProcessManager().getTarget(input);
-					asset::VioletShaderHandle shader = asset::ShaderManager::getInstance()->get(Name("resources/shaders/hammerhead.fx"));
+		  asset::VioletShaderHandle shader = asset::ShaderManager::getInstance()->get(Name("resources/shaders/hammerhead.fx"));
 
           float as = (float)rt_input.getTexture()->getLayer(0u).getHeight() / (float)rt_input.getTexture()->getLayer(0u).getWidth();
           VioletTexture violet_texture;
@@ -3912,7 +3893,7 @@ class PostProcess {
 
           auto mesh = asset::AssetManager::getInstance().createAsset<asset::Mesh>(Name("__hammerhead_mesh__"),
             foundation::Memory::constructShared<asset::Mesh>(asset::Mesh::createScreenQuad())
-            );
+          );
           g_world->getRenderer()->setMesh(mesh);
           g_world->getRenderer()->setSubMesh(0u);
 

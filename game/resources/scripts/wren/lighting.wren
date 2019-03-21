@@ -39,11 +39,6 @@ class Lighting {
 
   createSun() {
     //--------------------SUN-FRONT--------------------
-    // Create all required things.
-    PostProcess.addRenderTarget("sun_front_rt1", 512.0  / 4.0, 512.0  / 4.0, TextureFormat.R32G32B32A32)
-    PostProcess.addRenderTarget("sun_front_rt2", 1024.0 / 4.0, 1024.0 / 4.0, TextureFormat.R32G32B32A32)
-    PostProcess.addRenderTarget("sun_front_rt3", 2048.0 / 4.0, 2048.0 / 4.0, TextureFormat.R32G32B32A32)
-    
     _sun_front = GameObject.new()
 
     // Add a cascaded light.
@@ -56,7 +51,7 @@ class Lighting {
     light_sun_front.lightIntensity = 7.0
     light_sun_front.shadowType = ShadowTypes.Dynamic
     light_sun_front.dynamicFrequency = 25.0
-    light_sun_front.renderTargets = [ "sun_front_rt1", "sun_front_rt2", "sun_front_rt3" ]
+    light_sun_front.shadowMapSizePx = 1024.0
 
     //--------------------SUN-BACK--------------------
 
@@ -79,9 +74,6 @@ class Lighting {
     //--------------------FLASH-LIGHT--------------------
 
     // Create all required things.
-    PostProcess.addRenderTarget("flash_light_rt", 512.0, 512.0, TextureFormat.R32G32B32A32)
-
-    // Create all required things.
     _flashlight = GameObject.new()
 
     // Add a spot light.
@@ -95,15 +87,13 @@ class Lighting {
     trans_flashlight.worldPosition = Vec3.new(7.0, 2.0, 0.0)
     
     //light_flashlight.MakeRSM()
-    light_flashlight.renderTargets = [ "rsm_shad", "rsm_posi", "rsm_norm", "rsm_flux" ]
+    light_flashlight.shadowMapSizePx = 512.0
     light_flashlight.lightColour = Vec3.new(1.0, 1.0, 1.0)
     light_flashlight.intensity = 20.0
     light_flashlight.depth = 100.0
     light_flashlight.innerCutOff = Math.deg2Rad * 30.0
     light_flashlight.outerCutOff = Math.deg2Rad * 50.0
     light_flashlight.shadowType = ShadowTypes.Dynamic
-    //light_flashlight.renderTargets = [ "flash_light_rt" ]
-    //light_flashlight.texture = Texture.load("resources/textures/flashlight.png")
     light_flashlight.enabled = false
 
 
@@ -121,11 +111,6 @@ class Lighting {
     var trans_rsm = _rsm.getComponent(Transform)
     trans_rsm.worldRotation = Math.lookRotation(Vec3.new(0.5, 1.0, 1.0).normalized, Vec3.new(0.0, 1.0, 0.0))
 
-    PostProcess.addRenderTarget("rsm_shad", size, size, TextureFormat.R16G16B16A16)
-    //PostProcess.addRenderTarget("rsm_posi", size, size, TextureFormat.R16G16B16A16)
-    //PostProcess.addRenderTarget("rsm_norm", size, size, TextureFormat.R8G8B8A8)
-    //PostProcess.addRenderTarget("rsm_flux", size, size, TextureFormat.R16G16B16A16)
-
     // Add a RSM light.
     var light_rsm = _rsm.addComponent(Light)
     light_rsm.type = LightTypes.Directional
@@ -134,8 +119,7 @@ class Lighting {
     light_rsm.lightColour = Vec3.new(1.0, 1.0, 1.0)
     light_rsm.lightIntensity = 7.0
     light_rsm.shadowType = ShadowTypes.Dynamic
-    //light_rsm.renderTargets = [ "rsm_shad", "rsm_posi", "rsm_norm", "rsm_flux" ]
-    light_rsm.renderTargets = [ "rsm_shad" ]
+    light_rsm.shadowMapSizePx = size
     light_rsm.depth = 75.0
     light_rsm.size = 50.0
     //light_rsm.enabled = false
