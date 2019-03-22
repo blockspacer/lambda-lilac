@@ -809,7 +809,6 @@ namespace lambda
       renderer->setBlendState(platform::BlendState::Alpha());
     }
 
-#pragma optimize ("", off)
 	void LightSystem::renderPoint(const entity::Entity& entity)
     {
       foundation::SharedPointer<platform::IRenderer> renderer = world_->getRenderer();
@@ -836,7 +835,7 @@ namespace lambda
 	  };
 
       platform::RenderTarget shadow_map = (data.render_target.empty()) ? default_shadow_map_ : data.render_target.at(0u);
-	  const bool update = true;// (data.shadow_type == ShadowType::kDynamic) ? (++data.dynamic_index >= data.dynamic_frequency) : (data.shadow_type != ShadowType::kGenerated);
+	  const bool update = (data.shadow_type == ShadowType::kDynamic) ? (++data.dynamic_index >= data.dynamic_frequency) : (data.shadow_type != ShadowType::kGenerated);
 
       if (data.dynamic_index >= data.dynamic_frequency)
         data.dynamic_index = 0u;
