@@ -100,8 +100,9 @@ class ItemManager is MonoBehaviour {
     light.lightColour = Vec3.new(0.0, 1.0, 0.25)
     light.lightIntensity = 20.0
     light.depth = 2.0
-    //light.shadowType = ShadowTypes.Dynamic
-    light.enabled = false
+    light.shadowType = ShadowTypes.Dynamic
+    light.shadowMapSizePx = 256.0
+    light.enabled = true
 
     _statics.add(c)
     _lights.add(light)

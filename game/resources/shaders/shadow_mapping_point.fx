@@ -2,6 +2,7 @@
 #include "pbr.fx"
 
 // TODO (Hilze): Remove ASAP!
+#define CAST_SHADOWS 1
 #include "vsm_publish.fx"
 
 struct VSOutput
@@ -31,48 +32,28 @@ cbuffer cbPostProcess
   float  light_far  = 10.0f;
 };
 
-Texture2D tex_shadow_map   : register(t0);
+TextureCube tex_shadow_map   : register(t0);
 Texture2D tex_overlay      : register(t1);
 Texture2D tex_position     : register(t2);
 Texture2D tex_normal       : register(t3);
 Texture2D tex_metallic_roughness : register(t4);
-
-#define LINEARIZE(n, f, d) (2.0f * f * n / (f + n - (f - n) * d))
-
-float linearizePerspective(float depth)
-{
-  return LINEARIZE(light_near, light_far, depth);
-}
-
-float2 linearizePerspective(float2 depth)
-{
-  return LINEARIZE(light_near, light_far, depth);
-}
-
-float3 linearizePerspective(float3 depth)
-{
-  return LINEARIZE(light_near, light_far, depth);
-}
 
 float4 PS(VSOutput pIn) : SV_TARGET0
 {
   float4 position = float4(Sample(tex_position, SamLinearClamp, pIn.tex).xyz, 1.0f);
 
 #ifdef CAST_SHADOWS
-  float4 trans_position = mul(light_view_projection_matrix, position);
-  trans_position.xyz /= trans_position.w;
-  float2 coords = trans_position.xy * float2(0.5f, -0.5f) + 0.5f;
-  float position_depth = linearizePerspective(trans_position.z * 0.5f + 0.5f);
+  float3 dir = position.xyz - light_camera_position;
+  float position_depth = length(dir);
+  dir = normalize(dir);
 
-  float4 overlay = tex_overlay.Sample(SamLinearClamp, coords);
+  float hide_shadows = when_gt(position_depth, light_far);
 
-  float hide_shadows = clamp(when_le(coords.x, 0.0f) + when_ge(coords.x, 1.0f) + when_le(coords.y, 0.0f) + when_ge(coords.y, 1.0f) + when_le(trans_position.z, 0.0f) + when_ge(trans_position.z, 1.0f), 0.0f, 1.0f);
-
-  float3 shadow_map_depth = linearizePerspective(tex_shadow_map.Sample(SamAnisotrophicClamp, coords).xyz);
+  float3 shadow_map_depth = tex_shadow_map.Sample(SamAnisotrophicClamp, dir).xyz;
 
   float cs = calcShadow(shadow_map_depth, position_depth, light_far);
 
-  float3 in_shadow = lerp(float3(cs, cs, cs) * (overlay.xyz * overlay.w), float3(1.0f, 1.0f, 1.0f), hide_shadows);
+  float3 in_shadow = lerp(float3(cs, cs, cs), float3(1.0f, 1.0f, 1.0f), hide_shadows);
 #else
   float in_shadow = 1.0f;
 #endif
@@ -86,7 +67,7 @@ float4 PS(VSOutput pIn) : SV_TARGET0
   float3 light = light_colour * in_shadow;
 
   float3 col;
-  
+
   col = PBRPoint(
     light_position, light_camera_position,
     position.xyz, normal, metallic, roughness,

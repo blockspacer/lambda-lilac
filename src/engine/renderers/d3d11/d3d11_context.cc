@@ -1046,8 +1046,8 @@ namespace lambda
             (LONG)default_.viewport.w 
           });
         }
-        else if (output.getTexture()->getLayer(0u).getFormat() == 
-          TextureFormat::kR24G8)
+        else if (output.getTexture()->getLayer(0u).getFormat() == TextureFormat::kR24G8 || 
+          output.getTexture()->getLayer(0u).getFormat() ==  TextureFormat::kD32)
         {
           dsv = getDSV(
             output.getTexture(),
@@ -1139,7 +1139,8 @@ namespace lambda
       if (!texture)
         return;
       
-      if (texture->getLayer(0u).getFormat() == TextureFormat::kR24G8)
+      if (texture->getLayer(0u).getFormat() == TextureFormat::kR24G8 ||
+		  texture->getLayer(0u).getFormat() == TextureFormat::kD32)
       {
 		  for (int i = 0; i < 2; ++i)
 		  {

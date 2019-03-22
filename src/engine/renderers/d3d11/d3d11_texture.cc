@@ -28,8 +28,10 @@ namespace lambda
         return DXGI_FORMAT::DXGI_FORMAT_R32G32_FLOAT;
       case TextureFormat::kR16:
         return DXGI_FORMAT::DXGI_FORMAT_R16_FLOAT;
-      case TextureFormat::kR32:
+	  case TextureFormat::kR32:
         return DXGI_FORMAT::DXGI_FORMAT_R32_FLOAT;
+	  case TextureFormat::kD32:
+		return DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS;
       case TextureFormat::kR24G8:
         return DXGI_FORMAT::DXGI_FORMAT_R24G8_TYPELESS;
       case TextureFormat::kBC1:
@@ -81,8 +83,9 @@ namespace lambda
 				kTextureFlagDynamicData) && !is_render_target_) ? true : false;
 	  bool from_dds = (texture->getLayer(0u).getFlags() & kTextureFlagFromDDS)
 				? true : false;
-      UINT bind_flags    = is_render_target_ ? 
-        (format_ == DXGI_FORMAT_R24G8_TYPELESS ? D3D11_BIND_DEPTH_STENCIL : 
+	  bool is_dsv = (format_ == DXGI_FORMAT_R24G8_TYPELESS || format_ == DXGI_FORMAT_R32_TYPELESS);
+	  UINT bind_flags    = is_render_target_ ? 
+        (is_dsv ? D3D11_BIND_DEPTH_STENCIL : 
           D3D11_BIND_RENDER_TARGET) : 0u;
       bool contains_data = !texture->getLayer(0u).getData().empty() || from_dds;
 
@@ -175,7 +178,7 @@ namespace lambda
 	  layers_[1].resize(desc.ArraySize);
       if (is_render_target_)
       {
-        if (format_ == DXGI_FORMAT_R24G8_TYPELESS)
+        if (is_dsv)
           createDSVs(device, desc.ArraySize, desc.MipLevels);
         else
           createRTVs(device, desc.ArraySize, desc.MipLevels);
@@ -250,6 +253,7 @@ namespace lambda
       context->GenerateMips(srvs_[texture_index_]);
     }
 
+#pragma optimize("", off)
     ///////////////////////////////////////////////////////////////////////////
     ID3D11DepthStencilView* D3D11Texture::getDSV(
 	  unsigned char idx,
@@ -308,6 +312,8 @@ namespace lambda
       DXGI_FORMAT format = format_;
       if (format_ == DXGI_FORMAT_R24G8_TYPELESS)
         format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+      if (format_ == DXGI_FORMAT_R32_TYPELESS)
+        format = DXGI_FORMAT_R32_FLOAT;
 
       D3D11_SHADER_RESOURCE_VIEW_DESC desc{};
       if (layer_count == 1)
@@ -371,7 +377,7 @@ namespace lambda
       unsigned char mip_count)
     {
       D3D11_DEPTH_STENCIL_VIEW_DESC desc{};
-      desc.Format        = DXGI_FORMAT_D24_UNORM_S8_UINT;
+      desc.Format        = format_ == DXGI_FORMAT_R24G8_TYPELESS ? DXGI_FORMAT_D24_UNORM_S8_UINT : DXGI_FORMAT_D32_FLOAT;
       desc.ViewDimension = layer_count == 1 ? D3D11_DSV_DIMENSION_TEXTURE2D : D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
 	  
 	  for (unsigned char i = 0u; i < (is_render_target_ ? 2u : 1u); ++i)

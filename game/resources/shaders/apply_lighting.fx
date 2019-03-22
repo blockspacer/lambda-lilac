@@ -103,5 +103,7 @@ float4 PS(VSOutput pIn) : SV_TARGET0
   //light   = 1.0f; // Get rid of light so we can debug the SH.
   //ambient = 0.0f;
 
+  return float4(light, 1.0f);
+
   return float4(pow(abs(albedo.rgb), 2.2f) * (light + ambient), albedo.a);
 }

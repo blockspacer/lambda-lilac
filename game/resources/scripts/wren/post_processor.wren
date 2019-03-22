@@ -96,7 +96,7 @@ class PostProcessor {
 
     // Set all lighting shaders.
     Graphics.setDirectionalShaders(generate, modify, Shader.load("resources/shaders/vsm_publish_directional.fx"))
-    Graphics.setPointLightShaders( generate, modify, Shader.load("resources/shaders/vsm_publish_point.fx"))
+    Graphics.setPointLightShaders( generate, [], Shader.load("resources/shaders/vsm_publish_point.fx"))
     Graphics.setSpotLightShaders(  generate, modify, Shader.load("resources/shaders/vsm_publish_spot.fx"))
     Graphics.setCascadeShaders(    generate, modify, Shader.load("resources/shaders/vsm_publish_cascade.fx"))
 

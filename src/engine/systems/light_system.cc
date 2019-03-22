@@ -9,6 +9,7 @@
 #include "platform/post_process_manager.h"
 #include "platform/rasterizer_state.h"
 #include "platform/blend_state.h"
+#include "platform/depth_stencil_state.h"
 #include "platform/sampler_state.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include "platform/shader_variable.h"
@@ -479,7 +480,7 @@ namespace lambda
             data.shadow_map_size_px,
             data.shadow_map_size_px,
             layers,
-            TextureFormat::kR24G8,
+            TextureFormat::kD32,
             kTextureFlagIsRenderTarget
           )
         );
@@ -821,12 +822,21 @@ namespace lambda
 		  glm::vec3(-1.0f, 0.0f, 0.0f),
 		  glm::vec3(0.0f,  1.0f, 0.0f),
 		  glm::vec3(0.0f, -1.0f, 0.0f),
+		  glm::vec3(0.0f, 0.0f, -1.0f),
 		  glm::vec3(0.0f, 0.0f,  1.0f),
-		  glm::vec3(0.0f, 0.0f, -1.0f)
+	  };
+
+	  static const glm::vec3 g_ups[6u] = {
+		  glm::vec3(0.0f, 1.0f,  0.0f),
+		  glm::vec3(0.0f, 1.0f,  0.0f),
+		  glm::vec3(0.0f, 0.0f,  1.0f),
+		  glm::vec3(0.0f, 0.0f, -1.0f),
+		  glm::vec3(0.0f, 1.0f,  0.0f),
+		  glm::vec3(0.0f, 1.0f,  0.0f),
 	  };
 
       platform::RenderTarget shadow_map = (data.render_target.empty()) ? default_shadow_map_ : data.render_target.at(0u);
-      const bool update = (data.shadow_type == ShadowType::kDynamic) ? (++data.dynamic_index >= data.dynamic_frequency) : (data.shadow_type != ShadowType::kGenerated);
+	  const bool update = true;// (data.shadow_type == ShadowType::kDynamic) ? (++data.dynamic_index >= data.dynamic_frequency) : (data.shadow_type != ShadowType::kGenerated);
 
       if (data.dynamic_index >= data.dynamic_frequency)
         data.dynamic_index = 0u;
@@ -843,10 +853,10 @@ namespace lambda
 		  auto view_position_size = data.view_position.size();
 		  auto projection_size = data.projection.size();
 
-          data.view[i]          = glm::lookAtRH(translation, translation + g_forwards[i], glm::vec3(0.0f, 1.0f, 0.0f));
-          data.view_position[i] = translation;
+          data.view[i]          = glm::scale(glm::lookAtRH(translation, translation + g_forwards[i], g_ups[i]), glm::vec3(-1.0f, 1.0f, 1.0f));
+		  data.view_position[i] = translation;
           data.projection[i]    = glm::perspectiveRH(1.5708f, 1.0f, 0.001f, data.depth[i]); // 1.5708f radians == 90 degrees.
-        }
+		}
       }
 
       world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("light_camera_position"), data.view_position.back()));
@@ -865,6 +875,8 @@ namespace lambda
 
 		for (uint32_t i = 0; i < 6; ++i)
 		{
+          renderer->pushMarker("Render Face " + toString(i));
+
           world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("light_view_projection_matrix"), data.projection[i] * data.view[i]));
           
 		  // Render to the shadow map.
@@ -895,7 +907,7 @@ namespace lambda
           renderer->setMesh(full_screen_mesh_);
           renderer->setSubMesh(0u);
 		  renderer->setRasterizerState(platform::RasterizerState::SolidBack());
-          renderer->setBlendState(platform::BlendState::Alpha());
+		  renderer->setBlendState(platform::BlendState::Alpha());
 
           for (const asset::VioletShaderHandle& it : shaders_point_.shader_modify)
 		  {
@@ -909,18 +921,13 @@ namespace lambda
             );
 		    renderer->draw();
           }
+
+		  renderer->popMarker();
 		}
 		
 		shadow_map.setLayer(0);
 		depth_map.setLayer(0);
       }
-
-	  //world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("light_view_projection_matrix_00"), data.projection[0] * data.view[0]));
-	  //world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("light_view_projection_matrix_01"), data.projection[1] * data.view[1]));
-	  //world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("light_view_projection_matrix_02"), data.projection[2] * data.view[2]));
-	  //world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("light_view_projection_matrix_03"), data.projection[3] * data.view[3]));
-	  //world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("light_view_projection_matrix_04"), data.projection[4] * data.view[4]));
-	  //world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("light_view_projection_matrix_05"), data.projection[5] * data.view[5]));
 
       // Render lights to the light map.
       // Set up the post processing passes.
