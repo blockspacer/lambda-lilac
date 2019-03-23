@@ -88,6 +88,7 @@ class ItemManager is MonoBehaviour {
     c.transform.worldEuler    = euler
 
     c.addComponent(MeshRender).attach(_meshes[2])
+    c.getComponent(MeshRender).makeStaticRecursive()
 
     var l = GameObject.new()
     l.transform.parent = c
@@ -98,11 +99,10 @@ class ItemManager is MonoBehaviour {
     light.type = LightTypes.Point
 
     light.lightColour = Vec3.new(0.0, 1.0, 0.25)
-    light.lightIntensity = 20.0
+    light.lightIntensity = 40.0
     light.depth = 2.0
-    light.shadowType = ShadowTypes.Dynamic
-    light.shadowMapSizePx = 256.0
-    light.enabled = true
+    light.shadowType = ShadowTypes.GenerateOnce
+    light.shadowMapSizePx = 128.0
 
     _statics.add(c)
     _lights.add(light)
@@ -153,7 +153,7 @@ class ItemManager is MonoBehaviour {
         Math.random(0.0, 0.25)
       )
       _light_last_distance = _light_new_distance
-      _light_new_distance = Math.random(2.0, 2.5)
+      _light_new_distance = Math.random(4.0, 5.0)
     }
 
     var d = _light_time / _light_switch

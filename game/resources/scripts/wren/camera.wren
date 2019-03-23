@@ -101,8 +101,7 @@ class FreeLookCamera is MonoBehaviour {
 
     light.lightColour = Vec3.new(1.0, 1.0, 1.0)
     light.lightIntensity = 1.0
-    light.depth = 1.0
-    light.size = 1.0
+    light.depth = 2.0
   }
 
   rotation { _rotation }

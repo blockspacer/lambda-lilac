@@ -1651,7 +1651,7 @@ namespace lambda
         textures_.insert(
           eastl::make_pair(
             texture.getHash(), 
-            RefType<D3D11RenderTexture>{ d3d11_texture, 0u, 0.0f, false }
+            RefType<D3D11RenderTexture>{ d3d11_texture, 0u, 0.0f, texture->getKeepInMemory() }
           )
         );
         it = textures_.find(texture.getHash());

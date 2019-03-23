@@ -104,9 +104,9 @@ namespace lambda
 			virtual void collectGarbage() override;
 			void createRenderList(utilities::Culler& culler, const utilities::Frustum& frustum);
       void createSortedRenderList(utilities::LinkedNode* statics, utilities::LinkedNode* dynamics, Vector<utilities::Renderable*>& opaque, Vector<utilities::Renderable*>& alpha);
-      void renderAll(utilities::Culler& culler, const utilities::Frustum& frustum);
-      void renderAll(utilities::LinkedNode* statics, utilities::LinkedNode* dynamics);
-      void renderAll(const Vector<utilities::Renderable*>& opaque, const Vector<utilities::Renderable*>& alpha);
+      void renderAll(utilities::Culler& culler, const utilities::Frustum& frustum, bool is_rh = true);
+      void renderAll(utilities::LinkedNode* statics, utilities::LinkedNode* dynamics, bool is_rh = true);
+      void renderAll(const Vector<utilities::Renderable*>& opaque, const Vector<utilities::Renderable*>& alpha, bool is_rh = true);
 
       static size_t systemId() { return (size_t)SystemIds::kMeshRenderSystem; };
       MeshRenderComponent addComponent(const entity::Entity& entity);

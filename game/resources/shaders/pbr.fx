@@ -61,7 +61,7 @@ float3 PBRPoint(float3 light_position, float3 camera_position,
   float distance = length(light_position - world_position);
 
   // Inv normalized squared.
-  pbr_data.attenuation = saturate(1.0f - (distance - radius) / radius);
+  pbr_data.attenuation = saturate(1.0f - distance / radius);
   pbr_data.attenuation *= pbr_data.attenuation;
 
   // Inv sqr distance.

@@ -402,23 +402,23 @@ namespace lambda
       }
     };
 
-    void MeshRenderSystem::renderAll(utilities::Culler& culler, const utilities::Frustum& frustum)
+    void MeshRenderSystem::renderAll(utilities::Culler& culler, const utilities::Frustum& frustum, bool is_rh)
     {
       createRenderList(culler, frustum);
 
       utilities::LinkedNode statics = culler.getStatics();
       utilities::LinkedNode dynamics = culler.getDynamics();
 
-      renderAll(&statics, &dynamics);
+      renderAll(&statics, &dynamics, is_rh);
     }
-    void MeshRenderSystem::renderAll(utilities::LinkedNode* statics, utilities::LinkedNode* dynamics)
+    void MeshRenderSystem::renderAll(utilities::LinkedNode* statics, utilities::LinkedNode* dynamics, bool is_rh)
     {
       Vector<utilities::Renderable*> opaque;
       Vector<utilities::Renderable*> alpha;
       createSortedRenderList(statics, dynamics, opaque, alpha);
-      renderAll(opaque, alpha);
+      renderAll(opaque, alpha, is_rh);
     }
-    void MeshRenderSystem::renderAll(const Vector<utilities::Renderable*>& opaque, const Vector<utilities::Renderable*>& alpha)
+    void MeshRenderSystem::renderAll(const Vector<utilities::Renderable*>& opaque, const Vector<utilities::Renderable*>& alpha, bool is_rh)
     {
       foundation::SharedPointer<platform::IRenderer> renderer = world_->getRenderer();
 
@@ -444,8 +444,11 @@ namespace lambda
         }
         else
         {
-          renderer->setRasterizerState(platform::RasterizerState::SolidFront());
-        }
+					if (is_rh)
+						renderer->setRasterizerState(platform::RasterizerState::SolidFront());
+					else
+						renderer->setRasterizerState(platform::RasterizerState::SolidBack());
+				}
 
         renderer->draw();
       }

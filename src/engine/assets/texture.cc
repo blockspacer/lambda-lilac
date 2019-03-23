@@ -177,18 +177,21 @@ namespace lambda
 
     ///////////////////////////////////////////////////////////////////////////
     Texture::Texture()
+			: keep_in_memory_(false)
     {
     }
     
     ///////////////////////////////////////////////////////////////////////////
-    Texture::Texture(const Texture& texture) :
-      layers_(texture.layers_)
-    {
+    Texture::Texture(const Texture& texture)
+			: layers_(texture.layers_)
+			, keep_in_memory_(texture.keep_in_memory_)
+		{
     }
     
     ///////////////////////////////////////////////////////////////////////////
     Texture::Texture(const VioletTexture& texture, uint32_t layer_count)
-    {
+			: keep_in_memory_(false)
+		{
       for (uint32_t i = 0u; i < layer_count; ++i)
         addLayer(texture);
     }
@@ -276,6 +279,18 @@ namespace lambda
       );
       return layers_[layer];
     }
+
+		///////////////////////////////////////////////////////////////////////////
+		bool Texture::getKeepInMemory() const
+		{
+			return keep_in_memory_;
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		void Texture::setKeepInMemory(bool keep_in_memory)
+		{
+			keep_in_memory_ = keep_in_memory;
+		}
 
 
 

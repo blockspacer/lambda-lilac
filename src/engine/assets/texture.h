@@ -58,9 +58,12 @@ namespace lambda
       uint32_t getLayerCount() const;
       const TextureLayer& getLayer(uint32_t layer) const;
       TextureLayer& getLayer(uint32_t layer);
+			bool getKeepInMemory() const;
+			void setKeepInMemory(bool keep_in_memory);
 
     private:
       Vector<TextureLayer> layers_;
+			bool keep_in_memory_;
     };
     using VioletTextureHandle = VioletHandle<Texture>;
 
