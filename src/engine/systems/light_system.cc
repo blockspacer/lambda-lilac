@@ -206,14 +206,13 @@ namespace lambda
       transform_system_.reset();
     }
 
-#pragma optimize("", off)
     void LightSystem::onRender()
     {
       foundation::SharedPointer<platform::IRenderer> renderer = world_->getRenderer();
       renderer->beginTimer("Lighting");
       
       // Prepare the light buffer.
-	  renderer->pushMarker("Clear Light Buffer");
+			renderer->pushMarker("Clear Light Buffer");
       renderer->clearRenderTarget(
         world_->getPostProcessManager().getTarget(Name("light_map")).getTexture(),
         glm::vec4(0.0f)
@@ -221,36 +220,36 @@ namespace lambda
       world_->getRenderer()->popMarker();
 
 
-	  auto main_camera = camera_system_->getMainCamera();
-	  TransformComponent transform = transform_system_->getComponent(main_camera);
-	  const glm::mat4x4 view = glm::inverse(transform.getWorld());
-	  const glm::mat4x4 projection = glm::perspective(
-		  camera_system_->getFov(main_camera).asRad(),
-		  (float)world_->getWindow()->getSize().x / (float)world_->getWindow()->getSize().y,
-		  camera_system_->getNearPlane(main_camera).asMeter(),
-		  camera_system_->getFarPlane(main_camera).asMeter()
-	  );
+			auto main_camera = camera_system_->getMainCamera();
+			TransformComponent transform = transform_system_->getComponent(main_camera);
+			const glm::mat4x4 view = glm::inverse(transform.getWorld());
+			const glm::mat4x4 projection = glm::perspective(
+				camera_system_->getFov(main_camera).asRad(),
+				(float)world_->getWindow()->getSize().x / (float)world_->getWindow()->getSize().y,
+				camera_system_->getNearPlane(main_camera).asMeter(),
+				camera_system_->getFarPlane(main_camera).asMeter()
+			);
 
-	  utilities::Frustum frustum;
-	  frustum.construct(projection, view);
+			utilities::Frustum frustum;
+			frustum.construct(projection, view);
 
-	  for (LightData& data : data_)
-	  {
-		  bool enabled = data.enabled;
-
-		  if (enabled)
-		  {
-            switch (data.type)
-		    {
-			case LightType::kPoint:
+			for (LightData& data : data_)
 			{
-			  glm::vec3 position = transform_system_->getWorldTranslation(data.entity);
-			  float radius = data.depth.back() * 2.0f;
-			  if (!frustum.ContainsSphere(position, radius))
-			    enabled = false;
-			}
-		    }
-		  }
+				bool enabled = data.enabled;
+
+				if (enabled)
+				{
+					switch (data.type)
+					{
+					case LightType::kPoint:
+					{
+						glm::vec3 position = transform_system_->getWorldTranslation(data.entity);
+						float radius = data.depth.back();
+						if (!frustum.ContainsSphere(position, radius))
+							enabled = false;
+					}
+					}
+				}
 
         // Skip disabled lights.
         if (!enabled)

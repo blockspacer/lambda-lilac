@@ -106,11 +106,11 @@ class World {
       GUI.executeJavaScript("updateDebug(%(Time.deltaTime));")
       
       // Update the RSM light.
-      var sin_y_rot = -Math.sin(Math.deg2Rad * _camera.getComponent(FreeLookCamera).rotation.y)
-      var cos_y_rot = -Math.cos(Math.deg2Rad * _camera.getComponent(FreeLookCamera).rotation.y)
-      var offset = Vec3.new(sin_y_rot, 0.0, cos_y_rot).normalized * 12.5
-      var transform = _lighting.rsm.getComponent(Transform)
-      transform.worldPosition = _camera.transform.worldPosition + offset
+      //var sin_y_rot = -Math.sin(Math.deg2Rad * _camera.getComponent(FreeLookCamera).rotation.y)
+      //var cos_y_rot = -Math.cos(Math.deg2Rad * _camera.getComponent(FreeLookCamera).rotation.y)
+      //var offset = Vec3.new(sin_y_rot, 0.0, cos_y_rot).normalized * 12.5
+      //var transform = _lighting.rsm.getComponent(Transform)
+      //transform.worldPosition = _camera.transform.worldPosition + offset
     }
 
     fixedUpdate() {
