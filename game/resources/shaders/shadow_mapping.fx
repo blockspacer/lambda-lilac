@@ -40,29 +40,6 @@ Texture2D tex_position     : register(t2);
 Texture2D tex_normal       : register(t3);
 Texture2D tex_metallic_roughness : register(t4);
 
-#define LINEARIZE(n, f, d) (2.0f * f * n / (f + n - (f - n) * d))
-
-float linearize(float depth, float type)
-{
-  float perspective = LINEARIZE(light_near, light_far, depth);
-  float ortho       = depth * light_far;
-  return lerp(ortho, perspective, when_neq(type, 0.0f));
-}
-
-float2 linearize(float2 depth, float type)
-{
-  float2 perspective = LINEARIZE(light_near, light_far, depth);
-  float2 ortho       = depth * light_far;
-  return lerp(ortho, perspective, when_neq(type, 0.0f));
-}
-
-float3 linearize(float3 depth, float type)
-{
-  float3 perspective = LINEARIZE(light_near, light_far, depth);
-  float3 ortho       = depth * light_far;
-  return lerp(ortho, perspective, when_neq(type, 0.0f));
-}
-
 float4 PS(VSOutput pIn) : SV_TARGET0
 {
   float4 position = float4(Sample(tex_position, SamLinearClamp, pIn.tex).xyz, 1.0f);
@@ -70,15 +47,15 @@ float4 PS(VSOutput pIn) : SV_TARGET0
   float4 trans_position = mul(light_view_projection_matrix, position);
   trans_position.xyz /= trans_position.w;
   float2 coords = trans_position.xy * float2(0.5f, -0.5f) + 0.5f;
-  float position_depth = linearize(trans_position.z * 0.5f + 0.5f, light_type);
+	float position_depth = trans_position.z;
 
   float4 overlay = tex_overlay.Sample(SamLinearClamp, coords);
 
   float hide_shadows = clamp(when_le(coords.x, 0.0f) + when_ge(coords.x, 1.0f) + when_le(coords.y, 0.0f) + when_ge(coords.y, 1.0f) + when_le(trans_position.z, 0.0f) + when_ge(trans_position.z, 1.0f), 0.0f, 1.0f);
 
-  float3 shadow_map_depth = linearize(tex_shadow_map.Sample(SamAnisotrophicClamp, coords).xyz, light_type);
+	float3 shadow_map_depth = tex_shadow_map.Sample(SamAnisotrophicClamp, coords).xyz;
 
-  float cs = calcShadow(shadow_map_depth, position_depth, light_far);
+  float cs = calcShadow(shadow_map_depth, position_depth);
 
   float3 in_shadow = lerp(float3(cs, cs, cs) * (overlay.xyz * overlay.w), float3(1.0f, 1.0f, 1.0f), hide_shadows);
 
