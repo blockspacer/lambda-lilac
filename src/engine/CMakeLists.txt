@@ -119,6 +119,10 @@ SET(NoRendererSources
   "renderers/no/no_renderer.h"
   "renderers/no/no_renderer.cc"
 )
+SET(VulkanRendererSources
+  "renderers/vulkan/vulkan_renderer.h"
+  "renderers/vulkan/vulkan_renderer.cc"
+)
 SET(MetalRendererSources
   "renderers/metal/metal_renderer.h"
   "renderers/metal/metal_renderer.cc"
@@ -334,6 +338,7 @@ SOURCE_GROUP("physics\\bullet" FILES ${PhysicsBulletSources})
 SOURCE_GROUP("physics\\react" FILES ${PhysicsReactSources})
 SOURCE_GROUP("platform" FILES ${PlatformSources})
 SOURCE_GROUP("renderers\\d3d11" FILES ${D3D11RendererSources})
+SOURCE_GROUP("renderers\\vulkan" FILES ${VulkanRendererSources})
 SOURCE_GROUP("renderers\\metal" FILES ${MetalRendererSources})
 SOURCE_GROUP("renderers\\no" FILES ${NoRendererSources})
 SOURCE_GROUP("scripting" FILES ${ScriptingSources})
@@ -372,6 +377,9 @@ SET(Sources
 # /// RENDERERS /////////////////////////////////////////////////
 IF(${VIOLET_RENDERER} STREQUAL "D3D11")
 	SET(Sources ${Sources} ${D3D11RendererSources})
+ENDIF()
+IF(${VIOLET_RENDERER} STREQUAL "Vulkan")
+	SET(Sources ${Sources} ${VulkanRendererSources})
 ENDIF()
 IF(${VIOLET_RENDERER} STREQUAL "Metal")
 	SET(Sources ${Sources} ${MetalRendererSources})
@@ -482,6 +490,19 @@ TARGET_INCLUDE_DIRECTORIES(lambda-engine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 IF(${VIOLET_RENDERER} STREQUAL "D3D11")
 	TARGET_LINK_LIBRARIES(lambda-engine PUBLIC dxgi.lib d3dcompiler.lib d3d11.lib)
 	TARGET_COMPILE_DEFINITIONS(lambda-engine PRIVATE VIOLET_RENDERER_D3D11)
+ENDIF()
+IF(${VIOLET_RENDERER} STREQUAL "Vulkan")
+	TARGET_COMPILE_DEFINITIONS(lambda-engine PRIVATE VIOLET_RENDERER_VULKAN)
+	TARGET_LINK_LIBRARIES(lambda-engine PUBLIC VEZ)
+  
+  IF(VIOLET_WIN32)
+  
+      #COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/V-EZ/Bin/x86_64/VEZ_Debug.dll ${CMAKE_BINARY_DIR}/bin/Debug/VEZ_Debug.dll
+      #COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/V-EZ/Bin/x86_64/VEZ_MinSizeRel.dll ${CMAKE_BINARY_DIR}/bin/MinSizeRel/VEZ_MinSizeRel.dll
+      #COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/V-EZ/Bin/x86_64/VEZ_Release.dll ${CMAKE_BINARY_DIR}/bin/Release/VEZ_Release.dll
+    #ADD_CUSTOM_COMMAND(TARGET lambda-engine POST_BUILD
+    #  COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/V-EZ/Bin/x86_64/VEZ_RelWithDebugInfo.dll ${CMAKE_BINARY_DIR}/bin/RelWithDebInfo/VEZ_RelWithDebugInfo.dll)
+  ENDIF()
 ENDIF()
 IF(${VIOLET_RENDERER} STREQUAL "Metal")
   TARGET_LINK_LIBRARIES(lambda-engine PUBLIC "-framework Metal -framework MetalKit -framework Cocoa -framework AudioToolbox -framework CoreFoundation -framework AppKit -framework QuartzCore")

@@ -79,6 +79,14 @@ function(LinkDependencies)
   # /// ENGINE ////////////////////////////////////////////////////
   # ///////////////////////////////////////////////////////////////
   IF(${VIOLET_CONFIG_ENGINE})
+  # /// V-EZ //////////////////////////////////////////////////////
+    IF(${VIOLET_RENDERER} STREQUAL "Vulkan")
+      #SET(VEZ_COMPILE_SAMPLES OFF CACHE BOOL "" FORCE)
+      ADD_SUBDIRECTORY("deps/V-EZ")
+      SetSolutionFolder("deps/renderer/vulkan" VEZ spirv-cross-core spirv-cross-glsl glslang OGLCompiler OSDependent SPIRV SPVRemapper)
+      TARGET_INCLUDE_DIRECTORIES(VEZ INTERFACE "deps/V-EZ/Source")
+    ENDIF()
+
   # /// ASSIMP ////////////////////////////////////////////////////
     IF(${VIOLET_ASSET_ASSIMP})
       SET(ASSIMP_BUILD_TESTS OFF CACHE BOOL "" FORCE)

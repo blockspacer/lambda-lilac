@@ -110,10 +110,10 @@ namespace lambda
         asset::VioletTextureHandle texture, 
         uint8_t slot = 0
       ) = 0;
-			virtual void setRenderTargets(
-				Vector<asset::VioletTextureHandle> render_targets,
-				asset::VioletTextureHandle depth_buffer
-			) = 0;
+	  virtual void setRenderTargets(
+        Vector<asset::VioletTextureHandle> render_targets,
+        asset::VioletTextureHandle depth_buffer
+	  ) = 0;
 
       virtual void pushMarker(const String& name) = 0;
       virtual void setMarker(const String& name) = 0;

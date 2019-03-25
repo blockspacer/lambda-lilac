@@ -65,6 +65,8 @@ void operator delete[](void* ptr, std::size_t sz)
 #include "renderers/d3d11/d3d11_renderer.h"
 #elif defined VIOLET_RENDERER_METAL
 #include "renderers/metal/metal_renderer.h"
+#elif defined VIOLET_RENDERER_VULKAN
+#include "renderers/vulkan/vulkan_renderer.h"
 #elif defined VIOLET_RENDERER_NO
 #include "renderers/no/no_renderer.h"
 #endif
@@ -428,7 +430,9 @@ int main(int argc, char** argv)
 #if defined VIOLET_RENDERER_D3D11
     foundation::SharedPointer<platform::IRenderer> renderer = foundation::Memory::constructShared<windows::D3D11Renderer>();
 #elif defined VIOLET_RENDERER_METAL
-    foundation::SharedPointer<platform::IRenderer> renderer = foundation::Memory::constructShared<osx::MetalRenderer>();
+	  foundation::SharedPointer<platform::IRenderer> renderer = foundation::Memory::constructShared<osx::MetalRenderer>();
+#elif defined VIOLET_RENDERER_VULKAN
+	  foundation::SharedPointer<platform::IRenderer> renderer = foundation::Memory::constructShared<linux::VulkanRenderer>();
 #elif defined VIOLET_RENDERER_NO
     foundation::SharedPointer<platform::IRenderer> renderer = foundation::Memory::constructShared<windows::NoRenderer>();
 #else
