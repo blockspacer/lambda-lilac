@@ -94,7 +94,7 @@ class ItemManager is MonoBehaviour {
     l.transform.parent = c
     l.transform.localPosition = Vec3.new(0.0, 2.5, -1.0)
 
-    // Add a spot light.
+    // Add a point light.
     var light = l.addComponent(Light)
     light.type = LightTypes.Point
 

@@ -462,8 +462,9 @@ namespace lambda
 
     for (uint32_t i = 0u; i < size; ++i)
     {
-      Name depth_name = Name("shadow_map_depth_" + toString(i) + "_" + toString(entity));
-      Name color_name = Name("shadow_map_color_" + toString(i) + "_" + toString(entity));
+		static int kIdx = 0;
+      Name depth_name = Name("shadow_map_depth_" + toString(kIdx));
+      Name color_name = Name("shadow_map_color_" + toString(kIdx++));
       data.render_target.at(i) = platform::RenderTarget(color_name,
         asset::TextureManager::getInstance()->create(
           color_name,
@@ -475,6 +476,7 @@ namespace lambda
         )
       );
 			data.render_target.at(i).getTexture()->setKeepInMemory(true);
+			world_->getRenderer()->clearRenderTarget(data.render_target.at(i).getTexture(), glm::vec4(FLT_MAX));
 			data.depth_target.at(i) = platform::RenderTarget(depth_name,
           asset::TextureManager::getInstance()->create(
             depth_name,
@@ -687,14 +689,14 @@ namespace lambda
         translation = glm::vec3(glm::vec4(translation, 1.0f) * look_at_inv);
 #endif
 
-        data.view.back()          = glm::lookAtRH(translation, translation - forward, glm::vec3(0.0f, 1.0f, 0.0f));
+        data.view.back()          = glm::lookAtRH(translation, translation + forward, glm::vec3(0.0f, 1.0f, 0.0f));
         data.view_position.back() = translation;
         data.projection.back()    = glm::perspectiveRH(data.outer_cut_off.asRad(), 1.0f, 0.001f, data.depth.back());
       }
 
       world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("light_view_projection_matrix"), data.projection.back() * data.view.back()));
       world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("light_camera_position"), data.view_position.back()));
-      world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("light_direction"), -forward));
+      world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("light_direction"), forward));
       world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("light_colour"), data.colour * data.intensity));
       world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("light_ambient"), data.ambient));
       world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("light_far"), data.depth.back()));

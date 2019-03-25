@@ -12,7 +12,7 @@ float linearStep(float min, float max, float val)
 //#define NVIDIA_METHOD
 //http://developer.download.nvidia.com/SDK/10.5/direct3d/Source/VarianceShadowMapping/Doc/VarianceShadowMapping.pdf
 
-float calcShadow(float3 moments, float compare, float light_far)
+float calcShadow(float3 moments, float compare)
 {
 #ifdef NVIDIA_METHOD
   float E_x2 = moments.y;

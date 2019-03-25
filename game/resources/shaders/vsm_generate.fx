@@ -13,10 +13,6 @@ struct VSOutput
   float2 tex       : TEX_COORD;
 };
 
-#if !defined(VIOLET_DIRECTIONAL) && !defined(VIOLET_POINT) && !defined(VIOLET_SPOT)
-#define VIOLET_DIRECTIONAL
-#endif
-
 cbuffer cbPerMesh
 {
   float4x4 model_matrix;
@@ -53,7 +49,9 @@ float4 PS(VSOutput pIn) : SV_Target0
   float4 position = pIn.hPosition;
   float depth = length(position - light_camera_position);
 #elif defined(VIOLET_DIRECTIONAL)
-  float depth = pIn.position.z * 0.5f + 0.5f;
+  float depth = pIn.position.z * light_far;
+#else
+  float depth = 0.0f;
 #endif
 
   float dx = ddx(depth);

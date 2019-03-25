@@ -1,2 +1,2 @@
-#include "vsm_publish.fx"
+#define RSM_ENABLED
 #include "shadow_mapping_spot.fx"

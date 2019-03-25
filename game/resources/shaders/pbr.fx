@@ -40,7 +40,6 @@ float3 PBRSpot(float3 light_position, float3 camera_position,
   float intensity = clamp((theta - oco) / epsilon, 0.0f, 1.0f);
   
   pbr_data.attenuation *= intensity;
-  pbr_data.attenuation = 1.0f;
 
   return PBR(pbr_data);
 }

@@ -1,4 +1,6 @@
 #include "common.fx"
+#include "pbr.fx"
+#include "vsm_publish.fx"
 
 Texture2D tex_shadow_map_01 : register(t0);
 Texture2D tex_shadow_map_02 : register(t1);
@@ -8,10 +10,6 @@ Texture2D tex_position      : register(t4);
 Texture2D tex_normal        : register(t5);
 Texture2D tex_metallic_roughness : register(t6);
 
-#include "pbr.fx"
-
-// TODO (Hilze): Remove ASAP!
-#include "vsm_publish.fx"
 
 struct VSOutput
 {
@@ -121,7 +119,7 @@ float4 PS(VSOutput pIn) : SV_TARGET0
 
   shadow_map_depth = linearizeOrtho(shadow_map_depth);
   
-  float cs = calcShadow(shadow_map_depth, position_depth, far.x);
+  float cs = calcShadow(shadow_map_depth, position_depth);
 
   float3 in_shadow = lerp(float3(cs, cs, cs) * (overlay.xyz * overlay.w), float3(1.0f, 1.0f, 1.0f), hide_shadows);
 

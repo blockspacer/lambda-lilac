@@ -1132,6 +1132,7 @@ namespace lambda
     }
     
     ///////////////////////////////////////////////////////////////////////////
+#pragma optimize("", off)
     void D3D11Context::clearRenderTarget(
       asset::VioletTextureHandle texture, 
       const glm::vec4& colour)

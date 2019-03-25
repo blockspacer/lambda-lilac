@@ -1,13 +1,8 @@
 #include "common.fx"
 #include "pbr.fx"
-
-// TODO (Hilze): Remove ASAP!
 #include "vsm_publish.fx"
-
-#ifdef RSM_ENABLED
 #define RSM_SPOT
 #include "rsm.fx"
-#endif
 
 struct VSOutput
 {
@@ -44,23 +39,6 @@ Texture2D tex_position     : register(t2);
 Texture2D tex_normal       : register(t3);
 Texture2D tex_metallic_roughness : register(t4);
 
-#define LINEARIZE(n, f, d) (2.0f * f * n / (f + n - (f - n) * d))
-
-float linearizePerspective(float depth)
-{
-  return LINEARIZE(light_near, light_far, depth);
-}
-
-float2 linearizePerspective(float2 depth)
-{
-  return LINEARIZE(light_near, light_far, depth);
-}
-
-float3 linearizePerspective(float3 depth)
-{
-  return LINEARIZE(light_near, light_far, depth);
-}
-
 float4 PS(VSOutput pIn) : SV_TARGET0
 {
   float4 position = float4(Sample(tex_position, SamLinearClamp, pIn.tex).xyz, 1.0f);
@@ -68,17 +46,18 @@ float4 PS(VSOutput pIn) : SV_TARGET0
   float4 trans_position = mul(light_view_projection_matrix, position);
   trans_position.xyz /= trans_position.w;
   float2 coords = trans_position.xy * float2(0.5f, -0.5f) + 0.5f;
-  float position_depth = linearizePerspective(trans_position.z * 0.5f + 0.5f);
+  float position_depth = length(position - light_camera_position);
 
   float4 overlay = tex_overlay.Sample(SamLinearClamp, coords);
 
   float hide_shadows = clamp(when_le(coords.x, 0.0f) + when_ge(coords.x, 1.0f) + when_le(coords.y, 0.0f) + when_ge(coords.y, 1.0f) + when_le(trans_position.z, 0.0f) + when_ge(trans_position.z, 1.0f), 0.0f, 1.0f);
 
-  if(hide_shadows) return 0.0f;
+  float3 shadow_map_depth = tex_shadow_map.Sample(SamAnisotrophicClamp, coords).xyz;
 
-  float3 shadow_map_depth = linearizePerspective(tex_shadow_map.Sample(SamAnisotrophicClamp, coords).xyz);
+  float cs = calcShadow(shadow_map_depth, position_depth);
 
-  float cs = calcShadow(shadow_map_depth, position_depth - 100.0f, light_far);
+  if (cs <= 0.0f || hide_shadows == 1.0f)
+    return 0.0f;
 
   float3 in_shadow = lerp(float3(cs, cs, cs) * (overlay.xyz * overlay.w), float3(1.0f, 1.0f, 1.0f), hide_shadows);
 
@@ -90,8 +69,6 @@ float4 PS(VSOutput pIn) : SV_TARGET0
 
   float3 light = light_colour * in_shadow;
 
-  return float4(light, 1.0f);
-
   float3 col = PBRSpot(
     light_position, light_camera_position,
     position.xyz, normal, metallic, roughness,
@@ -100,7 +77,7 @@ float4 PS(VSOutput pIn) : SV_TARGET0
   );
 
 #ifdef RSM_ENABLED
-  //col += RSM(coords, normal, position.xyz);
+  col += RSM(coords, normal, position.xyz);
 #endif  
 
   return float4(col, 1.0f);

@@ -1,8 +1,5 @@
 #include "common.fx"
 #include "pbr.fx"
-
-// TODO (Hilze): Remove ASAP!
-#define CAST_SHADOWS 1
 #include "vsm_publish.fx"
 
 struct VSOutput
@@ -42,23 +39,16 @@ float4 PS(VSOutput pIn) : SV_TARGET0
 {
   float4 position = float4(Sample(tex_position, SamLinearClamp, pIn.tex).xyz, 1.0f);
 
-#ifdef CAST_SHADOWS
   float3 dir = position.xyz - light_camera_position;
   float position_depth = length(dir);
   dir = normalize(dir);
 
   float3 shadow_map_depth = tex_shadow_map.Sample(SamAnisotrophicClamp, dir).xyz;
 
-  float cs = calcShadow(shadow_map_depth, position_depth, light_far);
+  float cs = calcShadow(shadow_map_depth, position_depth);
 
-  float light_factor = cs;
-
-  if (position_depth > light_far || light_factor <= 0.0f)
+  if (position_depth > light_far || cs <= 0.0f)
     return 0.0f;
-
-#else
-  float light_factor = 1.0f;
-#endif
 
   float3 normal = normalize(Sample(tex_normal, SamLinearClamp, pIn.tex).rgb * 2.0f - 1.0f);
 
@@ -66,7 +56,7 @@ float4 PS(VSOutput pIn) : SV_TARGET0
   float  metallic  = metallic_roughness.r;
   float  roughness = metallic_roughness.g;
 
-  float3 light = light_colour * light_factor;
+  float3 light = light_colour * cs;
 
   float3 col;
 

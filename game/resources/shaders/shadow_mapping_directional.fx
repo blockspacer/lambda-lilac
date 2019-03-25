@@ -1,19 +1,16 @@
 #include "common.fx"
+#include "pbr.fx"
+#include "vsm_publish.fx"
+
+#ifdef RSM_ENABLED
+#include "rsm.fx"
+#endif
 
 Texture2D tex_shadow_map   : register(t0);
 Texture2D tex_overlay      : register(t1);
 Texture2D tex_position     : register(t2);
 Texture2D tex_normal       : register(t3);
 Texture2D tex_metallic_roughness : register(t4);
-
-#include "pbr.fx"
-
-// TODO (Hilze): Remove ASAP!
-#include "vsm_publish.fx"
-
-#ifdef RSM_ENABLED
-#include "rsm.fx"
-#endif
 
 struct VSOutput
 {
@@ -40,21 +37,6 @@ cbuffer cbPostProcess
   float  light_far  = 10.0f;
 };
 
-float linearizeOrtho(float depth)
-{
-  return depth * light_far;
-}
-
-float2 linearizeOrtho(float2 depth)
-{
-  return depth * light_far;
-}
-
-float3 linearizeOrtho(float3 depth)
-{
-  return depth * light_far;
-}
-
 float4 PS(VSOutput pIn) : SV_TARGET0
 {
   float4 position = float4(Sample(tex_position, SamLinearClamp, pIn.tex).xyz, 1.0f);
@@ -62,15 +44,18 @@ float4 PS(VSOutput pIn) : SV_TARGET0
   float4 trans_position = mul(light_view_projection_matrix, position);
   trans_position.xyz /= trans_position.w;
   float2 coords = trans_position.xy * float2(0.5f, -0.5f) + 0.5f;
-  float position_depth = linearizeOrtho(trans_position.z * 0.5f + 0.5f);
+  float position_depth = trans_position.z * light_far;
 
   float4 overlay = tex_overlay.Sample(SamLinearClamp, coords);
 
   float hide_shadows = clamp(when_le(coords.x, 0.0f) + when_ge(coords.x, 1.0f) + when_le(coords.y, 0.0f) + when_ge(coords.y, 1.0f) + when_le(trans_position.z, 0.0f) + when_ge(trans_position.z, 1.0f), 0.0f, 1.0f);
 
-  float3 shadow_map_depth = linearizeOrtho(tex_shadow_map.Sample(SamAnisotrophicClamp, coords).xyz);
+  float3 shadow_map_depth = tex_shadow_map.Sample(SamAnisotrophicClamp, coords).xyz;
 
-  float cs = calcShadow(shadow_map_depth, position_depth, light_far);
+  float cs = calcShadow(shadow_map_depth, position_depth);
+
+  if (cs <= 0.0f || hide_shadows >= 1.0f)
+    return 0.0f;
 
   float3 in_shadow = lerp(float3(cs, cs, cs) * (overlay.xyz * overlay.w), float3(1.0f, 1.0f, 1.0f), hide_shadows);
 

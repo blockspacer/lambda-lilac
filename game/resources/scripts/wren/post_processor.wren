@@ -97,16 +97,16 @@ class PostProcessor {
     var modify = [ blur_x, blur_y ]
 
     // Set all lighting shaders.
-    Graphics.setDirectionalShaders(generate_d, modify, Shader.load("resources/shaders/vsm_publish_directional.fx"))
-    Graphics.setPointLightShaders( generate_p, modify, Shader.load("resources/shaders/vsm_publish_point.fx"))
-    Graphics.setSpotLightShaders(  generate_s, modify, Shader.load("resources/shaders/vsm_publish_spot.fx"))
-    Graphics.setCascadeShaders(    generate_d, modify, Shader.load("resources/shaders/vsm_publish_cascade.fx"))
+    Graphics.setDirectionalShaders(generate_d, modify, Shader.load("resources/shaders/shadow_mapping_directional.fx"))
+    Graphics.setPointLightShaders( generate_p, modify, Shader.load("resources/shaders/shadow_mapping_point.fx"))
+    Graphics.setSpotLightShaders(  generate_s, modify, Shader.load("resources/shaders/shadow_mapping_spot.fx"))
+    Graphics.setCascadeShaders(    generate_d, modify, Shader.load("resources/shaders/shadow_mapping_cascade.fx"))
 
     // Set RSM shaders.
     // I'm actually using Reflective Variance Shadow Maps.
     var rsm_generate = Shader.load("resources/shaders/rvsm_generate.fx")
-    Graphics.setDirectionalShadersRSM(rsm_generate, modify, Shader.load("resources/shaders/rvsm_publish_directional.fx"))
-    Graphics.setSpotLightShadersRSM(rsm_generate, modify, Shader.load("resources/shaders/rvsm_publish_spot.fx"))
+    Graphics.setDirectionalShadersRSM(rsm_generate, modify, Shader.load("resources/shaders/reflective_shadow_mapping_directional.fx"))
+    Graphics.setSpotLightShadersRSM(rsm_generate, modify, Shader.load("resources/shaders/reflective_shadow_mapping_spot.fx"))
   }
   applyLighting(enabled) {
     if (!enabled) return
