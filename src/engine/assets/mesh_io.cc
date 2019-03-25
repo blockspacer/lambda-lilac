@@ -641,6 +641,10 @@ namespace lambda
 			if (last_slash != String::npos)
 				base_path = base_path.substr(0, last_slash + 1);
 
+			{
+				loadWorld(path);
+			}
+
       // Erase the invalid accessors.
       eraseIf(memory.pos, -1);
       eraseIf(memory.nor, -1);

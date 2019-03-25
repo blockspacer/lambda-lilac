@@ -520,6 +520,16 @@ namespace lambda
 
       resize();
       setVSync(context_.vsync);
+
+      setSamplerState(platform::SamplerState::PointClamp(),         6u);
+      setSamplerState(platform::SamplerState::LinearClamp(),        7u);
+      setSamplerState(platform::SamplerState::AnisotrophicClamp(),  8u);
+      setSamplerState(platform::SamplerState::PointBorder(),        9u);
+	  setSamplerState(platform::SamplerState::LinearBorder(),       10u);
+	  setSamplerState(platform::SamplerState::AnisotrophicBorder(), 11u);
+      setSamplerState(platform::SamplerState::PointWrap(),          12u);
+	  setSamplerState(platform::SamplerState::LinearWrap(),         13u);
+	  setSamplerState(platform::SamplerState::AnisotrophicWrap(),   14u);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -707,15 +717,6 @@ namespace lambda
     {
       setMesh(full_screen_quad_.mesh);
       setSubMesh(0u);
-      setSamplerState(platform::SamplerState::PointClamp(),         6u);
-      setSamplerState(platform::SamplerState::LinearClamp(),        7u);
-      setSamplerState(platform::SamplerState::AnisotrophicClamp(),  8u);
-      setSamplerState(platform::SamplerState::PointBorder(),        9u);
-	  setSamplerState(platform::SamplerState::LinearBorder(),       10u);
-	  setSamplerState(platform::SamplerState::AnisotrophicBorder(), 11u);
-      setSamplerState(platform::SamplerState::PointWrap(),          12u);
-	  setSamplerState(platform::SamplerState::LinearWrap(),         13u);
-	  setSamplerState(platform::SamplerState::AnisotrophicWrap(),   14u);
       setRasterizerState(platform::RasterizerState::SolidBack());
       setBlendState(platform::BlendState::Default());
       setDepthStencilState(platform::DepthStencilState::Default());

@@ -98,7 +98,7 @@ class PostProcessor {
 
     // Set all lighting shaders.
     Graphics.setDirectionalShaders(generate_d, modify, Shader.load("resources/shaders/shadow_mapping_directional.fx"))
-    Graphics.setPointLightShaders( generate_p, modify, Shader.load("resources/shaders/shadow_mapping_point.fx"))
+    Graphics.setPointLightShaders( generate_p, [], Shader.load("resources/shaders/shadow_mapping_point.fx"))
     Graphics.setSpotLightShaders(  generate_s, modify, Shader.load("resources/shaders/shadow_mapping_spot.fx"))
     Graphics.setCascadeShaders(    generate_d, modify, Shader.load("resources/shaders/shadow_mapping_cascade.fx"))
 

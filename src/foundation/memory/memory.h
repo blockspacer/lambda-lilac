@@ -40,9 +40,9 @@ namespace lambda
     public:
       using DefaultAllocator = MallocAllocator;
 
-      static void* allocate(size_t size, size_t align, IAllocator* allocator = &default_allocator());
-      static void* allocate(size_t size, IAllocator* allocator = &default_allocator());
-      static void* reallocate(void* data, size_t size, IAllocator* allocator = &default_allocator());
+      static void* allocate(size_t size, size_t align, IAllocator* allocator = default_allocator());
+      static void* allocate(size_t size, IAllocator* allocator = default_allocator());
+      static void* reallocate(void* data, size_t size, IAllocator* allocator = default_allocator());
       static void deallocate(void* ptr);
       template <typename T, typename ... Args>
       static T* construct(Args&&... args);
@@ -62,7 +62,8 @@ namespace lambda
       static UniquePointer<T> constructUnique(Args&&... args);
       template <typename T, typename ... Args>
       static UniquePointer<T> constructUnique(IAllocator* alloc, Args&&... args);
-      static DefaultAllocator& default_allocator();
+	  static DefaultAllocator* default_allocator();
+	  static DefaultAllocator* new_allocator();
 
     protected:
       struct AllocationHeader
@@ -75,7 +76,6 @@ namespace lambda
     private:
       static const size_t kDefaultHeapSize_; 
       static const size_t kDefaultAlignment_; 
-      static DefaultAllocator default_allocator_;
     };
 
     //--------------------------------------------------------------------------

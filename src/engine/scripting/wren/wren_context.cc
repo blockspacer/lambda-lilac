@@ -119,7 +119,7 @@ namespace lambda
     {
       if (declaration.find("Game::") != String::npos)
       {
-        std::string decl = stlString(declaration).substr(strlen("Game::"));
+        String decl = declaration.substr(strlen("Game::"));
 
         if (declaration.find("Initialize") != String::npos)
           return executeFunction(world_.instance, world_.initialize, args);

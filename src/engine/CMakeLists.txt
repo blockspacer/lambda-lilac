@@ -370,61 +370,61 @@ SET(Sources
 # /// SOURCES ///////////////////////////////////////////////////
 # ///////////////////////////////////////////////////////////////
 # /// RENDERERS /////////////////////////////////////////////////
-IF(${VIOLET_RENDERER_D3D11})
+IF(${VIOLET_RENDERER} STREQUAL "D3D11")
 	SET(Sources ${Sources} ${D3D11RendererSources})
 ENDIF()
-IF(${VIOLET_RENDERER_METAL})
+IF(${VIOLET_RENDERER} STREQUAL "Metal")
 	SET(Sources ${Sources} ${MetalRendererSources})
 ENDIF()
-IF(${VIOLET_RENDERER_NO})
+IF(${VIOLET_RENDERER} STREQUAL "No")
 	SET(Sources ${Sources} ${NoRendererSources})
 ENDIF()
 
 # ///////////////////////////////////////////////////////////////
 # /// WINDOWS ///////////////////////////////////////////////////
-IF(${VIOLET_WINDOW_GLFW})
+IF(${VIOLET_WINDOW} STREQUAL "GLFW")
 	SET(Sources ${Sources} ${WindowGLFWSources})
 ENDIF()
-IF(${VIOLET_WINDOW_SDL2})
+IF(${VIOLET_WINDOW} STREQUAL "SDL2")
 	SET(Sources ${Sources} ${WindowSDL2Sources})
 ENDIF()
-IF(${VIOLET_WINDOW_WIN32})
+IF(${VIOLET_WINDOW} STREQUAL "Win32")
 	SET(Sources ${Sources} ${WindowWin32Sources})
 ENDIF()
 
 # ///////////////////////////////////////////////////////////////
 # /// SCRIPTING /////////////////////////////////////////////////
-IF(${VIOLET_SCRIPTING_ANGEL})
+IF(${VIOLET_SCRIPTING} STREQUAL "AngelScript")
 	SET(Sources ${Sources} ${AngelScriptSources} ${AngelScriptAddonsSources})
 ENDIF()
-IF(${VIOLET_SCRIPTING_WREN})
+IF(${VIOLET_SCRIPTING} STREQUAL "Wren")
 	SET(Sources ${Sources} ${WrenSources})
 ENDIF()
 
 # ///////////////////////////////////////////////////////////////
 # /// PHYSICS ///////////////////////////////////////////////////
-IF(${VIOLET_PHYSICS_BULLET})
+IF(${VIOLET_PHYSICS} STREQUAL "Bullet3")
 	SET(Sources ${Sources} ${PhysicsBulletSources})
 ENDIF()
-IF(${VIOLET_PHYSICS_REACT})
+IF(${VIOLET_PHYSICS} STREQUAL "React")
 	SET(Sources ${Sources} ${PhysicsReactSources})
 ENDIF()
 
 # ///////////////////////////////////////////////////////////////
 # /// IMGUI /////////////////////////////////////////////////////
-IF(${VIOLET_IMGUI_NUKLEAR})
+IF(${VIOLET_IMGUI} STREQUAL "Nuklear")
 	SET(Sources ${Sources} ${NuklearImGuiSources})
 ENDIF()
-IF(${VIOLET_IMGUI_DEAR})
+IF(${VIOLET_IMGUI} STREQUAL "Dear ImGUI")
 	SET(Sources ${Sources} ${DearImGuiSources})
 ENDIF()
-IF(${VIOLET_IMGUI_NO})
+IF(${VIOLET_IMGUI} STREQUAL "No")
 	SET(Sources ${Sources} ${NoImGuiSources})
 ENDIF()
 
 # ///////////////////////////////////////////////////////////////
 # /// GUI ///////////////////////////////////////////////////////
-IF(${VIOLET_GUI_ULTRALIGHT})
+IF(${VIOLET_GUI} STREQUAL "Ultralight")
 	SET(Sources ${Sources} ${UltralightGuiSources})
 ENDIF()
 
@@ -453,7 +453,7 @@ ENDIF()
 
 # ///////////////////////////////////////////////////////////////
 # /// GUI ///////////////////////////////////////////////////////
-IF(${VIOLET_GUI_ULTRALIGHT})
+IF(${VIOLET_GUI} STREQUAL "Ultralight")
   TARGET_LINK_LIBRARIES(lambda-engine PUBLIC ultralight)
 
   IF(VIOLET_WIN32)
@@ -479,73 +479,73 @@ TARGET_INCLUDE_DIRECTORIES(lambda-engine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 # /// LINK AND DEFINE ///////////////////////////////////////////
 # ///////////////////////////////////////////////////////////////
 # /// RENDERERS /////////////////////////////////////////////////
-IF(${VIOLET_RENDERER_D3D11})
+IF(${VIOLET_RENDERER} STREQUAL "D3D11")
 	TARGET_LINK_LIBRARIES(lambda-engine PUBLIC dxgi.lib d3dcompiler.lib d3d11.lib)
 	TARGET_COMPILE_DEFINITIONS(lambda-engine PRIVATE VIOLET_RENDERER_D3D11)
 ENDIF()
-IF(${VIOLET_RENDERER_METAL})
+IF(${VIOLET_RENDERER} STREQUAL "Metal")
   TARGET_LINK_LIBRARIES(lambda-engine PUBLIC "-framework Metal -framework MetalKit -framework Cocoa -framework AudioToolbox -framework CoreFoundation -framework AppKit -framework QuartzCore")
 	TARGET_COMPILE_DEFINITIONS(lambda-engine PRIVATE VIOLET_RENDERER_METAL)
 ENDIF()
-IF(${VIOLET_RENDERER_NO})
+IF(${VIOLET_RENDERER} STREQUAL "No")
 	TARGET_COMPILE_DEFINITIONS(lambda-engine PRIVATE VIOLET_RENDERER_NO)
 ENDIF()
 
 
 # ///////////////////////////////////////////////////////////////
 # /// WINDOWS ///////////////////////////////////////////////////
-IF(${VIOLET_WINDOW_GLFW})
+IF(${VIOLET_WINDOW} STREQUAL "GLFW")
 	TARGET_LINK_LIBRARIES(lambda-engine PUBLIC glfw)
 	TARGET_COMPILE_DEFINITIONS(lambda-engine PRIVATE VIOLET_WINDOW_GLFW)
 ENDIF()
-IF(${VIOLET_WINDOW_SDL2})
+IF(${VIOLET_WINDOW} STREQUAL "SDL2")
 	TARGET_LINK_LIBRARIES(lambda-engine PUBLIC sdl)
 	TARGET_COMPILE_DEFINITIONS(lambda-engine PRIVATE VIOLET_WINDOW_SDL2)
 ENDIF()
-IF(${VIOLET_WINDOW_WIN32})
+IF(${VIOLET_WINDOW} STREQUAL "Win32")
 	TARGET_COMPILE_DEFINITIONS(lambda-engine PRIVATE VIOLET_WINDOW_WIN32)
 ENDIF()
 
 # ///////////////////////////////////////////////////////////////
 # /// SCRIPTING /////////////////////////////////////////////////
-IF(${VIOLET_SCRIPTING_ANGEL})
+IF(${VIOLET_SCRIPTING} STREQUAL "AngelScript")
 	TARGET_LINK_LIBRARIES(lambda-engine PUBLIC angelscript)
 	TARGET_COMPILE_DEFINITIONS(lambda-engine PRIVATE VIOLET_SCRIPTING_ANGEL)
   TARGET_INCLUDE_DIRECTORIES(lambda-engine PUBLIC "../../deps/AngelScript/sdk/angelscript/include")
 ENDIF()
 
-IF(${VIOLET_SCRIPTING_WREN})
+IF(${VIOLET_SCRIPTING} STREQUAL "Wren")
 	TARGET_LINK_LIBRARIES(lambda-engine PUBLIC wren)
 	TARGET_COMPILE_DEFINITIONS(lambda-engine PRIVATE VIOLET_SCRIPTING_WREN)
 ENDIF()
 
 # ///////////////////////////////////////////////////////////////
 # /// IMGUI /////////////////////////////////////////////////////
-IF(${VIOLET_IMGUI_NUKLEAR})
+IF(${VIOLET_IMGUI} STREQUAL "Nuklear")
 	TARGET_LINK_LIBRARIES(lambda-engine PUBLIC nuklear-imgui)
 	TARGET_COMPILE_DEFINITIONS(lambda-engine PRIVATE VIOLET_IMGUI_NUKLEAR)
 ENDIF()
-IF(${VIOLET_IMGUI_DEAR})
+IF(${VIOLET_IMGUI} STREQUAL "Dear ImGUI")
   TARGET_LINK_LIBRARIES(lambda-engine PUBLIC dear-imgui)
 	TARGET_COMPILE_DEFINITIONS(lambda-engine PRIVATE VIOLET_IMGUI_DEAR)
 ENDIF()
-IF(${VIOLET_IMGUI_NO})
+IF(${VIOLET_IMGUI} STREQUAL "No")
 	TARGET_COMPILE_DEFINITIONS(lambda-engine PRIVATE VIOLET_IMGUI_NO)
 ENDIF()
 
 # ///////////////////////////////////////////////////////////////
 # /// GUI ///////////////////////////////////////////////////////
-IF(${VIOLET_GUI_ULTRALIGHT})
+IF(${VIOLET_GUI} STREQUAL "Ultralight")
   TARGET_COMPILE_DEFINITIONS(lambda-engine PRIVATE VIOLET_GUI_ULTRALIGHT)
 ENDIF()
 
 # ///////////////////////////////////////////////////////////////
 # /// PHYSICS ///////////////////////////////////////////////////
-IF(${VIOLET_PHYSICS_BULLET})
+IF(${VIOLET_PHYSICS} STREQUAL "Bullet3")
   TARGET_LINK_LIBRARIES(lambda-engine PUBLIC bullet)
   TARGET_COMPILE_DEFINITIONS(lambda-engine PRIVATE VIOLET_PHYSICS_BULLET)
 ENDIF()
-IF(${VIOLET_PHYSICS_REACT})
+IF(${VIOLET_PHYSICS} STREQUAL "React")
   TARGET_LINK_LIBRARIES(lambda-engine PUBLIC reactphysics3d)
   TARGET_COMPILE_DEFINITIONS(lambda-engine PRIVATE VIOLET_PHYSICS_REACT)
 ENDIF()

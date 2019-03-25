@@ -597,6 +597,7 @@
 			<p class="menu_BodySubName" style="padding: 0pt; margin: 0pt; width: 50pt; font-weight: bold;">FPS</p>
 			<p class="menu_BodySubName" id="dbg_ms" style="padding: 0pt; margin: 0pt; width: 50pt; text-align: right;">0</p>
 			<p class="menu_BodySubName" style="padding: 0pt; margin: 0pt; width: 50pt; font-weight: bold;">MS</p>
+			<p class="menu_BodySubName" id="dbg_mem" style="padding: 0pt; margin: 0pt; width: 50pt; text-align: right;">0</p>
 		</div>
 		<script>
 			var m = document.getElementsByClassName("menu");
@@ -659,6 +660,9 @@
 					g_time -= 1.0;
 					g_fps = 0;
 				}
+			}
+			function updateAllocatedMemory(memSize) {
+				document.getElementById("dbg_mem").innerHTML = memSize + "MB"
 			}
 		</script>
 	</body>

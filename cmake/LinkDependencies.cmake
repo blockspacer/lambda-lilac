@@ -93,7 +93,7 @@ function(LinkDependencies)
     ENDIF()
     
   # /// ULTRALIGHT ////////////////////////////////////////////////
-    IF (${VIOLET_GUI_ULTRALIGHT})
+    IF (${VIOLET_GUI} STREQUAL "Ultralight")
       ADD_LIBRARY(ultralight INTERFACE)
       TARGET_INCLUDE_DIRECTORIES(ultralight INTERFACE "deps/ultralight/include")
       TARGET_INCLUDE_DIRECTORIES(ultralight INTERFACE "deps/ultralight/deps")
@@ -111,7 +111,7 @@ function(LinkDependencies)
     ENDIF()
 
   # /// BULLET 3 //////////////////////////////////////////////////
-    IF(${VIOLET_PHYSICS_BULLET})
+    IF(${VIOLET_PHYSICS} STREQUAL "Bullet3")
       SET(USE_GLUT OFF CACHE BOOL "" FORCE)
       SET(USE_GRAPHICAL_BENCHMARK OFF CACHE BOOL "" FORCE)
       SET(INSTALL_CMAKE_FILES OFF CACHE BOOL "" FORCE)
@@ -130,7 +130,7 @@ function(LinkDependencies)
       SetSolutionFolder("deps/physics"    Bullet2FileLoader Bullet3Collision Bullet3Common Bullet3Dynamics Bullet3Geometry Bullet3OpenCL_clew BulletCollision BulletDynamics BulletInverseDynamics BulletSoftBody LinearMath)
     ENDIF()
 
-    IF(${VIOLET_PHYSICS_REACT})
+    IF(${VIOLET_PHYSICS} STREQUAL "React")
       ADD_SUBDIRECTORY("deps/reactphysics3d")
       TARGET_INCLUDE_DIRECTORIES(reactphysics3d INTERFACE "deps/reactphysics3d/src")
       SetSolutionFolder("deps/physics" reactphysics3d)
@@ -191,14 +191,14 @@ function(LinkDependencies)
     TARGET_INCLUDE_DIRECTORIES(tiny-gltf INTERFACE "deps/tinygltf")
 
   # /// ANGEL SCRIPT //////////////////////////////////////////////
-    IF(${VIOLET_SCRIPTING_ANGEL})
+    IF(${VIOLET_SCRIPTING} STREQUAL "AngelScript")
       ADD_SUBDIRECTORY("deps/AngelScript/sdk/angelscript/projects/cmake")
       # TARGET_INCLUDE_DIRECTORIES(angelscript PUBLIC "deps/AngelScript/sdk/angelscript/include")
       SetSolutionFolder("deps/scripting"  angelscript)
     ENDIF()
 
   # /// WREN SCRIPT ///////////////////////////////////////////////
-    IF(${VIOLET_SCRIPTING_WREN})
+    IF(${VIOLET_SCRIPTING} STREQUAL "Wren")
       include(LinkWren)
       LinkWren()
       SetSolutionFolder("deps/scripting"  wren)
@@ -206,7 +206,7 @@ function(LinkDependencies)
     ENDIF()
 
   # /// NUKLEAR IMGUI /////////////////////////////////////////////
-    IF(${VIOLET_IMGUI_NUKLEAR})
+    IF(${VIOLET_IMGUI} STREQUAL "Nuklear")
       FILE(GLOB FILES "deps/nuklear/src/*.*")
       ADD_LIBRARY("nuklear-imgui" ${FILES})
       TARGET_INCLUDE_DIRECTORIES(nuklear-imgui INTERFACE "deps/nuklear")
@@ -216,7 +216,7 @@ function(LinkDependencies)
     ENDIF()
 
   # /// DEAR IMGUI ////////////////////////////////////////////////
-    IF(${VIOLET_IMGUI_DEAR})
+    IF(${VIOLET_IMGUI} STREQUAL "Dear ImGUI")
       SET(DearImGuiSources             "deps/imgui/imconfig.h"
         "deps/imgui/imgui.h"           "deps/imgui/imgui.cpp"
         "deps/imgui/imgui_draw.cpp"    "deps/imgui/imgui_demo.cpp"
@@ -228,7 +228,7 @@ function(LinkDependencies)
     ENDIF()
 
   # /// GLFW //////////////////////////////////////////////////////
-    IF(${VIOLET_WINDOW_GLFW})
+    IF(${VIOLET_WINDOW} STREQUAL "GLFW")
       SET(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
       SET(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
       SET(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
@@ -239,7 +239,7 @@ function(LinkDependencies)
     ENDIF()
 
   # /// SDL2 //////////////////////////////////////////////////////
-    IF(${VIOLET_WINDOW_SDL2})
+    IF(${VIOLET_WINDOW} STREQUAL "SDL2")
       #[[SET(3DNOW OFF CACHE BOOL "" FORCE)
       SET(ALTIVEC OFF CACHE BOOL "" FORCE)
       SET(ASSEMBLY OFF CACHE BOOL "" FORCE)

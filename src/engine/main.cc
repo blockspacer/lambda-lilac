@@ -1,5 +1,46 @@
-#include "assets/shader.h"
 #include <memory/memory.h>
+void* operator new  (std::size_t count)
+{
+	return lambda::foundation::Memory::allocate(count, lambda::foundation::Memory::new_allocator());
+}
+void* operator new[](std::size_t count)
+{
+	return lambda::foundation::Memory::allocate(count, lambda::foundation::Memory::new_allocator());
+}
+void* operator new  (std::size_t count, const std::nothrow_t& tag)
+{
+	return lambda::foundation::Memory::allocate(count, lambda::foundation::Memory::new_allocator());
+}
+void* operator new[](std::size_t count, const std::nothrow_t& tag)
+{
+	return lambda::foundation::Memory::allocate(count, lambda::foundation::Memory::new_allocator());
+}
+void operator delete  (void* ptr)
+{
+	lambda::foundation::Memory::deallocate(ptr);
+}
+void operator delete[](void* ptr)
+{
+	lambda::foundation::Memory::deallocate(ptr);
+}
+void operator delete  (void* ptr, const std::nothrow_t& tag)
+{
+	lambda::foundation::Memory::deallocate(ptr);
+}
+void operator delete[](void* ptr, const std::nothrow_t& tag)
+{
+	lambda::foundation::Memory::deallocate(ptr);
+}
+void operator delete  (void* ptr, std::size_t sz)
+{
+	lambda::foundation::Memory::deallocate(ptr);
+}
+void operator delete[](void* ptr, std::size_t sz)
+{
+	lambda::foundation::Memory::deallocate(ptr);
+}
+
+#include "assets/shader.h"
 #include <iostream>
 #include "systems/transform_system.h"
 #include "platform/scene.h"
@@ -290,8 +331,12 @@ public:
 
     imgui->imEnd();
   }
+
   void update(const double& delta_time) override
   {
+	  float mem_def = (float)(foundation::Memory::default_allocator()->allocated() + foundation::Memory::new_allocator()->allocated()) / (1024.0f * 1024.0f);
+	  getGUI().executeJavaScript("updateAllocatedMemory(" + toString(round(mem_def, 3)) + ")");
+
 		return;
 
     foundation::SharedPointer<platform::IImGUI> imgui = getImGUI();

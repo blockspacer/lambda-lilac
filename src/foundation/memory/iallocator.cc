@@ -1,6 +1,9 @@
 #include "iallocator.h"
 #include "utils/console.h"
 
+#define LMB_OPEN_ALLOCATIONS
+#define LMB_BUFFER_OVERFLOW
+
 namespace lambda
 {
   namespace foundation
@@ -34,10 +37,9 @@ namespace lambda
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#pragma optimize("", off)
     void* IAllocator::Allocate(size_t size, size_t align)
     {
-      std::lock_guard<std::recursive_mutex> lock(mutex_);
-
 #ifdef LMB_BUFFER_OVERFLOW
       // TODO (Hilze): Fix this. Very serious issue!
       if (allocated_ + size > max_size_)
@@ -46,6 +48,9 @@ namespace lambda
         return nullptr;
       }
 #endif
+
+	  if (allocated_ + size < allocated_)
+		  int xxxx = 0;
 
       allocated_ += size;
       ++open_allocations_;
@@ -56,8 +61,6 @@ namespace lambda
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     size_t IAllocator::Deallocate(void* ptr)
     {
-      std::lock_guard<std::recursive_mutex> lock(mutex_);
-
       size_t deallocated = DeallocateImpl(ptr);
 
       if (max_size_ < deallocated)

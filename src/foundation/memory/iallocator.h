@@ -1,7 +1,7 @@
 #pragma once
 #include <cinttypes>
 #include <cstddef>
-#include <mutex>
+#include <atomic>
 
 namespace lambda
 {
@@ -19,7 +19,7 @@ namespace lambda
       IAllocator(const IAllocator& other) = delete;
       IAllocator(const IAllocator&& other) = delete;
       size_t open_allocations() const;
-      size_t allocated() const;
+      virtual size_t allocated() const;
       virtual ~IAllocator();
 
     protected:
@@ -29,12 +29,10 @@ namespace lambda
       virtual size_t DeallocateImpl(void* ptr) = 0;
 
     private:
-      size_t max_size_; 
+      const size_t max_size_;
     protected:
-      size_t open_allocations_; 
-      size_t allocated_; 
-    private:
-      std::recursive_mutex mutex_; 
+      std::atomic<size_t> open_allocations_;
+      std::atomic<size_t> allocated_;
     };
   }
 }
