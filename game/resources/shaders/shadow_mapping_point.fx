@@ -47,15 +47,17 @@ float4 PS(VSOutput pIn) : SV_TARGET0
   float position_depth = length(dir);
   dir = normalize(dir);
 
-  float hide_shadows = when_gt(position_depth, light_far);
-
   float3 shadow_map_depth = tex_shadow_map.Sample(SamAnisotrophicClamp, dir).xyz;
 
   float cs = calcShadow(shadow_map_depth, position_depth, light_far);
 
-  float3 in_shadow = lerp(float3(cs, cs, cs), float3(1.0f, 1.0f, 1.0f), hide_shadows);
+  float light_factor = cs;
+
+  if (position_depth > light_far || light_factor <= 0.0f)
+    return 0.0f;
+
 #else
-  float in_shadow = 1.0f;
+  float light_factor = 1.0f;
 #endif
 
   float3 normal = normalize(Sample(tex_normal, SamLinearClamp, pIn.tex).rgb * 2.0f - 1.0f);
@@ -64,7 +66,7 @@ float4 PS(VSOutput pIn) : SV_TARGET0
   float  metallic  = metallic_roughness.r;
   float  roughness = metallic_roughness.g;
 
-  float3 light = light_colour * in_shadow;
+  float3 light = light_colour * light_factor;
 
   float3 col;
 
