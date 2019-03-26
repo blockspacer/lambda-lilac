@@ -11,10 +11,97 @@ namespace lambda
 {
   namespace linux
   {
+	  class VulkanTexture;
+	  class VulkanRenderer;
+
+	  extern const char* vkErrorCode(const VkResult& result);
+
+	  ///////////////////////////////////////////////////////////////////////////
+	  class VulkanRenderBuffer : public platform::IRenderBuffer
+	  {
+	  public:
+		  VulkanRenderBuffer(
+			  uint32_t size,
+			  uint32_t flags,
+			  VkBuffer buffer,
+			  VulkanRenderer* renderer
+		  );
+		  virtual void*    lock()   override;
+		  virtual void     unlock() override;
+		  virtual uint32_t getFlags()  const override;
+		  virtual uint32_t getSize()   const override;
+		  VkBuffer         getBuffer() const;
+
+	  private:
+		  void* data_;
+		  VulkanRenderer* renderer_;
+		  VkBuffer buffer_;
+		  uint32_t flags_;
+		  uint32_t size_;
+	  };
+
+	  ///////////////////////////////////////////////////////////////////////////
+	  class VulkanRenderTexture : public platform::IRenderTexture
+	  {
+	  public:
+		  VulkanRenderTexture(
+			  uint32_t width,
+			  uint32_t height,
+			  uint32_t depth,
+			  uint32_t mip_count,
+			  TextureFormat format,
+			  uint32_t flags,
+			  VulkanTexture* texture,
+			  VulkanRenderer* renderer
+		  );
+		  virtual void*    lock(uint32_t level)   override;
+		  virtual void     unlock(uint32_t level) override;
+		  virtual uint32_t getWidth()    const override;
+		  virtual uint32_t getHeight()   const override;
+		  virtual uint32_t getDepth()    const override;
+		  virtual uint32_t getMipCount() const override;
+		  virtual uint32_t getFlags()    const override;
+		  virtual TextureFormat getFormat() const override;
+		  VulkanTexture* getTexture() const;
+
+	  private:
+		  void* data_;
+		  VulkanRenderer* renderer_;
+		  VulkanTexture* texture_;
+		  uint32_t flags_;
+		  uint32_t width_;
+		  uint32_t height_;
+		  uint32_t depth_;
+		  uint32_t mip_count_;
+		  TextureFormat format_;
+	  };
+
     ///////////////////////////////////////////////////////////////////////////
     class VulkanRenderer : public platform::IRenderer
     {
+      struct MemoryStats
+      {
+        uint32_t vertex;
+        uint32_t index;
+        uint32_t constant;
+        uint32_t texture;
+        uint32_t render_target;
+      } memory_stats_;
+#define TO_MB(bytes) (std::round(bytes / 10000) / 100)
+
     public:
+		platform::IRenderBuffer* allocRenderBuffer(
+			uint32_t size,
+			uint32_t flags,
+			void* data = nullptr
+		);
+		void freeRenderBuffer(platform::IRenderBuffer*& buffer);
+		platform::IRenderTexture* allocRenderTexture(
+			asset::VioletTextureHandle texture
+		);
+		void freeRenderTexture(platform::IRenderTexture*& texture);
+
+      VulkanRenderer();
       virtual ~VulkanRenderer();
       virtual void setWindow(
         foundation::SharedPointer<platform::IWindow> window
@@ -100,12 +187,20 @@ namespace lambda
         const platform::ShaderVariable& variable
       ) override;
 
+	  VkDevice getDevice() const;
+	  VkCommandBuffer getCommandBuffer() const;
+
     protected:
       virtual void destroyAsset(
         foundation::SharedPointer<asset::IAsset> asset
       ) override;
 
 	private:
+		void createFrameBuffer(platform::IWindow* window);
+		void createCommandBuffer();
+
+	private:
+	  bool vsync_;
 	  world::IWorld* world_;
 
 	  VkInstance instance_;
@@ -113,6 +208,34 @@ namespace lambda
 	  VkSurfaceKHR surface_;
 	  VkDevice device_;
 	  VezSwapchain swapchain_;
+
+	  VkQueue graphics_queue_;
+	  VkCommandBuffer command_buffer_;
+
+	  struct FrameBuffer
+	  {
+		  VkImage        color_image              = VK_NULL_HANDLE;
+		  VkImageView    color_image_view         = VK_NULL_HANDLE;
+		  VkImage        depth_stencil_image      = VK_NULL_HANDLE;
+		  VkImageView    depth_stencil_image_view = VK_NULL_HANDLE;
+		  VezFramebuffer handle                   = VK_NULL_HANDLE;
+	  } frame_buffer_;
+
+	  struct Test
+	  {
+		  struct Pipeline
+		  {
+			  VezPipeline pipeline = VK_NULL_HANDLE;
+			  std::vector<VkShaderModule> shader_modules;
+		  } pipeline;
+
+		  VkBuffer vertex_buffer = VK_NULL_HANDLE;
+		  VkBuffer index_buffer = VK_NULL_HANDLE;
+		  VkImage image = VK_NULL_HANDLE;
+		  VkImageView image_view = VK_NULL_HANDLE;
+		  VkSampler sampler = VK_NULL_HANDLE;
+		  VkBuffer uniform_buffer = VK_NULL_HANDLE;
+	  } test_;
     };
   }
 }

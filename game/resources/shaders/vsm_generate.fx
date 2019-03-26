@@ -46,7 +46,7 @@ float4 PS(VSOutput pIn) : SV_Target0
     discard;
 
 #if defined(VIOLET_POINT) || defined(VIOLET_SPOT)
-  float4 position = pIn.hPosition;
+  float3 position = pIn.hPosition.xyz;
   float depth = length(position - light_camera_position);
 #elif defined(VIOLET_DIRECTIONAL)
   float depth = pIn.position.z * light_far;

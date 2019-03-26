@@ -156,7 +156,6 @@ namespace lambda
 	}
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#pragma optimize("", off)
 	VioletShader VioletShaderManager::JSonToShaderHeader(Vector<char> data)
 	{
 		rapidjson::Document doc;
@@ -169,10 +168,10 @@ namespace lambda
 
 		const auto& languages = doc["languages"].GetArray();
 
+		uint32_t offset = 0;
 		for (int lang_int = 0; lang_int < VIOLET_LANG_COUNT; ++lang_int)
 		{
 			Vector<String> indices = split(languages[lang_int].GetString(), '|');
-			uint32_t offset = 0;
 			uint32_t idx = 0;
 
 			for (int stage_int = 0; stage_int < (int)ShaderStages::kCount; ++stage_int)

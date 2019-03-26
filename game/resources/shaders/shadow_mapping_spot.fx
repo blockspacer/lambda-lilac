@@ -46,7 +46,7 @@ float4 PS(VSOutput pIn) : SV_TARGET0
   float4 trans_position = mul(light_view_projection_matrix, position);
   trans_position.xyz /= trans_position.w;
   float2 coords = trans_position.xy * float2(0.5f, -0.5f) + 0.5f;
-  float position_depth = length(position - light_camera_position);
+  float position_depth = length(position.xyz - light_camera_position);
 
   float4 overlay = tex_overlay.Sample(SamLinearClamp, coords);
 

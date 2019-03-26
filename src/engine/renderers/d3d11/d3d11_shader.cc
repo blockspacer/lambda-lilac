@@ -611,6 +611,11 @@ namespace lambda
           offset = 0;
         }
 
+		element.SemanticIndex = parameter.SemanticIndex;
+		element.AlignedByteOffset = offset;
+		element.InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+		element.InstanceDataStepRate = 0;
+
         // Instancing
         if (String(element.SemanticName).find("instance_") != String::npos)
         {
@@ -618,11 +623,6 @@ namespace lambda
           element.InputSlotClass = D3D11_INPUT_PER_INSTANCE_DATA;
           element.InstanceDataStepRate = 1;
         }
-
-        element.SemanticIndex        = parameter.SemanticIndex;
-        element.AlignedByteOffset    = offset;
-        element.InputSlotClass       = D3D11_INPUT_PER_VERTEX_DATA;
-        element.InstanceDataStepRate = 0;
 
 				if (inl <= 1)
 					stages_.push_back(constexprHash(semantic));

@@ -288,6 +288,7 @@ function(LinkDependencies)
   IF(${VIOLET_CONFIG_TOOLS})
   # /// DIRECTX SHADER COMPILER ///////////////////////////////////
     IF (${VIOLET_SHADER_CONDUCTOR})
+      SET(SC_WITH_CSHARP OFF CACHE BOOL "" FORCE)
       ADD_SUBDIRECTORY("deps/ShaderConductor")
       TARGET_INCLUDE_DIRECTORIES(ShaderConductor INTERFACE "deps/ShaderConductor/Include")
     ENDIF()

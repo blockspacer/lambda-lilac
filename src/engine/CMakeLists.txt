@@ -120,8 +120,16 @@ SET(NoRendererSources
   "renderers/no/no_renderer.cc"
 )
 SET(VulkanRendererSources
+  "renderers/vulkan/vulkan_mesh.h"
+  "renderers/vulkan/vulkan_mesh.cc"
   "renderers/vulkan/vulkan_renderer.h"
   "renderers/vulkan/vulkan_renderer.cc"
+  "renderers/vulkan/vulkan_shader.h"
+  "renderers/vulkan/vulkan_shader.cc"
+  "renderers/vulkan/vulkan_state_manager.h"
+  "renderers/vulkan/vulkan_state_manager.cc"
+  "renderers/vulkan/vulkan_texture.h"
+  "renderers/vulkan/vulkan_texture.cc"
 )
 SET(MetalRendererSources
   "renderers/metal/metal_renderer.h"

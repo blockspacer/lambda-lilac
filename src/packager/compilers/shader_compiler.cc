@@ -57,6 +57,60 @@ public:
 };
 #endif
 
+bool compileHLSL(lambda::String file, lambda::String source, lambda::String entry, lambda::String stage, lambda::Vector<char>& output)
+{
+#if VIOLET_WIN32
+		ID3D10Blob* blob;
+		ID3D10Blob* error;
+
+		IncludeHandler include_handler(file);
+
+		HRESULT result = D3DCompile(
+			(void*)source.data(),
+			source.size(),
+			file.c_str(), 0,
+			&include_handler,
+			entry.c_str(),
+			stage.c_str(),
+			0,
+			0,
+			&blob,
+			&error
+		);
+
+		if (FAILED(result))
+		{
+			if (blob)
+				blob->Release();
+
+			if (error)
+			{
+				lambda::String err =
+					"D3DCompile: Failed to compile shader \"" + file +
+					"\" with message:\n" + lambda::String((char*)error->GetBufferPointer());
+
+				if (err.find("X3501") == lambda::String::npos)
+				{
+					lambda::foundation::Info(err.c_str());
+
+					error->Release();
+					return false;
+				}
+			}
+		}
+		else
+		{
+			output.resize(blob->GetBufferSize());
+			memcpy(output.data(), blob->GetBufferPointer(), output.size());
+			blob->Release();
+		}
+#else
+	output.resize(source.size());
+	memcpy(output.data(), source.c_str(), output.size());
+#endif
+	return true;
+}
+
 namespace lambda
 {
 	///////////////////////////////////////////////////////////////////////////
@@ -103,7 +157,7 @@ namespace lambda
 		source_desc.loadIncludeCallback = includeCallback;
 		source_desc.numDefines = 0;
 		source_desc.source = source.c_str();
-		source_desc.stage = stage;
+		source_desc.stage = sc_stage;
 
 		ShaderConductor::Compiler::Options options;
 		options.disableOptimizations = false;
@@ -159,8 +213,13 @@ namespace lambda
 			}
 			else
 			{
+#if VIOLET_WIN32
+				if (!compileHLSL(file, source, entry, stage, output[i]))
+					return false;
+#else
 				output[i].resize(source.size());
 				memcpy(output[i].data(), source.c_str(), source.size());
+#endif
 			}
 		}
 #else
@@ -169,49 +228,8 @@ namespace lambda
 #if VIOLET_WIN32
 			if (i == VIOLET_HLSL)
 			{
-				ID3D10Blob* blob;
-				ID3D10Blob* error;
-
-				IncludeHandler include_handler(file);
-
-				HRESULT result = D3DCompile(
-					(void*)source.data(),
-					source.size(),
-					file.c_str(), 0,
-					&include_handler,
-					entry.c_str(),
-					stage.c_str(),
-					0,
-					0,
-					&blob,
-					&error
-				);
-
-				if (FAILED(result))
-				{
-					if (blob)
-						blob->Release();
-
-					if (error)
-					{
-						String err =
-							"D3DCompile: Failed to compile shader \"" + file + 
-							"\" with message:\n" + String((char*)error->GetBufferPointer());
-
-						if (err.find("X3501") == String::npos)
-						{
-							foundation::Info(err.c_str());
-
-							error->Release();
-							return false;
-						}
-					}
-				}
-				else
-				{
-					output[i].resize(blob->GetBufferSize());
-					memcpy(output[i].data(), blob->GetBufferPointer(), output[i].size());
-				}
+				if (!compileHLSL(file, source, entry, stage, output[i]))
+					return false;
 			}
 			else
 #endif
