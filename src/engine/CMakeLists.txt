@@ -120,6 +120,7 @@ SET(NoRendererSources
   "renderers/no/no_renderer.cc"
 )
 SET(VulkanRendererSources
+  "renderers/vulkan/vulkan.h"
   "renderers/vulkan/vulkan_mesh.h"
   "renderers/vulkan/vulkan_mesh.cc"
   "renderers/vulkan/vulkan_renderer.h"

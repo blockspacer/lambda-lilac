@@ -1,5 +1,6 @@
 #include "vulkan_shader.h"
 #include <utils/file_system.h>
+#include "vulkan_renderer.h"
 
 namespace lambda
 {
@@ -8,6 +9,10 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
 	  VulkanShader::VulkanShader(asset::VioletShaderHandle shader, VulkanRenderer* renderer)
 		  : renderer_(renderer)
+		  , vs_(VK_NULL_HANDLE)
+		  , ps_(VK_NULL_HANDLE)
+		  , gs_(VK_NULL_HANDLE)
+		  , num_render_targets_(0u)
 	  {
 		  auto data = asset::ShaderManager::getInstance()->getData(shader);
 		  Vector<VezPipelineShaderStageCreateInfo> shader_stages;
@@ -282,15 +287,24 @@ namespace lambda
       return gs_buffers_;
     }
 
-	struct Resource
+	///////////////////////////////////////////////////////////////////////////
+	Vector<VulkanReflectionInfo> VulkanShader::getTextures()
 	{
-		String name;
-		int index;
-
-	};
+		return textures_;
+	}
 
 	///////////////////////////////////////////////////////////////////////////
-#pragma optimize("", off)
+	Vector<VulkanReflectionInfo> VulkanShader::getSamplers()
+	{
+		return samplers_;
+	}
+
+	uint32_t VulkanShader::getNumRenderTargets()
+	{
+		return num_render_targets_;
+	}
+
+	///////////////////////////////////////////////////////////////////////////
 	void VulkanShader::reflect()
 	{
 		VkResult result;
@@ -301,10 +315,10 @@ namespace lambda
 		result = vezEnumeratePipelineResources(pipeline_, &resource_count, resources.data());
 		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could reflect on pipeline | %s", vkErrorCode(result));
 
-
 		std::vector<VezPipelineResource> vez_input_layout;
-		std::vector<VezPipelineResource> vez_samplers;
 		std::vector<VezPipelineResource> vez_images;
+		std::vector<VezPipelineResource> vez_samplers;
+		std::vector<VezPipelineResource> vez_output;
 		std::vector<VezPipelineResource> vez_uniform_buffers;
 		for (const VezPipelineResource& resource : resources)
 		{
@@ -313,11 +327,14 @@ namespace lambda
 			case VezPipelineResourceType::VEZ_PIPELINE_RESOURCE_TYPE_INPUT:
 				vez_input_layout.push_back(resource);
 				break;
+			case VezPipelineResourceType::VEZ_PIPELINE_RESOURCE_TYPE_SAMPLED_IMAGE:
+				vez_images.push_back(resource);
+				break;
 			case VezPipelineResourceType::VEZ_PIPELINE_RESOURCE_TYPE_SAMPLER:
 				vez_samplers.push_back(resource);
 				break;
-			case VezPipelineResourceType::VEZ_PIPELINE_RESOURCE_TYPE_SAMPLED_IMAGE:
-				vez_images.push_back(resource);
+			case VezPipelineResourceType::VEZ_PIPELINE_RESOURCE_TYPE_OUTPUT:
+				vez_output.push_back(resource);
 				break;
 			case VezPipelineResourceType::VEZ_PIPELINE_RESOURCE_TYPE_UNIFORM_BUFFER:
 				vez_uniform_buffers.push_back(resource);
@@ -327,6 +344,70 @@ namespace lambda
 			}
 		}
 		
+		// Uniform buffers.
+		for (const VezPipelineResource& uniform_buffer : vez_uniform_buffers)
+		{
+			String name = uniform_buffer.name;
+			if (name.find("type_") == 0)
+				name = name.substr(strlen("type_"));
+
+			Vector<platform::BufferVariable> variables;
+			foundation::SharedPtr<void> data = foundation::Memory::makeShared(foundation::Memory::allocate(uniform_buffer.size));
+			memset(data.get(), 0, uniform_buffer.size);
+
+			const VezMemberInfo* next_member = uniform_buffer.pMembers;
+			while (next_member)
+			{
+				platform::BufferVariable variable;
+				variable.name  = next_member->name;
+				variable.count = next_member->arraySize;
+				variable.size  = next_member->size;
+				variable.data  = (char*)data.get() + next_member->offset;
+				variables.push_back(variable);
+
+				next_member = next_member->pNext;
+			}
+
+			if ((uniform_buffer.stages & VK_SHADER_STAGE_VERTEX_BIT))
+				vs_buffers_.push_back(platform::ShaderBuffer(Name(name), variables, data));
+			if ((uniform_buffer.stages & VK_SHADER_STAGE_FRAGMENT_BIT))
+				ps_buffers_.push_back(platform::ShaderBuffer(Name(name), variables, data));
+			if ((uniform_buffer.stages & VK_SHADER_STAGE_GEOMETRY_BIT))
+				gs_buffers_.push_back(platform::ShaderBuffer(Name(name), variables, data));
+		}
+		
+		// Textures.
+		for (const VezPipelineResource& resource : vez_images)
+		{
+			VulkanReflectionInfo refl_info;
+			refl_info.name     = resource.name;
+			refl_info.set      = resource.set;
+			refl_info.binding  = resource.binding;
+			if (eastl::find(textures_.begin(), textures_.end(), refl_info) == textures_.end())
+				textures_.push_back(refl_info);
+		}
+		
+		// Samplers.
+		for (const VezPipelineResource& resource : vez_samplers)
+		{
+			VulkanReflectionInfo refl_info;
+			refl_info.name     = resource.name;
+			refl_info.set      = resource.set;
+			refl_info.binding  = resource.binding;
+			if (eastl::find(samplers_.begin(), samplers_.end(), refl_info) == samplers_.end())
+				samplers_.push_back(refl_info);
+		}
+
+		// Output.
+		for (const VezPipelineResource& resource : vez_output)
+		{
+			String name = resource.name;
+			for (char& ch : name)
+				ch = tolower(ch);
+			if (name.find("sv_target") != String::npos)
+				num_render_targets_++;
+		}
+
 		//! Input layout.
 		int idx    = 0;
 		int offset = 0;
@@ -347,7 +428,7 @@ namespace lambda
 		{
 			String name(resource.name);
 			if (name.find("in_var_") == 0)
-				name.substr(strlen("in_var_"));
+				name = name.substr(strlen("in_var_"));
 
 			InputLayout element{};
 

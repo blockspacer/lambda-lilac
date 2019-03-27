@@ -1,6 +1,7 @@
 #pragma once
 #include "assets/mesh.h"
 #include <memory/memory.h>
+#include "vulkan.h"
 
 namespace lambda
 {

@@ -185,7 +185,6 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     VulkanTexture::~VulkanTexture()
     {
-      LMB_ASSERT(false, "VULKAN: Not implemented");
       for (uint32_t i = 0u; i < 2u; ++i)
       {
         if (srvs_[i] != VK_NULL_HANDLE)

@@ -1,6 +1,6 @@
 #pragma once
 #include "assets/texture.h"
-#include <vulkan/vulkan.hpp>
+#include "vulkan.h"
 
 namespace lambda
 {

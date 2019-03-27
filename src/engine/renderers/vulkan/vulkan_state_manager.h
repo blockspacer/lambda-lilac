@@ -5,7 +5,7 @@
 #include "platform/depth_stencil_state.h"
 #include <containers/containers.h>
 #include "assets/mesh.h"
-#include "vulkan_renderer.h"
+#include "vulkan.h"
 
 namespace eastl {
 
@@ -68,12 +68,15 @@ namespace lambda
 {
   namespace linux
   {
+	  class VulkanRenderer;
+
     ///////////////////////////////////////////////////////////////////////////
     class VulkanStateManager
     {
     public:
       void initialize(VulkanRenderer* renderer);
-      void bindRasterizerState(
+	  void update(Vector<VulkanReflectionInfo> samplers);
+	  void bindRasterizerState(
         const platform::RasterizerState& rasterizer_state
       );
       void bindBlendState(const platform::BlendState& blend_state);
@@ -100,11 +103,16 @@ namespace lambda
 
 	  VulkanRenderer* renderer_;
 	  
-	  VezRasterizationState bound_rasterizer_state_;
-	  VezColorBlendState bound_blend_state_;
-	  VkSampler bound_sampler_states_[16];
-	  VezPipelineDepthStencilState bound_depth_stencil_state_;
-	  VezInputAssemblyState bound_input_assembly_state_;
+	  bool     dirty_rasterizer_;
+	  bool     dirty_blend_;
+	  bool     dirty_depth_stencil_;
+	  bool     dirty_input_assembly_;
+	  uint16_t dirty_sampler_;
+	  VezRasterizationState        rasterizer_;
+	  VezColorBlendState           blend_;
+	  VkSampler                    samplers_[16];
+	  VezPipelineDepthStencilState depth_stencil_;
+	  VezInputAssemblyState        input_assembly_;
     };
   }
 }

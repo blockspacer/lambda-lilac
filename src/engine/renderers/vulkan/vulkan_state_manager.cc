@@ -1,6 +1,7 @@
 #include "vulkan_state_manager.h"
 #include "assets/mesh.h"
 #include <utils/console.h>
+#include "vulkan_renderer.h"
 
 namespace lambda
 {
@@ -12,6 +13,49 @@ namespace lambda
       renderer_ = renderer;
       blend_states_.clear();
     }
+
+	///////////////////////////////////////////////////////////////////////////
+	void VulkanStateManager::update(Vector<VulkanReflectionInfo> samplers)
+	{
+		if (dirty_rasterizer_)
+		{
+			vezCmdSetRasterizationState(&rasterizer_);
+			dirty_rasterizer_ = false;
+		}
+		if (dirty_blend_)
+		{
+			vezCmdSetColorBlendState(&blend_);
+			dirty_blend_ = false;
+		}
+		if (dirty_depth_stencil_)
+		{
+			vezCmdSetDepthStencilState(&depth_stencil_);
+			dirty_depth_stencil_ = false;
+		}
+		if (dirty_input_assembly_)
+		{
+			vezCmdSetInputAssemblyState(&input_assembly_);
+			dirty_input_assembly_ = false;
+		}
+		if (dirty_sampler_)
+		{
+			for (uint16_t i = 0; i < 16 && dirty_sampler_ != 0; ++i)
+			{
+				if ((dirty_sampler_ & (1 << i)))
+				{
+					for (const VulkanReflectionInfo& sampler : samplers)
+					{
+						if (sampler.binding == i)
+						{
+							vezCmdBindSampler(samplers_[i], sampler.set, sampler.binding, 0);
+						}
+					}
+
+					dirty_sampler_ &= ~(1 << i);
+				}
+			}
+		}
+	}
    
     ///////////////////////////////////////////////////////////////////////////
     void VulkanStateManager::bindRasterizerState(
@@ -54,10 +98,8 @@ namespace lambda
       else
         rasterization_state = it->second;
 	  
-      bound_rasterizer_state_ = rasterization_state;
-
-      // Set the state.
-	  vezCmdSetRasterizationState(&bound_rasterizer_state_);
+      rasterizer_ = rasterization_state;
+	  dirty_rasterizer_ = true;
     }
 
 	static VkBlendOp getBlendOp(platform::BlendState::BlendOp blend_op)
@@ -144,10 +186,8 @@ namespace lambda
       else
 		  color_blend_state = it->second;
 
-      bound_blend_state_ = color_blend_state;
-
-      // Set the state.
-	  vezCmdSetColorBlendState(&bound_blend_state_);
+      blend_ = color_blend_state;
+	  dirty_blend_ = true;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -172,9 +212,8 @@ namespace lambda
       else
 		  pipeline_depth_stencil_state = it->second;
 
-      bound_depth_stencil_state_ = pipeline_depth_stencil_state;
-
-	  vezCmdSetDepthStencilState(&bound_depth_stencil_state_);
+      depth_stencil_ = pipeline_depth_stencil_state;
+	  dirty_depth_stencil_ = true;
     }
     
     ///////////////////////////////////////////////////////////////////////////
@@ -222,9 +261,8 @@ namespace lambda
       else
 		  sampler = it->second;
 
-      bound_sampler_states_[slot] = sampler;
-
-	  vezCmdBindSampler(bound_sampler_states_[slot], 0, 0, slot); // TODO (Hilze): Fix this ASAP!
+      samplers_[slot] = sampler;
+	  dirty_sampler_ |= (1 << slot);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -250,9 +288,8 @@ namespace lambda
 		else
 			input_assembly_state = it->second;
 
-		bound_input_assembly_state_ = input_assembly_state;
-
-	    vezCmdSetInputAssemblyState(&bound_input_assembly_state_);
+		input_assembly_  = input_assembly_state;
+		dirty_input_assembly_ = true;
     }
   }
 }

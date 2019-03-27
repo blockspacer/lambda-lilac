@@ -1,20 +1,16 @@
 #pragma once
 #include "interfaces/irenderer.h"
-
-#if VIOLET_WIN32
-#define VK_USE_PLATFORM_WIN32_KHR
-#endif
-#include <vulkan/vulkan.hpp>
-#include <VEZ.h>
+#include "vulkan.h"
+#include "vulkan_state_manager.h"
 
 namespace lambda
 {
   namespace linux
   {
 	  class VulkanTexture;
+	  class VulkanShader;
 	  class VulkanRenderer;
-
-	  extern const char* vkErrorCode(const VkResult& result);
+	  class VulkanMesh;
 
 	  ///////////////////////////////////////////////////////////////////////////
 	  class VulkanRenderBuffer : public platform::IRenderBuffer
@@ -76,6 +72,23 @@ namespace lambda
 		  TextureFormat format_;
 	  };
 
+	  struct VulkanCommandBuffer
+	  {
+	  public:
+		  VulkanCommandBuffer();
+		  void create(VkDevice device, VkQueue graphics_queue);
+		  void destroy(VkDevice device);
+		  void begin();
+		  void end();
+		  void tryBegin();
+		  void tryEnd();
+		  VkCommandBuffer getCommandBuffer() const;
+
+	  private:
+		  VkCommandBuffer command_buffer;
+		  bool recording;
+	  };
+
     ///////////////////////////////////////////////////////////////////////////
     class VulkanRenderer : public platform::IRenderer
     {
@@ -95,11 +108,11 @@ namespace lambda
 			uint32_t flags,
 			void* data = nullptr
 		);
-		void freeRenderBuffer(platform::IRenderBuffer*& buffer);
+		void freeRenderBuffer(platform::IRenderBuffer* buffer);
 		platform::IRenderTexture* allocRenderTexture(
 			asset::VioletTextureHandle texture
 		);
-		void freeRenderTexture(platform::IRenderTexture*& texture);
+		void freeRenderTexture(platform::IRenderTexture* texture);
 
       VulkanRenderer();
       virtual ~VulkanRenderer();
@@ -151,8 +164,8 @@ namespace lambda
         const glm::vec4& colour
       ) override;
 
-      virtual void setScissorRect(const glm::vec4& rect) override;
-      virtual void setViewports(const Vector<glm::vec4>& rects);
+	  virtual void setScissorRects(const Vector<glm::vec4>& rects) override;
+	  virtual void setViewports(const Vector<glm::vec4>& rects) override;
 
       virtual void setMesh(asset::MeshHandle mesh) override;
       virtual void setSubMesh(const uint32_t& sub_mesh_idx) override;
@@ -165,6 +178,12 @@ namespace lambda
         Vector<asset::VioletTextureHandle> render_targets,
         asset::VioletTextureHandle depth_buffer
 	  ) override;
+	  void setRenderTargets(
+		  Vector<VkImageView> render_targets,
+		  VkImageView depth_buffer,
+		  uint32_t width,
+		  uint32_t height
+	  );
 
       virtual void pushMarker(const String& name) override;
       virtual void setMarker(const String& name) override;
@@ -196,8 +215,11 @@ namespace lambda
       ) override;
 
 	private:
-		void createFrameBuffer(platform::IWindow* window);
 		void createCommandBuffer();
+		void createTest();
+
+		void updateFramebuffer();
+		Vector<VezAttachmentReference> getAttachmentReferences();
 
 	private:
 	  bool vsync_;
@@ -210,16 +232,64 @@ namespace lambda
 	  VezSwapchain swapchain_;
 
 	  VkQueue graphics_queue_;
-	  VkCommandBuffer command_buffer_;
+	  VulkanCommandBuffer command_buffer_;
 
-	  struct FrameBuffer
+	  struct State
 	  {
-		  VkImage        color_image              = VK_NULL_HANDLE;
-		  VkImageView    color_image_view         = VK_NULL_HANDLE;
-		  VkImage        depth_stencil_image      = VK_NULL_HANDLE;
-		  VkImageView    depth_stencil_image_view = VK_NULL_HANDLE;
-		  VezFramebuffer handle                   = VK_NULL_HANDLE;
-	  } frame_buffer_;
+		  uint16_t dirty_textures;
+		  VulkanRenderTexture* textures[16];
+		  bool dirty_shader;
+		  VulkanShader* shader;
+		  
+		  bool dirty_framebuffer;
+		  VkImageView render_targets[8];
+		  VkImageView depth_target;
+		  uint32_t rt_width;
+		  uint32_t rt_height;
+		  VezFramebuffer framebuffer;
+
+		  VulkanMesh* mesh;
+		  uint32_t sub_mesh_idx;
+		  
+		  glm::mat4x4 model;
+		  glm::vec2 screen_size;
+		  glm::vec2 metallic_roughness;
+	  } state_;
+
+	  double delta_time_;
+	  double total_time_;
+	  float  render_scale_;
+
+	  struct Memory
+	  {
+		  template<typename T>
+		  struct Entry
+		  {
+			  T* ptr = nullptr;
+			  uint32_t hit_count = 0u;
+			  bool keep_in_memory = false;
+		  };
+
+		  VulkanShader* getShader(asset::VioletShaderHandle handle);
+		  VulkanRenderTexture* getTexture(asset::VioletTextureHandle handle);
+		  void removeShader(asset::VioletShaderHandle handle);
+		  void removeTexture(asset::VioletTextureHandle handle);
+		  void removeShader(size_t handle);
+		  void removeTexture(size_t handle);
+
+		  void removeUnusedEntries();
+		  void removeAllEntries();
+		  UnorderedMap<size_t, Entry<VulkanShader>> shaders;
+		  UnorderedMap<size_t, Entry<VulkanRenderTexture>> textures;
+		  VulkanRenderer* renderer;
+	  } memory_;
+
+	  VulkanStateManager state_manager_;
+	  struct VulkanFullScreenQuad
+	  {
+		  asset::MeshHandle mesh;
+		  asset::VioletShaderHandle shader;
+	  } full_screen_quad_;
 
 	  struct Test
 	  {

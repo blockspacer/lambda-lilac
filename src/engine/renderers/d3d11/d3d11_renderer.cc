@@ -245,16 +245,16 @@ namespace lambda
     };
 
     ///////////////////////////////////////////////////////////////////////////
-    struct RenderActionSetScissorRect : public IRenderAction
+    struct RenderActionSetScissorRects : public IRenderAction
     {
-      RenderActionSetScissorRect() :
-      rect() {};
-      ~RenderActionSetScissorRect() {};
+		RenderActionSetScissorRects() :
+      rects() {};
+      ~RenderActionSetScissorRects() {};
       virtual void execute(D3D11Context* context) const override
       {
-        context->setScissorRect(rect);
+        context->setScissorRects(rects);
       }
-      glm::vec4 rect;
+      Vector<glm::vec4> rects;
     };
 
     ///////////////////////////////////////////////////////////////////////////
@@ -531,11 +531,11 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::setScissorRect(const glm::vec4 & rect)
+	void D3D11Renderer::setScissorRects(const Vector<glm::vec4>& rects)
     {
-      RenderActionSetScissorRect* action =
-        foundation::GetFrameHeap()->construct<RenderActionSetScissorRect>();
-      action->rect = rect;
+      RenderActionSetScissorRects* action =
+        foundation::GetFrameHeap()->construct<RenderActionSetScissorRects>();
+      action->rects = rects;
       queue_actions_.push_back(action);
     }
 
@@ -771,9 +771,9 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::setScissorRect(const glm::vec4& rect)
+	void D3D11Renderer::setScissorRects(const Vector<glm::vec4>& rects)
     {
-      context_->setScissorRect(rect);
+      context_->setScissorRects(rects);
     }
 
     ///////////////////////////////////////////////////////////////////////////

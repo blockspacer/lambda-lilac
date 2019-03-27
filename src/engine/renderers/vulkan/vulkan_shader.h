@@ -2,7 +2,8 @@
 #include "assets/shader.h"
 #include "vulkan_mesh.h"
 #include "platform/shader_variable_manager.h"
-#include "vulkan_renderer.h"
+#include "vulkan.h"
+#include <set>
 
 namespace lambda
 {
@@ -28,13 +29,17 @@ namespace lambda
       void bind();
       void unbind();
       void bindBuffers();
-			Vector<uint32_t> getStages() const;
+	  Vector<uint32_t> getStages() const;
 
       void updateShaderVariable(const platform::ShaderVariable& variable);
 
       Vector<platform::ShaderBuffer>& getVsBuffers();
       Vector<platform::ShaderBuffer>& getPsBuffers();
       Vector<platform::ShaderBuffer>& getGsBuffers();
+
+	  Vector<VulkanReflectionInfo> getTextures();
+	  Vector<VulkanReflectionInfo> getSamplers();
+	  uint32_t getNumRenderTargets();
 
 	  void reflect();
 
@@ -46,6 +51,10 @@ namespace lambda
 	  VkShaderModule vs_;
 	  VkShaderModule ps_;
 	  VkShaderModule gs_;
+
+	  Vector<VulkanReflectionInfo> textures_;
+	  Vector<VulkanReflectionInfo> samplers_;
+	  uint32_t num_render_targets_;
 
 	  VulkanRenderer* renderer_;
       Vector<platform::ShaderBuffer> vs_buffers_;

@@ -608,11 +608,11 @@ namespace lambda
       default_.viewport.y = 0.0f;
       default_.viewport.z = (float)width;
       default_.viewport.w = (float)height;
-			setViewports(Vector<glm::vec4>{ default_.viewport });
+	  setViewports(Vector<glm::vec4>{ default_.viewport });
 
-			world_->getPostProcessManager().resize(glm::vec2(width, height) * render_scale_);
+	  world_->getPostProcessManager().resize(glm::vec2(width, height) * render_scale_);
       
-      setScissorRect(glm::vec4(0.0f, 0.0f, world_->getWindow()->getSize()));
+      setScissorRects({ glm::vec4(0.0f, 0.0f, world_->getWindow()->getSize()) });
 
       world_->getShaderVariableManager().setVariable(
         platform::ShaderVariable(Name("screen_size"),
@@ -947,7 +947,7 @@ namespace lambda
         context_.backbuffer.GetAddressOf(), 
         nullptr
       );
-      setScissorRect(glm::vec4(0.0f, 0.0f, world_->getWindow()->getSize()));
+	  setScissorRects({ glm::vec4(0.0f, 0.0f, world_->getWindow()->getSize()) });
       setMesh(full_screen_quad_.mesh);
       setShader(full_screen_quad_.shader);
       setSubMesh(0u);
@@ -988,7 +988,7 @@ namespace lambda
 				&rtv,
 				nullptr
 			);
-			setScissorRect(viewport);
+			setScissorRects({ viewport });
 			setMesh(full_screen_quad_.mesh);
 			setShader(full_screen_quad_.shader);
 			setSubMesh(0u);
@@ -1032,7 +1032,7 @@ namespace lambda
       Vector<ID3D11RenderTargetView*> rtvs;
       ID3D11DepthStencilView* dsv = nullptr;
       Vector<glm::vec4> viewports;
-      Vector<D3D11_RECT> scissor_rects;
+      Vector<glm::vec4> scissor_rects;
 
       for (auto& output : shader_pass.getOutputs())
       {
@@ -1124,12 +1124,9 @@ namespace lambda
       }
 
       // Shader.
-      context_.context->RSSetScissorRects(
-        (UINT)scissor_rects.size(),
-        scissor_rects.data()
-      );
+	  setScissorRects(scissor_rects);
       setViewports(viewports);
-			setRenderTargets(rtvs, dsv);
+	  setRenderTargets(rtvs, dsv);
     }
     
     ///////////////////////////////////////////////////////////////////////////
@@ -1174,15 +1171,21 @@ namespace lambda
     }
     
     ///////////////////////////////////////////////////////////////////////////
-    void D3D11Context::setScissorRect(const glm::vec4& rect)
+	void D3D11Context::setScissorRects(const Vector<glm::vec4>& rects)
     {
-      D3D11_RECT scissor_rect;
-      scissor_rect.left   = (LONG)rect.x;
-      scissor_rect.right  = (LONG)rect.x + (LONG)rect.z;
-      scissor_rect.top    = (LONG)rect.y;
-      scissor_rect.bottom = (LONG)rect.y + (LONG)rect.w;
+      Vector<D3D11_RECT> scissor_rects;
 
-      context_.context->RSSetScissorRects(1u,&scissor_rect);
+	  for (const auto& rect : rects)
+	  {
+		  D3D11_RECT scissor_rect;
+		  scissor_rect.left   = (LONG)rect.x;
+		  scissor_rect.right  = (LONG)rect.x + (LONG)rect.z;
+		  scissor_rect.top    = (LONG)rect.y;
+		  scissor_rect.bottom = (LONG)rect.y + (LONG)rect.w;
+		  scissor_rects.push_back(scissor_rect);
+	  }
+
+      context_.context->RSSetScissorRects((UINT)scissor_rects.size(), scissor_rects.data());
     }
   
     ///////////////////////////////////////////////////////////////////////////

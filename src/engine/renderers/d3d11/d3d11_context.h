@@ -204,8 +204,8 @@ namespace lambda
         const glm::vec4& colour
       ) override;
 
-      virtual void setScissorRect(const glm::vec4& rect) override;
-      virtual void setViewports(const Vector<glm::vec4>& rects) override;
+	  virtual void setScissorRects(const Vector<glm::vec4>& rects) override;
+	  virtual void setViewports(const Vector<glm::vec4>& rects) override;
 
       virtual void setMesh(asset::MeshHandle mesh) override;
       virtual void setSubMesh(const uint32_t& sub_mesh_idx) override;

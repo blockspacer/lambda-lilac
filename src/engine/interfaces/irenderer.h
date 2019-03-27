@@ -100,8 +100,8 @@ namespace lambda
         const glm::vec4& colour
       ) = 0;
 
-      virtual void setScissorRect(const glm::vec4& rect) = 0;
-			virtual void setViewports(const Vector<glm::vec4>& rects) = 0;
+	  virtual void setScissorRects(const Vector<glm::vec4>& rects) = 0;
+	  virtual void setViewports(const Vector<glm::vec4>& rects) = 0;
 
       virtual void setMesh(asset::MeshHandle mesh) = 0;
       virtual void setSubMesh(const uint32_t& sub_mesh_idx) = 0;

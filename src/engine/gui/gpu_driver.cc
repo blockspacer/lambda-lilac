@@ -378,7 +378,7 @@ namespace lambda
 				state.viewport_height
 			);
 			renderer->setViewports({ viewport });
-			renderer->setScissorRect(viewport);
+			renderer->setScissorRects({ viewport });
 
 			for (int i = 0; i < 8; ++i)
 				renderer->setTexture(asset::VioletTextureHandle(), i);
