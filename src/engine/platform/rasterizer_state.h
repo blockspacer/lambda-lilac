@@ -75,3 +75,21 @@ namespace lambda
     };
   }
 }
+
+#include <containers/containers.h>
+
+namespace eastl
+{
+	/////////////////////////////////////////////////////////////////////////////
+	template <>
+	struct hash<lambda::platform::RasterizerState>
+	{
+		std::size_t operator()(const lambda::platform::RasterizerState& k) const
+		{
+			size_t hash = 0ull;
+			lambda::hashCombine(hash, (size_t)k.getCullMode());
+			lambda::hashCombine(hash, (size_t)k.getFillMode());
+			return hash;
+		}
+	};
+}

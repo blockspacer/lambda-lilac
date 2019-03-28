@@ -15,8 +15,11 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     struct VulkanBuffer
     {
+      platform::ShaderBuffer shader_buffer;
       VulkanRenderBuffer* buffer;
-      size_t slot = 0u;
+	  int offset;
+	  int set;
+	  int binding;
       bool bound = false;
     };
 
@@ -33,9 +36,7 @@ namespace lambda
 
       void updateShaderVariable(const platform::ShaderVariable& variable);
 
-      Vector<platform::ShaderBuffer>& getVsBuffers();
-      Vector<platform::ShaderBuffer>& getPsBuffers();
-      Vector<platform::ShaderBuffer>& getGsBuffers();
+      Vector<VulkanBuffer>& getBuffers();
 
 	  Vector<VulkanReflectionInfo> getTextures();
 	  Vector<VulkanReflectionInfo> getSamplers();
@@ -57,13 +58,9 @@ namespace lambda
 	  uint32_t num_render_targets_;
 
 	  VulkanRenderer* renderer_;
-      Vector<platform::ShaderBuffer> vs_buffers_;
-      Vector<platform::ShaderBuffer> ps_buffers_;
-      Vector<platform::ShaderBuffer> gs_buffers_;
-      Vector<VulkanBuffer> vs_Vulkan_buffers_;
-      Vector<VulkanBuffer> ps_Vulkan_buffers_;
-      Vector<VulkanBuffer> gs_Vulkan_buffers_;
+      Vector<VulkanBuffer> buffers_;
 	  VezPipeline pipeline_;
-    };
+	  VezVertexInputFormat input_format_;
+	};
   }
 }

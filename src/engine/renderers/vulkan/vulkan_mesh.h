@@ -14,15 +14,14 @@ namespace lambda
     class VulkanMesh : public asset::IGPUAsset
     {
     public:
-      VulkanMesh(VulkanRenderer* renderer);
+      VulkanMesh(asset::MeshHandle mesh, VulkanRenderer* renderer);
       virtual ~VulkanMesh() override;
 
       void bind(
         const Vector<uint32_t>& stages,
-				asset::MeshHandle mesh,
         const uint32_t& sub_mesh_idx
       );
-      void draw(asset::MeshHandle mesh, const uint32_t& sub_mesh_idx);
+      void draw(const uint32_t& sub_mesh_idx);
 
     private:
       void update(
@@ -46,6 +45,7 @@ namespace lambda
 
     private:
       VulkanRenderer* renderer_;
+	  asset::MeshHandle mesh_;
 	  UnorderedMap<uint32_t, VulkanRenderBuffer*> buffer_;
     };
   }

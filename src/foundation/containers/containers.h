@@ -89,14 +89,10 @@ namespace lambda
     }
 
     if (current.size() != 0)
-    {
       split.push_back(current);
-    }
 
     if (split.size() == 0)
-    {
       split.push_back(str);
-    }
 
     return split;
   }
@@ -117,9 +113,7 @@ namespace lambda
       }
 
       if (counter == tl)
-      {
         return static_cast<int>(i - tl);
-      }
 
       counter = 0;
     }
@@ -309,6 +303,12 @@ namespace lambda
   inline uint32_t constexprHash(const std::string& s)
   {
     return crc32::crc32(s.c_str());
+  }
+  template <class T>
+  inline void hashCombine(size_t& s, const T& v)
+  {
+	  eastl::hash<T> h;
+	  s ^= h(v) + 0x9e3779b9 + (s << 6) + (s >> 2);
   }
 }
 

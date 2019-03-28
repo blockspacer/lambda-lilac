@@ -170,3 +170,25 @@ namespace lambda
     };
   }
 }
+
+namespace eastl 
+{
+	/////////////////////////////////////////////////////////////////////////////
+	template <>
+	struct hash<lambda::platform::BlendState>
+	{
+		std::size_t operator()(const lambda::platform::BlendState& k) const
+		{
+			size_t hash = 0ull;
+			lambda::hashCombine(hash, (size_t)(k.getBlendEnable() ? 1 : 0));
+			lambda::hashCombine(hash, (size_t)k.getBlendOp());
+			lambda::hashCombine(hash, (size_t)k.getBlendOpAlpha());
+			lambda::hashCombine(hash, (size_t)k.getDestBlend());
+			lambda::hashCombine(hash, (size_t)k.getDestBlendAlpha());
+			lambda::hashCombine(hash, (size_t)k.getSrcBlend());
+			lambda::hashCombine(hash, (size_t)k.getSrcBlendAlpha());
+			lambda::hashCombine(hash, (size_t)k.getWriteMask());
+			return hash;
+		}
+	};
+}

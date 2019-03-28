@@ -116,11 +116,12 @@ namespace lambda
 	  }
 
 	  // Upload the data.
-	  bool contains_data = !texture->getLayer(0u).getData().empty() || from_dds;
+      bool contains_data = !texture->getLayer(0u).getData().empty() || from_dds;
 	  
-	  for (unsigned char i = 0u; i < (is_render_target_ ? 2u : 1u) && contains_data; ++i)
+	  for (unsigned char i = 0u; i < (is_render_target_ ? 2u : 1u); ++i)
 	  {
-		  for (uint32_t layer = 0u; layer < image_create_info.arrayLayers; ++layer)
+		  for (uint32_t layer = 0u; layer < image_create_info.arrayLayers &&
+			  contains_data; ++layer)
 		  {
 			  uint32_t w = texture->getLayer(layer).getWidth();
 			  uint32_t h = texture->getLayer(layer).getHeight();
@@ -164,7 +165,6 @@ namespace lambda
 				  sub_data_info.imageOffset = { 0, 0, 0 };
 				  sub_data_info.imageExtent = { w, h, 1 };
 				  result = vezImageSubData(renderer_->getDevice(), textures_[i], &sub_data_info, data);
-				  LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not update iamge sub data | %s", vkErrorCode(result));
 
 				  offset += bpl;
 				  w /= 2u;
@@ -185,6 +185,7 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     VulkanTexture::~VulkanTexture()
     {
+      LMB_ASSERT(false, "VULKAN: Not implemented");
       for (uint32_t i = 0u; i < 2u; ++i)
       {
         if (srvs_[i] != VK_NULL_HANDLE)

@@ -5,6 +5,53 @@
 
 namespace lambda
 {
+	namespace linux
+	{
+		///////////////////////////////////////////////////////////////////////////
+		struct Framebuffer
+		{
+			uint32_t rt_width;
+			uint32_t rt_height;
+			uint32_t num_framebuffers;
+			VkImageView render_targets[9];
+
+			bool operator==(const Framebuffer& other) const
+			{
+				if (num_framebuffers != other.num_framebuffers || rt_width != other.rt_width || rt_height != other.rt_height)
+					return false;
+
+				for (uint32_t i = 0; i < num_framebuffers; ++i)
+					if (render_targets[i] != other.render_targets[i])
+						return false;
+
+				return true;
+			}
+		};
+	}
+}
+
+#include <containers/containers.h>
+
+namespace eastl
+{
+	/////////////////////////////////////////////////////////////////////////////
+	template <>
+	struct hash<lambda::linux::Framebuffer>
+	{
+		std::size_t operator()(const lambda::linux::Framebuffer& k) const
+		{
+			size_t hash = 0ull;
+			for (uint32_t i = 0; i < k.num_framebuffers; ++i)
+				lambda::hashCombine(hash, (size_t)k.render_targets[i]);
+			return hash;
+		}
+	};
+}
+
+#define VIOLET_USE_GPU_MARKERS 1
+
+namespace lambda
+{
   namespace linux
   {
 	  class VulkanTexture;
@@ -216,9 +263,7 @@ namespace lambda
 
 	private:
 		void createCommandBuffer();
-		void createTest();
 
-		void updateFramebuffer();
 		Vector<VezAttachmentReference> getAttachmentReferences();
 
 	private:
@@ -240,7 +285,10 @@ namespace lambda
 		  VulkanRenderTexture* textures[16];
 		  bool dirty_shader;
 		  VulkanShader* shader;
-		  
+		  bool dirty_mesh;
+		  VulkanMesh* mesh;
+		  uint32_t sub_mesh;
+
 		  bool dirty_framebuffer;
 		  VkImageView render_targets[8];
 		  VkImageView depth_target;
@@ -248,39 +296,51 @@ namespace lambda
 		  uint32_t rt_height;
 		  VezFramebuffer framebuffer;
 
-		  VulkanMesh* mesh;
-		  uint32_t sub_mesh_idx;
-		  
-		  glm::mat4x4 model;
-		  glm::vec2 screen_size;
-		  glm::vec2 metallic_roughness;
+		  bool dirty_scissor_rects;
+		  VkRect2D scissor_rects[8];
+		  uint32_t num_scissor_rects;
+
+		  bool dirty_viewports;
+		  VkViewport viewports[8];
+		  uint32_t num_viewports;
+
 	  } state_;
 
 	  double delta_time_;
 	  double total_time_;
 	  float  render_scale_;
 
+	  VkImage backbuffer_;
+	  VkImageView backbuffer_view_;
+
 	  struct Memory
 	  {
 		  template<typename T>
 		  struct Entry
 		  {
-			  T* ptr = nullptr;
+			  T ptr = nullptr;
 			  uint32_t hit_count = 0u;
 			  bool keep_in_memory = false;
 		  };
 
 		  VulkanShader* getShader(asset::VioletShaderHandle handle);
 		  VulkanRenderTexture* getTexture(asset::VioletTextureHandle handle);
+		  VulkanMesh* getMesh(asset::MeshHandle handle);
+		  VezFramebuffer getFramebuffer(const Framebuffer& framebuffer);
 		  void removeShader(asset::VioletShaderHandle handle);
 		  void removeTexture(asset::VioletTextureHandle handle);
+		  void removeMesh(asset::MeshHandle handle);
+		  void removeFramebuffer(const Framebuffer& framebuffer);
 		  void removeShader(size_t handle);
 		  void removeTexture(size_t handle);
+		  void removeMesh(size_t handle);
 
 		  void removeUnusedEntries();
 		  void removeAllEntries();
-		  UnorderedMap<size_t, Entry<VulkanShader>> shaders;
-		  UnorderedMap<size_t, Entry<VulkanRenderTexture>> textures;
+		  UnorderedMap<size_t, Entry<VulkanShader*>> shaders;
+		  UnorderedMap<size_t, Entry<VulkanRenderTexture*>> textures;
+		  UnorderedMap<size_t, Entry<VulkanMesh*>> meshes;
+		  UnorderedMap<Framebuffer, Entry<VezFramebuffer>> framebuffers;
 		  VulkanRenderer* renderer;
 	  } memory_;
 
@@ -291,21 +351,16 @@ namespace lambda
 		  asset::VioletShaderHandle shader;
 	  } full_screen_quad_;
 
-	  struct Test
-	  {
-		  struct Pipeline
-		  {
-			  VezPipeline pipeline = VK_NULL_HANDLE;
-			  std::vector<VkShaderModule> shader_modules;
-		  } pipeline;
-
-		  VkBuffer vertex_buffer = VK_NULL_HANDLE;
-		  VkBuffer index_buffer = VK_NULL_HANDLE;
-		  VkImage image = VK_NULL_HANDLE;
-		  VkImageView image_view = VK_NULL_HANDLE;
-		  VkSampler sampler = VK_NULL_HANDLE;
-		  VkBuffer uniform_buffer = VK_NULL_HANDLE;
-	  } test_;
-    };
+#if VIOLET_DEBUG
+	  VkDebugUtilsMessengerEXT debug_messenger_;
+#endif
+#if VIOLET_USE_GPU_MARKERS
+	  PFN_vkCmdDebugMarkerBeginEXT  debug_marker_begin_;
+	  PFN_vkCmdDebugMarkerEndEXT    debug_marker_end_;
+	  PFN_vkCmdDebugMarkerInsertEXT debug_marker_insert_;
+	  bool has_debug_markers_;
+	  uint32_t marker_depth_;
+#endif
+	};
   }
 }

@@ -118,3 +118,19 @@ namespace lambda
     };
   }
 }
+
+namespace eastl 
+{
+	/////////////////////////////////////////////////////////////////////////////
+	template <>
+	struct hash<lambda::platform::SamplerState>
+	{
+		std::size_t operator()(const lambda::platform::SamplerState& k) const
+		{
+			size_t hash = 0ull;
+			lambda::hashCombine(hash, (size_t)k.getClampMode());
+			lambda::hashCombine(hash, (size_t)k.getSampleMode());
+			return hash;
+		}
+	};
+}

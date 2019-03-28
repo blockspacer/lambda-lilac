@@ -11,7 +11,17 @@ namespace lambda
     void VulkanStateManager::initialize(VulkanRenderer* renderer)
     {
       renderer_ = renderer;
-      blend_states_.clear();
+
+	  dirty_rasterizer_ = false;
+	  dirty_blend_ = false;
+	  dirty_depth_stencil_ = false;
+	  dirty_input_assembly_ = false;
+	  dirty_sampler_ = 0u;
+	  rasterizer_ = {};
+	  blend_ = {};
+	  memset(samplers_, 0, sizeof(samplers_));
+	  depth_stencil_ = {};
+	  input_assembly_ = {};
     }
 
 	///////////////////////////////////////////////////////////////////////////

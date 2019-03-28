@@ -36,7 +36,6 @@ namespace lambda
       void pingPong();
       unsigned char pingPongIdx() const;
 
-    protected:
       VkImage getTexture(unsigned char idx) const;
     
     private:

@@ -16,63 +16,6 @@
 //enum D3D11_BLEND;
 //enum D3D11_BLEND_OP;
 
-namespace eastl {
-
-  /////////////////////////////////////////////////////////////////////////////
-  template <>
-  struct hash<lambda::platform::BlendState>
-  {
-    std::size_t operator()(const lambda::platform::BlendState& k) const
-    {
-      unsigned char a = (unsigned char)k.getBlendEnable();
-      unsigned char b = ((unsigned char)k.getBlendOp()) << 4u;
-      unsigned char c = (unsigned char)k.getBlendOpAlpha();
-      unsigned char d = ((unsigned char)k.getDestBlend()) << 4u;
-      unsigned char e = (unsigned char)k.getDestBlendAlpha();
-      unsigned char f = ((unsigned char)k.getSrcBlend()) << 4u;
-      unsigned char g = (unsigned char)k.getSrcBlendAlpha();
-      unsigned char h = ((unsigned char)k.getWriteMask()) << 4u;
-
-      return (a | b) | ((c | d) << 8u) | ((e | f) << 16u) | ((g | h) << 24u);
-    }
-  };
-
-  /////////////////////////////////////////////////////////////////////////////
-  template <>
-  struct hash<lambda::platform::RasterizerState>
-  {
-    std::size_t operator()(const lambda::platform::RasterizerState& k) const
-    {
-      unsigned char a = (unsigned char)k.getCullMode();
-      unsigned char b = (unsigned char)k.getFillMode();
-      return a | (b << 8u);
-    }
-  };
-  
-  /////////////////////////////////////////////////////////////////////////////
-  template <>
-  struct hash<lambda::platform::DepthStencilState>
-  {
-    std::size_t operator()(const lambda::platform::DepthStencilState& k) const
-    {
-      unsigned char a = (unsigned char)k.getDepthCompareOp();
-      return a;
-    }
-  };
-  
-  /////////////////////////////////////////////////////////////////////////////
-  template <>
-  struct hash<lambda::platform::SamplerState>
-  {
-    std::size_t operator()(const lambda::platform::SamplerState& k) const
-    {
-      unsigned char a = (unsigned char)k.getClampMode();
-      unsigned char b = (unsigned char)k.getSampleMode();
-      return a | (b << 8u);
-    }
-  };
-}
-
 namespace lambda
 {
   namespace windows

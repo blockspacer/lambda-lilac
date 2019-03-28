@@ -6,8 +6,9 @@ namespace lambda
 	namespace linux
 	{
 		///////////////////////////////////////////////////////////////////////////
-		VulkanMesh::VulkanMesh(VulkanRenderer* renderer)
+		VulkanMesh::VulkanMesh(asset::MeshHandle mesh, VulkanRenderer* renderer)
 			: renderer_(renderer)
+			, mesh_(mesh)
 		{
 		}
 
@@ -22,21 +23,20 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		void VulkanMesh::bind(
 			const Vector<uint32_t>& stages,
-			asset::MeshHandle mesh,
 			const uint32_t& sub_mesh_idx)
 		{
 			Vector<VkBuffer> buffers;
 			Vector<VkDeviceSize> offsets;
 
-			asset::SubMesh& sub_mesh = mesh->getSubMeshes().at(sub_mesh_idx);
+			asset::SubMesh& sub_mesh = mesh_->getSubMeshes().at(sub_mesh_idx);
 
-			auto size = mesh->get(asset::MeshElements::kPositions).count;
+			auto size = mesh_->get(asset::MeshElements::kPositions).count;
 
 			for (const auto& stage : stages)
 			{
 				VulkanRenderBuffer*& Vulkan_buffer = buffer_[stage];
-				const asset::Mesh::Buffer& mesh_buffer = mesh->get(stage);
-				if (Vulkan_buffer == nullptr || mesh->changed(stage))
+				const asset::Mesh::Buffer& mesh_buffer = mesh_->get(stage);
+				if (Vulkan_buffer == nullptr || mesh_->changed(stage))
 					update(mesh_buffer, Vulkan_buffer, true);
 				buffers.push_back(
 					Vulkan_buffer ? Vulkan_buffer->getBuffer() : nullptr
@@ -52,11 +52,11 @@ namespace lambda
 			);
 
 			const asset::Mesh::Buffer& indices =
-				mesh->get(asset::MeshElements::kIndices);
+				mesh_->get(asset::MeshElements::kIndices);
 			if (indices.count > 0u)
 			{
 				if (buffer_[asset::MeshElements::kIndices] == nullptr ||
-					mesh->changed(asset::MeshElements::kIndices))
+					mesh_->changed(asset::MeshElements::kIndices))
 					update(indices, buffer_.at(asset::MeshElements::kIndices), false);
 
 				VkIndexType index_type = VK_INDEX_TYPE_UINT32;
@@ -82,9 +82,9 @@ namespace lambda
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		void VulkanMesh::draw(asset::MeshHandle mesh, const uint32_t& sub_mesh_idx)
+		void VulkanMesh::draw(const uint32_t& sub_mesh_idx)
 		{
-			asset::SubMesh& sub_mesh = mesh->getSubMeshes().at(sub_mesh_idx);
+			asset::SubMesh& sub_mesh = mesh_->getSubMeshes().at(sub_mesh_idx);
 
 			if (buffer_.find(asset::MeshElements::kIndices) != buffer_.end() &&
 				buffer_.at(asset::MeshElements::kIndices)->getSize() > 0)

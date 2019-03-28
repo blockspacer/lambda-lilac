@@ -13,6 +13,8 @@ namespace lambda
 		  , ps_(VK_NULL_HANDLE)
 		  , gs_(VK_NULL_HANDLE)
 		  , num_render_targets_(0u)
+		  , pipeline_(VK_NULL_HANDLE)
+		  , input_format_(VK_NULL_HANDLE)
 	  {
 		  auto data = asset::ShaderManager::getInstance()->getData(shader);
 		  Vector<VezPipelineShaderStageCreateInfo> shader_stages;
@@ -81,16 +83,11 @@ namespace lambda
 		vezDestroyShaderModule(renderer_->getDevice(), ps_);
 		vezDestroyShaderModule(renderer_->getDevice(), gs_);
 		vezDestroyPipeline(renderer_->getDevice(), pipeline_);
+		vezDestroyVertexInputFormat(renderer_->getDevice(), input_format_);
 
-      ps_buffers_.resize(0u);
-      vs_buffers_.resize(0u);
-      gs_buffers_.resize(0u);
-
-      for (auto& buffer : ps_Vulkan_buffers_) 
-        renderer_->freeRenderBuffer((platform::IRenderBuffer*&)buffer.buffer);
-      for (auto& buffer : vs_Vulkan_buffers_) 
-        renderer_->freeRenderBuffer((platform::IRenderBuffer*&)buffer.buffer);
-      for (auto& buffer : gs_Vulkan_buffers_) 
+      buffers_.resize(0u);
+      
+      for (auto& buffer : buffers_) 
         renderer_->freeRenderBuffer((platform::IRenderBuffer*&)buffer.buffer);
     }
 
@@ -98,123 +95,45 @@ namespace lambda
     void VulkanShader::bind()
     {
 		vezCmdBindPipeline(pipeline_);
+		vezCmdSetVertexInputFormat(input_format_);
     }
 
     ///////////////////////////////////////////////////////////////////////////
     void VulkanShader::unbind()
     {
-      for (auto& buffer : vs_Vulkan_buffers_)
-        buffer.bound = false;
-      for (auto& buffer : ps_Vulkan_buffers_)
-        buffer.bound = false;
-      for (auto& buffer : gs_Vulkan_buffers_)
+      for (auto& buffer : buffers_)
         buffer.bound = false;
     }
 
     ///////////////////////////////////////////////////////////////////////////
     void VulkanShader::bindBuffers()
     {
-      /*for (size_t i = 0u; i < vs_buffers_.size(); ++i)
+      for (size_t i = 0u; i < buffers_.size(); ++i)
       {
-        auto& buffer = vs_buffers_.at(i);
-        auto& Vulkan_buffer = vs_Vulkan_buffers_.at(i);
+        auto& buffer = buffers_.at(i).shader_buffer;
+        auto& gpu_buffer = buffers_.at(i).buffer;
 
         if (buffer.getChanged() == true)
         {
           buffer.setChanged(false);
-          context_->getVulkanContext()->UpdateSubresource(
-            Vulkan_buffer.buffer->getBuffer(), 
-            0u, 
-            NULL, 
-            buffer.getData(), 
-            0u, 
-            0u
-          );
-          Vulkan_buffer.bound = false;
-        }
-        if (!Vulkan_buffer.bound)
-        {
-          Vulkan_buffer.bound = true;
-          IVulkanBuffer* buffer =
-            (IVulkanBuffer*)Vulkan_buffer.buffer->getBuffer();
+		  
+		  void* data = gpu_buffer->lock();
+		  memcpy(data, buffer.getData(), gpu_buffer->getSize());
+		  gpu_buffer->unlock();
           
-          context_->getVulkanContext()->VSSetConstantBuffers(
-            (UINT)Vulkan_buffer.slot, 
-            1u, 
-            &buffer
-          );
+		  buffers_.at(i).bound = false;
+        }
+
+		if (!buffers_[i].bound)
+        {
+          buffers_[i].bound = true;
+		  vezCmdBindBuffer(buffers_[i].buffer->getBuffer(), buffers_[i].offset, VK_WHOLE_SIZE, buffers_[i].set, buffers_[i].binding, 0);
         }
       }
-      for (size_t i = 0u; i < ps_buffers_.size(); ++i)
-      {
-        auto& buffer = ps_buffers_.at(i);
-        auto& Vulkan_buffer = ps_Vulkan_buffers_.at(i);
-
-        if (buffer.getChanged() == true)
-        {
-          buffer.setChanged(false);
-          
-          context_->getVulkanContext()->UpdateSubresource(
-            Vulkan_buffer.buffer->getBuffer(), 
-            0u, 
-            NULL, 
-            buffer.getData(), 
-            0u, 
-            0u
-          );
-          
-          Vulkan_buffer.bound = false;
-        }
-        if (!Vulkan_buffer.bound)
-        {
-          Vulkan_buffer.bound = true;
-          IVulkanBuffer* buffer = 
-            (IVulkanBuffer*)Vulkan_buffer.buffer->getBuffer();
-          
-          context_->getVulkanContext()->PSSetConstantBuffers(
-            (UINT)Vulkan_buffer.slot, 
-            1u, 
-            &buffer
-          );
-        }
-      }
-      for (size_t i = 0u; i < gs_buffers_.size(); ++i)
-      {
-        auto& buffer = gs_buffers_.at(i);
-        auto& Vulkan_buffer = gs_Vulkan_buffers_.at(i);
-
-        if (buffer.getChanged() == true)
-        {
-          buffer.setChanged(false);
-          
-          context_->getVulkanContext()->UpdateSubresource(
-            Vulkan_buffer.buffer->getBuffer(), 
-            0u, 
-            NULL, 
-            buffer.getData(), 
-            0u, 
-            0u
-          );
-          
-          Vulkan_buffer.bound = false;
-        }
-        if (!Vulkan_buffer.bound)
-        {
-          Vulkan_buffer.bound = true;
-          IVulkanBuffer* buffer = 
-            (IVulkanBuffer*)Vulkan_buffer.buffer->getBuffer();
-          
-          context_->getVulkanContext()->GSSetConstantBuffers(
-            (UINT)Vulkan_buffer.slot, 
-            1u, 
-            &buffer
-          );
-        }
-      }*/
     }
     
     ///////////////////////////////////////////////////////////////////////////
-		Vector<uint32_t> VulkanShader::getStages() const
+	Vector<uint32_t> VulkanShader::getStages() const
     {
       return stages_;
     }
@@ -223,46 +142,16 @@ namespace lambda
     void VulkanShader::updateShaderVariable(
       const platform::ShaderVariable& variable)
     {
-      for (size_t i = 0u; i < vs_buffers_.size(); ++i)
+      for (size_t i = 0u; i < buffers_.size(); ++i)
       {
-        auto& buffer = vs_buffers_.at(i);
+        auto& buffer = buffers_.at(i);
 
-        for (auto& v : buffer.getVariables())
+        for (auto& v : buffer.shader_buffer.getVariables())
         {
           if (variable.name == v.name)
           {
             memcpy(v.data, variable.data.data(), v.size);
-            buffer.setChanged(true);
-            continue;
-          }
-        }
-      }
-      
-      for (size_t i = 0u; i < ps_buffers_.size(); ++i)
-      {
-        auto& buffer = ps_buffers_.at(i);
-
-        for (auto& v : buffer.getVariables())
-        {
-          if (variable.name == v.name)
-          {
-            memcpy(v.data, variable.data.data(), v.size);
-            buffer.setChanged(true);
-            continue;
-          }
-        }
-      }
-
-      for (size_t i = 0u; i < gs_buffers_.size(); ++i)
-      {
-        auto& buffer = gs_buffers_.at(i);
-
-        for (auto& v : buffer.getVariables())
-        {
-          if (variable.name == v.name)
-          {
-            memcpy(v.data, variable.data.data(), v.size);
-            buffer.setChanged(true);
+            buffer.shader_buffer.setChanged(true);
             continue;
           }
         }
@@ -270,21 +159,9 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    Vector<platform::ShaderBuffer>& VulkanShader::getVsBuffers()
+    Vector<VulkanBuffer>& VulkanShader::getBuffers()
     {
-      return vs_buffers_;
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    Vector<platform::ShaderBuffer>& VulkanShader::getPsBuffers()
-    {
-      return ps_buffers_;
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    Vector<platform::ShaderBuffer>& VulkanShader::getGsBuffers()
-    {
-      return gs_buffers_;
+      return buffers_;
     }
 
 	///////////////////////////////////////////////////////////////////////////
@@ -305,6 +182,7 @@ namespace lambda
 	}
 
 	///////////////////////////////////////////////////////////////////////////
+#pragma optimize ("", off)
 	void VulkanShader::reflect()
 	{
 		VkResult result;
@@ -368,12 +246,14 @@ namespace lambda
 				next_member = next_member->pNext;
 			}
 
-			if ((uniform_buffer.stages & VK_SHADER_STAGE_VERTEX_BIT))
-				vs_buffers_.push_back(platform::ShaderBuffer(Name(name), variables, data));
-			if ((uniform_buffer.stages & VK_SHADER_STAGE_FRAGMENT_BIT))
-				ps_buffers_.push_back(platform::ShaderBuffer(Name(name), variables, data));
-			if ((uniform_buffer.stages & VK_SHADER_STAGE_GEOMETRY_BIT))
-				gs_buffers_.push_back(platform::ShaderBuffer(Name(name), variables, data));
+			buffers_.push_back();
+			VulkanBuffer buffer;
+			buffer.buffer  = (VulkanRenderBuffer*)renderer_->allocRenderBuffer(uniform_buffer.size, platform::IRenderBuffer::kFlagConstant | platform::IRenderBuffer::kFlagDynamic);
+			buffer.offset  = uniform_buffer.offset;
+			buffer.set     = uniform_buffer.set;
+			buffer.binding = uniform_buffer.binding;
+			buffer.shader_buffer = platform::ShaderBuffer(Name(name), variables, data);
+			buffers_.push_back(buffer);
 		}
 		
 		// Textures.
@@ -408,65 +288,194 @@ namespace lambda
 				num_render_targets_++;
 		}
 
-		//! Input layout.
-		int idx    = 0;
-		int offset = 0;
-		int inl    = 0;
-
 		struct InputLayout
 		{
-			int InputSlot;
-			String name;
-			int InputSlotClass;
-			int InstanceDataStepRate;
-			int SemanticIndex;
-			int AlignedByteOffset;
+			int location;
+			int binding;
+			int offset;
+			VkFormat format;
 		};
 
-		Vector<InputLayout> input_layout;
+		struct InputBuffer
+		{
+			Vector<InputLayout> input_layouts;
+			int stride;
+			bool instanced;
+		};
+
+		Vector<InputBuffer> input_buffers;
+
 		for (const VezPipelineResource& resource : vez_input_layout)
 		{
+			if ((resource.stages & VK_SHADER_STAGE_VERTEX_BIT) == 0)
+				continue;
+
 			String name(resource.name);
 			if (name.find("in_var_") == 0)
 				name = name.substr(strlen("in_var_"));
 
-			InputLayout element{};
-
 			// Inlining
-			if (name.find("inl_") != String::npos)
+			if (name.find("inl_") == 0)
 			{
 				name = name.substr(strlen("inl_"));
-				element.InputSlot = idx;
-				inl++;
+
+				if (input_buffers.empty())
+				{
+					InputBuffer buffer;
+					buffer.instanced = false;
+					buffer.stride = 0;
+					input_buffers.push_back(buffer);
+				}
 			}
 			else
 			{
-				if (inl == 0)
-					element.InputSlot = idx++;
-				else
-					element.InputSlot = ++idx;
-				offset = 0;
+				InputBuffer buffer;
+				buffer.instanced = false;
+				buffer.stride = 0;
+				input_buffers.push_back(buffer);
 			}
 
-			element.SemanticIndex = resource.binding;
-			element.AlignedByteOffset = offset;
-			element.InputSlotClass = 0;
-			element.InstanceDataStepRate = 0;
+			InputBuffer& input_buffer = input_buffers.back();
 
-			// Instancing
-			if (String(element.name).find("instance_") != String::npos)
+			if (name.find("instance_") == 0)
 			{
 				name = name.substr(strlen("instance_"));
-				element.InputSlotClass = 1;
-				element.InstanceDataStepRate = 1;
+				input_buffer.instanced = true;
 			}
 
-			if (inl <= 1)
-				stages_.push_back(constexprHash(name));
+			InputLayout element;
+			element.offset   = input_buffer.stride;
+			element.location = (int)input_buffer.input_layouts.size();
+			element.binding  = (int)input_buffers.size() - 1;
+		
+			switch (resource.baseType)
+			{
+			case VEZ_BASE_TYPE_BOOL:
+				switch (resource.vecSize)
+				{
+				case 1: element.format = VK_FORMAT_R8_SINT; break;
+				case 2: element.format = VK_FORMAT_R8G8_SINT; break;
+				case 3: element.format = VK_FORMAT_R8G8B8_SINT; break;
+				case 4: element.format = VK_FORMAT_R8G8B8A8_SINT; break;
+				}
+				break;
+			case VEZ_BASE_TYPE_CHAR:
+				switch (resource.vecSize)
+				{
+				case 1: element.format = VK_FORMAT_R8_SINT; break;
+				case 2: element.format = VK_FORMAT_R8G8_SINT; break;
+				case 3: element.format = VK_FORMAT_R8G8B8_SINT; break;
+				case 4: element.format = VK_FORMAT_R8G8B8A8_SINT; break;
+				}
+				break;
+			case VEZ_BASE_TYPE_INT:
+				switch (resource.vecSize)
+				{
+				case 1: element.format = VK_FORMAT_R32_SINT; break;
+				case 2: element.format = VK_FORMAT_R32G32_SINT; break;
+				case 3: element.format = VK_FORMAT_R32G32B32_SINT; break;
+				case 4: element.format = VK_FORMAT_R32G32B32A32_SINT; break;
+				}
+				break;
+			case VEZ_BASE_TYPE_UINT:
+				switch (resource.vecSize)
+				{
+				case 1: element.format = VK_FORMAT_R32_UINT; break;
+				case 2: element.format = VK_FORMAT_R32G32_UINT; break;
+				case 3: element.format = VK_FORMAT_R32G32B32_UINT; break;
+				case 4: element.format = VK_FORMAT_R32G32B32A32_UINT; break;
+				}
+				break;
+			case VEZ_BASE_TYPE_UINT64:
+				switch (resource.vecSize)
+				{
+				case 1: element.format = VK_FORMAT_R64_UINT; break;
+				case 2: element.format = VK_FORMAT_R64G64_UINT; break;
+				case 3: element.format = VK_FORMAT_R64G64B64_UINT; break;
+				case 4: element.format = VK_FORMAT_R64G64B64A64_UINT; break;
+				}
+				break;
+			case VEZ_BASE_TYPE_HALF:
+				switch (resource.vecSize)
+				{
+				case 1: element.format = VK_FORMAT_R16_SFLOAT; break;
+				case 2: element.format = VK_FORMAT_R16G16_SFLOAT; break;
+				case 3: element.format = VK_FORMAT_R16G16B16_SFLOAT; break;
+				case 4: element.format = VK_FORMAT_R16G16B16A16_SFLOAT; break;
+				}
+				break;
+			case VEZ_BASE_TYPE_FLOAT:
+				switch (resource.vecSize)
+				{
+				case 1: element.format = VK_FORMAT_R32_SFLOAT; break;
+				case 2: element.format = VK_FORMAT_R32G32_SFLOAT; break;
+				case 3: element.format = VK_FORMAT_R32G32B32_SFLOAT; break;
+				case 4: element.format = VK_FORMAT_R32G32B32A32_SFLOAT; break;
+				}
+				break;
+			case VEZ_BASE_TYPE_DOUBLE:
+				switch (resource.vecSize)
+				{
+				case 1: element.format = VK_FORMAT_R64_SFLOAT; break;
+				case 2: element.format = VK_FORMAT_R64G64_SFLOAT; break;
+				case 3: element.format = VK_FORMAT_R64G64B64_SFLOAT; break;
+				case 4: element.format = VK_FORMAT_R64G64B64A64_SFLOAT; break;
+				}
+				break;
+			}
 
-			input_layout.push_back(element);
+			switch (resource.baseType)
+			{
+			case VEZ_BASE_TYPE_BOOL:
+			case VEZ_BASE_TYPE_CHAR:
+				input_buffer.stride += 1 * resource.vecSize * resource.arraySize;
+				break;
+			case VEZ_BASE_TYPE_HALF:
+				input_buffer.stride += 2 * resource.vecSize * resource.arraySize;
+				break;
+			case VEZ_BASE_TYPE_INT:
+			case VEZ_BASE_TYPE_UINT:
+			case VEZ_BASE_TYPE_FLOAT:
+				input_buffer.stride += 4 * resource.vecSize * resource.arraySize;
+				break;
+			case VEZ_BASE_TYPE_UINT64:
+			case VEZ_BASE_TYPE_DOUBLE:
+				input_buffer.stride += 8 * resource.vecSize * resource.arraySize;
+				break;
+			}
+
+			input_buffer.input_layouts.push_back(element);
+
+			if (input_buffer.input_layouts.size() == 1)
+				stages_.push_back(constexprHash(name));
 		}
 
+		Vector<VkVertexInputBindingDescription> vertex_input_binding(input_buffers.size());
+		Vector<VkVertexInputAttributeDescription> attribute_descriptions;
+		for (uint32_t i = 0; i < input_buffers.size(); ++i)
+		{
+			vertex_input_binding[i].binding   = i;
+			vertex_input_binding[i].inputRate = input_buffers[i].instanced ? VK_VERTEX_INPUT_RATE_INSTANCE : VK_VERTEX_INPUT_RATE_VERTEX;
+			vertex_input_binding[i].stride    = input_buffers[i].stride;
+
+			for (const auto& input_layout : input_buffers[i].input_layouts)
+			{
+				VkVertexInputAttributeDescription attribute_description;
+				attribute_description.binding  = input_layout.binding;
+				attribute_description.format   = input_layout.format;
+				attribute_description.location = input_layout.location;
+				attribute_description.offset   = input_layout.offset;
+				attribute_descriptions.push_back(attribute_description);
+			}
+		}
+
+		VezVertexInputFormatCreateInfo vertex_input_format_create_info{};
+		vertex_input_format_create_info.pVertexAttributeDescriptions    = attribute_descriptions.data();
+		vertex_input_format_create_info.vertexAttributeDescriptionCount = (uint32_t)attribute_descriptions.size();
+		vertex_input_format_create_info.pVertexBindingDescriptions      = vertex_input_binding.data();
+		vertex_input_format_create_info.vertexBindingDescriptionCount   = (uint32_t)vertex_input_binding.size();
+		result = vezCreateVertexInputFormat(renderer_->getDevice(), &vertex_input_format_create_info, &input_format_);
+		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could create vertex input format | %s", vkErrorCode(result));
 	}
   }
 }

@@ -85,3 +85,18 @@ namespace lambda
     };
   }
 }
+
+namespace eastl
+{
+	/////////////////////////////////////////////////////////////////////////////
+	template <>
+	struct hash<lambda::platform::DepthStencilState>
+	{
+		std::size_t operator()(const lambda::platform::DepthStencilState& k) const
+		{
+			size_t hash = 0ull;
+			lambda::hashCombine(hash, (size_t)k.getDepthCompareOp());
+			return hash;
+		}
+	};
+}
