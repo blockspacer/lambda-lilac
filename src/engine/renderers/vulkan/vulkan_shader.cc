@@ -21,12 +21,10 @@ namespace lambda
 
 		  VkResult result;
 
-		  VezShaderModuleCreateInfo shader_module_create_info{};
-		  shader_module_create_info.pEntryPoint = "main";
-
-
 		  if (!data[(int)ShaderStages::kVertex][VIOLET_SPIRV].empty())
 		  {
+			  VezShaderModuleCreateInfo shader_module_create_info{};
+			  shader_module_create_info.pEntryPoint = "VS";
 			  shader_module_create_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
 			  shader_module_create_info.codeSize = static_cast<uint32_t>(data[(int)ShaderStages::kVertex][VIOLET_SPIRV].size());
 			  shader_module_create_info.pCode = (uint32_t*)data[(int)ShaderStages::kVertex][VIOLET_SPIRV].data();
@@ -35,13 +33,15 @@ namespace lambda
 			  LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not create shader module | %s", vkErrorCode(result));
 
 			  VezPipelineShaderStageCreateInfo shader_stage{};
-			  shader_stage.pEntryPoint = "main";
+			  shader_stage.pEntryPoint = "VS";
 			  shader_stage.module = vs_;
 			  shader_stages.push_back(shader_stage);
 		  }
 
 		  if (!data[(int)ShaderStages::kPixel][VIOLET_SPIRV].empty())
 		  {
+			  VezShaderModuleCreateInfo shader_module_create_info{};
+			  shader_module_create_info.pEntryPoint = "PS";
 			  shader_module_create_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 			  shader_module_create_info.codeSize = static_cast<uint32_t>(data[(int)ShaderStages::kPixel][VIOLET_SPIRV].size());
 			  shader_module_create_info.pCode = reinterpret_cast<const uint32_t*>(data[(int)ShaderStages::kPixel][VIOLET_SPIRV].data());
@@ -50,13 +50,15 @@ namespace lambda
 			  LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not create shader module | %s", vkErrorCode(result));
 
 			  VezPipelineShaderStageCreateInfo shader_stage{};
-			  shader_stage.pEntryPoint = "main";
+			  shader_stage.pEntryPoint = "PS";
 			  shader_stage.module = ps_;
 			  shader_stages.push_back(shader_stage);
 		  }
 
 		  if (!data[(int)ShaderStages::kGeometry][VIOLET_SPIRV].empty())
 		  {
+			  VezShaderModuleCreateInfo shader_module_create_info{};
+			  shader_module_create_info.pEntryPoint = "GS";
 			  shader_module_create_info.stage = VK_SHADER_STAGE_GEOMETRY_BIT;
 			  shader_module_create_info.codeSize = static_cast<uint32_t>(data[(int)ShaderStages::kGeometry][VIOLET_SPIRV].size());
 			  shader_module_create_info.pCode = reinterpret_cast<const uint32_t*>(data[(int)ShaderStages::kGeometry][VIOLET_SPIRV].data());
@@ -65,7 +67,7 @@ namespace lambda
 			  LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not create shader module | %s", vkErrorCode(result));
 
 			  VezPipelineShaderStageCreateInfo shader_stage{};
-			  shader_stage.pEntryPoint = "main";
+			  shader_stage.pEntryPoint = "GS";
 			  shader_stage.module = gs_;
 			  shader_stages.push_back(shader_stage);
 		  }
@@ -186,7 +188,6 @@ namespace lambda
 	}
 
 	///////////////////////////////////////////////////////////////////////////
-#pragma optimize ("", off)
 	void VulkanShader::reflect()
 	{
 		VkResult result;
@@ -250,7 +251,6 @@ namespace lambda
 				next_member = next_member->pNext;
 			}
 
-			buffers_.push_back();
 			VulkanBuffer buffer;
 			buffer.buffer  = (VulkanRenderBuffer*)renderer_->allocRenderBuffer(uniform_buffer.size, platform::IRenderBuffer::kFlagConstant | platform::IRenderBuffer::kFlagDynamic);
 			buffer.offset  = uniform_buffer.offset;
