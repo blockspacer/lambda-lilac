@@ -418,10 +418,8 @@ private:
 
 int main(int argc, char** argv)
 {
-  if (argc == 1)
-    LMB_ASSERT(false, "No project folder was speficied!")
-  else if (argc == 2)
-    LMB_ASSERT(false, "No entry script was specified!")
+  LMB_ASSERT(argc != 1, "No project folder was speficied!")
+  LMB_ASSERT(argc != 2, "No entry script was specified!")
 
   lambda::FileSystem::SetBaseDir(argv[1]);
   String script(argv[2]);

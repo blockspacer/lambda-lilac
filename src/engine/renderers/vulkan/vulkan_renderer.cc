@@ -382,20 +382,6 @@ namespace lambda
 
 		return VK_FALSE;
 	}
-
-	VKAPI_ATTR VkBool32 VKAPI_CALL MyDebugReportCallback(
-		VkDebugReportFlagsEXT       flags,
-		VkDebugReportObjectTypeEXT  objectType,
-		uint64_t                    object,
-		size_t                      location,
-		int32_t                     messageCode,
-		const char*                 pLayerPrefix,
-		const char*                 pMessage,
-		void*                       pUserData)
-	{
-		std::cerr << pMessage << std::endl;
-		return VK_FALSE;
-	}
 #endif
 
     ///////////////////////////////////////////////////////////////////////////
@@ -457,20 +443,20 @@ namespace lambda
 		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Failed to create instance | %s", vkErrorCode(result));
 
 #if VIOLET_DEBUG
-		/*VkDebugUtilsMessengerCreateInfoEXT debug_utils_messenger_create_info{};
+		VkDebugUtilsMessengerCreateInfoEXT debug_utils_messenger_create_info{};
 		debug_utils_messenger_create_info.sType           = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
 		debug_utils_messenger_create_info.messageSeverity = 
-			VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | 
-			VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+			//VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | 
+			//VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
 			VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
 			VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT |
 			0;
 		debug_utils_messenger_create_info.messageType = 
-			VK_DEBUG_REPORT_INFORMATION_BIT_EXT |
+			//VK_DEBUG_REPORT_INFORMATION_BIT_EXT |
+			//VK_DEBUG_REPORT_DEBUG_BIT_EXT |
+			//VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT |
 			VK_DEBUG_REPORT_WARNING_BIT_EXT |
-			VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT |
 			VK_DEBUG_REPORT_ERROR_BIT_EXT |
-			VK_DEBUG_REPORT_DEBUG_BIT_EXT |
 			0;
 		debug_utils_messenger_create_info.pfnUserCallback = debugCallback;
 		debug_utils_messenger_create_info.pUserData       = nullptr;
@@ -478,35 +464,35 @@ namespace lambda
 		PFN_vkCreateDebugUtilsMessengerEXT createDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance_, "vkCreateDebugUtilsMessengerEXT");
 		result = createDebugUtilsMessengerEXT(instance_, &debug_utils_messenger_create_info, VK_NULL_HANDLE, &debug_messenger_);
 		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Failed to create debug utils messenger | %s", vkErrorCode(result));
-*/
-		PFN_vkCreateDebugReportCallbackEXT vkCreateDebugReportCallbackEXT =
-			reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>
-			(vkGetInstanceProcAddr(instance_, "vkCreateDebugReportCallbackEXT"));
-		PFN_vkDebugReportMessageEXT vkDebugReportMessageEXT =
-			reinterpret_cast<PFN_vkDebugReportMessageEXT>
-			(vkGetInstanceProcAddr(instance_, "vkDebugReportMessageEXT"));
-		PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT =
-			reinterpret_cast<PFN_vkDestroyDebugReportCallbackEXT>
-			(vkGetInstanceProcAddr(instance_, "vkDestroyDebugReportCallbackEXT"));
 
-		/* Setup callback creation information */
-		VkDebugReportCallbackCreateInfoEXT callbackCreateInfo;
-		callbackCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
-		callbackCreateInfo.pNext = nullptr;
-		callbackCreateInfo.flags = 
-			VK_DEBUG_REPORT_INFORMATION_BIT_EXT |
-			VK_DEBUG_REPORT_WARNING_BIT_EXT |
-			VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT |
-			VK_DEBUG_REPORT_ERROR_BIT_EXT |
-			VK_DEBUG_REPORT_DEBUG_BIT_EXT |
-			0;
-		callbackCreateInfo.pfnCallback = &MyDebugReportCallback;
-		callbackCreateInfo.pUserData = nullptr;
+		//PFN_vkCreateDebugReportCallbackEXT vkCreateDebugReportCallbackEXT =
+		//	reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>
+		//	(vkGetInstanceProcAddr(instance_, "vkCreateDebugReportCallbackEXT"));
+		//PFN_vkDebugReportMessageEXT vkDebugReportMessageEXT =
+		//	reinterpret_cast<PFN_vkDebugReportMessageEXT>
+		//	(vkGetInstanceProcAddr(instance_, "vkDebugReportMessageEXT"));
+		//PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT =
+		//	reinterpret_cast<PFN_vkDestroyDebugReportCallbackEXT>
+		//	(vkGetInstanceProcAddr(instance_, "vkDestroyDebugReportCallbackEXT"));
 
-		/* Register the callback */
-		VkDebugReportCallbackEXT callback;
-		result = vkCreateDebugReportCallbackEXT(instance_, &callbackCreateInfo, nullptr, &callback);
-		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Failed to create debug callback | %s", vkErrorCode(result));
+		///* Setup callback creation information */
+		//VkDebugReportCallbackCreateInfoEXT callbackCreateInfo;
+		//callbackCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
+		//callbackCreateInfo.pNext = nullptr;
+		//callbackCreateInfo.flags = 
+		//	VK_DEBUG_REPORT_INFORMATION_BIT_EXT |
+		//	VK_DEBUG_REPORT_WARNING_BIT_EXT |
+		//	VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT |
+		//	VK_DEBUG_REPORT_ERROR_BIT_EXT |
+		//	VK_DEBUG_REPORT_DEBUG_BIT_EXT |
+		//	0;
+		//callbackCreateInfo.pfnCallback = &MyDebugReportCallback;
+		//callbackCreateInfo.pUserData = nullptr;
+
+		///* Register the callback */
+		//VkDebugReportCallbackEXT callback;
+		//result = vkCreateDebugReportCallbackEXT(instance_, &callbackCreateInfo, nullptr, &callback);
+		//LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Failed to create debug callback | %s", vkErrorCode(result));
 #endif
 
 		// Get physical device.
