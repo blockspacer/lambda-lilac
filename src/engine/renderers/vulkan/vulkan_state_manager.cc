@@ -76,14 +76,6 @@ namespace lambda
 	  const auto& it = rasterizer_states_.find(rasterizer_state);
       if (it == rasterizer_states_.end())
       {
-		rasterization_state.cullMode;
-		rasterization_state.depthBiasEnable;
-		rasterization_state.depthClampEnable;
-		rasterization_state.frontFace;
-		rasterization_state.pNext;
-		rasterization_state.polygonMode;
-		rasterization_state.rasterizerDiscardEnable;
-
 		switch (rasterizer_state.getCullMode())
         {
         case platform::RasterizerState::CullMode::kBack: 

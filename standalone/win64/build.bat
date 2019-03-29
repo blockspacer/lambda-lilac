@@ -1,0 +1,1 @@
+lambda-builder.exe ../../game

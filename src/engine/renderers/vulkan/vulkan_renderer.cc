@@ -5,6 +5,8 @@
 #include "vulkan_mesh.h"
 #include "vulkan_state_manager.h"
 #include "memory/frame_heap.h"
+#include <fstream>
+#include <stb_image.h>
 
 namespace lambda
 {
@@ -255,6 +257,103 @@ namespace lambda
 		vezDestroyInstance(instance_);
     }
 
+	VkShaderModule CreateShaderModule(VkDevice device, const std::string& filename, const std::string& entryPoint, VkShaderStageFlagBits stage)
+	{
+		// Load the GLSL shader code from disk.
+		std::ifstream filestream(filename.c_str(), std::ios::in | std::ios::binary);
+		if (!filestream.good())
+		{
+			std::cout << "Failed to open " << filename << "\n";
+			return VK_NULL_HANDLE;
+		}
+
+		std::string code = std::string((std::istreambuf_iterator<char>(filestream)), std::istreambuf_iterator<char>());
+		filestream.close();
+
+		// Create the shader module.
+		VezShaderModuleCreateInfo createInfo = {};
+		createInfo.stage = stage;
+		createInfo.codeSize = static_cast<uint32_t>(code.size());
+		if (filename.find(".spv") != std::string::npos)
+			createInfo.pCode = reinterpret_cast<const uint32_t*>(code.c_str());
+		else
+			createInfo.pGLSLSource = code.c_str();
+		createInfo.pEntryPoint = entryPoint.c_str();
+
+		VkShaderModule shaderModule = VK_NULL_HANDLE;
+		auto result = vezCreateShaderModule(device, &createInfo, &shaderModule);
+		if (result != VK_SUCCESS && shaderModule != VK_NULL_HANDLE)
+		{
+			// If shader module creation failed but error is from GLSL compilation, get the error log.
+			uint32_t infoLogSize = 0;
+			vezGetShaderModuleInfoLog(shaderModule, &infoLogSize, nullptr);
+
+			std::string infoLog(infoLogSize, '\0');
+			vezGetShaderModuleInfoLog(shaderModule, &infoLogSize, &infoLog[0]);
+
+			vezDestroyShaderModule(device, shaderModule);
+
+			std::cout << infoLog << "\n";
+			return VK_NULL_HANDLE;
+		}
+
+		return shaderModule;
+	}
+
+	typedef std::tuple<std::string, VkShaderStageFlagBits> PipelineShaderInfo;
+
+	bool CreatePipeline(VkDevice device, const std::vector<PipelineShaderInfo>& pipelineShaderInfo, VezPipeline* pPipeline, std::vector<VkShaderModule>* shaderModules)
+	{
+		// Create shader modules.
+		std::vector<VezPipelineShaderStageCreateInfo> shaderStageCreateInfo(pipelineShaderInfo.size());
+		for (auto i = 0U; i < pipelineShaderInfo.size(); ++i)
+		{
+			auto filename = std::get<0>(pipelineShaderInfo[i]);
+			auto stage = std::get<1>(pipelineShaderInfo[i]);
+			auto shaderModule = CreateShaderModule(device, filename, "main", stage);
+			if (shaderModule == VK_NULL_HANDLE)
+			{
+				std::cout << "CreateShaderModule failed\n";
+				return false;
+			}
+
+			shaderStageCreateInfo[i].module = shaderModule;
+			shaderStageCreateInfo[i].pEntryPoint = "main";
+			shaderStageCreateInfo[i].pSpecializationInfo = nullptr;
+
+			shaderModules->push_back(shaderModule);
+		}
+
+		// Determine if this is a compute only pipeline.
+		bool isComputePipeline = (pipelineShaderInfo.size() == 1 && std::get<1>(pipelineShaderInfo[0]) == VK_SHADER_STAGE_COMPUTE_BIT);
+
+		// Create the graphics pipeline or compute pipeline.
+		if (isComputePipeline)
+		{
+			VezComputePipelineCreateInfo pipelineCreateInfo = {};
+			pipelineCreateInfo.pStage = shaderStageCreateInfo.data();
+			if (vezCreateComputePipeline(device, &pipelineCreateInfo, pPipeline) != VK_SUCCESS)
+			{
+				std::cout << "vkCreateComputePipeline failed\n";
+				return false;
+			}
+		}
+		else
+		{
+			VezGraphicsPipelineCreateInfo pipelineCreateInfo = {};
+			pipelineCreateInfo.stageCount = static_cast<uint32_t>(shaderStageCreateInfo.size());
+			pipelineCreateInfo.pStages = shaderStageCreateInfo.data();
+			if (vezCreateGraphicsPipeline(device, &pipelineCreateInfo, pPipeline) != VK_SUCCESS)
+			{
+				std::cout << "vkCreateGraphicsPipeline failed\n";
+				return false;
+			}
+		}
+
+		// Return success.
+		return true;
+	}
+
 #if VIOLET_DEBUG
 	///////////////////////////////////////////////////////////////////////////
 	static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
@@ -283,6 +382,20 @@ namespace lambda
 
 		return VK_FALSE;
 	}
+
+	VKAPI_ATTR VkBool32 VKAPI_CALL MyDebugReportCallback(
+		VkDebugReportFlagsEXT       flags,
+		VkDebugReportObjectTypeEXT  objectType,
+		uint64_t                    object,
+		size_t                      location,
+		int32_t                     messageCode,
+		const char*                 pLayerPrefix,
+		const char*                 pMessage,
+		void*                       pUserData)
+	{
+		std::cerr << pMessage << std::endl;
+		return VK_FALSE;
+	}
 #endif
 
     ///////////////////////////////////////////////////////////////////////////
@@ -306,13 +419,26 @@ namespace lambda
 		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Failed to enumerate instance layer properties | %s", vkErrorCode(result));
 
 		for (const auto& layer : properties)
+		{
+
 			foundation::Debug(layer.layerName + String("\n"));
 
+			result = vezEnumerateInstanceExtensionProperties(layer.layerName, &property_count, nullptr);
+			LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Failed to enumerate instance extension properties | %s", vkErrorCode(result));
+			Vector<VkExtensionProperties> extensions(property_count);
+			result = vezEnumerateInstanceExtensionProperties(layer.layerName, &property_count, extensions.data());
+			LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Failed to enumerate instance extension properties | %s", vkErrorCode(result));
+
+			for (const auto& extension : extensions)
+				foundation::Debug(String("\t") + extension.extensionName + String("\n"));
+
+		}
 		Vector<const char*> enabled_layers = { "VK_LAYER_LUNARG_standard_validation" };
 		Vector<const char*> enabled_extensions = { VK_KHR_SURFACE_EXTENSION_NAME };
 
 #if VIOLET_DEBUG
 		enabled_extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+		enabled_extensions.push_back("VK_EXT_debug_report");
 #endif
 
 #if VIOLET_WIN32
@@ -331,7 +457,7 @@ namespace lambda
 		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Failed to create instance | %s", vkErrorCode(result));
 
 #if VIOLET_DEBUG
-		VkDebugUtilsMessengerCreateInfoEXT debug_utils_messenger_create_info{};
+		/*VkDebugUtilsMessengerCreateInfoEXT debug_utils_messenger_create_info{};
 		debug_utils_messenger_create_info.sType           = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
 		debug_utils_messenger_create_info.messageSeverity = 
 			VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | 
@@ -340,7 +466,7 @@ namespace lambda
 			VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT |
 			0;
 		debug_utils_messenger_create_info.messageType = 
-			//VK_DEBUG_REPORT_INFORMATION_BIT_EXT |
+			VK_DEBUG_REPORT_INFORMATION_BIT_EXT |
 			VK_DEBUG_REPORT_WARNING_BIT_EXT |
 			VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT |
 			VK_DEBUG_REPORT_ERROR_BIT_EXT |
@@ -352,6 +478,35 @@ namespace lambda
 		PFN_vkCreateDebugUtilsMessengerEXT createDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance_, "vkCreateDebugUtilsMessengerEXT");
 		result = createDebugUtilsMessengerEXT(instance_, &debug_utils_messenger_create_info, VK_NULL_HANDLE, &debug_messenger_);
 		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Failed to create debug utils messenger | %s", vkErrorCode(result));
+*/
+		PFN_vkCreateDebugReportCallbackEXT vkCreateDebugReportCallbackEXT =
+			reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>
+			(vkGetInstanceProcAddr(instance_, "vkCreateDebugReportCallbackEXT"));
+		PFN_vkDebugReportMessageEXT vkDebugReportMessageEXT =
+			reinterpret_cast<PFN_vkDebugReportMessageEXT>
+			(vkGetInstanceProcAddr(instance_, "vkDebugReportMessageEXT"));
+		PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT =
+			reinterpret_cast<PFN_vkDestroyDebugReportCallbackEXT>
+			(vkGetInstanceProcAddr(instance_, "vkDestroyDebugReportCallbackEXT"));
+
+		/* Setup callback creation information */
+		VkDebugReportCallbackCreateInfoEXT callbackCreateInfo;
+		callbackCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
+		callbackCreateInfo.pNext = nullptr;
+		callbackCreateInfo.flags = 
+			VK_DEBUG_REPORT_INFORMATION_BIT_EXT |
+			VK_DEBUG_REPORT_WARNING_BIT_EXT |
+			VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT |
+			VK_DEBUG_REPORT_ERROR_BIT_EXT |
+			VK_DEBUG_REPORT_DEBUG_BIT_EXT |
+			0;
+		callbackCreateInfo.pfnCallback = &MyDebugReportCallback;
+		callbackCreateInfo.pUserData = nullptr;
+
+		/* Register the callback */
+		VkDebugReportCallbackEXT callback;
+		result = vkCreateDebugReportCallbackEXT(instance_, &callbackCreateInfo, nullptr, &callback);
+		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Failed to create debug callback | %s", vkErrorCode(result));
 #endif
 
 		// Get physical device.
@@ -426,7 +581,7 @@ namespace lambda
 		swapchain_create_info.tripleBuffer = VK_TRUE;
 		result = vezCreateSwapchain(device_, &swapchain_create_info, &swapchain_);
 		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not create swapchain | %s", vkErrorCode(result));
-		// Create the AppBase::GetDevice() side image.
+		// Create the device_ side image.
 		VezImageCreateInfo image_create_info = {};
 		image_create_info.imageType   = VK_IMAGE_TYPE_2D;
 		image_create_info.format      = VK_FORMAT_R8G8B8A8_UNORM;
@@ -456,6 +611,219 @@ namespace lambda
 
 		state_manager_.initialize(this);
 		resize();
+
+
+		asset::VioletShaderHandle shader = asset::ShaderManager::getInstance()->get(Name("resources/shaders/test.fx"));
+		setShader(shader);
+		setMesh(full_screen_quad_.mesh);
+		setSubMesh(0);
+
+
+		struct PipelineDesc
+		{
+			VezPipeline pipeline = VK_NULL_HANDLE;
+			std::vector<VkShaderModule> shaderModules;
+		} m_basicPipeline;
+		VkBuffer m_vertexBuffer = VK_NULL_HANDLE;
+		VkBuffer m_indexBuffer = VK_NULL_HANDLE;
+		VkBuffer m_uniformBuffer = VK_NULL_HANDLE;
+		VkSampler m_sampler = VK_NULL_HANDLE;
+		VkImage m_image = VK_NULL_HANDLE;
+		VkImageView m_imageView = VK_NULL_HANDLE;
+
+		if (!CreatePipeline(device_,
+		{ { "C:/git/lambda-lilac/deps/V-EZ/Samples/Data/Shaders/SimpleQuad/SimpleQuad.vert", VK_SHADER_STAGE_VERTEX_BIT },
+		{ "C:/git/lambda-lilac/deps/V-EZ/Samples/Data/Shaders/SimpleQuad/SimpleQuad.frag", VK_SHADER_STAGE_FRAGMENT_BIT } },
+			&m_basicPipeline.pipeline, &m_basicPipeline.shaderModules))
+		{
+		}
+
+#define FATAL(msg) { std::cout << msg << "\n"; }
+		{
+			struct Vertex
+			{
+				float x, y, z;
+				float nx, ny, nz;
+				float u, v;
+			};
+			// A single quad with positions, normals and uvs.
+			Vertex vertices[] = {
+				{ -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f },
+				{ 1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f },
+				{ 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f },
+				{ -1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f }
+			};
+
+			// Create the device side vertex buffer.
+			VezBufferCreateInfo bufferCreateInfo = {};
+			bufferCreateInfo.size = sizeof(vertices);
+			bufferCreateInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+			auto result = vezCreateBuffer(device_, VEZ_MEMORY_GPU_ONLY, &bufferCreateInfo, &m_vertexBuffer);
+			if (result != VK_SUCCESS)
+				FATAL("vezCreateBuffer failed for vertex buffer");
+
+			// Upload the host side data.
+			result = vezBufferSubData(device_, m_vertexBuffer, 0, sizeof(vertices), static_cast<void*>(vertices));
+			if (result != VK_SUCCESS)
+				FATAL("vezBufferSubData failed for vertex buffer");
+
+			// A single quad with positions, normals and uvs.
+			uint32_t indices[] = {
+				0, 1, 2,
+				0, 2, 3,
+			};
+
+			// Create the device side index buffer.
+			bufferCreateInfo.size = sizeof(indices);
+			bufferCreateInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+			result = vezCreateBuffer(device_, VEZ_MEMORY_GPU_ONLY, &bufferCreateInfo, &m_indexBuffer);
+			if (result != VK_SUCCESS)
+				FATAL("vezCreateBuffer failed for index buffer");
+
+			// Upload the host side data.
+			result = vezBufferSubData(device_, m_indexBuffer, 0, sizeof(indices), static_cast<void*>(indices));
+			if (result != VK_SUCCESS)
+				FATAL("vezBufferSubData failed for index buffer");
+		}
+
+		struct UniformBuffer
+		{
+			glm::mat4 model;
+			glm::mat4 view;
+			glm::mat4 projection;
+		};
+		{
+			// Create a buffer for storing per frame matrices.
+			VezBufferCreateInfo createInfo = {};
+			createInfo.size = sizeof(UniformBuffer);
+			createInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+			if (vezCreateBuffer(device_, VEZ_MEMORY_CPU_TO_GPU, &createInfo, &m_uniformBuffer) != VK_SUCCESS)
+				FATAL("vezCreateBuffer failed for uniform buffer");
+		}
+
+		{
+			VezSamplerCreateInfo createInfo = {};
+			createInfo.magFilter = VK_FILTER_LINEAR;
+			createInfo.minFilter = VK_FILTER_LINEAR;
+			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+			createInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+			createInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+			createInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+			auto result = vezCreateSampler(device_, &createInfo, &m_sampler);
+			if (result != VK_SUCCESS)
+				FATAL("vezCreateSampler failed");
+		}
+
+		{
+			// Load image from disk.
+			int width, height, channels;
+			auto pixelData = stbi_load("C:/git/lambda-lilac/deps/V-EZ/Samples/Data/Textures/texture.jpg", &width, &height, &channels, 4);
+
+			// Create the device_ side image.
+			VezImageCreateInfo imageCreateInfo = {};
+			imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+			imageCreateInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
+			imageCreateInfo.extent = { static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1 };
+			imageCreateInfo.mipLevels = 1;
+			imageCreateInfo.arrayLayers = 1;
+			imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+			imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+			imageCreateInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+			auto result = vezCreateImage(device_, VEZ_MEMORY_GPU_ONLY, &imageCreateInfo, &m_image);
+			if (result != VK_SUCCESS)
+				FATAL("vezCreateImage failed");
+
+			// Upload the host side data.
+			VezImageSubDataInfo subDataInfo = {};
+			subDataInfo.imageSubresource.mipLevel = 0;
+			subDataInfo.imageSubresource.baseArrayLayer = 0;
+			subDataInfo.imageSubresource.layerCount = 1;
+			subDataInfo.imageOffset = { 0, 0, 0 };
+			subDataInfo.imageExtent = { imageCreateInfo.extent.width, imageCreateInfo.extent.height, 1 };
+			result = vezImageSubData(device_, m_image, &subDataInfo, reinterpret_cast<const void*>(pixelData));
+			if (result != VK_SUCCESS)
+				FATAL("vezImageSubData failed");
+
+			// Destroy the pixel data.
+			stbi_image_free(pixelData);
+
+			// Create the image view for binding the texture as a resource.
+			VezImageViewCreateInfo imageViewCreateInfo = {};
+			imageViewCreateInfo.image = m_image;
+			imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+			imageViewCreateInfo.format = imageCreateInfo.format;
+			imageViewCreateInfo.subresourceRange.layerCount = 1;
+			imageViewCreateInfo.subresourceRange.levelCount = 1;
+			result = vezCreateImageView(device_, &imageViewCreateInfo, &m_imageView);
+			if (result != VK_SUCCESS)
+				FATAL("vezCreateImageView failed");
+		}
+
+		// TODO (Hilze): Remove all of this demo code ASAP!
+		command_buffer_.tryBegin();
+
+		int width  = (int)world_->getWindow()->getSize().x;
+		int height = (int)world_->getWindow()->getSize().y;
+
+		VkViewport viewport = { 0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f, 1.0f };
+		VkRect2D scissor = { { 0, 0 },{ static_cast<uint32_t>(width), static_cast<uint32_t>(height) } };
+		vezCmdSetViewport(0, 1, &viewport);
+		vezCmdSetScissor(0, 1, &scissor);
+		vezCmdSetViewportState(1);
+
+		// Update framebuffer.
+		Framebuffer framebuffer{};
+		framebuffer.num_framebuffers = state_.shader->getNumRenderTargets();
+		framebuffer.rt_width  = (uint32_t)width;
+		framebuffer.rt_height = (uint32_t)height;
+		framebuffer.render_targets[0] = backbuffer_view_;
+
+		state_.framebuffer = memory_.getFramebuffer(framebuffer);
+
+		// Begin a render pass.
+		Vector<VezAttachmentReference> attachment_references = getAttachmentReferences();
+		VezRenderPassBeginInfo render_pass_begin_info{};
+		render_pass_begin_info.framebuffer = state_.framebuffer;
+		render_pass_begin_info.attachmentCount = (uint32_t)attachment_references.size();
+		render_pass_begin_info.pAttachments = attachment_references.data();
+		vezCmdBeginRenderPass(&render_pass_begin_info);
+
+		// Bind the pipeline and associated resources.
+		vezCmdBindPipeline(m_basicPipeline.pipeline);
+		vezCmdBindBuffer(m_uniformBuffer, 0, VK_WHOLE_SIZE, 0, 0, 0);
+		vezCmdBindImageView(m_imageView, m_sampler, 0, 1, 0);
+
+		// Set depth stencil state.
+		VezPipelineDepthStencilState depthStencilState = {};
+		depthStencilState.depthTestEnable = VK_TRUE;
+		depthStencilState.depthWriteEnable = VK_TRUE;
+		depthStencilState.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+		vezCmdSetDepthStencilState(&depthStencilState);
+
+		// Bind the vertex buffer and index buffers.
+		VkDeviceSize offset = 0;
+		vezCmdBindVertexBuffers(0, 1, &m_vertexBuffer, &offset);
+		vezCmdBindIndexBuffer(m_indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+		// Draw the quad.
+		vezCmdDrawIndexed(6, 1, 0, 0, 0);
+
+		vezCmdEndRenderPass();
+
+
+		// TODO (Hilze): Remove all of this demo code ASAP!
+		platform::RenderTarget output;
+
+		platform::ShaderPass shader_pass(
+			Name("test"),
+			shader,
+			{},
+			{ output }
+		);
+		bindShaderPass(shader_pass);
+		draw();
+
+		asset::ShaderManager::getInstance()->destroy(shader);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -630,20 +998,13 @@ namespace lambda
 		{
 			Framebuffer framebuffer{};
 			framebuffer.num_framebuffers = state_.shader->getNumRenderTargets();
-			framebuffer.rt_width         = state_.rt_width;
-			framebuffer.rt_height        = state_.rt_height;
+			framebuffer.rt_width = state_.rt_width;
+			framebuffer.rt_height = state_.rt_height;
 			memcpy(framebuffer.render_targets, state_.render_targets, sizeof(VkImageView) * framebuffer.num_framebuffers);
-			
+
 			if (state_.depth_target != VK_NULL_HANDLE)
 				framebuffer.render_targets[framebuffer.num_framebuffers++] = state_.depth_target;
 
-			// TODO (Hilze): Remove ASAP!
-			framebuffer.rt_width  = world_->getWindow()->getSize().x;
-			framebuffer.rt_height = world_->getWindow()->getSize().y;
-
-			for (uint32_t i = 0; i < framebuffer.num_framebuffers; ++i)
-				framebuffer.render_targets[i] = backbuffer_view_;
-			
 			state_.framebuffer = memory_.getFramebuffer(framebuffer);
 			state_.dirty_framebuffer = false;
 		}
@@ -651,9 +1012,9 @@ namespace lambda
 		// Begin a render pass.
 		Vector<VezAttachmentReference> attachment_references = getAttachmentReferences();
 		VezRenderPassBeginInfo render_pass_begin_info{};
-		render_pass_begin_info.framebuffer     = state_.framebuffer;
+		render_pass_begin_info.framebuffer = state_.framebuffer;
 		render_pass_begin_info.attachmentCount = (uint32_t)attachment_references.size();
-		render_pass_begin_info.pAttachments    = attachment_references.data();
+		render_pass_begin_info.pAttachments = attachment_references.data();
 		vezCmdBeginRenderPass(&render_pass_begin_info);
 
 		// Update shader.
@@ -662,12 +1023,6 @@ namespace lambda
 			state_.shader->bind();
 			state_.dirty_shader = false;
 		}
-
-
-		for (auto& buffer : state_.shader->getBuffers())
-			world_->getShaderVariableManager().updateBuffer(buffer.shader_buffer);
-
-		state_.shader->bindBuffers();
 
 		// Update textures.
 		Vector<VulkanReflectionInfo> textures = state_.shader->getTextures();
@@ -686,7 +1041,7 @@ namespace lambda
 							vezCmdBindImageView(view, VK_NULL_HANDLE, texture.set, texture.binding, 0);
 						}
 					}
-
+		
 					state_.dirty_textures &= ~(1 << i);
 				}
 			}
@@ -695,6 +1050,12 @@ namespace lambda
 		// Update state manager.
 		Vector<VulkanReflectionInfo> samplers = state_.shader->getSamplers();
 		state_manager_.update(samplers);
+
+		// Update constant buffers.
+		for (auto& buffer : state_.shader->getBuffers())
+			world_->getShaderVariableManager().updateBuffer(buffer.shader_buffer);
+
+		state_.shader->bindBuffers();
 
 		// Update mesh.
 		if (state_.dirty_mesh)
@@ -1275,7 +1636,8 @@ namespace lambda
 		for (uint32_t i = 0; i < state_.shader->getNumRenderTargets(); ++i)
 		{
 			VezAttachmentReference attachment_reference{};
-			attachment_reference.loadOp  = VK_ATTACHMENT_LOAD_OP_LOAD;
+			attachment_reference.clearValue.color = { 0.3f, 0.3f, 0.3f, 0.0f };
+			attachment_reference.loadOp  = VK_ATTACHMENT_LOAD_OP_CLEAR;
 			attachment_reference.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 			attachment_references.push_back(attachment_reference);
 		}
@@ -1283,7 +1645,8 @@ namespace lambda
 		if (state_.depth_target)
 		{
 			VezAttachmentReference attachment_reference{};
-			attachment_reference.loadOp  = VK_ATTACHMENT_LOAD_OP_LOAD;
+			attachment_reference.clearValue.depthStencil.depth = 1.0f;
+			attachment_reference.loadOp  = VK_ATTACHMENT_LOAD_OP_CLEAR;
 			attachment_reference.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 			attachment_references.push_back(attachment_reference);
 		}
