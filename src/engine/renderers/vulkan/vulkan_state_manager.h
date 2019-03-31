@@ -13,13 +13,19 @@ namespace lambda
   {
 	  class VulkanRenderer;
 
+		struct ColorBlendState
+		{
+			VezColorBlendState blend_state;
+			VezColorBlendAttachmentState attachments[8];
+		};
+
     ///////////////////////////////////////////////////////////////////////////
     class VulkanStateManager
     {
     public:
       void initialize(VulkanRenderer* renderer);
-	  void update(Vector<VulkanReflectionInfo> samplers);
-	  void bindRasterizerState(
+			void update(Vector<VulkanReflectionInfo> samplers, uint32_t attachment_count);
+			void bindRasterizerState(
         const platform::RasterizerState& rasterizer_state
       );
       void bindBlendState(const platform::BlendState& blend_state);
@@ -36,26 +42,26 @@ namespace lambda
       UnorderedMap<platform::RasterizerState, 
         VezRasterizationState> rasterizer_states_;
       UnorderedMap<platform::BlendState, 
-        VezColorBlendState> blend_states_;
+				ColorBlendState> blend_states_;
       UnorderedMap<platform::SamplerState, 
         VkSampler> sampler_states_;
-	  UnorderedMap<platform::DepthStencilState,
-		  VezPipelineDepthStencilState> depth_stencil_states_;
-	  UnorderedMap<asset::Topology,
-		  VezInputAssemblyState> input_assembly_states_;
+			UnorderedMap<platform::DepthStencilState,
+				VezPipelineDepthStencilState> depth_stencil_states_;
+			UnorderedMap<asset::Topology,
+				VezInputAssemblyState> input_assembly_states_;
 
-	  VulkanRenderer* renderer_;
+			VulkanRenderer* renderer_;
 	  
-	  bool     dirty_rasterizer_;
-	  bool     dirty_blend_;
-	  bool     dirty_depth_stencil_;
-	  bool     dirty_input_assembly_;
-	  uint16_t dirty_sampler_;
-	  VezRasterizationState        rasterizer_;
-	  VezColorBlendState           blend_;
-	  VkSampler                    samplers_[16];
-	  VezPipelineDepthStencilState depth_stencil_;
-	  VezInputAssemblyState        input_assembly_;
+			bool     dirty_rasterizer_;
+			bool     dirty_blend_;
+			bool     dirty_depth_stencil_;
+			bool     dirty_input_assembly_;
+			uint16_t dirty_sampler_;
+			VezRasterizationState        rasterizer_;
+			ColorBlendState              blend_;
+			VkSampler                    samplers_[16];
+			VezPipelineDepthStencilState depth_stencil_;
+			VezInputAssemblyState        input_assembly_;
     };
   }
 }

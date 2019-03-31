@@ -21,6 +21,7 @@ namespace lambda
 		}
 
 		///////////////////////////////////////////////////////////////////////////
+#pragma optimize("", off)
 		void VulkanMesh::bind(
 			const Vector<uint32_t>& stages,
 			const uint32_t& sub_mesh_idx)
@@ -44,12 +45,15 @@ namespace lambda
 				offsets.push_back(sub_mesh.offsets[stage].offset);
 			}
 
-			vezCmdBindVertexBuffers(
-				0, 
-				(uint32_t)buffers.size(),
-				buffers.data(), 
-				offsets.data()
-			);
+			if (!buffers.empty())
+			{
+				vezCmdBindVertexBuffers(
+					0,
+					(uint32_t)buffers.size(),
+					buffers.data(),
+					offsets.data()
+				);
+			}
 
 			const asset::Mesh::Buffer& indices =
 				mesh_->get(asset::MeshElements::kIndices);

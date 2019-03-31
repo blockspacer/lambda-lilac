@@ -1,6 +1,6 @@
 #include "common.fx"
 
-cbuffer cbPostProcess
+Make_CBuffer(cbPostProcess, 0)
 {
   float4x4 view_matrix;
   float4x4 inverse_view_matrix;
@@ -25,9 +25,9 @@ VSOutput VS(uint id: SV_VertexID)
   return vOut;
 }
 
-Texture2D tex_albedo   : register(t0);
-Texture2D tex_position : register(t1);
-Texture2D tex_normal   : register(t2);
+Make_Texture2D(tex_albedo, 0);
+Make_Texture2D(tex_position, 1);
+Make_Texture2D(tex_normal, 2);
 
 float2 getTex(float3 world_pos)
 {

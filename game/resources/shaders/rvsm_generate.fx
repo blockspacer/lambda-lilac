@@ -16,13 +16,13 @@ struct VSOutput
   float2 tex       : TEX_COORD;
 };
 
-cbuffer cbPerMesh
+Make_CBuffer(cbPerMesh, 0)
 {
   float4x4 model_matrix;
   float4x4 light_view_projection_matrix;
 }
 
-cbuffer cbPerPass
+Make_CBuffer(cbPerPass, 1)
 {
   float4 light_colour;
 }
@@ -38,8 +38,8 @@ VSOutput VS(VSInput vIn)
   return vOut;
 }
 
-Texture2D tex_albedo   : register(t0);
-Texture2D tex_normal   : register(t1);
+Make_Texture2D(tex_albedo, 0);
+Make_Texture2D(tex_normal, 1);
 
 struct PSOutput
 {

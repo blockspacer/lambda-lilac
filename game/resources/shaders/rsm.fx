@@ -5,9 +5,9 @@
 static const float rsm_intensity = 1.0f;
 static const float rsm_r_max = 0.05f;
 
-Texture2D tex_s_position   : register(t5);
-Texture2D tex_s_normal     : register(t6);
-Texture2D tex_s_flux       : register(t7);
+Make_Texture2D(tex_s_position, 5);
+Make_Texture2D(tex_s_normal, 6);
+Make_Texture2D(tex_s_flux, 7);
 
 float3 RSM(float2 shadow_coord, float3 w_normal, float3 w_position)
 {

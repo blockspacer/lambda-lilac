@@ -1,4 +1,6 @@
-cbuffer Uniforms : register(b0)
+#include "common.fx"
+
+Make_CBuffer(Uniforms, 0)
 {
   float4 State;
   float4x4 Transform;
@@ -83,7 +85,7 @@ float2 ScreenToDeviceCoords(float2 screen_coord) {
   return screen_coord;
 }
 
-VS_OUTPUT VS(float2 Position : inl_Positions,
+VS_OUTPUT VS(float2 Position : inl_use_me_Positions,
             float4 Color    : inl_COLOR0,
             float2 TexCoord : inl_TEXCOORD0,
             float2 ObjCoord : inl_TEXCOORD1,
@@ -130,9 +132,9 @@ VS_OUTPUT VS(float2 Position : inl_Positions,
 
 
 // PS
-Texture2D texture0 : register(t0);
-Texture2D texture1 : register(t1);
-SamplerState sampler0 : register(s0);
+Make_Texture2D(texture0, 0);
+Make_Texture2D(texture1, 1);
+Make_SamplerState(sampler0, 0);
 
 float OutColor;
 

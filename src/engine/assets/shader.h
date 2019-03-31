@@ -19,6 +19,7 @@ namespace lambda
 
 			String getFilePath() const;
 			Vector<char> getByteCode(ShaderStages stage, int type) const;
+			Vector<VioletShaderResource> getResources(ShaderStages stage) const;
 
 			void setShaderVariable(const platform::ShaderVariable& variable);
 			Vector<platform::ShaderVariable> getQueuedShaderVariables();

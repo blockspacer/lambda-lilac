@@ -21,7 +21,7 @@ class PostProcessor {
     PostProcess.addRenderTarget("position",            1.0, TextureFormat.R32G32B32A32)
     PostProcess.addRenderTarget("normal",              1.0, TextureFormat.R8G8B8A8)
     PostProcess.addRenderTarget("metallic_roughness",  1.0, TextureFormat.R8G8B8A8)
-    PostProcess.addRenderTarget("depth_buffer",        1.0, TextureFormat.R24G8)
+    PostProcess.addRenderTarget("depth_buffer",        1.0, TextureFormat.D32)
     PostProcess.addRenderTarget("post_process_buffer", 1.0, TextureFormat.R32G32B32A32)
 
     // Set the final pass.

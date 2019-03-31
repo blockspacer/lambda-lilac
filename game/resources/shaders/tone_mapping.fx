@@ -14,7 +14,7 @@ VSOutput VS(uint id: SV_VertexID)
   return vOut;
 }
 
-Texture2D tex_albedo    : register(t0);
+Make_Texture2D(tex_albedo, 0);
 
 float3 hejlToneMapping(float3 color)
 {

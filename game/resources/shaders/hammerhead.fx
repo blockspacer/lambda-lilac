@@ -6,7 +6,7 @@ struct VSOutput
   float2 tex      : TEX_COORD;
 };
 
-cbuffer cbPostProcess
+Make_CBuffer(cbPostProcess, 0)
 {
   float roughness;
 };
@@ -19,7 +19,7 @@ VSOutput VS(uint id: SV_VertexID)
   return vOut;
 }
 
-Texture2D tex_hammerhead : register(t0);
+Make_Texture2D(tex_hammerhead, 0);
 static const uint SAMPLE_COUNT = 512u;
 
 float RadicalInverse_VdC(uint bits)

@@ -1,7 +1,7 @@
 #include "common.fx"
 #include "atmosphere.fx"
 
-cbuffer cbPerPass
+Make_CBuffer(cbPerPass, 0)
 {
   float4x4 model_matrix;
   float4x4 view_matrix;
@@ -9,7 +9,7 @@ cbuffer cbPerPass
   float4x4 inverse_projection_matrix;
 };
 
-cbuffer cbPerFrameSky
+Make_CBuffer(cbPerFrameSky, 1)
 {
   float3 eSunDir = normalize(float3(1.0f, 1.0f, 1.0f));
   float eNearPlane = 0.1f;
@@ -31,12 +31,12 @@ VSOutput VS(uint id : SV_VertexID)
   return vOut;
 }
 
-Texture2D   tex_post_process : register(t0);
-Texture2D   tex_position     : register(t1);
+Make_Texture2D(tex_post_process, 0);
+Make_Texture2D(tex_position, 1);
 #ifdef CUBEMAP
-TextureCube tex_cubemap      : register(t2);
+Make_TextureCube(tex_cubemap, 2);
 #else
-Texture2D   tex_cubemap      : register(t2);
+Make_Texture2D(tex_cubemap, 2);
 #endif
 
 #define FLT_MAX 3.402823466e+5F

@@ -1,10 +1,12 @@
+#include "common.fx"
+
 cbuffer buffer0 : register(b0)
 {
 	float4x4 projection_matrix;
 };
 
-Texture2D    tex : register(t0);
-SamplerState sam : register(s0);
+Make_Texture2D(tex, 0);
+Make_SamplerState(sam, 0);
 
 struct VS_INPUT
 {

@@ -1,3 +1,4 @@
+#include "common.fx"
 #include "tbn.fx"
 
 struct VSInput
@@ -13,7 +14,7 @@ struct VSOutput
   float4 colour    : COLOUR;
 };
 
-cbuffer cbPerMesh
+Make_CBuffer(cbPerMesh, 0)
 {
   float4x4 view_projection_matrix;
 }
@@ -33,7 +34,7 @@ struct PSOutput
   float4 albedo   : SV_Target0;
 };
 
-cbuffer cbPerMesh
+Make_CBuffer(cbPerMesh, 1)
 {
   float2 metallic_roughness;
   float3 camera_position;

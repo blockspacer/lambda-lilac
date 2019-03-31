@@ -1,6 +1,6 @@
 #include "common.fx"
 
-cbuffer cbPostProcess
+Make_CBuffer(cbPostProcess, 0)
 {
   float4x4 view_matrix;
   float4x4 projection_matrix;
@@ -101,10 +101,10 @@ VSOutput VS(uint id: SV_VertexID)
   return vOut;
 }
 
-Texture2D tex_position  : register(t0);
-Texture2D tex_normal    : register(t1);
-Texture2D tex_random    : register(t2);
-Texture2D tex_depth     : register(t3);
+Make_Texture2D(tex_position, 0);
+Make_Texture2D(tex_normal, 1);
+Make_Texture2D(tex_random, 2);
+Make_Texture2D(tex_depth, 3);
 
 float4 PS(VSOutput pIn) : SV_Target0
 {

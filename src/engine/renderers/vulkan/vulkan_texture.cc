@@ -54,6 +54,7 @@ namespace lambda
       return VkFormat::VK_FORMAT_UNDEFINED;
     }
 
+#pragma optimize ("", off)
     ///////////////////////////////////////////////////////////////////////////
 	VulkanTexture::VulkanTexture(
       asset::VioletTextureHandle texture, 
@@ -85,14 +86,20 @@ namespace lambda
 		  ? true : false;
 	  bool is_dsv = (format_ == VK_FORMAT_D24_UNORM_S8_UINT || format_ == VK_FORMAT_D32_SFLOAT);
 
-	  VkImageUsageFlags usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+		// TODO (Hilze): Remove the flag VK_IMAGE_USAGE_TRANSFER_SRC_BIT ASAP!
+	  VkImageUsageFlags usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 	  if (is_render_target_)
 	  {
 		  if (is_dsv)
-			  usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+			  usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 		  else
-			  usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+			  usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 	  }
+
+		if (!(is_dsv && is_render_target_))
+		{
+			usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
+		}
 
 	  VezImageCreateInfo image_create_info{};
 	  image_create_info.pNext         = nullptr;
@@ -111,8 +118,8 @@ namespace lambda
 	  // Create the textures.
 	  for (unsigned char i = 0u; i < (is_render_target_ ? 2u : 1u); ++i)
 	  {
-		result = vezCreateImage(renderer_->getDevice(), VEZ_MEMORY_GPU_ONLY, &image_create_info, &textures_[i]);
-		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not create texture | %s", vkErrorCode(result));
+			result = vezCreateImage(renderer_->getDevice(), VEZ_MEMORY_GPU_ONLY, &image_create_info, &textures_[i]);
+			LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not create texture | %s", vkErrorCode(result));
 	  }
 
 	  // Upload the data.

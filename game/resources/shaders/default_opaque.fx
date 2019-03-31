@@ -28,7 +28,7 @@ struct VSOutput
   float3 normal    : NORMAL;
 };
 
-cbuffer cbPerMesh
+Make_CBuffer(cbPerMesh, 0)
 {
   float4x4 model_matrix;
   float4x4 view_projection_matrix;
@@ -54,9 +54,9 @@ VSOutput VS(VSInput vIn)
   return vOut;
 }
 
-Texture2D tex_albedo   : register(t0);
-Texture2D tex_normal   : register(t1);
-Texture2D tex_dmra     : register(t2); // Displacement - Metallicness - Roughness - Ambient Occlusion
+Make_Texture2D(tex_albedo, 0);
+Make_Texture2D(tex_normal, 1);
+Make_Texture2D(tex_dmra, 2); // Displacement - Metallicness - Roughness - Ambient Occlusion
 
 struct PSOutput
 {
@@ -66,7 +66,7 @@ struct PSOutput
   float4 mra      : SV_Target3; // Metallic - Roughness - Ambient Occlusion.
 };
 
-cbuffer cbPerMesh
+Make_CBuffer(cbPerMesh, 1)
 {
   float2 metallic_roughness;
   float3 camera_position;

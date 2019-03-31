@@ -14,7 +14,7 @@ VSOutput VS(uint id: SV_VertexID)
   return vOut;
 }
 
-Texture2D tex_albedo    : register(t0);
+Make_Texture2D(tex_albedo, 0);
 
 static const float3 l = float3(0.2126f, 0.7152f, 0.0722f);
 static const float bloom_threshold = 1.0f;

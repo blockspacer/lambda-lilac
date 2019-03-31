@@ -1,6 +1,6 @@
 #include "common.fx"
 
-cbuffer cbPostProcess
+Make_CBuffer(cbPostProcess, 0)
 {
   float2 screen_size;
 
@@ -23,7 +23,7 @@ VSOutput VS(uint id: SV_VertexID)
   return vOut;
 }
 
-Texture2D tex_albedo   : register(t0);
+Make_Texture2D(tex_albedo, 0);
 
 float4 PS(VSOutput pIn) : SV_TARGET
 {

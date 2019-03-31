@@ -15,14 +15,13 @@ VSOutput VS(uint id : SV_VertexID)
   return vOut;
 }
 
-cbuffer cbPostProcess
+Make_CBuffer(cbPostProcess, 0)
 {
   float2 inv_texture_size;
   float2 blur_scale = float2(0.0f, 0.0f);
 };
 
-SamplerState sam : register(s1);
-Texture2D tex_to_blur  : register(t0);
+Make_Texture2D(tex_to_blur, 0);
 
 
 static const float blur_table[5] = {

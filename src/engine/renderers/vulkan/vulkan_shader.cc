@@ -6,7 +6,37 @@ namespace lambda
 {
   namespace linux
   {
+		bool compile(VkDevice device, const char* data, uint32_t size, VkShaderModule& module, VezPipelineShaderStageCreateInfo& shader_stage, const char* entry, VkShaderStageFlagBits stage)
+		{
+			VezShaderModuleCreateInfo shader_module_create_info{};
+			shader_module_create_info.pEntryPoint = entry;
+			shader_module_create_info.stage       = stage;
+			shader_module_create_info.codeSize    = size;
+			shader_module_create_info.pCode       = (uint32_t*)data;
+
+			VkResult result;
+			result = vezCreateShaderModule(device, &shader_module_create_info, &module);
+			LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not create shader module | %s", vkErrorCode(result));
+			if (result != VK_SUCCESS && module != VK_NULL_HANDLE)
+			{
+				// If shader module creation failed but error is from GLSL compilation, get the error log.
+				uint32_t info_log_size = 0;
+				vezGetShaderModuleInfoLog(module, &info_log_size, nullptr);
+				String info_log(info_log_size, '\0');
+				vezGetShaderModuleInfoLog(module, &info_log_size, &info_log[0]);
+				vezDestroyShaderModule(device, module);
+				foundation::Error(info_log + "\n");
+				return false;
+			}
+
+			shader_stage.pEntryPoint = entry;
+			shader_stage.module      = module;
+
+			return true;
+		}
+
     ///////////////////////////////////////////////////////////////////////////
+#pragma optimize("", off)
 	  VulkanShader::VulkanShader(asset::VioletShaderHandle shader, VulkanRenderer* renderer)
 		  : renderer_(renderer)
 		  , vs_(VK_NULL_HANDLE)
@@ -23,53 +53,26 @@ namespace lambda
 
 		  if (!data[(int)ShaderStages::kVertex][VIOLET_SPIRV].empty())
 		  {
-			  VezShaderModuleCreateInfo shader_module_create_info{};
-			  shader_module_create_info.pEntryPoint = "VS";
-			  shader_module_create_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
-			  shader_module_create_info.codeSize = static_cast<uint32_t>(data[(int)ShaderStages::kVertex][VIOLET_SPIRV].size());
-			  shader_module_create_info.pCode = (uint32_t*)data[(int)ShaderStages::kVertex][VIOLET_SPIRV].data();
-
-			  result = vezCreateShaderModule(renderer_->getDevice(), &shader_module_create_info, &vs_);
-			  LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not create shader module | %s", vkErrorCode(result));
-
-			  VezPipelineShaderStageCreateInfo shader_stage{};
-			  shader_stage.pEntryPoint = "VS";
-			  shader_stage.module = vs_;
-			  shader_stages.push_back(shader_stage);
+				VezPipelineShaderStageCreateInfo shader_stage{};
+				String src = (char*)data[(int)ShaderStages::kVertex][VIOLET_SPIRV].data();
+				if (compile(renderer_->getDevice(), src.c_str(), (uint32_t)src.size(), vs_, shader_stage, "main", VK_SHADER_STAGE_VERTEX_BIT))
+					shader_stages.push_back(shader_stage);
 		  }
 
 		  if (!data[(int)ShaderStages::kPixel][VIOLET_SPIRV].empty())
 		  {
-			  VezShaderModuleCreateInfo shader_module_create_info{};
-			  shader_module_create_info.pEntryPoint = "PS";
-			  shader_module_create_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-			  shader_module_create_info.codeSize = static_cast<uint32_t>(data[(int)ShaderStages::kPixel][VIOLET_SPIRV].size());
-			  shader_module_create_info.pCode = reinterpret_cast<const uint32_t*>(data[(int)ShaderStages::kPixel][VIOLET_SPIRV].data());
-
-			  result = vezCreateShaderModule(renderer_->getDevice(), &shader_module_create_info, &ps_);
-			  LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not create shader module | %s", vkErrorCode(result));
-
-			  VezPipelineShaderStageCreateInfo shader_stage{};
-			  shader_stage.pEntryPoint = "PS";
-			  shader_stage.module = ps_;
-			  shader_stages.push_back(shader_stage);
+				VezPipelineShaderStageCreateInfo shader_stage{};
+				String src = (char*)data[(int)ShaderStages::kPixel][VIOLET_SPIRV].data();
+				if (compile(renderer_->getDevice(), src.c_str(), (uint32_t)src.size(), ps_, shader_stage, "main", VK_SHADER_STAGE_FRAGMENT_BIT))
+					shader_stages.push_back(shader_stage);
 		  }
 
 		  if (!data[(int)ShaderStages::kGeometry][VIOLET_SPIRV].empty())
 		  {
-			  VezShaderModuleCreateInfo shader_module_create_info{};
-			  shader_module_create_info.pEntryPoint = "GS";
-			  shader_module_create_info.stage = VK_SHADER_STAGE_GEOMETRY_BIT;
-			  shader_module_create_info.codeSize = static_cast<uint32_t>(data[(int)ShaderStages::kGeometry][VIOLET_SPIRV].size());
-			  shader_module_create_info.pCode = reinterpret_cast<const uint32_t*>(data[(int)ShaderStages::kGeometry][VIOLET_SPIRV].data());
-
-			  result = vezCreateShaderModule(renderer_->getDevice(), &shader_module_create_info, &gs_);
-			  LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not create shader module | %s", vkErrorCode(result));
-
-			  VezPipelineShaderStageCreateInfo shader_stage{};
-			  shader_stage.pEntryPoint = "GS";
-			  shader_stage.module = gs_;
-			  shader_stages.push_back(shader_stage);
+				VezPipelineShaderStageCreateInfo shader_stage{};
+				String src = (char*)data[(int)ShaderStages::kGeometry][VIOLET_SPIRV].data();
+				if (compile(renderer_->getDevice(), src.c_str(), (uint32_t)src.size(), gs_, shader_stage, "main", VK_SHADER_STAGE_GEOMETRY_BIT))
+					shader_stages.push_back(shader_stage);
 		  }
 
 		   
@@ -79,17 +82,49 @@ namespace lambda
 		  result = vezCreateGraphicsPipeline(renderer_->getDevice(), &pipeline_create_info, &pipeline_);
 		  LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not create pipeline | %s", vkErrorCode(result));
 
+			for (uint32_t i = 0; i < (uint32_t)ShaderStages::kCount; ++i)
+			{
+				for (const auto& resource : shader->getResources((ShaderStages)i))
+				{
+					VulkanReflectionInfo info{};
+					switch (resource.type)
+					{
+					case VioletShaderResourceType::kConstantBuffer:
+						info.slot    = resource.slot;
+						info.binding = info.slot + 200;
+						info.set     = 0;
+						info.name    = "sampler";
+						samplers_.push_back(info);
+						break;
+					case VioletShaderResourceType::kSampler:
+						info.slot    = resource.slot;
+						info.binding = info.slot + 200;
+						info.set     = 0;
+						info.name    = "sampler";
+						samplers_.push_back(info);
+						break;
+					case VioletShaderResourceType::kTexture:
+						info.slot    = resource.slot;
+						info.binding = info.slot + 100;
+						info.set     = 0;
+						info.name    = "texture";
+						textures_.push_back(info);
+						break;
+					}
+				}
+			}
+
 		  reflect();
 	  }
     
     ///////////////////////////////////////////////////////////////////////////
     VulkanShader::~VulkanShader()
     {
-		vezDestroyShaderModule(renderer_->getDevice(), vs_);
-		vezDestroyShaderModule(renderer_->getDevice(), ps_);
-		vezDestroyShaderModule(renderer_->getDevice(), gs_);
-		vezDestroyPipeline(renderer_->getDevice(), pipeline_);
-		vezDestroyVertexInputFormat(renderer_->getDevice(), input_format_);
+			vezDestroyShaderModule(renderer_->getDevice(), vs_);
+			vezDestroyShaderModule(renderer_->getDevice(), ps_);
+			vezDestroyShaderModule(renderer_->getDevice(), gs_);
+			vezDestroyPipeline(renderer_->getDevice(), pipeline_);
+			vezDestroyVertexInputFormat(renderer_->getDevice(), input_format_);
 
       buffers_.resize(0u);
       
@@ -100,8 +135,8 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     void VulkanShader::bind()
     {
-		vezCmdBindPipeline(pipeline_);
-		vezCmdSetVertexInputFormat(input_format_);
+			vezCmdBindPipeline(pipeline_);
+			vezCmdSetVertexInputFormat(input_format_);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -112,6 +147,7 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
+#pragma optimize ("", off)
     void VulkanShader::bindBuffers()
     {
       for (size_t i = 0u; i < buffers_.size(); ++i)
@@ -123,18 +159,18 @@ namespace lambda
         {
           buffer.setChanged(false);
 		  
-		  void* data = gpu_buffer->lock();
-		  memcpy(data, buffer.getData(), gpu_buffer->getSize());
-		  gpu_buffer->unlock();
+					void* data = gpu_buffer->lock();
+					memcpy(data, buffer.getData(), gpu_buffer->getSize());
+					gpu_buffer->unlock();
           
-		  buffers_.at(i).bound = false;
+					buffers_.at(i).bound = false;
         }
 
-		if (!buffers_[i].bound)
-        {
-          buffers_[i].bound = true;
-		  vezCmdBindBuffer(buffers_[i].buffer->getBuffer(), buffers_[i].offset, VK_WHOLE_SIZE, buffers_[i].set, buffers_[i].binding, 0);
-        }
+				//if (!buffers_[i].bound)
+				{
+					buffers_[i].bound = true;
+					vezCmdBindBuffer(buffers_[i].buffer->getBuffer(), buffers_[i].offset, VK_WHOLE_SIZE, buffers_[i].set, buffers_[i].binding, 0);
+				}
       }
     }
     
@@ -170,316 +206,348 @@ namespace lambda
       return buffers_;
     }
 
-	///////////////////////////////////////////////////////////////////////////
-	Vector<VulkanReflectionInfo> VulkanShader::getTextures()
-	{
-		return textures_;
-	}
-
-	///////////////////////////////////////////////////////////////////////////
-	Vector<VulkanReflectionInfo> VulkanShader::getSamplers()
-	{
-		return samplers_;
-	}
-
-	uint32_t VulkanShader::getNumRenderTargets()
-	{
-		return num_render_targets_;
-	}
-
-	///////////////////////////////////////////////////////////////////////////
-	void VulkanShader::reflect()
-	{
-		VkResult result;
-		uint32_t resource_count;
-		result = vezEnumeratePipelineResources(pipeline_, &resource_count, nullptr);
-		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could reflect on pipeline | %s", vkErrorCode(result));
-		Vector<VezPipelineResource> resources(resource_count);
-		result = vezEnumeratePipelineResources(pipeline_, &resource_count, resources.data());
-		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could reflect on pipeline | %s", vkErrorCode(result));
-
-		std::vector<VezPipelineResource> vez_input_layout;
-		std::vector<VezPipelineResource> vez_images;
-		std::vector<VezPipelineResource> vez_samplers;
-		std::vector<VezPipelineResource> vez_output;
-		std::vector<VezPipelineResource> vez_uniform_buffers;
-		for (const VezPipelineResource& resource : resources)
+		///////////////////////////////////////////////////////////////////////////
+		Vector<VulkanReflectionInfo> VulkanShader::getTextures()
 		{
-			switch (resource.resourceType)
+			return textures_;
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		Vector<VulkanReflectionInfo> VulkanShader::getSamplers()
+		{
+			return samplers_;
+		}
+
+		uint32_t VulkanShader::getNumRenderTargets()
+		{
+			return num_render_targets_;
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+#pragma optimize("", off)
+		void VulkanShader::reflect()
+		{
+			VkResult result;
+			uint32_t resource_count;
+			result = vezEnumeratePipelineResources(pipeline_, &resource_count, nullptr);
+			LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could reflect on pipeline | %s", vkErrorCode(result));
+			Vector<VezPipelineResource> resources(resource_count);
+			result = vezEnumeratePipelineResources(pipeline_, &resource_count, resources.data());
+			LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could reflect on pipeline | %s", vkErrorCode(result));
+
+			Vector<VezPipelineResource> vez_input_layout;
+			Vector<VezPipelineResource> vez_images;
+			Vector<VezPipelineResource> vez_samplers;
+			Vector<VezPipelineResource> vez_output;
+			Vector<VezPipelineResource> vez_uniform_buffers;
+			for (const VezPipelineResource& resource : resources)
 			{
-			case VezPipelineResourceType::VEZ_PIPELINE_RESOURCE_TYPE_INPUT:
-				vez_input_layout.push_back(resource);
-				break;
-			case VezPipelineResourceType::VEZ_PIPELINE_RESOURCE_TYPE_SAMPLED_IMAGE:
-				vez_images.push_back(resource);
-				break;
-			case VezPipelineResourceType::VEZ_PIPELINE_RESOURCE_TYPE_SAMPLER:
-				vez_samplers.push_back(resource);
-				break;
-			case VezPipelineResourceType::VEZ_PIPELINE_RESOURCE_TYPE_OUTPUT:
-				vez_output.push_back(resource);
-				break;
-			case VezPipelineResourceType::VEZ_PIPELINE_RESOURCE_TYPE_UNIFORM_BUFFER:
-				vez_uniform_buffers.push_back(resource);
-				break;
-			default:
-				break;
+				switch (resource.resourceType)
+				{
+				case VezPipelineResourceType::VEZ_PIPELINE_RESOURCE_TYPE_INPUT:
+
+					if ((resource.stages & VK_SHADER_STAGE_VERTEX_BIT))
+						vez_input_layout.push_back(resource);
+					break;
+				case VezPipelineResourceType::VEZ_PIPELINE_RESOURCE_TYPE_SAMPLED_IMAGE:
+					vez_images.push_back(resource);
+					break;
+				case VezPipelineResourceType::VEZ_PIPELINE_RESOURCE_TYPE_SAMPLER:
+					vez_samplers.push_back(resource);
+					break;
+				case VezPipelineResourceType::VEZ_PIPELINE_RESOURCE_TYPE_OUTPUT:
+					vez_output.push_back(resource);
+					break;
+				case VezPipelineResourceType::VEZ_PIPELINE_RESOURCE_TYPE_UNIFORM_BUFFER:
+					vez_uniform_buffers.push_back(resource);
+					break;
+				default:
+					break;
+				}
 			}
-		}
 		
-		// Uniform buffers.
-		for (const VezPipelineResource& uniform_buffer : vez_uniform_buffers)
-		{
-			String name = uniform_buffer.name;
-			if (name.find("type_") == 0)
-				name = name.substr(strlen("type_"));
-
-			Vector<platform::BufferVariable> variables;
-			foundation::SharedPtr<void> data = foundation::Memory::makeShared(foundation::Memory::allocate(uniform_buffer.size));
-			memset(data.get(), 0, uniform_buffer.size);
-
-			const VezMemberInfo* next_member = uniform_buffer.pMembers;
-			while (next_member)
+			// Uniform buffers.
+			for (const VezPipelineResource& uniform_buffer : vez_uniform_buffers)
 			{
-				platform::BufferVariable variable;
-				variable.name  = next_member->name;
-				variable.count = next_member->arraySize;
-				variable.size  = next_member->size;
-				variable.data  = (char*)data.get() + next_member->offset;
-				variables.push_back(variable);
+				String name = uniform_buffer.name;
+				if (name.find("type_") == 0)
+					name = name.substr(strlen("type_"));
 
-				next_member = next_member->pNext;
+				Vector<platform::BufferVariable> variables;
+				foundation::SharedPtr<void> data = foundation::Memory::makeShared(foundation::Memory::allocate(uniform_buffer.size));
+				memset(data.get(), 0, uniform_buffer.size);
+
+				const VezMemberInfo* next_member = uniform_buffer.pMembers;
+				while (next_member)
+				{
+					platform::BufferVariable variable;
+					variable.name  = next_member->name;
+					variable.count = next_member->arraySize;
+					variable.size  = next_member->size;
+					variable.data  = (char*)data.get() + next_member->offset;
+					variables.push_back(variable);
+
+					next_member = next_member->pNext;
+				}
+
+				VulkanBuffer buffer;
+				buffer.buffer  = (VulkanRenderBuffer*)renderer_->allocRenderBuffer(uniform_buffer.size, platform::IRenderBuffer::kFlagConstant | platform::IRenderBuffer::kFlagDynamic);
+				buffer.offset  = uniform_buffer.offset;
+				buffer.set     = uniform_buffer.set;
+				buffer.binding = uniform_buffer.binding;
+				buffer.slot    = uniform_buffer.binding - 0;
+				buffer.shader_buffer = platform::ShaderBuffer(Name(name), variables, data);
+				buffers_.push_back(buffer);
+			}
+		
+			// Textures.
+			for (const VezPipelineResource& resource : vez_images)
+			{
+				VulkanReflectionInfo refl_info;
+				refl_info.name     = resource.name;
+				refl_info.set      = resource.set;
+				refl_info.binding  = resource.binding;
+				refl_info.slot     = resource.binding - 100;
+				if (eastl::find(textures_.begin(), textures_.end(), refl_info) == textures_.end())
+					textures_.push_back(refl_info);
+			}
+		
+			// Samplers.
+			for (const VezPipelineResource& resource : vez_samplers)
+			{
+				VulkanReflectionInfo refl_info;
+				refl_info.name     = resource.name;
+				refl_info.set      = resource.set;
+				refl_info.binding  = resource.binding;
+				refl_info.slot     = resource.binding - 200;
+				if (eastl::find(samplers_.begin(), samplers_.end(), refl_info) == samplers_.end())
+					samplers_.push_back(refl_info);
 			}
 
-			VulkanBuffer buffer;
-			buffer.buffer  = (VulkanRenderBuffer*)renderer_->allocRenderBuffer(uniform_buffer.size, platform::IRenderBuffer::kFlagConstant | platform::IRenderBuffer::kFlagDynamic);
-			buffer.offset  = uniform_buffer.offset;
-			buffer.set     = uniform_buffer.set;
-			buffer.binding = uniform_buffer.binding;
-			buffer.shader_buffer = platform::ShaderBuffer(Name(name), variables, data);
-			buffers_.push_back(buffer);
-		}
-		
-		// Textures.
-		for (const VezPipelineResource& resource : vez_images)
-		{
-			VulkanReflectionInfo refl_info;
-			refl_info.name     = resource.name;
-			refl_info.set      = resource.set;
-			refl_info.binding  = resource.binding;
-			if (eastl::find(textures_.begin(), textures_.end(), refl_info) == textures_.end())
-				textures_.push_back(refl_info);
-		}
-		
-		// Samplers.
-		for (const VezPipelineResource& resource : vez_samplers)
-		{
-			VulkanReflectionInfo refl_info;
-			refl_info.name     = resource.name;
-			refl_info.set      = resource.set;
-			refl_info.binding  = resource.binding;
-			if (eastl::find(samplers_.begin(), samplers_.end(), refl_info) == samplers_.end())
-				samplers_.push_back(refl_info);
-		}
-
-		// Output.
-		for (const VezPipelineResource& resource : vez_output)
-		{
-			String name = resource.name;
-			for (char& ch : name)
-				ch = tolower(ch);
-			if (name.find("sv_target") != String::npos)
-				num_render_targets_++;
-		}
-
-		struct InputLayout
-		{
-			int location;
-			int binding;
-			int offset;
-			VkFormat format;
-		};
-
-		struct InputBuffer
-		{
-			Vector<InputLayout> input_layouts;
-			int stride;
-			bool instanced;
-		};
-
-		Vector<InputBuffer> input_buffers;
-
-		for (const VezPipelineResource& resource : vez_input_layout)
-		{
-			if ((resource.stages & VK_SHADER_STAGE_VERTEX_BIT) == 0)
-				continue;
-
-			String name(resource.name);
-			if (name.find("in_var_") == 0)
-				name = name.substr(strlen("in_var_"));
-
-			// Inlining
-			if (name.find("inl_") == 0)
+			// Output.
+			for (const VezPipelineResource& resource : vez_output)
 			{
-				name = name.substr(strlen("inl_"));
+				String name = resource.name;
+				for (char& ch : name)
+					ch = tolower(ch);
+				if (name.find("sv_target") != String::npos)
+					num_render_targets_++;
+			}
 
-				if (input_buffers.empty())
+			struct InputLayout
+			{
+				int location;
+				int binding;
+				int offset;
+				VkFormat format;
+				uint32_t hash;
+				bool use_me;
+			};
+
+			struct InputBuffer
+			{
+				Vector<InputLayout> input_layouts;
+				int stride;
+				bool instanced;
+			};
+
+			Vector<InputBuffer> input_buffers;
+
+			for (const VezPipelineResource& resource : vez_input_layout)
+			{
+				String name(resource.name);
+				if (name.find("in_var_") == 0)
+					name = name.substr(strlen("in_var_"));
+				InputLayout element;
+				element.use_me = false;
+
+				// Inlining
+				if (name.find("inl_") == 0)
+				{
+					name = name.substr(strlen("inl_"));
+
+					if (input_buffers.empty())
+					{
+						InputBuffer buffer;
+						buffer.instanced = false;
+						buffer.stride = 0;
+						input_buffers.push_back(buffer);
+					}
+				}
+				else
 				{
 					InputBuffer buffer;
 					buffer.instanced = false;
 					buffer.stride = 0;
 					input_buffers.push_back(buffer);
 				}
+
+				// Inlining
+				if (name.find("use_me_") == 0)
+				{
+					name = name.substr(strlen("use_me_"));
+					element.use_me = true;
+				}
+
+				InputBuffer& input_buffer = input_buffers.back();
+
+				if (name.find("instance_") == 0)
+				{
+					name = name.substr(strlen("instance_"));
+					input_buffer.instanced = true;
+				}
+
+				element.offset   = input_buffer.stride;
+				element.location = resource.location;// (int)input_buffer.input_layouts.size();
+				element.binding  = resource.binding;// (int)input_buffers.size() - 1;
+				element.hash     = constexprHash(name);
+
+				switch (resource.baseType)
+				{
+				case VEZ_BASE_TYPE_BOOL:
+					switch (resource.vecSize)
+					{
+					case 1: element.format = VK_FORMAT_R8_SINT; break;
+					case 2: element.format = VK_FORMAT_R8G8_SINT; break;
+					case 3: element.format = VK_FORMAT_R8G8B8_SINT; break;
+					case 4: element.format = VK_FORMAT_R8G8B8A8_SINT; break;
+					}
+					break;
+				case VEZ_BASE_TYPE_CHAR:
+					switch (resource.vecSize)
+					{
+					case 1: element.format = VK_FORMAT_R8_SINT; break;
+					case 2: element.format = VK_FORMAT_R8G8_SINT; break;
+					case 3: element.format = VK_FORMAT_R8G8B8_SINT; break;
+					case 4: element.format = VK_FORMAT_R8G8B8A8_SINT; break;
+					}
+					break;
+				case VEZ_BASE_TYPE_INT:
+					switch (resource.vecSize)
+					{
+					case 1: element.format = VK_FORMAT_R32_SINT; break;
+					case 2: element.format = VK_FORMAT_R32G32_SINT; break;
+					case 3: element.format = VK_FORMAT_R32G32B32_SINT; break;
+					case 4: element.format = VK_FORMAT_R32G32B32A32_SINT; break;
+					}
+					break;
+				case VEZ_BASE_TYPE_UINT:
+					switch (resource.vecSize)
+					{
+					case 1: element.format = VK_FORMAT_R32_UINT; break;
+					case 2: element.format = VK_FORMAT_R32G32_UINT; break;
+					case 3: element.format = VK_FORMAT_R32G32B32_UINT; break;
+					case 4: element.format = VK_FORMAT_R32G32B32A32_UINT; break;
+					}
+					break;
+				case VEZ_BASE_TYPE_UINT64:
+					switch (resource.vecSize)
+					{
+					case 1: element.format = VK_FORMAT_R64_UINT; break;
+					case 2: element.format = VK_FORMAT_R64G64_UINT; break;
+					case 3: element.format = VK_FORMAT_R64G64B64_UINT; break;
+					case 4: element.format = VK_FORMAT_R64G64B64A64_UINT; break;
+					}
+					break;
+				case VEZ_BASE_TYPE_HALF:
+					switch (resource.vecSize)
+					{
+					case 1: element.format = VK_FORMAT_R16_SFLOAT; break;
+					case 2: element.format = VK_FORMAT_R16G16_SFLOAT; break;
+					case 3: element.format = VK_FORMAT_R16G16B16_SFLOAT; break;
+					case 4: element.format = VK_FORMAT_R16G16B16A16_SFLOAT; break;
+					}
+					break;
+				case VEZ_BASE_TYPE_FLOAT:
+					switch (resource.vecSize)
+					{
+					case 1: element.format = VK_FORMAT_R32_SFLOAT; break;
+					case 2: element.format = VK_FORMAT_R32G32_SFLOAT; break;
+					case 3: element.format = VK_FORMAT_R32G32B32_SFLOAT; break;
+					case 4: element.format = VK_FORMAT_R32G32B32A32_SFLOAT; break;
+					}
+					break;
+				case VEZ_BASE_TYPE_DOUBLE:
+					switch (resource.vecSize)
+					{
+					case 1: element.format = VK_FORMAT_R64_SFLOAT; break;
+					case 2: element.format = VK_FORMAT_R64G64_SFLOAT; break;
+					case 3: element.format = VK_FORMAT_R64G64B64_SFLOAT; break;
+					case 4: element.format = VK_FORMAT_R64G64B64A64_SFLOAT; break;
+					}
+					break;
+				}
+
+				switch (resource.baseType)
+				{
+				case VEZ_BASE_TYPE_BOOL:
+				case VEZ_BASE_TYPE_CHAR:
+					input_buffer.stride += 1 * resource.vecSize * resource.arraySize;
+					break;
+				case VEZ_BASE_TYPE_HALF:
+					input_buffer.stride += 2 * resource.vecSize * resource.arraySize;
+					break;
+				case VEZ_BASE_TYPE_INT:
+				case VEZ_BASE_TYPE_UINT:
+				case VEZ_BASE_TYPE_FLOAT:
+					input_buffer.stride += 4 * resource.vecSize * resource.arraySize;
+					break;
+				case VEZ_BASE_TYPE_UINT64:
+				case VEZ_BASE_TYPE_DOUBLE:
+					input_buffer.stride += 8 * resource.vecSize * resource.arraySize;
+					break;
+				}
+
+				input_buffer.input_layouts.push_back(element);
 			}
-			else
+
+			for (const InputBuffer& input_buffer : input_buffers)
 			{
-				InputBuffer buffer;
-				buffer.instanced = false;
-				buffer.stride = 0;
-				input_buffers.push_back(buffer);
+				uint32_t hash = 0u;
+				int best = INT_MAX;
+
+				for (const InputLayout& input_layout : input_buffer.input_layouts)
+				{
+					if (input_layout.use_me)
+					{
+						hash = input_layout.hash;
+						break;
+					}
+					if (input_layout.offset < best)
+					{
+						best = input_layout.offset;
+						hash = input_layout.hash;
+					}
+				}
+				stages_.push_back(hash);
 			}
 
-			InputBuffer& input_buffer = input_buffers.back();
-
-			if (name.find("instance_") == 0)
+			Vector<VkVertexInputBindingDescription> vertex_input_binding(input_buffers.size());
+			Vector<VkVertexInputAttributeDescription> attribute_descriptions;
+			for (uint32_t i = 0; i < input_buffers.size(); ++i)
 			{
-				name = name.substr(strlen("instance_"));
-				input_buffer.instanced = true;
+				vertex_input_binding[i].binding   = i;
+				vertex_input_binding[i].inputRate = input_buffers[i].instanced ? VK_VERTEX_INPUT_RATE_INSTANCE : VK_VERTEX_INPUT_RATE_VERTEX;
+				vertex_input_binding[i].stride    = input_buffers[i].stride;
+
+				for (const auto& input_layout : input_buffers[i].input_layouts)
+				{
+					VkVertexInputAttributeDescription attribute_description;
+					attribute_description.binding  = input_layout.binding;
+					attribute_description.format   = input_layout.format;
+					attribute_description.location = input_layout.location;
+					attribute_description.offset   = input_layout.offset;
+					attribute_descriptions.push_back(attribute_description);
+				}
 			}
 
-			InputLayout element;
-			element.offset   = input_buffer.stride;
-			element.location = (int)input_buffer.input_layouts.size();
-			element.binding  = (int)input_buffers.size() - 1;
-		
-			switch (resource.baseType)
-			{
-			case VEZ_BASE_TYPE_BOOL:
-				switch (resource.vecSize)
-				{
-				case 1: element.format = VK_FORMAT_R8_SINT; break;
-				case 2: element.format = VK_FORMAT_R8G8_SINT; break;
-				case 3: element.format = VK_FORMAT_R8G8B8_SINT; break;
-				case 4: element.format = VK_FORMAT_R8G8B8A8_SINT; break;
-				}
-				break;
-			case VEZ_BASE_TYPE_CHAR:
-				switch (resource.vecSize)
-				{
-				case 1: element.format = VK_FORMAT_R8_SINT; break;
-				case 2: element.format = VK_FORMAT_R8G8_SINT; break;
-				case 3: element.format = VK_FORMAT_R8G8B8_SINT; break;
-				case 4: element.format = VK_FORMAT_R8G8B8A8_SINT; break;
-				}
-				break;
-			case VEZ_BASE_TYPE_INT:
-				switch (resource.vecSize)
-				{
-				case 1: element.format = VK_FORMAT_R32_SINT; break;
-				case 2: element.format = VK_FORMAT_R32G32_SINT; break;
-				case 3: element.format = VK_FORMAT_R32G32B32_SINT; break;
-				case 4: element.format = VK_FORMAT_R32G32B32A32_SINT; break;
-				}
-				break;
-			case VEZ_BASE_TYPE_UINT:
-				switch (resource.vecSize)
-				{
-				case 1: element.format = VK_FORMAT_R32_UINT; break;
-				case 2: element.format = VK_FORMAT_R32G32_UINT; break;
-				case 3: element.format = VK_FORMAT_R32G32B32_UINT; break;
-				case 4: element.format = VK_FORMAT_R32G32B32A32_UINT; break;
-				}
-				break;
-			case VEZ_BASE_TYPE_UINT64:
-				switch (resource.vecSize)
-				{
-				case 1: element.format = VK_FORMAT_R64_UINT; break;
-				case 2: element.format = VK_FORMAT_R64G64_UINT; break;
-				case 3: element.format = VK_FORMAT_R64G64B64_UINT; break;
-				case 4: element.format = VK_FORMAT_R64G64B64A64_UINT; break;
-				}
-				break;
-			case VEZ_BASE_TYPE_HALF:
-				switch (resource.vecSize)
-				{
-				case 1: element.format = VK_FORMAT_R16_SFLOAT; break;
-				case 2: element.format = VK_FORMAT_R16G16_SFLOAT; break;
-				case 3: element.format = VK_FORMAT_R16G16B16_SFLOAT; break;
-				case 4: element.format = VK_FORMAT_R16G16B16A16_SFLOAT; break;
-				}
-				break;
-			case VEZ_BASE_TYPE_FLOAT:
-				switch (resource.vecSize)
-				{
-				case 1: element.format = VK_FORMAT_R32_SFLOAT; break;
-				case 2: element.format = VK_FORMAT_R32G32_SFLOAT; break;
-				case 3: element.format = VK_FORMAT_R32G32B32_SFLOAT; break;
-				case 4: element.format = VK_FORMAT_R32G32B32A32_SFLOAT; break;
-				}
-				break;
-			case VEZ_BASE_TYPE_DOUBLE:
-				switch (resource.vecSize)
-				{
-				case 1: element.format = VK_FORMAT_R64_SFLOAT; break;
-				case 2: element.format = VK_FORMAT_R64G64_SFLOAT; break;
-				case 3: element.format = VK_FORMAT_R64G64B64_SFLOAT; break;
-				case 4: element.format = VK_FORMAT_R64G64B64A64_SFLOAT; break;
-				}
-				break;
-			}
-
-			switch (resource.baseType)
-			{
-			case VEZ_BASE_TYPE_BOOL:
-			case VEZ_BASE_TYPE_CHAR:
-				input_buffer.stride += 1 * resource.vecSize * resource.arraySize;
-				break;
-			case VEZ_BASE_TYPE_HALF:
-				input_buffer.stride += 2 * resource.vecSize * resource.arraySize;
-				break;
-			case VEZ_BASE_TYPE_INT:
-			case VEZ_BASE_TYPE_UINT:
-			case VEZ_BASE_TYPE_FLOAT:
-				input_buffer.stride += 4 * resource.vecSize * resource.arraySize;
-				break;
-			case VEZ_BASE_TYPE_UINT64:
-			case VEZ_BASE_TYPE_DOUBLE:
-				input_buffer.stride += 8 * resource.vecSize * resource.arraySize;
-				break;
-			}
-
-			input_buffer.input_layouts.push_back(element);
-
-			if (input_buffer.input_layouts.size() == 1)
-				stages_.push_back(constexprHash(name));
+ 			VezVertexInputFormatCreateInfo vertex_input_format_create_info{};
+			vertex_input_format_create_info.pVertexAttributeDescriptions    = attribute_descriptions.data();
+			vertex_input_format_create_info.vertexAttributeDescriptionCount = (uint32_t)attribute_descriptions.size();
+			vertex_input_format_create_info.pVertexBindingDescriptions      = vertex_input_binding.data();
+			vertex_input_format_create_info.vertexBindingDescriptionCount   = (uint32_t)vertex_input_binding.size();
+			result = vezCreateVertexInputFormat(renderer_->getDevice(), &vertex_input_format_create_info, &input_format_);
+			LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could create vertex input format | %s", vkErrorCode(result));
 		}
-
-		Vector<VkVertexInputBindingDescription> vertex_input_binding(input_buffers.size());
-		Vector<VkVertexInputAttributeDescription> attribute_descriptions;
-		for (uint32_t i = 0; i < input_buffers.size(); ++i)
-		{
-			vertex_input_binding[i].binding   = i;
-			vertex_input_binding[i].inputRate = input_buffers[i].instanced ? VK_VERTEX_INPUT_RATE_INSTANCE : VK_VERTEX_INPUT_RATE_VERTEX;
-			vertex_input_binding[i].stride    = input_buffers[i].stride;
-
-			for (const auto& input_layout : input_buffers[i].input_layouts)
-			{
-				VkVertexInputAttributeDescription attribute_description;
-				attribute_description.binding  = input_layout.binding;
-				attribute_description.format   = input_layout.format;
-				attribute_description.location = input_layout.location;
-				attribute_description.offset   = input_layout.offset;
-				attribute_descriptions.push_back(attribute_description);
-			}
-		}
-
-		VezVertexInputFormatCreateInfo vertex_input_format_create_info{};
-		vertex_input_format_create_info.pVertexAttributeDescriptions    = attribute_descriptions.data();
-		vertex_input_format_create_info.vertexAttributeDescriptionCount = (uint32_t)attribute_descriptions.size();
-		vertex_input_format_create_info.pVertexBindingDescriptions      = vertex_input_binding.data();
-		vertex_input_format_create_info.vertexBindingDescriptionCount   = (uint32_t)vertex_input_binding.size();
-		result = vezCreateVertexInputFormat(renderer_->getDevice(), &vertex_input_format_create_info, &input_format_);
-		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could create vertex input format | %s", vkErrorCode(result));
-	}
   }
 }

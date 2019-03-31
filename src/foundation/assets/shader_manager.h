@@ -11,12 +11,27 @@ namespace lambda
 #define VIOLET_METAL 3
 #define VIOLET_LANG_COUNT 4
 
+	enum class VioletShaderResourceType : uint8_t
+	{
+		kTexture,
+		kSampler,
+		kConstantBuffer
+	};
+
+	struct VioletShaderResource
+	{
+		VioletShaderResourceType type;
+		ShaderStages stage;
+		uint8_t slot;
+	};
+
 	struct VioletShader
 	{
 		uint64_t hash;
 		String file_path;
 		Array<Array<Pair<uint32_t, uint32_t>, VIOLET_LANG_COUNT>, (size_t)ShaderStages::kCount> blob_sizes;
 		Array<Array<Vector<char>, VIOLET_LANG_COUNT>, (size_t)ShaderStages::kCount> blobs;
+		Array<Vector<VioletShaderResource>, (size_t)ShaderStages::kCount> resources;
 	};
 
 	class VioletShaderManager : public VioletBaseAssetManager

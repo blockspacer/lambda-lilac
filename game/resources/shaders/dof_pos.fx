@@ -1,6 +1,6 @@
 #include "common.fx"
 
-cbuffer cbPerPass
+Make_CBuffer(cbPerPass, 0)
 {
   float3 camera_position;
   float camera_far;
@@ -13,8 +13,8 @@ struct VSOutput
   float2 tex      : TEX_COORD;
 };
 
-Texture2D tex_prev_pos : register(t0);
-Texture2D tex_position : register(t1);
+Make_Texture2D(tex_prev_pos, 0);
+Make_Texture2D(tex_position, 1);
 
 VSOutput VS(uint id: SV_VertexID)
 {

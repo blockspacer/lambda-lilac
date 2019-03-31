@@ -17,7 +17,9 @@ ShaderConductor::Blob* includeCallback(const char* include)
 
 #if VIOLET_WIN32
 #include <d3dcompiler.h>
+#include <d3d11shader.h>
 #pragma comment(lib,"D3dcompiler.lib")
+#pragma comment(lib,"dxguid.lib")
 
 ///////////////////////////////////////////////////////////////////////////////
 class IncludeHandler : public ID3DInclude
@@ -57,53 +59,101 @@ public:
 };
 #endif
 
-bool compileHLSL(lambda::String file, lambda::String source, lambda::String entry, lambda::String stage, lambda::Vector<char>& output)
+#pragma optimize ("", off)
+bool compileHLSL(lambda::String file, lambda::String source, lambda::String entry, lambda::String stage, lambda::Vector<char>& output, lambda::Vector<lambda::VioletShaderResource>& resources)
 {
 #if VIOLET_WIN32
-		ID3D10Blob* blob;
-		ID3D10Blob* error;
+	ID3D10Blob* blob;
+	ID3D10Blob* error;
 
-		IncludeHandler include_handler(file);
+	IncludeHandler include_handler(file);
 
-		HRESULT result = D3DCompile(
-			(void*)source.data(),
-			source.size(),
-			file.c_str(), 0,
-			&include_handler,
-			entry.c_str(),
-			stage.c_str(),
-			0,
-			0,
-			&blob,
-			&error
-		);
+	HRESULT result = D3DCompile(
+		(void*)source.data(),
+		source.size(),
+		file.c_str(), 0,
+		&include_handler,
+		entry.c_str(),
+		stage.c_str(),
+		0,
+		0,
+		&blob,
+		&error
+	);
 
-		if (FAILED(result))
+	if (FAILED(result))
+	{
+		if (blob)
+			blob->Release();
+
+		if (error)
 		{
-			if (blob)
-				blob->Release();
+			lambda::String err =
+				"D3DCompile: Failed to compile shader \"" + file +
+				"\" with message:\n" + lambda::String((char*)error->GetBufferPointer());
 
-			if (error)
+			if (err.find("X3501") == lambda::String::npos)
 			{
-				lambda::String err =
-					"D3DCompile: Failed to compile shader \"" + file +
-					"\" with message:\n" + lambda::String((char*)error->GetBufferPointer());
+				lambda::foundation::Info(err.c_str());
 
-				if (err.find("X3501") == lambda::String::npos)
-				{
-					lambda::foundation::Info(err.c_str());
-
-					error->Release();
-					return false;
-				}
+				error->Release();
+				return false;
 			}
 		}
-		else
+	}
+	else
+	{
+		ID3D11ShaderReflection* reflector = nullptr;
+		HRESULT result = D3DReflect(blob->GetBufferPointer(), blob->GetBufferSize(), IID_ID3D11ShaderReflection, (void**)&reflector);
+		if (FAILED(result))
 		{
-			output.resize(blob->GetBufferSize());
-			memcpy(output.data(), blob->GetBufferPointer(), output.size());
+			lambda::foundation::Info("Could not reflect on shader");
+
 			blob->Release();
+			return false;
 		}
+
+		resources.clear();
+		D3D11_SHADER_DESC desc{};
+		reflector->GetDesc(&desc);
+		for (uint32_t i = 0; i < desc.BoundResources; ++i)
+		{
+			D3D11_SHADER_INPUT_BIND_DESC bind_desc{};
+			reflector->GetResourceBindingDesc(i, &bind_desc);
+			
+			lambda::VioletShaderResource resource;
+			resource.slot = bind_desc.BindPoint;
+
+			switch (stage[0])
+			{
+			case 'c': case 'C': resource.stage = lambda::ShaderStages::kCompute;  break;
+			case 'd': case 'D': resource.stage = lambda::ShaderStages::kDomain;   break;
+			case 'g': case 'G': resource.stage = lambda::ShaderStages::kGeometry; break;
+			case 'h': case 'H': resource.stage = lambda::ShaderStages::kHull;     break;
+			case 'p': case 'P': resource.stage = lambda::ShaderStages::kPixel;    break;
+			case 'v': case 'V': resource.stage = lambda::ShaderStages::kVertex;   break;
+			}
+
+			switch (bind_desc.Type)
+			{
+				case D3D_SIT_CBUFFER:
+					resource.type = lambda::VioletShaderResourceType::kConstantBuffer;
+					break;
+				case D3D_SIT_SAMPLER:
+					resource.type = lambda::VioletShaderResourceType::kSampler;
+					break;
+				case D3D_SIT_TEXTURE:
+					resource.type = lambda::VioletShaderResourceType::kTexture;
+					break;
+			}
+			resources.push_back(resource);
+		}
+
+		output.resize(blob->GetBufferSize());
+		memcpy(output.data(), blob->GetBufferPointer(), output.size());
+		blob->Release();
+	}
+
 #else
 	output.resize(source.size());
 	memcpy(output.data(), source.c_str(), output.size());
@@ -123,7 +173,8 @@ namespace lambda
 	bool CompileX(
 		String file, 
 		String stage,
-		Array<Vector<char>, VIOLET_LANG_COUNT>& output)
+		Array<Vector<char>, VIOLET_LANG_COUNT>& output,
+		Vector<VioletShaderResource>& resources)
 	{
 		String source = FileSystem::FileToString(file);
 
@@ -150,19 +201,24 @@ namespace lambda
 		case 'V': sc_stage = ShaderConductor::ShaderStage::VertexShader; break;
 		}
 
+		ShaderConductor::MacroDefine defines[] = {
+			{ "VIOLET_SPIRV", "1" }
+		};
+
 		ShaderConductor::Compiler::SourceDesc source_desc;
 		source_desc.defines = nullptr;
 		source_desc.entryPoint = entry.c_str();
 		source_desc.fileName = file.c_str();
 		source_desc.loadIncludeCallback = includeCallback;
-		source_desc.numDefines = 0;
+		source_desc.numDefines = 1;
+		source_desc.defines = defines;
 		source_desc.source = source.c_str();
 		source_desc.stage = sc_stage;
 
 		ShaderConductor::Compiler::Options options;
 		options.disableOptimizations = false;
 		options.enable16bitTypes = false;
-		options.enableDebugInfo = false;
+		options.enableDebugInfo = true;
 		options.optimizationLevel = 3;
 		options.packMatricesInRowMajor = true;
 		options.shaderModel.major_ver = 6;
@@ -179,6 +235,7 @@ namespace lambda
 		target_descs[VIOLET_HLSL].version   = "50";
 
 		ShaderConductor::Compiler::ResultDesc results[VIOLET_LANG_COUNT];
+
 		ShaderConductor::Compiler::Compile(source_desc, options, target_descs, VIOLET_LANG_COUNT, results);
 
 		for (int i = 0; i < VIOLET_LANG_COUNT; ++i)
@@ -214,7 +271,7 @@ namespace lambda
 			else
 			{
 #if VIOLET_WIN32
-				if (!compileHLSL(file, source, entry, stage, output[i]))
+				if (!compileHLSL(file, source, entry, stage, output[i], resources))
 					return false;
 #else
 				output[i].resize(source.size());
@@ -228,7 +285,7 @@ namespace lambda
 #if VIOLET_WIN32
 			if (i == VIOLET_HLSL)
 			{
-				if (!compileHLSL(file, source, entry, stage, output[i]))
+				if (!compileHLSL(file, source, entry, stage, output[i], resources))
 					return false;
 			}
 			else
@@ -248,17 +305,17 @@ namespace lambda
 		VioletShader shader_program;
 		shader_program.file_path = compile_info.file;
 		shader_program.hash = GetHash(shader_program.file_path);
-		if (!CompileX(compile_info.file, "vs_5_0", shader_program.blobs[(int)ShaderStages::kVertex]))
+		if (!CompileX(compile_info.file, "vs_5_0", shader_program.blobs[(int)ShaderStages::kVertex], shader_program.resources[(int)ShaderStages::kVertex]))
 			return false;
-		if (!CompileX(compile_info.file, "ps_5_0", shader_program.blobs[(int)ShaderStages::kPixel]))
+		if (!CompileX(compile_info.file, "ps_5_0", shader_program.blobs[(int)ShaderStages::kPixel], shader_program.resources[(int)ShaderStages::kPixel]))
 			return false;
-		if (!CompileX(compile_info.file, "gs_5_0", shader_program.blobs[(int)ShaderStages::kGeometry]))
+		if (!CompileX(compile_info.file, "gs_5_0", shader_program.blobs[(int)ShaderStages::kGeometry], shader_program.resources[(int)ShaderStages::kGeometry]))
 			return false;
-		if (!CompileX(compile_info.file, "hs_5_0", shader_program.blobs[(int)ShaderStages::kHull]))
+		if (!CompileX(compile_info.file, "cs_5_0", shader_program.blobs[(int)ShaderStages::kCompute], shader_program.resources[(int)ShaderStages::kCompute]))
 			return false;
-		if (!CompileX(compile_info.file, "ds_5_0", shader_program.blobs[(int)ShaderStages::kDomain]))
+		if (!CompileX(compile_info.file, "hs_5_0", shader_program.blobs[(int)ShaderStages::kHull], shader_program.resources[(int)ShaderStages::kHull]))
 			return false;
-		if (!CompileX(compile_info.file, "cs_5_0", shader_program.blobs[(int)ShaderStages::kCompute]))
+		if (!CompileX(compile_info.file, "ds_5_0", shader_program.blobs[(int)ShaderStages::kDomain], shader_program.resources[(int)ShaderStages::kDomain]))
 			return false;
 
 		AddShader(shader_program);

@@ -19,7 +19,7 @@ VSOutput VS(uint id : SV_VertexID)
   return vOut;
 }
 
-cbuffer cbPostProcess
+Make_CBuffer(cbPostProcess, 0)
 {
   float4x4 light_view_projection_matrix;
   float3 light_camera_position;
@@ -34,11 +34,11 @@ cbuffer cbPostProcess
   float  light_far  = 10.0f;
 };
 
-Texture2D tex_shadow_map   : register(t0);
-Texture2D tex_overlay      : register(t1);
-Texture2D tex_position     : register(t2);
-Texture2D tex_normal       : register(t3);
-Texture2D tex_metallic_roughness : register(t4);
+Make_Texture2D(tex_shadow_map, 0);
+Make_Texture2D(tex_overlay, 1);
+Make_Texture2D(tex_position, 2);
+Make_Texture2D(tex_normal, 3);
+Make_Texture2D(tex_metallic_roughness, 4);
 
 float4 PS(VSOutput pIn) : SV_TARGET0
 {

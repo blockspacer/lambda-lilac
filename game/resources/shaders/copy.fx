@@ -14,7 +14,7 @@ VSOutput VS(uint id: SV_VertexID)
   return vOut;
 }
 
-Texture2D tex    : register(t0);
+Make_Texture2D(tex, 0);
 
 float4 PS(VSOutput pIn) : SV_TARGET0
 {

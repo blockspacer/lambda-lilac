@@ -310,8 +310,10 @@ namespace lambda
 	  double total_time_;
 	  float  render_scale_;
 
-	  VkImage backbuffer_;
-	  VkImageView backbuffer_view_;
+		VkImage backbuffer_;
+		VkImageView backbuffer_view_;
+
+		asset::VioletTextureHandle default_texture_;
 
 	  struct Memory
 	  {

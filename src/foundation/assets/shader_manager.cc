@@ -144,6 +144,26 @@ namespace lambda
 
 		doc.AddMember("languages", lang_array, doc.GetAllocator());
 
+		// Resources.
+		rapidjson::Value res_array(rapidjson::kArrayType);
+
+		for (int stage_int = 0; stage_int < (int)ShaderStages::kCount; ++stage_int)
+		{
+			String str;
+			for (const VioletShaderResource& resource : shader_program.resources[stage_int])
+			{
+				// Size.
+				if (!str.empty())
+					str += ",";
+				str += toString((uint32_t)resource.type) + "|" + toString((uint32_t)resource.stage) + "|" + toString((uint32_t)resource.slot);
+			}
+
+			rapidjson::Value stage(rapidjson::Type::kStringType);
+			stage.SetString(str.c_str(), (rapidjson::SizeType)str.size(), doc.GetAllocator());
+			res_array.PushBack(stage, doc.GetAllocator());
+		}
+		
+		doc.AddMember("resources", res_array, doc.GetAllocator());
 
 		rapidjson::StringBuffer buffer;
 		rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
@@ -156,6 +176,7 @@ namespace lambda
 	}
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#pragma optimize ("", off)
 	VioletShader VioletShaderManager::JSonToShaderHeader(Vector<char> data)
 	{
 		rapidjson::Document doc;
@@ -184,6 +205,26 @@ namespace lambda
 			}
 		}
 
+		const auto& resources = doc["resources"].GetArray();
+
+		for (int stage_int = 0; stage_int < (int)ShaderStages::kCount; ++stage_int)
+		{
+			Vector<String> res = split(resources[stage_int].GetString(), ',');
+			
+			if (res.size() == 1 && res[0].empty())
+				continue;
+
+			for (const String& r : res)
+			{
+				Vector<String> indices = split(resources[stage_int].GetString(), '|');
+				VioletShaderResource resource;
+				resource.type  = (VioletShaderResourceType)std::stoul(indices[0].c_str());
+				resource.stage = (ShaderStages)std::stoul(indices[1].c_str());
+				resource.slot  = (uint8_t)std::stoul(indices[2].c_str());
+				program.resources[stage_int].push_back(resource);
+			}
+		}
+		
 		return program;
 	}
 }

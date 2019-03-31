@@ -17,6 +17,7 @@ namespace lambda
 			Name     name;
 			uint32_t set = 0u;
 			uint32_t binding = 0u;
+			uint32_t slot = 0u;
 
 			bool operator==(const VulkanReflectionInfo& other) const
 			{

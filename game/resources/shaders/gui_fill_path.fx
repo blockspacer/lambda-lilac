@@ -1,26 +1,28 @@
-cbuffer Uniforms : register(b0)
+#include "common.fx"
+
+Make_CBuffer(Uniforms, 0)
 {
-  float4 State;
-  float4x4 Transform;
-  float4 Scalar4_0;
-  float4 Scalar4_1;
-  float4 Vector_0;
-  float4 Vector_1;
-  float4 Vector_2;
-  float4 Vector_3;
-  float4 Vector_4;
-  float4 Vector_5;
-  float4 Vector_6;
-  float4 Vector_7;
-  float ClipSize;
-  float4x4 Clip_0;
-  float4x4 Clip_1;
-  float4x4 Clip_2;
-  float4x4 Clip_3;
-  float4x4 Clip_4;
-  float4x4 Clip_5;
-  float4x4 Clip_6;
-  float4x4 Clip_7;
+ float4 State;
+ float4x4 Transform;
+ float4 Scalar4_0;
+ float4 Scalar4_1;
+ float4 Vector_0;
+ float4 Vector_1;
+ float4 Vector_2;
+ float4 Vector_3;
+ float4 Vector_4;
+ float4 Vector_5;
+ float4 Vector_6;
+ float4 Vector_7;
+ float ClipSize;
+ float4x4 Clip_0;
+ float4x4 Clip_1;
+ float4x4 Clip_2;
+ float4x4 Clip_3;
+ float4x4 Clip_4;
+ float4x4 Clip_5;
+ float4x4 Clip_6;
+ float4x4 Clip_7;
 };
 
 float Time() { return State[0]; }
@@ -74,7 +76,7 @@ float2 ScreenToDeviceCoords(float2 screen_coord) {
   return screen_coord;
 }
 
-VS_OUTPUT VS(float2 Position : inl_Positions,
+VS_OUTPUT VS(float2 Position : inl_use_me_Positions,
             float4  Color    : inl_COLOR0,
             float2  ObjCoord : inl_TEXCOORD0)
 {
@@ -87,8 +89,8 @@ VS_OUTPUT VS(float2 Position : inl_Positions,
 }
 
 // PS
-Texture2D texture0 : register(t0);
-SamplerState sampler0 : register(s0);
+Make_Texture2D(texture0, 0);
+Make_SamplerState(sampler0, 0);
 
 float sdRect(float2 p, float2 size) {
   float2 d = abs(p) - size;

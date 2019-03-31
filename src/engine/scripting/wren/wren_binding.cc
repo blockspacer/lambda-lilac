@@ -889,6 +889,9 @@ class TextureFormat {
     static BC5          { 13 }
     static BC6          { 14 }
     static BC7          { 15 }
+    static B8G8R8A8     { 16 }
+    static A8           { 17 }
+    static D32          { 18 }
 }
 )";
         char* data = (char*)WREN_ALLOC(str.size() + 1u);

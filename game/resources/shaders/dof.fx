@@ -1,6 +1,6 @@
 #include "common.fx"
 
-cbuffer cbPerPass
+Make_CBuffer(cbPerPass, 0)
 {
   float4x4 view_matrix;
   float3 camera_position;
@@ -13,10 +13,10 @@ struct VSOutput
   float2 tex      : TEX_COORD;
 };
 
-Texture2D tex_albedo     : register(t0);
-Texture2D tex_blurred    : register(t1);
-Texture2D tex_dof_pos    : register(t2);
-Texture2D tex_position   : register(t3);
+Make_Texture2D(tex_albedo, 0);
+Make_Texture2D(tex_blurred, 1);
+Make_Texture2D(tex_dof_pos, 2);
+Make_Texture2D(tex_position, 3);
 
 static float distance = 1.0f / 15.0f;
 

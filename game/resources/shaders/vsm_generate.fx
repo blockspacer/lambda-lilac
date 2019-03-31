@@ -13,13 +13,13 @@ struct VSOutput
   float2 tex       : TEX_COORD;
 };
 
-cbuffer cbPerMesh
+Make_CBuffer(cbPerMesh, 0)
 {
   float4x4 model_matrix;
   float4x4 light_view_projection_matrix;
 }
 
-cbuffer cbPostProcess
+Make_CBuffer(cbPostProcess, 1)
 {
 #if defined(VIOLET_POINT) || defined(VIOLET_SPOT)
   float3 light_camera_position;
@@ -37,7 +37,7 @@ VSOutput VS(VSInput vIn)
   return vOut;
 }
 
-Texture2D tex_albedo : register(t0);
+Make_Texture2D(tex_albedo, 0);
 
 // TODO (Hilze): Support alpha.
 float4 PS(VSOutput pIn) : SV_Target0

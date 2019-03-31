@@ -46,6 +46,12 @@ namespace lambda
 		}
 
 		///////////////////////////////////////////////////////////////////////////
+		Vector<VioletShaderResource> Shader::getResources(ShaderStages stage) const
+		{
+			return shader_.resources[stage];
+		}
+
+		///////////////////////////////////////////////////////////////////////////
 		void Shader::setShaderVariable(const platform::ShaderVariable& variable)
 		{
 			queued_shader_variables_.push_back(variable);

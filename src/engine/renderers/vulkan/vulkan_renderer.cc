@@ -241,6 +241,14 @@ namespace lambda
 					)
 				);
 
+
+		default_texture_ = asset::TextureManager::getInstance()->create(
+			Name("__default_render_texture__"),
+			1u, 1u, 1u, TextureFormat::kR8G8B8A8,
+			kTextureFlagIsRenderTarget, // TODO (Hilze): Remove!
+			Vector<char>(4, 255)
+		);
+
 		full_screen_quad_.shader = asset::ShaderManager::getInstance()->get(Name("resources/shaders/full_screen_quad.fx"));
 	}
 
@@ -388,234 +396,194 @@ namespace lambda
     void VulkanRenderer::setWindow(
       foundation::SharedPointer<platform::IWindow> window)
     {
-		VkResult result;
+			VkResult result;
 
-		// Create instance.
-		VezApplicationInfo application_info = {};
-		application_info.pApplicationName   = "MyApplication";
-		application_info.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-		application_info.pEngineName        = "Lambda Lilac";
-		application_info.engineVersion      = VK_MAKE_VERSION(1, 0, 0);
+			// Create instance.
+			VezApplicationInfo application_info = {};
+			application_info.pApplicationName   = "MyApplication";
+			application_info.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+			application_info.pEngineName        = "Lambda Lilac";
+			application_info.engineVersion      = VK_MAKE_VERSION(1, 0, 0);
 
-		uint32_t property_count;
-		result = vezEnumerateInstanceLayerProperties(&property_count, nullptr);
-		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Failed to enumerate instance layer properties | %s", vkErrorCode(result));
-		Vector<VkLayerProperties> properties(property_count);
-		result = vezEnumerateInstanceLayerProperties(&property_count, properties.data());
-		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Failed to enumerate instance layer properties | %s", vkErrorCode(result));
+			uint32_t property_count;
+			result = vezEnumerateInstanceLayerProperties(&property_count, nullptr);
+			LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Failed to enumerate instance layer properties | %s", vkErrorCode(result));
+			Vector<VkLayerProperties> properties(property_count);
+			result = vezEnumerateInstanceLayerProperties(&property_count, properties.data());
+			LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Failed to enumerate instance layer properties | %s", vkErrorCode(result));
 
-		for (const auto& layer : properties)
-		{
+			for (const auto& layer : properties)
+			{
 
-			foundation::Debug(layer.layerName + String("\n"));
+				foundation::Debug(layer.layerName + String("\n"));
 
-			result = vezEnumerateInstanceExtensionProperties(layer.layerName, &property_count, nullptr);
-			LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Failed to enumerate instance extension properties | %s", vkErrorCode(result));
-			Vector<VkExtensionProperties> extensions(property_count);
-			result = vezEnumerateInstanceExtensionProperties(layer.layerName, &property_count, extensions.data());
-			LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Failed to enumerate instance extension properties | %s", vkErrorCode(result));
+				result = vezEnumerateInstanceExtensionProperties(layer.layerName, &property_count, nullptr);
+				LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Failed to enumerate instance extension properties | %s", vkErrorCode(result));
+				Vector<VkExtensionProperties> extensions(property_count);
+				result = vezEnumerateInstanceExtensionProperties(layer.layerName, &property_count, extensions.data());
+				LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Failed to enumerate instance extension properties | %s", vkErrorCode(result));
 
-			for (const auto& extension : extensions)
-				foundation::Debug(String("\t") + extension.extensionName + String("\n"));
+				for (const auto& extension : extensions)
+					foundation::Debug(String("\t") + extension.extensionName + String("\n"));
 
-		}
-		Vector<const char*> enabled_layers = { "VK_LAYER_LUNARG_standard_validation" };
-		Vector<const char*> enabled_extensions = { VK_KHR_SURFACE_EXTENSION_NAME };
+			}
+			Vector<const char*> enabled_layers = { "VK_LAYER_LUNARG_standard_validation" };
+			Vector<const char*> enabled_extensions = { VK_KHR_SURFACE_EXTENSION_NAME };
 
 #if VIOLET_DEBUG
-		enabled_extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-		enabled_extensions.push_back("VK_EXT_debug_report");
+			enabled_extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+			enabled_extensions.push_back("VK_EXT_debug_report");
 #endif
 
 #if VIOLET_WIN32
-		enabled_extensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+			enabled_extensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #else
 #pragma error "Currently unsupported platform."
 #endif
 
-		VezInstanceCreateInfo instance_create_info{};
-		instance_create_info.pApplicationInfo        = &application_info;
-		instance_create_info.enabledLayerCount       = static_cast<uint32_t>(enabled_layers.size());
-		instance_create_info.ppEnabledLayerNames     = enabled_layers.data();
-		instance_create_info.enabledExtensionCount   = static_cast<uint32_t>(enabled_extensions.size());
-		instance_create_info.ppEnabledExtensionNames = enabled_extensions.data();
-		result = vezCreateInstance(&instance_create_info, &instance_);
-		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Failed to create instance | %s", vkErrorCode(result));
+			VezInstanceCreateInfo instance_create_info{};
+			instance_create_info.pApplicationInfo        = &application_info;
+			instance_create_info.enabledLayerCount       = static_cast<uint32_t>(enabled_layers.size());
+			instance_create_info.ppEnabledLayerNames     = enabled_layers.data();
+			instance_create_info.enabledExtensionCount   = static_cast<uint32_t>(enabled_extensions.size());
+			instance_create_info.ppEnabledExtensionNames = enabled_extensions.data();
+			result = vezCreateInstance(&instance_create_info, &instance_);
+			LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Failed to create instance | %s", vkErrorCode(result));
 
 #if VIOLET_DEBUG
-		VkDebugUtilsMessengerCreateInfoEXT debug_utils_messenger_create_info{};
-		debug_utils_messenger_create_info.sType           = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-		debug_utils_messenger_create_info.messageSeverity = 
-			//VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | 
-			//VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
-			VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-			VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT |
-			0;
-		debug_utils_messenger_create_info.messageType = 
-			//VK_DEBUG_REPORT_INFORMATION_BIT_EXT |
-			//VK_DEBUG_REPORT_DEBUG_BIT_EXT |
-			//VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT |
-			VK_DEBUG_REPORT_WARNING_BIT_EXT |
-			VK_DEBUG_REPORT_ERROR_BIT_EXT |
-			0;
-		debug_utils_messenger_create_info.pfnUserCallback = debugCallback;
-		debug_utils_messenger_create_info.pUserData       = nullptr;
+			VkDebugUtilsMessengerCreateInfoEXT debug_utils_messenger_create_info{};
+			debug_utils_messenger_create_info.sType           = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+			debug_utils_messenger_create_info.messageSeverity = 
+				//VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | 
+				//VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+				VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+				VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT |
+				0;
+			debug_utils_messenger_create_info.messageType = 
+				VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+				VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+				VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT |
+				0;
+			debug_utils_messenger_create_info.pfnUserCallback = debugCallback;
+			debug_utils_messenger_create_info.pUserData       = nullptr;
 		
-		PFN_vkCreateDebugUtilsMessengerEXT createDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance_, "vkCreateDebugUtilsMessengerEXT");
-		result = createDebugUtilsMessengerEXT(instance_, &debug_utils_messenger_create_info, VK_NULL_HANDLE, &debug_messenger_);
-		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Failed to create debug utils messenger | %s", vkErrorCode(result));
-
-		//PFN_vkCreateDebugReportCallbackEXT vkCreateDebugReportCallbackEXT =
-		//	reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>
-		//	(vkGetInstanceProcAddr(instance_, "vkCreateDebugReportCallbackEXT"));
-		//PFN_vkDebugReportMessageEXT vkDebugReportMessageEXT =
-		//	reinterpret_cast<PFN_vkDebugReportMessageEXT>
-		//	(vkGetInstanceProcAddr(instance_, "vkDebugReportMessageEXT"));
-		//PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT =
-		//	reinterpret_cast<PFN_vkDestroyDebugReportCallbackEXT>
-		//	(vkGetInstanceProcAddr(instance_, "vkDestroyDebugReportCallbackEXT"));
-
-		///* Setup callback creation information */
-		//VkDebugReportCallbackCreateInfoEXT callbackCreateInfo;
-		//callbackCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
-		//callbackCreateInfo.pNext = nullptr;
-		//callbackCreateInfo.flags = 
-		//	VK_DEBUG_REPORT_INFORMATION_BIT_EXT |
-		//	VK_DEBUG_REPORT_WARNING_BIT_EXT |
-		//	VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT |
-		//	VK_DEBUG_REPORT_ERROR_BIT_EXT |
-		//	VK_DEBUG_REPORT_DEBUG_BIT_EXT |
-		//	0;
-		//callbackCreateInfo.pfnCallback = &MyDebugReportCallback;
-		//callbackCreateInfo.pUserData = nullptr;
-
-		///* Register the callback */
-		//VkDebugReportCallbackEXT callback;
-		//result = vkCreateDebugReportCallbackEXT(instance_, &callbackCreateInfo, nullptr, &callback);
-		//LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Failed to create debug callback | %s", vkErrorCode(result));
+			PFN_vkCreateDebugUtilsMessengerEXT createDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance_, "vkCreateDebugUtilsMessengerEXT");
+			result = createDebugUtilsMessengerEXT(instance_, &debug_utils_messenger_create_info, VK_NULL_HANDLE, &debug_messenger_);
+			LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Failed to create debug utils messenger | %s", vkErrorCode(result));
 #endif
 
-		// Get physical device.
-		uint32_t physical_device_count;
-		vezEnumeratePhysicalDevices(instance_, &physical_device_count, nullptr);
+			// Get physical device.
+			uint32_t physical_device_count;
+			vezEnumeratePhysicalDevices(instance_, &physical_device_count, nullptr);
 		
-		std::vector<VkPhysicalDevice> physical_devices(physical_device_count);
-		vezEnumeratePhysicalDevices(instance_, &physical_device_count, physical_devices.data());
+			std::vector<VkPhysicalDevice> physical_devices(physical_device_count);
+			vezEnumeratePhysicalDevices(instance_, &physical_device_count, physical_devices.data());
 		
-		for (VkPhysicalDevice physical_device : physical_devices)
-		{
-		  VkPhysicalDeviceProperties properties;
-		  vezGetPhysicalDeviceProperties(physical_device, &properties);
+			for (VkPhysicalDevice physical_device : physical_devices)
+			{
+				VkPhysicalDeviceProperties properties;
+				vezGetPhysicalDeviceProperties(physical_device, &properties);
 		
-		  if (properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
-		  {
-			  foundation::Debug(properties.deviceName + String("\n"));
-			  physical_device_ = physical_device;
-			  break;
-		  }
-		}
+				if (properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+				{
+					foundation::Debug(properties.deviceName + String("\n"));
+					physical_device_ = physical_device;
+					break;
+				}
+			}
 
-		LMB_ASSERT(physical_device_ != VK_NULL_HANDLE, "VULKAN: Could not find physical device");
+			LMB_ASSERT(physical_device_ != VK_NULL_HANDLE, "VULKAN: Could not find physical device");
 
-		// Create surface.
+			// Create surface.
 #if VIOLET_WIN32
-		VkWin32SurfaceCreateInfoKHR surface_create_info {};
-		surface_create_info.sType     = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-		surface_create_info.hwnd      = (HWND)window->getWindow();
-		surface_create_info.hinstance = GetModuleHandle(NULL);
+			VkWin32SurfaceCreateInfoKHR surface_create_info {};
+			surface_create_info.sType     = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+			surface_create_info.hwnd      = (HWND)window->getWindow();
+			surface_create_info.hinstance = GetModuleHandle(NULL);
 
-		result = vkCreateWin32SurfaceKHR(instance_, &surface_create_info, nullptr, &surface_);
-		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not create surface | %s", vkErrorCode(result));
+			result = vkCreateWin32SurfaceKHR(instance_, &surface_create_info, nullptr, &surface_);
+			LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not create surface | %s", vkErrorCode(result));
 #endif
 
-		// Create device.
-		enabled_extensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+			// Create device.
+			enabled_extensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
-		// Get available extensions.
-		uint32_t extension_count;
-		result = vezEnumerateDeviceExtensionProperties(physical_device_, VK_NULL_HANDLE, &extension_count, VK_NULL_HANDLE);
-		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not enumerate device extensions | %s", vkErrorCode(result));
-		Vector<VkExtensionProperties> extensions(extension_count);
-		result = vezEnumerateDeviceExtensionProperties(physical_device_, VK_NULL_HANDLE, &extension_count, extensions.data());
-		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not enumerate device extensions | %s", vkErrorCode(result));
+			// Get available extensions.
+			uint32_t extension_count;
+			result = vezEnumerateDeviceExtensionProperties(physical_device_, VK_NULL_HANDLE, &extension_count, VK_NULL_HANDLE);
+			LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not enumerate device extensions | %s", vkErrorCode(result));
+			Vector<VkExtensionProperties> extensions(extension_count);
+			result = vezEnumerateDeviceExtensionProperties(physical_device_, VK_NULL_HANDLE, &extension_count, extensions.data());
+			LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not enumerate device extensions | %s", vkErrorCode(result));
 
 #if VIOLET_USE_GPU_MARKERS
-		for (auto& ext : extensions)
-			if (!strcmp(ext.extensionName, VK_EXT_DEBUG_MARKER_EXTENSION_NAME))
-				has_debug_markers_ = true;
+			for (auto& ext : extensions)
+				if (!strcmp(ext.extensionName, VK_EXT_DEBUG_MARKER_EXTENSION_NAME))
+					has_debug_markers_ = true;
 
-		if (has_debug_markers_)
-			enabled_extensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+			if (has_debug_markers_)
+				enabled_extensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
 #endif
 
-		VezDeviceCreateInfo device_create_info{};
-		device_create_info.enabledExtensionCount   = static_cast<uint32_t>(enabled_extensions.size());
-		device_create_info.ppEnabledExtensionNames = enabled_extensions.data();
-		result = vezCreateDevice(physical_device_, &device_create_info, &device_);
-		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not create device | %s", vkErrorCode(result));
+			VezDeviceCreateInfo device_create_info{};
+			device_create_info.enabledExtensionCount   = static_cast<uint32_t>(enabled_extensions.size());
+			device_create_info.ppEnabledExtensionNames = enabled_extensions.data();
+			result = vezCreateDevice(physical_device_, &device_create_info, &device_);
+			LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not create device | %s", vkErrorCode(result));
 
 #if VIOLET_USE_GPU_MARKERS
-		debug_marker_begin_  = (PFN_vkCmdDebugMarkerBeginEXT) vkGetDeviceProcAddr(device_, "vkCmdDebugMarkerBeginEXT");
-		debug_marker_end_    = (PFN_vkCmdDebugMarkerEndEXT)   vkGetDeviceProcAddr(device_, "vkCmdDebugMarkerEndEXT");
-		debug_marker_insert_ = (PFN_vkCmdDebugMarkerInsertEXT)vkGetDeviceProcAddr(device_, "vkCmdDebugMarkerInsertEXT");
+			debug_marker_begin_  = (PFN_vkCmdDebugMarkerBeginEXT) vkGetDeviceProcAddr(device_, "vkCmdDebugMarkerBeginEXT");
+			debug_marker_end_    = (PFN_vkCmdDebugMarkerEndEXT)   vkGetDeviceProcAddr(device_, "vkCmdDebugMarkerEndEXT");
+			debug_marker_insert_ = (PFN_vkCmdDebugMarkerInsertEXT)vkGetDeviceProcAddr(device_, "vkCmdDebugMarkerInsertEXT");
 #endif
 
 	    // Create swapchain.
 	    VezSwapchainCreateInfo swapchain_create_info{};
-		swapchain_create_info.surface      = surface_;
-		swapchain_create_info.format       = { VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
-		swapchain_create_info.tripleBuffer = VK_TRUE;
-		result = vezCreateSwapchain(device_, &swapchain_create_info, &swapchain_);
-		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not create swapchain | %s", vkErrorCode(result));
-		// Create the device_ side image.
-		VezImageCreateInfo image_create_info = {};
-		image_create_info.imageType   = VK_IMAGE_TYPE_2D;
-		image_create_info.format      = VK_FORMAT_R8G8B8A8_UNORM;
-		image_create_info.extent      = { world_->getWindow()->getSize().x, world_->getWindow()->getSize().y, 1 };
-		image_create_info.mipLevels   = 1;
-		image_create_info.arrayLayers = 1;
-		image_create_info.samples     = VK_SAMPLE_COUNT_1_BIT;
-		image_create_info.tiling      = VK_IMAGE_TILING_OPTIMAL;
-		image_create_info.usage       = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-		result = vezCreateImage(device_, VEZ_MEMORY_GPU_ONLY, &image_create_info, &backbuffer_);
-		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not create image | %s", vkErrorCode(result));
+			swapchain_create_info.surface      = surface_;
+			swapchain_create_info.format       = { VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
+			swapchain_create_info.tripleBuffer = VK_TRUE;
+			result = vezCreateSwapchain(device_, &swapchain_create_info, &swapchain_);
+			LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not create swapchain | %s", vkErrorCode(result));
+			// Create the device_ side image.
+			VezImageCreateInfo image_create_info = {};
+			image_create_info.imageType   = VK_IMAGE_TYPE_2D;
+			image_create_info.format      = VK_FORMAT_R8G8B8A8_UNORM;
+			image_create_info.extent      = { world_->getWindow()->getSize().x, world_->getWindow()->getSize().y, 1 };
+			image_create_info.mipLevels   = 1;
+			image_create_info.arrayLayers = 1;
+			image_create_info.samples     = VK_SAMPLE_COUNT_1_BIT;
+			image_create_info.tiling      = VK_IMAGE_TILING_OPTIMAL;
+			image_create_info.usage       = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+			result = vezCreateImage(device_, VEZ_MEMORY_GPU_ONLY, &image_create_info, &backbuffer_);
+			LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not create image | %s", vkErrorCode(result));
 
-		// Create the image view for binding the texture as a resource.
-		VezImageViewCreateInfo image_view_create_info{};
-		image_view_create_info.image                       = backbuffer_;
-		image_view_create_info.viewType                    = VK_IMAGE_VIEW_TYPE_2D;
-		image_view_create_info.format                      = image_create_info.format;
-		image_view_create_info.subresourceRange.layerCount = 1;
-		image_view_create_info.subresourceRange.levelCount = 1;
-		result = vezCreateImageView(device_, &image_view_create_info, &backbuffer_view_);
-		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not create image view | %s", vkErrorCode(result));
+			// Create the image view for binding the texture as a resource.
+			VezImageViewCreateInfo image_view_create_info{};
+			image_view_create_info.image                       = backbuffer_;
+			image_view_create_info.viewType                    = VK_IMAGE_VIEW_TYPE_2D;
+			image_view_create_info.format                      = image_create_info.format;
+			image_view_create_info.subresourceRange.layerCount = 1;
+			image_view_create_info.subresourceRange.levelCount = 1;
+			result = vezCreateImageView(device_, &image_view_create_info, &backbuffer_view_);
+			LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not create image view | %s", vkErrorCode(result));
 
-		createCommandBuffer();
+			createCommandBuffer();
 
-		// Set VSync.
-		setVSync(getVSync());
+			// Set VSync.
+			setVSync(getVSync());
 
-		state_manager_.initialize(this);
-		resize();
-
-
-		asset::VioletShaderHandle shader = asset::ShaderManager::getInstance()->get(Name("resources/shaders/test.fx"));
-
-		platform::RenderTarget output;
-		platform::ShaderPass shader_pass(
-			Name("test"),
-			shader,
-			{},
-			{ output }
-		);
-		bindShaderPass(shader_pass);
-
-		setMesh(full_screen_quad_.mesh);
-		setSubMesh(0);
-
-		draw();
-
-		asset::ShaderManager::getInstance()->destroy(shader);
+			state_manager_.initialize(this);
+			resize();
+		
+      setSamplerState(platform::SamplerState::PointClamp(),         6u);
+      setSamplerState(platform::SamplerState::LinearClamp(),        7u);
+      setSamplerState(platform::SamplerState::AnisotrophicClamp(),  8u);
+      setSamplerState(platform::SamplerState::PointBorder(),        9u);
+			setSamplerState(platform::SamplerState::LinearBorder(),       10u);
+			setSamplerState(platform::SamplerState::AnisotrophicBorder(), 11u);
+      setSamplerState(platform::SamplerState::PointWrap(),          12u);
+			setSamplerState(platform::SamplerState::LinearWrap(),         13u);
+			setSamplerState(platform::SamplerState::AnisotrophicWrap(),   14u);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -762,105 +730,118 @@ namespace lambda
 		foundation::GetFrameHeap()->update();
 	}
 
+#pragma optimize ("", off)
     ///////////////////////////////////////////////////////////////////////////
     void VulkanRenderer::draw()
     {
-		if (!state_.shader)
-			return;
+			command_buffer_.tryBegin();
 
-		command_buffer_.tryBegin();
-
-		// Update viewports.
-		if (state_.dirty_viewports)
-		{
-			vezCmdSetViewport(0, state_.num_viewports, &state_.viewports[0]);
-			vezCmdSetViewportState(state_.num_viewports);
-			state_.dirty_viewports = false;
-		}
-
-		// Update scissors.
-		if (state_.dirty_scissor_rects)
-		{
-			vezCmdSetScissor(0, state_.num_scissor_rects, &state_.scissor_rects[0]);
-			state_.dirty_scissor_rects = false;
-		}
-
-		// Update framebuffer.
-		if (state_.dirty_framebuffer)
-		{
-			Framebuffer framebuffer{};
-			framebuffer.num_framebuffers = state_.shader->getNumRenderTargets();
-			framebuffer.rt_width = state_.rt_width;
-			framebuffer.rt_height = state_.rt_height;
-			memcpy(framebuffer.render_targets, state_.render_targets, sizeof(VkImageView) * framebuffer.num_framebuffers);
-
-			if (state_.depth_target != VK_NULL_HANDLE)
-				framebuffer.render_targets[framebuffer.num_framebuffers++] = state_.depth_target;
-
-			state_.framebuffer = memory_.getFramebuffer(framebuffer);
-			state_.dirty_framebuffer = false;
-		}
-
-		// Begin a render pass.
-		Vector<VezAttachmentReference> attachment_references = getAttachmentReferences();
-		VezRenderPassBeginInfo render_pass_begin_info{};
-		render_pass_begin_info.framebuffer = state_.framebuffer;
-		render_pass_begin_info.attachmentCount = (uint32_t)attachment_references.size();
-		render_pass_begin_info.pAttachments = attachment_references.data();
-		vezCmdBeginRenderPass(&render_pass_begin_info);
-
-		// Update shader.
-		if (state_.dirty_shader)
-		{
-			state_.shader->bind();
-			state_.dirty_shader = false;
-		}
-
-		// Update textures.
-		Vector<VulkanReflectionInfo> textures = state_.shader->getTextures();
-
-		if (state_.dirty_textures)
-		{
-			for (uint16_t i = 0; i < 16 && state_.dirty_textures != 0; ++i)
+			// Update viewports.
+			//if (state_.dirty_viewports)
 			{
-				if ((state_.dirty_textures & (1 << i)))
-				{
-					VkImageView view = state_.textures[i]->getTexture()->getMainView();
-					for (const VulkanReflectionInfo& texture : textures)
-					{
-						if (texture.binding == i)
-						{
-							vezCmdBindImageView(view, VK_NULL_HANDLE, texture.set, texture.binding, 0);
-						}
-					}
-		
-					state_.dirty_textures &= ~(1 << i);
-				}
+				vezCmdSetViewport(0, state_.num_viewports, &state_.viewports[0]);
+				vezCmdSetViewportState(state_.num_viewports);
+				state_.dirty_viewports = false;
 			}
-		}
 
-		// Update state manager.
-		Vector<VulkanReflectionInfo> samplers = state_.shader->getSamplers();
-		state_manager_.update(samplers);
+			// Update scissors.
+			//if (state_.dirty_scissor_rects)
+			{
+				vezCmdSetScissor(0, state_.num_scissor_rects, &state_.scissor_rects[0]);
+				state_.dirty_scissor_rects = false;
+			}
 
-		// Update constant buffers.
-		for (auto& buffer : state_.shader->getBuffers())
-			world_->getShaderVariableManager().updateBuffer(buffer.shader_buffer);
+			// Update framebuffer.
+			//if (state_.dirty_framebuffer)
+			{
+				Framebuffer framebuffer{};
+				framebuffer.num_framebuffers = state_.shader->getNumRenderTargets();
+				framebuffer.rt_width = state_.rt_width;
+				framebuffer.rt_height = state_.rt_height;
+				memcpy(framebuffer.render_targets, state_.render_targets, sizeof(VkImageView) * framebuffer.num_framebuffers);
 
-		state_.shader->bindBuffers();
+				if (state_.depth_target != VK_NULL_HANDLE)
+					framebuffer.render_targets[framebuffer.num_framebuffers++] = state_.depth_target;
 
-		// Update mesh.
-		if (state_.dirty_mesh)
-		{
-			state_.mesh->bind(state_.shader->getStages(), state_.sub_mesh);
-			state_.dirty_mesh = false;
-		}
+				state_.framebuffer = memory_.getFramebuffer(framebuffer);
+				state_.dirty_framebuffer = false;
+			}
 
-		// Draw.
-		state_.mesh->draw(state_.sub_mesh);
+			// Begin a render pass.
+			Vector<VezAttachmentReference> attachment_references = getAttachmentReferences();
+			VezRenderPassBeginInfo render_pass_begin_info{};
+			render_pass_begin_info.framebuffer = state_.framebuffer;
+			render_pass_begin_info.attachmentCount = (uint32_t)attachment_references.size();
+			render_pass_begin_info.pAttachments = attachment_references.data();
+			vezCmdBeginRenderPass(&render_pass_begin_info);
+
+			// Update shader.
+			//if (state_.dirty_shader)
+			{
+				state_.shader->bind();
+				state_.dirty_shader = false;
+			}
+
+			// Update textures.
+			Vector<VulkanReflectionInfo> textures = state_.shader->getTextures();
+
+			//if (state_.dirty_textures)
+			{
+				/*for (uint16_t i = 0; i < 16 && state_.dirty_textures != 0; ++i)
+				{
+					if ((state_.dirty_textures & (1 << i)))
+					{
+						VkImageView view = state_.textures[i]->getTexture()->getMainView();
+						for (const VulkanReflectionInfo& texture : textures)
+						{
+							if (texture.binding == i)
+							{
+								vezCmdBindImageView(view, VK_NULL_HANDLE, texture.set, texture.binding, 0);
+							}
+						}
+		
+						state_.dirty_textures &= ~(1 << i);
+					}
+				}*/
+			}
+
+
+			for (const VulkanReflectionInfo& texture : textures)
+			{
+				if (!state_.textures[texture.slot])
+				{
+					setTexture(default_texture_, texture.slot);
+				}
+
+				VkImageView view = state_.textures[texture.slot]->getTexture()->getMainView();
+				vezCmdBindImageView(view, VK_NULL_HANDLE, texture.set, texture.binding, 0);
+			}
+
+			// Update state manager.
+			Vector<VulkanReflectionInfo> samplers = state_.shader->getSamplers();
+			state_manager_.update(samplers, state_.shader->getNumRenderTargets());
+
+			// Update constant buffers.
+			for (auto& buffer : state_.shader->getBuffers())
+				world_->getShaderVariableManager().updateBuffer(buffer.shader_buffer);
+
+			state_.shader->bindBuffers();
+
+			// Update mesh.
+			//if (state_.dirty_mesh)
+			{
+				state_.mesh->bind(state_.shader->getStages(), state_.sub_mesh);
+				state_.dirty_mesh = false;
+			}
+
+			// Draw.
+			state_.mesh->draw(state_.sub_mesh);
 	
-		// Rend renderpass.
-		vezCmdEndRenderPass();
+			// Rend renderpass.
+			vezCmdEndRenderPass();
+
+			command_buffer_.tryEnd();
+			command_buffer_.tryBegin();
     }
     
     ///////////////////////////////////////////////////////////////////////////
@@ -1024,10 +1005,8 @@ namespace lambda
 				viewports.push_back({
 					0.0f,
 					0.0f,
-					(float)(output.getTexture()->getLayer(0u).getWidth()
-					>> output.getMipMap()),
-						(float)(output.getTexture()->getLayer(0u).getHeight()
-							>> output.getMipMap())
+					(float)std::max(1u, output.getTexture()->getLayer(0u).getWidth() >> output.getMipMap()),
+					(float)std::max(1u, output.getTexture()->getLayer(0u).getHeight() >> output.getMipMap())
 				});
 
 				if (output.getTexture()->getLayer(0u).getFlags() &
@@ -1195,6 +1174,7 @@ namespace lambda
 
 		if (m != state_.mesh)
 		{
+			state_manager_.bindTopology(mesh->getTopology());
 			state_.dirty_mesh = true;
 			state_.mesh = m;
 		}
@@ -1216,16 +1196,16 @@ namespace lambda
 		if (!shader)
 			return;
 
-		VulkanShader* s = memory_.getShader(shader);
+			VulkanShader* s = memory_.getShader(shader);
 
-		for (const auto& variable : shader->getQueuedShaderVariables())
-			s->updateShaderVariable(variable);
+			for (const auto& variable : shader->getQueuedShaderVariables())
+				s->updateShaderVariable(variable);
 
-		if (s != state_.shader)
-		{
-			state_.dirty_shader = true;
-			state_.shader = s;
-		}
+			if (s != state_.shader)
+			{
+				state_.dirty_shader = true;
+				state_.shader = s;
+			}
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -1233,16 +1213,16 @@ namespace lambda
       asset::VioletTextureHandle texture, 
       uint8_t slot)
     {
-		if (!texture)
-			return;
+			if (!texture)
+				return;
 
-		VulkanRenderTexture* t = memory_.getTexture(texture);
+			VulkanRenderTexture* t = memory_.getTexture(texture);
 
-		if (t != state_.textures[slot])
-		{
-			state_.dirty_textures |= (1 << slot);
-			state_.textures[slot] = t;
-		}
+			if (t != state_.textures[slot])
+			{
+				state_.dirty_textures |= (1 << slot);
+				state_.textures[slot] = t;
+			}
     }
 
 	///////////////////////////////////////////////////////////////////////////
@@ -1428,8 +1408,7 @@ namespace lambda
 		for (uint32_t i = 0; i < state_.shader->getNumRenderTargets(); ++i)
 		{
 			VezAttachmentReference attachment_reference{};
-			attachment_reference.clearValue.color = { 0.3f, 0.3f, 0.3f, 0.0f };
-			attachment_reference.loadOp  = VK_ATTACHMENT_LOAD_OP_CLEAR;
+			attachment_reference.loadOp  = VK_ATTACHMENT_LOAD_OP_LOAD;
 			attachment_reference.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 			attachment_references.push_back(attachment_reference);
 		}
@@ -1437,7 +1416,7 @@ namespace lambda
 		if (state_.depth_target)
 		{
 			VezAttachmentReference attachment_reference{};
-			attachment_reference.clearValue.depthStencil.depth = 1.0f;
+			attachment_reference.loadOp  = VK_ATTACHMENT_LOAD_OP_LOAD;
 			attachment_reference.loadOp  = VK_ATTACHMENT_LOAD_OP_CLEAR;
 			attachment_reference.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 			attachment_references.push_back(attachment_reference);

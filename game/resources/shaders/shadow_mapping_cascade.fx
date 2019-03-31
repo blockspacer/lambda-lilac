@@ -2,13 +2,13 @@
 #include "pbr.fx"
 #include "vsm_publish.fx"
 
-Texture2D tex_shadow_map_01 : register(t0);
-Texture2D tex_shadow_map_02 : register(t1);
-Texture2D tex_shadow_map_03 : register(t2);
-Texture2D tex_overlay       : register(t3);
-Texture2D tex_position      : register(t4);
-Texture2D tex_normal        : register(t5);
-Texture2D tex_metallic_roughness : register(t6);
+Make_Texture2D(tex_shadow_map_01, 0);
+Make_Texture2D(tex_shadow_map_02, 1);
+Make_Texture2D(tex_shadow_map_03, 2);
+Make_Texture2D(tex_overlay, 3);
+Make_Texture2D(tex_position, 4);
+Make_Texture2D(tex_normal, 5);
+Make_Texture2D(tex_metallic_roughness, 6);
 
 
 struct VSOutput
@@ -26,7 +26,7 @@ VSOutput VS(uint id : SV_VertexID)
   return vOut;
 }
 
-cbuffer cbPostProcess
+Make_CBuffer(cbPostProcess, 0)
 {
   float4x4 light_view_projection_matrix_01;
   float4x4 light_view_projection_matrix_02;

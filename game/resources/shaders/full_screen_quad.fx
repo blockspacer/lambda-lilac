@@ -1,3 +1,5 @@
+#include "common.fx"
+
 struct VSOutput
 {
   float4 position : SV_POSITION0;
@@ -12,15 +14,9 @@ VSOutput VS(uint id: SV_VertexID)
   return vOut;
 }
 
-cbuffer cbDynamicResolution
-{
-  float dynamic_resolution_scale;
-};
-
-Texture2D tex_to_screen : register(t0);
-SamplerState sam_point  : register(s0);
+Make_Texture2D(tex_to_screen, 0);
 
 float4 PS(VSOutput pIn) : SV_TARGET0
 {
-    return tex_to_screen.Sample(sam_point, pIn.tex * dynamic_resolution_scale);
+    return Sample(tex_to_screen, SamPointClamp, pIn.tex);
 }

@@ -12,85 +12,90 @@ namespace lambda
     {
       renderer_ = renderer;
 
-	  dirty_rasterizer_ = false;
-	  dirty_blend_ = false;
-	  dirty_depth_stencil_ = false;
-	  dirty_input_assembly_ = false;
-	  dirty_sampler_ = 0u;
-	  rasterizer_ = {};
-	  blend_ = {};
-	  memset(samplers_, 0, sizeof(samplers_));
-	  depth_stencil_ = {};
-	  input_assembly_ = {};
+			dirty_rasterizer_ = false;
+			dirty_blend_ = false;
+			dirty_depth_stencil_ = false;
+			dirty_input_assembly_ = false;
+			dirty_sampler_ = 0u;
+			rasterizer_ = {};
+			blend_ = {};
+			memset(samplers_, 0, sizeof(samplers_));
+			depth_stencil_ = {};
+			input_assembly_ = {};
     }
 
-	///////////////////////////////////////////////////////////////////////////
-	void VulkanStateManager::update(Vector<VulkanReflectionInfo> samplers)
-	{
-		if (dirty_rasterizer_)
+		///////////////////////////////////////////////////////////////////////////
+		void VulkanStateManager::update(Vector<VulkanReflectionInfo> samplers, uint32_t attachment_count)
 		{
-			vezCmdSetRasterizationState(&rasterizer_);
-			dirty_rasterizer_ = false;
-		}
-		if (dirty_blend_)
-		{
-			vezCmdSetColorBlendState(&blend_);
-			dirty_blend_ = false;
-		}
-		if (dirty_depth_stencil_)
-		{
-			vezCmdSetDepthStencilState(&depth_stencil_);
-			dirty_depth_stencil_ = false;
-		}
-		if (dirty_input_assembly_)
-		{
-			vezCmdSetInputAssemblyState(&input_assembly_);
-			dirty_input_assembly_ = false;
-		}
-		if (dirty_sampler_)
-		{
-			for (uint16_t i = 0; i < 16 && dirty_sampler_ != 0; ++i)
+			//if (dirty_rasterizer_)
 			{
-				if ((dirty_sampler_ & (1 << i)))
-				{
-					for (const VulkanReflectionInfo& sampler : samplers)
-					{
-						if (sampler.binding == i)
-						{
-							vezCmdBindSampler(samplers_[i], sampler.set, sampler.binding, 0);
-						}
-					}
-
-					dirty_sampler_ &= ~(1 << i);
-				}
+				vezCmdSetRasterizationState(&rasterizer_);
+				dirty_rasterizer_ = false;
 			}
+			//if (dirty_blend_)
+			{
+				blend_.blend_state.attachmentCount = attachment_count;
+				blend_.blend_state.pAttachments = blend_.attachments;
+				vezCmdSetColorBlendState(&blend_.blend_state);
+				dirty_blend_ = false;
+			}
+			//if (dirty_depth_stencil_)
+			{
+				vezCmdSetDepthStencilState(&depth_stencil_);
+				dirty_depth_stencil_ = false;
+			}
+			//if (dirty_input_assembly_)
+			{
+				vezCmdSetInputAssemblyState(&input_assembly_);
+				dirty_input_assembly_ = false;
+			}
+			//if (dirty_sampler_)
+			//{
+			//	for (uint16_t i = 0; i < 16 && dirty_sampler_ != 0; ++i)
+			//	{
+			//		//if ((dirty_sampler_ & (1 << i)))
+			//		{
+			//			for (const VulkanReflectionInfo& sampler : samplers)
+			//			{
+			//				if (sampler.slot == i)
+			//				{
+			//					vezCmdBindSampler(samplers_[i], sampler.set, sampler.binding, 0);
+			//				}
+			//			}
+			//
+			//			dirty_sampler_ &= ~(1 << i);
+			//		}
+			//	}
+			//}
+	
+			for (const VulkanReflectionInfo& sampler : samplers)
+				vezCmdBindSampler(samplers_[sampler.slot], sampler.set, sampler.binding, 0);
 		}
-	}
    
     ///////////////////////////////////////////////////////////////////////////
     void VulkanStateManager::bindRasterizerState(
       const platform::RasterizerState& rasterizer_state)
     {
-	  // Get the state.
-	  VezRasterizationState rasterization_state;
-	  const auto& it = rasterizer_states_.find(rasterizer_state);
+			// Get the state.
+			VezRasterizationState rasterization_state{};
+			const auto& it = rasterizer_states_.find(rasterizer_state);
       if (it == rasterizer_states_.end())
       {
-		switch (rasterizer_state.getCullMode())
+				switch (rasterizer_state.getCullMode())
         {
         case platform::RasterizerState::CullMode::kBack: 
-		  rasterization_state.cullMode = VK_CULL_MODE_BACK_BIT;  break;
+					rasterization_state.cullMode = VK_CULL_MODE_BACK_BIT;  break;
         case platform::RasterizerState::CullMode::kFront: 
-		  rasterization_state.cullMode = VK_CULL_MODE_FRONT_BIT;  break;
+					rasterization_state.cullMode = VK_CULL_MODE_FRONT_BIT;  break;
         case platform::RasterizerState::CullMode::kNone: 
-		  rasterization_state.cullMode = VK_CULL_MODE_NONE;  break;
+					rasterization_state.cullMode = VK_CULL_MODE_NONE;  break;
         }
         switch (rasterizer_state.getFillMode())
         {
         case platform::RasterizerState::FillMode::kSolid:     
-		  rasterization_state.polygonMode = VK_POLYGON_MODE_FILL; break;
+					rasterization_state.polygonMode = VK_POLYGON_MODE_FILL; break;
         case platform::RasterizerState::FillMode::kWireframe: 
-		  rasterization_state.polygonMode = VK_POLYGON_MODE_LINE; break;
+					rasterization_state.polygonMode = VK_POLYGON_MODE_LINE; break;
         }
 
         rasterizer_states_.insert(
@@ -101,7 +106,7 @@ namespace lambda
         rasterization_state = it->second;
 	  
       rasterizer_ = rasterization_state;
-	  dirty_rasterizer_ = true;
+			dirty_rasterizer_ = true;
     }
 
 	static VkBlendOp getBlendOp(platform::BlendState::BlendOp blend_op)
@@ -163,33 +168,35 @@ namespace lambda
       const platform::BlendState& blend_state)
     {
       // Get the state.
-	  VezColorBlendState color_blend_state;
+			ColorBlendState color_blend_state{};
       const auto& it = blend_states_.find(blend_state);
       if (it == blend_states_.end())
       {
-		// TODO (Hilze): Fix this memory leak.
-		VezColorBlendAttachmentState* attachment = 
-			foundation::Memory::construct<VezColorBlendAttachmentState>();
-		attachment->alphaBlendOp = getBlendOp(blend_state.getBlendOpAlpha());
-		attachment->blendEnable = blend_state.getBlendEnable();
-		attachment->colorBlendOp = getBlendOp(blend_state.getBlendOp());
-		attachment->colorWriteMask = blend_state.getWriteMask();
-		attachment->dstAlphaBlendFactor = getBlendFactor(blend_state.getDestBlendAlpha());
-		attachment->dstColorBlendFactor = getBlendFactor(blend_state.getDestBlend());
-		attachment->srcAlphaBlendFactor = getBlendFactor(blend_state.getSrcBlendAlpha());
-		attachment->srcColorBlendFactor = getBlendFactor(blend_state.getSrcBlend());
-        color_blend_state.attachmentCount = 1;
-		color_blend_state.logicOp;
-		color_blend_state.logicOpEnable = false;
-		color_blend_state.pAttachments = attachment;
-
+				for (uint32_t i = 0; i < 8; ++i)
+				{
+					color_blend_state.attachments[i] = {};
+					color_blend_state.attachments[i].alphaBlendOp        = getBlendOp(blend_state.getBlendOpAlpha());
+					color_blend_state.attachments[i].blendEnable         = blend_state.getBlendEnable();
+					color_blend_state.attachments[i].colorBlendOp        = getBlendOp(blend_state.getBlendOp());
+					color_blend_state.attachments[i].colorWriteMask      = blend_state.getWriteMask();
+					color_blend_state.attachments[i].dstAlphaBlendFactor = getBlendFactor(blend_state.getDestBlendAlpha());
+					color_blend_state.attachments[i].dstColorBlendFactor = getBlendFactor(blend_state.getDestBlend());
+					color_blend_state.attachments[i].srcAlphaBlendFactor = getBlendFactor(blend_state.getSrcBlendAlpha());
+					color_blend_state.attachments[i].srcColorBlendFactor = getBlendFactor(blend_state.getSrcBlend());
+				}
+				
+				color_blend_state.blend_state = {};
+				VezColorBlendAttachmentState* attachment = foundation::Memory::construct<VezColorBlendAttachmentState>();
+				color_blend_state.blend_state.logicOp;
+				color_blend_state.blend_state.logicOpEnable = false;
+				
         blend_states_.insert(eastl::make_pair(blend_state, color_blend_state));
       }
       else
-		  color_blend_state = it->second;
+				color_blend_state = it->second;
 
       blend_ = color_blend_state;
-	  dirty_blend_ = true;
+	    dirty_blend_ = true;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -197,25 +204,25 @@ namespace lambda
       const platform::DepthStencilState& depth_stencil_state)
     {
       // Get the state.
-      VezPipelineDepthStencilState pipeline_depth_stencil_state;
+			VezPipelineDepthStencilState pipeline_depth_stencil_state{};
       const auto& it = depth_stencil_states_.find(depth_stencil_state);
       if (it == depth_stencil_states_.end())
       {
-		pipeline_depth_stencil_state.depthBoundsTestEnable = VK_TRUE;
-		pipeline_depth_stencil_state.depthCompareOp        = getDepthCompareOp(depth_stencil_state.getDepthCompareOp());
-		pipeline_depth_stencil_state.depthTestEnable       = VK_TRUE;
-		pipeline_depth_stencil_state.depthWriteEnable      = depth_stencil_state.getDepthWritemode() ? VK_TRUE : VK_FALSE;
-		pipeline_depth_stencil_state.stencilTestEnable     = VK_FALSE;
+				pipeline_depth_stencil_state.depthBoundsTestEnable = VK_TRUE;
+				pipeline_depth_stencil_state.depthCompareOp        = getDepthCompareOp(depth_stencil_state.getDepthCompareOp());
+				pipeline_depth_stencil_state.depthTestEnable       = VK_TRUE;
+				pipeline_depth_stencil_state.depthWriteEnable      = depth_stencil_state.getDepthWritemode() ? VK_TRUE : VK_FALSE;
+				pipeline_depth_stencil_state.stencilTestEnable     = VK_FALSE;
         
         depth_stencil_states_.insert(
           eastl::make_pair(depth_stencil_state, pipeline_depth_stencil_state)
         );
       }
       else
-		  pipeline_depth_stencil_state = it->second;
+				pipeline_depth_stencil_state = it->second;
 
       depth_stencil_ = pipeline_depth_stencil_state;
-	  dirty_depth_stencil_ = true;
+			dirty_depth_stencil_ = true;
     }
     
     ///////////////////////////////////////////////////////////////////////////
@@ -228,43 +235,43 @@ namespace lambda
       const auto& it = sampler_states_.find(sampler_state);
       if (it == sampler_states_.end())
       {
-		VezSamplerCreateInfo sampler_create_info{};
-		sampler_create_info.compareOp = VK_COMPARE_OP_ALWAYS;
-		sampler_create_info.maxLod = FLT_MAX;
+				VezSamplerCreateInfo sampler_create_info{};
+				sampler_create_info.compareOp = VK_COMPARE_OP_ALWAYS;
+				sampler_create_info.maxLod = FLT_MAX;
 
         switch (sampler_state.getClampMode())
         {
         case platform::SamplerState::ClampMode::kBorder: 
-		  sampler_create_info.addressModeU = sampler_create_info.addressModeV =
-		    sampler_create_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-		  break;
+					sampler_create_info.addressModeU = sampler_create_info.addressModeV =
+					sampler_create_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+					break;
         case platform::SamplerState::ClampMode::kClamp:  
           sampler_create_info.addressModeU = sampler_create_info.addressModeV =
-		    sampler_create_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-		  break;
+					sampler_create_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+					break;
         case platform::SamplerState::ClampMode::kWrap:
-		  sampler_create_info.addressModeU = sampler_create_info.addressModeV =
-		    sampler_create_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-		  break;
+					sampler_create_info.addressModeU = sampler_create_info.addressModeV =
+					sampler_create_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+					break;
         }
         switch (sampler_state.getSampleMode())
         {
         case platform::SamplerState::SampleMode::kAnisotropic:
-		  sampler_create_info.minFilter = sampler_create_info.magFilter = VkFilter::VK_FILTER_LINEAR; break;
+					sampler_create_info.minFilter = sampler_create_info.magFilter = VkFilter::VK_FILTER_LINEAR; break;
         case platform::SamplerState::SampleMode::kLinear:     
           sampler_create_info.minFilter = sampler_create_info.magFilter = VkFilter::VK_FILTER_LINEAR; break;
         case platform::SamplerState::SampleMode::kPoint:     
           sampler_create_info.minFilter = sampler_create_info.magFilter = VkFilter::VK_FILTER_NEAREST; break;
         }
-		VkResult result;
-		result = vezCreateSampler(renderer_->getDevice(), &sampler_create_info, &sampler);
-		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not create sampler | %s", vkErrorCode(result));
+				VkResult result;
+				result = vezCreateSampler(renderer_->getDevice(), &sampler_create_info, &sampler);
+				LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not create sampler | %s", vkErrorCode(result));
       }
       else
-		  sampler = it->second;
+			  sampler = it->second;
 
       samplers_[slot] = sampler;
-	  dirty_sampler_ |= (1 << slot);
+		  dirty_sampler_ |= (1 << slot);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -278,13 +285,9 @@ namespace lambda
 			switch (topology)
 			{
 			case asset::Topology::kLines:
-				input_assembly_state.topology =
-					VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
-				break;
+				input_assembly_state.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST; break;
 			case asset::Topology::kTriangles:
-				input_assembly_state.topology =
-					VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-				break;
+				input_assembly_state.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST; break;
 			}
 		}
 		else

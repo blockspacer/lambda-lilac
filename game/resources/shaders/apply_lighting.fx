@@ -12,18 +12,18 @@ float3 FresnelSchlickRoughness(float cosTheta, float3 F0, float roughness)
 ///////////////////////////////////////////////////////////////////////////
 // Inputs /////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
-Texture2D tex_albedo      : register(t0);
-Texture2D tex_position    : register(t1);
-Texture2D tex_normal      : register(t2);
-Texture2D tex_mra         : register(t3);
+Make_Texture2D(tex_albedo, 0);
+Make_Texture2D(tex_position, 1);
+Make_Texture2D(tex_normal, 2);
+Make_Texture2D(tex_mra, 3);
 
-Texture2D tex_light_map   : register(t4);
+Make_Texture2D(tex_light_map, 4);
 
-Texture2D tex_irradiance  : register(t5);
-Texture2D tex_prefiltered : register(t6);
-Texture2D tex_brdfLUT     : register(t7);
+Make_Texture2D(tex_irradiance, 5);
+Make_Texture2D(tex_prefiltered, 6);
+Make_Texture2D(tex_brdfLUT, 7);
 
-cbuffer AmbientValues
+Make_CBuffer(AmbientValues, 0)
 {
   float ambient_intensity = 1.0f;
   float3 camera_position;

@@ -17,9 +17,10 @@ namespace lambda
     {
       platform::ShaderBuffer shader_buffer;
       VulkanRenderBuffer* buffer;
-	  int offset;
-	  int set;
-	  int binding;
+			int offset;
+			int set;
+			int binding;
+			int slot;
       bool bound = false;
     };
 

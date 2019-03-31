@@ -52,8 +52,8 @@ namespace lambda
     kBC6,
     kBC7,
     kB8G8R8A8,
-	kA8,
-	kD32,
+		kA8,
+		kD32,
   };
   // Bytes Per Pixel. Bytes Per Row. Bytes Per Layer.
   inline void calculateImageMemory(TextureFormat format, uint16_t w, uint16_t h, uint32_t& bpp, uint32_t& bpr, uint32_t& bpl)

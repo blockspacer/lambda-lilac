@@ -1,22 +1,39 @@
 #ifndef __COMMON__
 #define __COMMON__
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+#if VIOLET_SPIRV
+#define Lilac_CBuffer_Offset 0
+#define Lilac_Texture_Offset 100
+#define Lilac_SamplerState_Offset 200
+#define Make_CBuffer(name, slot) [[vk::binding(slot + Lilac_CBuffer_Offset)]] cbuffer name : register(b##slot)
+#define Make_Texture2D(name, slot) [[vk::binding(slot + Lilac_Texture_Offset)]] Texture2D name : register(t##slot)
+#define Make_TextureCube(name, slot) [[vk::binding(slot + Lilac_Texture_Offset)]] TextureCube name : register(t##slot)
+#define Make_SamplerState(name, slot) [[vk::binding(slot + Lilac_SamplerState_Offset)]] SamplerState name : register(s##slot)
+#else
+#define Make_CBuffer(name, slot) cbuffer name : register(b##slot)
+#define Make_Texture2D(name, slot) Texture2D name : register(t##slot)
+#define Make_TextureCube(name, slot) TextureCube name : register(t##slot)
+#define Make_SamplerState(name, slot) SamplerState name : register(s##slot)
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 static const float PI  = 3.14159265359f;
 static const float TAU = 6.28318530718f;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-SamplerState SamPointClamp         : register(s6);
-SamplerState SamLinearClamp        : register(s7);
-SamplerState SamAnisotrophicClamp  : register(s8);
-SamplerState SamPointBorder        : register(s9);
-SamplerState SamLinearBorder       : register(s10);
-SamplerState SamAnisotrophicBorder : register(s11);
-SamplerState SamPointWarp          : register(s12);
-SamplerState SamLinearWarp         : register(s13);
-SamplerState SamAnisotrophicWarp   : register(s14);
+Make_SamplerState(SamPointClamp, 6);
+Make_SamplerState(SamLinearClamp, 7);
+Make_SamplerState(SamAnisotrophicClamp, 8);
+Make_SamplerState(SamPointBorder, 9);
+Make_SamplerState(SamLinearBorder, 10);
+Make_SamplerState(SamAnisotrophicBorder, 11);
+Make_SamplerState(SamPointWarp, 12);
+Make_SamplerState(SamLinearWarp, 13);
+Make_SamplerState(SamAnisotrophicWarp, 14);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-cbuffer cbDynamicResolution
+Make_CBuffer(cbDynamicResolution, 10)
 {
   float dynamic_resolution_scale = 0.5f;
 };

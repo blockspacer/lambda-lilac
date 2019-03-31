@@ -14,14 +14,14 @@ VSOutput VS(uint id: SV_VertexID)
   return vOut;
 }
 
-cbuffer CBUFFER
+Make_CBuffer(CBUFFER, 0)
 {
   float total_time;
   float water_height;
   float3 camera_position;
 }
 
-Texture2D tex_albedo    : register(t0);
+Make_Texture2D(tex_albedo, 0);
 
 static const float2 sin_intensity = float2(0.025f, 0.01f);
 static const float2 speed = float2(3.0f, 1.25f);
