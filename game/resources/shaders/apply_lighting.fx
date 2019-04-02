@@ -91,7 +91,7 @@ float4 PS(VSOutput pIn) : SV_TARGET0
 
   float3 ambient = (kD * diffuse + specular) * ao * ambient_intensity;
 
-  ambient *= tex_SSAO.Sample(SamLinearClamp, pIn.tex).r;
+  ambient *= Sample(tex_SSAO, SamLinearClamp, pIn.tex).r;
 
 #if VIOLET_GAMMA_CORRECT
   ambient = ambient / (ambient + 1.0f);

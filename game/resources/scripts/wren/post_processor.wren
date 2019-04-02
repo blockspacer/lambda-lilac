@@ -109,8 +109,6 @@ class PostProcessor {
     Graphics.setSpotLightShadersRSM(rsm_generate, modify, Shader.load("resources/shaders/reflective_shadow_mapping_spot.fx"))
   }
   applyLighting(enabled) {
-    if (!enabled) return
-
     PostProcess.addShaderPass("apply_lighting", Shader.load("resources/shaders/apply_lighting.fx"), [ "post_process_buffer", "position", "normal", "metallic_roughness", "light_map", "irradiance_map", "prefiltered", "brdf_lut", "ssao_target" ], [ "post_process_buffer" ])
   }
   ssao(enabled, blur_scale, blur_passes, render_target_scale) {
