@@ -350,7 +350,7 @@ namespace lambda
     {
       bound_.mesh   = nullptr;
       bound_.shader = nullptr;
-      for (uint8_t i = 0u; i < 8u; ++i)
+      for (uint8_t i = 0u; i < MAX_TEXTURE_COUNT; ++i)
       {
         bound_.textures[i] = nullptr;
         textures_[i] = nullptr;
@@ -713,6 +713,7 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
+#pragma optimize ("", off)
     void D3D11Context::endFrame(bool display)
     {
       setMesh(full_screen_quad_.mesh);
@@ -1245,7 +1246,7 @@ namespace lambda
       // Bind the shader.
       bound_.shader = d3d11_shader;
       
-			if (d3d11_shader)
+	  if (d3d11_shader)
         d3d11_shader->bind();
     }
    
@@ -1484,6 +1485,18 @@ namespace lambda
         render_target_manager_.destroy((D3D11Texture*)asset->gpuData().get());
       }*/
     }
+
+	///////////////////////////////////////////////////////////////////////////
+	void D3D11Context::destroyTexture(const size_t& hash)
+	{
+		asset_manager_.removeTexture(hash);
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	void D3D11Context::destroyShader(const size_t& hash)
+	{
+		asset_manager_.removeShader(hash);
+	}
     
     ///////////////////////////////////////////////////////////////////////////
     ID3D11RenderTargetView* D3D11Context::getRTV(
@@ -1518,6 +1531,7 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
+#pragma optimize ("", off)
     void D3D11Context::draw(ID3D11Buffer* buffer)
     {
       for (unsigned char i = 0; i < highest_bound_texture_; ++i)

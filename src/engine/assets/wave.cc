@@ -45,6 +45,12 @@ namespace lambda
       return buffer_;
     }
 
+	///////////////////////////////////////////////////////////////////////////
+	void Wave::release(Wave* wave, const size_t& hash)
+	{
+		WaveManager::getInstance()->destroy(wave, hash);
+	}
+
 
 
 
@@ -86,9 +92,9 @@ namespace lambda
     }
     
     ///////////////////////////////////////////////////////////////////////////
-    void WaveManager::destroy(VioletWaveHandle wave)
+    void WaveManager::destroy(Wave* wave, const size_t& hash)
     {
-      foundation::Memory::destruct<Wave>(wave.get());
+      foundation::Memory::destruct<Wave>(wave);
     }
     
     ///////////////////////////////////////////////////////////////////////////

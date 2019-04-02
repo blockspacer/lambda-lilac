@@ -444,51 +444,46 @@ namespace lambda
 	{
     LightData& data = lookUpData(entity);
 
-	  for (platform::RenderTarget render_target : data.render_target)
-        asset::TextureManager::getInstance()->destroy(render_target.getTexture());
-    for (platform::RenderTarget depth_target : data.depth_target)
-      asset::TextureManager::getInstance()->destroy(depth_target.getTexture());
-		
 	  uint32_t size   = 1u; // TODO (Hilze): Do RSM stuff here.
 	  uint32_t layers = (data.type == LightType::kPoint) ? 6u : 1u;
 
 	  data.depth_target.resize(size * layers);
 	  data.render_target.resize(size * layers);
-    data.culler.resize(size * layers);
-    data.view_position.resize(size * layers, glm::vec3(0.0f));
-    data.projection.resize(size * layers, glm::mat4x4(1.0f));
-    data.view.resize(size * layers, glm::mat4x4(1.0f));
-    data.depth.resize(size * layers, data.depth.back());
+      data.culler.resize(size * layers);
+      data.view_position.resize(size * layers, glm::vec3(0.0f));
+	  data.projection.resize(size * layers, glm::mat4x4(1.0f));
+	  data.view.resize(size * layers, glm::mat4x4(1.0f));
+	  data.depth.resize(size * layers, data.depth.back());
 
-    for (uint32_t i = 0u; i < size; ++i)
-    {
+	  for (uint32_t i = 0u; i < size; ++i)
+	  {
 		static int kIdx = 0;
-      Name depth_name = Name("shadow_map_depth_" + toString(kIdx));
-      Name color_name = Name("shadow_map_color_" + toString(kIdx++));
-      data.render_target.at(i) = platform::RenderTarget(color_name,
-        asset::TextureManager::getInstance()->create(
-          color_name,
-          data.shadow_map_size_px,
-          data.shadow_map_size_px,
-          layers,
-          TextureFormat::kR32G32B32A32,
-          kTextureFlagIsRenderTarget
-        )
-      );
-			data.render_target.at(i).getTexture()->setKeepInMemory(true);
-			world_->getRenderer()->clearRenderTarget(data.render_target.at(i).getTexture(), glm::vec4(FLT_MAX));
-			data.depth_target.at(i) = platform::RenderTarget(depth_name,
+  		Name depth_name = Name("shadow_map_depth_" + toString(kIdx));
+		Name color_name = Name("shadow_map_color_" + toString(kIdx++));
+		data.render_target.at(i) = platform::RenderTarget(color_name,
           asset::TextureManager::getInstance()->create(
-            depth_name,
+            color_name,
             data.shadow_map_size_px,
             data.shadow_map_size_px,
             layers,
+            TextureFormat::kR32G32B32A32,
+            kTextureFlagIsRenderTarget
+          )
+        );
+	    data.render_target.at(i).getTexture()->setKeepInMemory(true);
+	    world_->getRenderer()->clearRenderTarget(data.render_target.at(i).getTexture(), glm::vec4(FLT_MAX));
+	    data.depth_target.at(i) = platform::RenderTarget(depth_name,
+		  asset::TextureManager::getInstance()->create(
+		    depth_name,
+		    data.shadow_map_size_px,
+		    data.shadow_map_size_px,
+		    layers,
             TextureFormat::kD32,
             kTextureFlagIsRenderTarget
           )
         );
       }
-		}
+    }
     void LightSystem::renderDirectional(const entity::Entity& entity)
     {
       foundation::SharedPointer<platform::IRenderer> renderer = world_->getRenderer();

@@ -9,38 +9,75 @@ namespace lambda
     {
       kGPUOnly = 1u,
     };
+
+	class VioletRefHandler
+	{
+	public:
+		static void incRef(const size_t& hash)
+		{
+			if (hash == 0u)
+				return;
+
+			g_refs[hash]++;
+		}
+		static bool decRef(const size_t& hash)
+		{
+			if (hash == 0u)
+				return true;
+
+			return --g_refs[hash] > 0;
+		}
+
+	private:
+		static UnorderedMap<size_t, int> g_refs;
+	};
     
     template<typename T>
     class VioletHandle
     {
     public:
       VioletHandle()
-        : hash_(0u)
+        : name_()
         , data_(nullptr)
       {
       }
       VioletHandle(T* data, Name name)
-        : hash_(name.getHash())
+        : name_(name)
         , data_(data)
       {
-      }
+		  VioletRefHandler::incRef(name_.getHash());
+	  }
       VioletHandle(const VioletHandle& other)
-        : hash_(other.hash_)
+        : name_(other.name_)
         , data_(other.data_)
       {
-      }
+		  VioletRefHandler::incRef(name_.getHash());
+	  }
+	  ~VioletHandle()
+	  {
+		release();
+	  }
       void operator=(const VioletHandle<T>& other)
       {
+		if (name_ == other.name_)
+		  return;
+		
+		release();
+
         data_ = other.data_;
-        hash_ = other.hash_;
+		name_ = other.name_;
+
+		VioletRefHandler::incRef(name_.getHash());
       }
       void operator=(const std::nullptr_t& /*null*/)
       {
+        release();
         data_ = nullptr;
+		name_ = 0u;
       }
       bool operator==(const VioletHandle<T>& other) const
       {
-        return hash_ == other.hash_;
+        return name_ == other.name_;
       }
       bool operator==(const std::nullptr_t& /*null*/) const
       {
@@ -48,7 +85,7 @@ namespace lambda
       }
       bool operator!=(const VioletHandle<T>& other) const
       {
-        return hash_ != other.hash_;
+        return name_ != other.name_;
       }
       bool operator!=(const std::nullptr_t& /*null*/) const
       {
@@ -85,11 +122,26 @@ namespace lambda
       }
       size_t getHash() const
       {
-        return hash_;
+        return name_.getHash();
       }
+	  Name getName() const
+	  {
+		  return name_;
+	  }
+
+	  void release()
+	  {
+        if (!VioletRefHandler::decRef(name_.getHash()))
+		{
+		  T::release(data_, name_.getHash());
+		  data_ = nullptr;
+		  name_ = 0u;
+
+		}
+	  }
 
     private:
-      size_t hash_;
+      Name name_;
       T* data_;
     };
   }

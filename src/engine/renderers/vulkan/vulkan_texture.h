@@ -37,7 +37,8 @@ namespace lambda
       unsigned char pingPongIdx() const;
 
       VkImage getTexture(unsigned char idx) const;
-    
+	  size_t getGPUSize() const;
+
     private:
 	  void createMainViews(
         unsigned char layer_count,
@@ -58,6 +59,7 @@ namespace lambda
 	  unsigned char texture_index_;
 	  bool is_render_target_;
 	  bool is_dynamic_;
+	  size_t size_;
     };
   }
 }

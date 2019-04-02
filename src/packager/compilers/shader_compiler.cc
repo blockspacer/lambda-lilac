@@ -123,7 +123,9 @@ bool compileHLSL(lambda::String file, lambda::String source, lambda::String entr
 			
 			lambda::VioletShaderResource resource;
 			resource.slot = bind_desc.BindPoint;
-
+			resource.name = bind_desc.Name;
+			resource.size = 1;
+			
 			switch (stage[0])
 			{
 			case 'c': case 'C': resource.stage = lambda::ShaderStages::kCompute;  break;
@@ -137,8 +139,29 @@ bool compileHLSL(lambda::String file, lambda::String source, lambda::String entr
 			switch (bind_desc.Type)
 			{
 				case D3D_SIT_CBUFFER:
+				{
 					resource.type = lambda::VioletShaderResourceType::kConstantBuffer;
+					
+					ID3D11ShaderReflectionConstantBuffer* cbuffer = reflector->GetConstantBufferByName(bind_desc.Name);
+					D3D11_SHADER_BUFFER_DESC cb_desc;
+					cbuffer->GetDesc(&cb_desc);
+					resource.size = cb_desc.Size;
+					
+					for (uint32_t j = 0; j < cb_desc.Variables; ++j)
+					{
+						lambda::VioletShaderResource::Item item;
+						ID3D11ShaderReflectionVariable* var = cbuffer->GetVariableByIndex(j);
+						D3D11_SHADER_VARIABLE_DESC var_desc;
+						var->GetDesc(&var_desc);
+						// TODO (Hilze): Support default value.
+						//var_desc.DefaultValue;
+						item.name   = var_desc.Name;
+						item.size   = var_desc.Size;
+						item.offset = var_desc.StartOffset;
+						resource.items.push_back(item);
+					}
 					break;
+					}
 				case D3D_SIT_SAMPLER:
 					resource.type = lambda::VioletShaderResourceType::kSampler;
 					break;

@@ -11,13 +11,33 @@ namespace lambda
 {
   namespace linux
   {
-	  class VulkanRenderer;
+    class VulkanRenderer;
 
-		struct ColorBlendState
-		{
-			VezColorBlendState blend_state;
-			VezColorBlendAttachmentState attachments[8];
-		};
+	struct VulkanRasterizationState
+	{
+      VezRasterizationState rasterization;
+	};
+
+    struct VulkanColorBlendState
+    {
+      VezColorBlendState blend_state;
+      VezColorBlendAttachmentState attachments[8];
+    };
+
+	struct VulkanSampler
+	{
+      VkSampler sampler;
+	};
+    
+	struct VulkanPipelineDepthStencilState
+	{
+      VezPipelineDepthStencilState depth_stencil;
+	};
+
+    struct VulkanInputAssemblyState
+    {
+      VezInputAssemblyState input_assembly;
+    };
 
     ///////////////////////////////////////////////////////////////////////////
     class VulkanStateManager
@@ -40,28 +60,29 @@ namespace lambda
 
     private:
       UnorderedMap<platform::RasterizerState, 
-        VezRasterizationState> rasterizer_states_;
+        VulkanRasterizationState*> rasterizer_states_;
       UnorderedMap<platform::BlendState, 
-				ColorBlendState> blend_states_;
+        VulkanColorBlendState*> blend_states_;
       UnorderedMap<platform::SamplerState, 
-        VkSampler> sampler_states_;
-			UnorderedMap<platform::DepthStencilState,
-				VezPipelineDepthStencilState> depth_stencil_states_;
-			UnorderedMap<asset::Topology,
-				VezInputAssemblyState> input_assembly_states_;
+        VulkanSampler*> sampler_states_;
+	  UnorderedMap<platform::DepthStencilState,
+        VulkanPipelineDepthStencilState*> depth_stencil_states_;
+	  UnorderedMap<asset::Topology,
+        VulkanInputAssemblyState*> input_assembly_states_;
 
-			VulkanRenderer* renderer_;
+      VulkanRenderer* renderer_;
+      
+      bool     dirty_rasterizer_;
+      bool     dirty_blend_;
+      bool     dirty_depth_stencil_;
+      bool     dirty_input_assembly_;
+      uint16_t dirty_sampler_;
 	  
-			bool     dirty_rasterizer_;
-			bool     dirty_blend_;
-			bool     dirty_depth_stencil_;
-			bool     dirty_input_assembly_;
-			uint16_t dirty_sampler_;
-			VezRasterizationState        rasterizer_;
-			ColorBlendState              blend_;
-			VkSampler                    samplers_[16];
-			VezPipelineDepthStencilState depth_stencil_;
-			VezInputAssemblyState        input_assembly_;
+	  VulkanRasterizationState*        rasterizer_;
+	  VulkanColorBlendState*           blend_;
+	  VulkanSampler*                   samplers_[16];
+	  VulkanPipelineDepthStencilState* depth_stencil_;
+	  VulkanInputAssemblyState*        input_assembly_;
     };
   }
 }

@@ -1,8 +1,8 @@
 #include "common.fx"
 #include "tbn.fx"
 
-#define VIOLET_PARALLAX_MAPPING 1
-#define NORMAL_MAPPING 1
+#define VIOLET_PARALLAX_MAPPING 0
+#define NORMAL_MAPPING 0
 #define VIOLET_GRID_ALBEDO 0
 #define VIOLET_DYNAMIC_GRID_SIZE 1
 

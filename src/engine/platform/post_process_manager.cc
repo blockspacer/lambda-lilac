@@ -41,6 +41,7 @@ namespace lambda
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void PostProcessManager::addTarget(const RenderTarget& target)
     {
+      target.getTexture()->getLayer(0u).setFlags(target.getTexture()->getLayer(0u).getFlags() | kTextureFlagIsRenderTarget);
       targets_.insert(eastl::make_pair(target.getName(), target));
       targets_[target.getName()].resize(last_size_);
     }

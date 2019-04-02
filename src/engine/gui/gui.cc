@@ -212,25 +212,28 @@ namespace lambda
 			gui::MyGPUDriver* driver =
 				(gui::MyGPUDriver*)ultralight::Platform::instance().gpu_driver();
 
-			driver->BeginSynchronize();
-
-			// Render all active views to command lists 
-			// and dispatch calls to GPUDriver
-			renderer_->ptr->Render();
-
-			driver->EndSynchronize();
-
-			// Draw any pending commands to screen
-			if (driver->HasCommandsPending())
+			if (driver)
 			{
-				driver->DrawCommandList();
+				driver->BeginSynchronize();
 
-				world_->getRenderer()->copyToTexture(
-					driver->GetRenderBuffer(
-						view_->ptr->render_target().render_buffer_id
-					),
-					texture_
-				);
+				// Render all active views to command lists 
+				// and dispatch calls to GPUDriver
+				renderer_->ptr->Render();
+
+				driver->EndSynchronize();
+
+				// Draw any pending commands to screen
+				if (driver->HasCommandsPending())
+				{
+					driver->DrawCommandList();
+
+					world_->getRenderer()->copyToTexture(
+						driver->GetRenderBuffer(
+							view_->ptr->render_target().render_buffer_id
+						),
+						texture_
+					);
+				}
 			}
 		}
 

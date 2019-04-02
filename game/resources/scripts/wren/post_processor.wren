@@ -38,14 +38,14 @@ class PostProcessor {
     shadowMapping(
       ini_reader["Lighting", "Enabled"]
     )
-    applyLighting(
-      ini_reader["Lighting", "Enabled"]
-    )
     ssao(
       ini_reader["SSAO", "Enabled"], 
       Vec2.new(ini_reader["SSAO", "BlurScaleX"], ini_reader["SSAO", "BlurScaleY"]), 
       Vec2.new(ini_reader["SSAO", "BlurPassesX"], ini_reader["SSAO", "BlurPassesY"]), 
       ini_reader["SSAO", "TargetScale"]
+    )
+    applyLighting(
+      ini_reader["Lighting", "Enabled"]
     )
     skyDome(
       ini_reader["Skydome", "Enabled"]
@@ -111,21 +111,23 @@ class PostProcessor {
   applyLighting(enabled) {
     if (!enabled) return
 
-    PostProcess.addShaderPass("apply_lighting", Shader.load("resources/shaders/apply_lighting.fx"), [ "post_process_buffer", "position", "normal", "metallic_roughness", "light_map", "irradiance_map", "prefiltered", "brdf_lut" ], [ "post_process_buffer" ])
+    PostProcess.addShaderPass("apply_lighting", Shader.load("resources/shaders/apply_lighting.fx"), [ "post_process_buffer", "position", "normal", "metallic_roughness", "light_map", "irradiance_map", "prefiltered", "brdf_lut", "ssao_target" ], [ "post_process_buffer" ])
   }
   ssao(enabled, blur_scale, blur_passes, render_target_scale) {
-    if (!enabled) return
+    if (!enabled) {
+      PostProcess.addRenderTarget("ssao_target", Texture.create(Vec2.new(1.0), TextureFormat.R8G8B8A8))
+      return
+    }
 
     // Add the required render targets.
-    PostProcess.addRenderTarget("ssao_target", render_target_scale, TextureFormat.R32G32B32A32)
+    PostProcess.addRenderTarget("ssao_target", render_target_scale, TextureFormat.R8G8B8A8)
     PostProcess.addRenderTarget("random_texture", Texture.load("resources/textures/lighting/noise.png"))
 
     // Add the main SSAO pass.
     PostProcess.addShaderPass("ssao", Shader.load("resources/shaders/ssao.fx"), [ "position", "normal", "random_texture", "depth_buffer" ], [ "ssao_target" ])
 
-    // Horizontal blur.
-    var shader_blur_x = Shader.load("resources/shaders/blur_9x1.fx")
-    shader_blur_x.setVariableFloat2("blur_scale", Vec2.new(blur_scale.x, 0.0))
+    // // Horizontal blur.
+    var shader_blur_x = Shader.load("resources/shaders/blur_horizontal.fx")
 
     var i = 0
     while (i < blur_passes.x && blur_scale.x > 0.0) {
@@ -134,18 +136,13 @@ class PostProcessor {
     }
 
     // Vertical blur.
-    var shader_blur_y = Shader.load("resources/shaders/blur_9x1.fx")
-    shader_blur_y.setVariableFloat2("blur_scale", Vec2.new(0.0, blur_scale.y))
+    var shader_blur_y = Shader.load("resources/shaders/blur_vertical.fx")
 
     i = 0
     while (i < blur_passes.y && blur_scale.y > 0.0) {
       PostProcess.addShaderPass("ssao_blur_y_%(i)", shader_blur_y, [ "ssao_target" ], [ "ssao_target" ])
       i = i + 1
     }
-
-    // Apply SSAO.
-    var shader_apply = Shader.load("resources/shaders/ssao_apply.fx")
-    PostProcess.addShaderPass("ssao_apply", shader_apply, [ "post_process_buffer", "ssao_target" ], [ "post_process_buffer" ])
   }
 
   skyDome(enabled) {
@@ -165,8 +162,7 @@ class PostProcessor {
     PostProcess.addShaderPass("bloom_extract", shader_extract, [ "post_process_buffer" ], [ "bloom_target" ])
 
     // Bloom blur horizontal.
-    var shader_blur_x  = Shader.load("resources/shaders/blur_9x1.fx")
-    shader_blur_x.setVariableFloat2("blur_scale", Vec2.new(blur_scale.x, 0.0))
+    var shader_blur_x  = Shader.load("resources/shaders/blur_horizontal.fx")
 
     var i = 0
     while (i < blur_passes.x && blur_scale.x > 0.0) {
@@ -175,8 +171,7 @@ class PostProcessor {
     }
 
     // Bloom blur vertical.
-    var shader_blur_y  = Shader.load("resources/shaders/blur_9x1.fx")
-    shader_blur_y.setVariableFloat2("blur_scale", Vec2.new(0.0, blur_scale.y))
+    var shader_blur_y  = Shader.load("resources/shaders/blur_vertical.fx")
 
     i = 0
     while (i < blur_passes.y && blur_scale.y > 0.0) {
@@ -205,8 +200,7 @@ class PostProcessor {
     PostProcess.addRenderTarget("dof_pos", Texture.create(Vec2.new(1.0), [ 16.0 ], TextureFormat.R32G32B32A32))
 
     // Blur horizontal.
-    var shader_blur_x = Shader.load("resources/shaders/blur_7x1.fx")
-    shader_blur_x.setVariableFloat2("blur_scale", Vec2.new(blur_scale.x, 0.0))
+    var shader_blur_x = Shader.load("resources/shaders/blur_horizontal.fx")
 
     var i = 0
     while (i < blur_passes.x && blur_scale.x > 0.0) {
@@ -215,8 +209,7 @@ class PostProcessor {
     }
 
     // Blur vertical.
-    var shader_blur_y = Shader.load("resources/shaders/blur_7x1.fx")
-    shader_blur_y.setVariableFloat2("blur_scale", Vec2.new(blur_scale.y, 0.0))
+    var shader_blur_y = Shader.load("resources/shaders/blur_vertical.fx")
 
     i = 0
     while (i < blur_passes.y && blur_scale.y > 0.0) {

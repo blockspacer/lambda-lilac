@@ -18,11 +18,13 @@ VSOutput VS(uint id : SV_VertexID)
 Make_CBuffer(cbPostProcess, 0)
 {
   float2 inv_texture_size;
-  float2 blur_scale = float2(0.0f, 0.0f);
 };
 
 Make_Texture2D(tex_to_blur, 0);
 
+#ifndef BLUR_SCALE
+#define BLUR_SCALE 1.0f
+#endif
 
 static const float blur_table[5] = {
   0.016216f,
@@ -36,7 +38,7 @@ float4 PS(VSOutput pIn) : SV_TARGET0
 {
   float4 colour = 0.0f;
 
-  float2 scale = blur_scale * inv_texture_size;
+  float2 scale = BLUR_SCALE * inv_texture_size;
 
   colour += Sample(tex_to_blur, SamLinearClamp, pIn.tex + -4.0f * scale) * blur_table[0];
   colour += Sample(tex_to_blur, SamLinearClamp, pIn.tex + -3.0f * scale) * blur_table[1];

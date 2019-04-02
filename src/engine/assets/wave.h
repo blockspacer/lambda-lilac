@@ -24,6 +24,8 @@ namespace lambda
       void setBuffer(SoLoud::Wav* buffer);
       SoLoud::Wav* getBuffer() const;
 
+	  static void release(Wave* wave, const size_t& hash);
+
     private:
       SoLoud::Wav* buffer_;
     };
@@ -38,7 +40,7 @@ namespace lambda
       VioletWaveHandle create(Name name, VioletWave wave);
       VioletWaveHandle get(Name name);
       VioletWaveHandle get(uint64_t hash);
-      void destroy(VioletWaveHandle Wave);
+      void destroy(Wave* wave, const size_t& hash);
 
     public:
       static WaveManager* getInstance();

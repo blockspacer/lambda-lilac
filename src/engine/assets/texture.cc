@@ -3,6 +3,7 @@
 #include "utils/console.h"
 #include "utils/file_system.h"
 #include <memory/memory.h>
+#include <interfaces/irenderer.h>
 
 namespace lambda
 {
@@ -292,6 +293,12 @@ namespace lambda
 			keep_in_memory_ = keep_in_memory;
 		}
 
+		///////////////////////////////////////////////////////////////////////////
+		void Texture::release(Texture* texture, const size_t& hash)
+		{
+			TextureManager::getInstance()->destroy(texture, hash);
+		}
+
 
 
 
@@ -377,27 +384,32 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     VioletTextureHandle TextureManager::get(Name name)
     {
-      return get(manager_.GetHash(FileSystem::MakeRelative(name.getName())));
+	  uint64_t hash = manager_.GetHash(FileSystem::MakeRelative(name.getName()));
+	  LMB_ASSERT(manager_.HasHeader(hash), "Could not find texture: %s", name.getName().c_str());
+      return get(hash);
     }
     
     ///////////////////////////////////////////////////////////////////////////
     VioletTextureHandle TextureManager::get(uint64_t hash)
     {
+	  LMB_ASSERT(manager_.HasHeader(hash), "Could not find texture: %ull", hash);
       VioletTexture texture = manager_.GetTexture(hash);
       return create(texture.file, texture);
     }
 
-		///////////////////////////////////////////////////////////////////////////
-		Vector<char> TextureManager::getData(VioletTextureHandle texture)
-		{
-			return eastl::move(manager_.GetData(texture.getHash()));
-		}
+	///////////////////////////////////////////////////////////////////////////
+	Vector<char> TextureManager::getData(VioletTextureHandle texture)
+	{
+	  LMB_ASSERT(manager_.HasHeader(texture.getHash()), "Could not find texture: %s", texture.getName().getName().c_str());
+      return eastl::move(manager_.GetData(texture.getHash()));
+	}
     
-    ///////////////////////////////////////////////////////////////////////////
-    void TextureManager::destroy(VioletTextureHandle texture)
-    {
-      foundation::Memory::destruct<Texture>(texture.get());
-    }
+	///////////////////////////////////////////////////////////////////////////
+	void TextureManager::destroy(Texture* texture, const size_t& hash)
+	{
+      foundation::Memory::destruct<Texture>(texture);
+	  renderer_->destroyTexture(hash);
+	}
     
     ///////////////////////////////////////////////////////////////////////////
     TextureManager* TextureManager::getInstance()
@@ -407,6 +419,12 @@ namespace lambda
       
       return s_instance;
     }
+
+	///////////////////////////////////////////////////////////////////////////
+	void TextureManager::setRenderer(platform::IRenderer* renderer)
+	{
+		getInstance()->renderer_ = renderer;
+	}
     
     ///////////////////////////////////////////////////////////////////////////
     VioletTextureManager& TextureManager::getManager()

@@ -258,7 +258,6 @@ public:
   void frameInfo()
   {
     foundation::SharedPointer<platform::IImGUI> imgui = getImGUI();
-    frame_counter.tick();
 
     static double frame_target_max = 60.0;
     static double frame_target_min = 40.0;
@@ -336,8 +335,22 @@ public:
 
   void update(const double& delta_time) override
   {
+	  frame_counter.tick();
+
 	  float mem_def = (float)(foundation::Memory::default_allocator()->allocated() + foundation::Memory::new_allocator()->allocated()) / (1024.0f * 1024.0f);
 	  getGUI().executeJavaScript("updateAllocatedMemory(" + toString(round(mem_def, 3)) + ")");
+
+	  float dynamic_resolution_scale =
+		  getShaderVariableManager().getShaderVariable(
+			  Name("dynamic_resolution_scale")
+		  ).data.at(0);
+
+	  if (frame_counter.getFrames() < 60)
+		  dynamic_resolution_scale = max(dynamic_resolution_scale - 0.01f, 0.2f);
+	  else if (dynamic_resolution_scale < 1.0f)
+		  dynamic_resolution_scale = min(dynamic_resolution_scale + 0.01f, 1.0f);
+
+	  getShaderVariableManager().setVariable(platform::ShaderVariable(Name("dynamic_resolution_scale"), dynamic_resolution_scale));
 
 		return;
 

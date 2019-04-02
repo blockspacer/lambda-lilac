@@ -24,7 +24,7 @@ VSOutput VS(uint id: SV_VertexID)
   return vOut;
 }
 
-static const float speed = 1000.0f;
+static const float speed = 10000.0f;
 
 float BezierBlend(float t)
 {

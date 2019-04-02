@@ -20,9 +20,19 @@ namespace lambda
 
 	struct VioletShaderResource
 	{
+		String name;
 		VioletShaderResourceType type;
 		ShaderStages stage;
-		uint8_t slot;
+		uint32_t slot;
+		uint32_t size;
+
+		struct Item
+		{
+			String name;
+			uint32_t size;
+			uint32_t offset;
+		};
+		Vector<Item> items;
 	};
 
 	struct VioletShader

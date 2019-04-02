@@ -122,6 +122,8 @@ namespace lambda
       virtual void destroyAsset(
         foundation::SharedPointer<asset::IAsset> asset
       ) override;
+	  virtual void destroyTexture(const size_t& hash) override;
+	  virtual void destroyShader(const size_t& hash) override;
 
     private:
       D3D11Context* context_;

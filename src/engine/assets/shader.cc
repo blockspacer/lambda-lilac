@@ -1,7 +1,7 @@
 #include "Shader.h"
 #include <utils/file_system.h>
 #include <memory/memory.h>
-#include <soloud_wav.h>
+#include <interfaces/irenderer.h>
 
 namespace lambda
 {
@@ -48,19 +48,23 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		Vector<VioletShaderResource> Shader::getResources(ShaderStages stage) const
 		{
-			return shader_.resources[stage];
+			return shader_.resources[(int)stage];
 		}
 
 		///////////////////////////////////////////////////////////////////////////
 		void Shader::setShaderVariable(const platform::ShaderVariable& variable)
 		{
-			queued_shader_variables_.push_back(variable);
+			auto it = eastl::find(queued_shader_variables_.begin(), queued_shader_variables_.end(), variable);
+			if (it != queued_shader_variables_.end())
+				*it = variable;
+			else
+				queued_shader_variables_.push_back(variable);
 		}
 
 		///////////////////////////////////////////////////////////////////////////
 		Vector<platform::ShaderVariable> Shader::getQueuedShaderVariables()
 		{
-			return eastl::move(queued_shader_variables_);
+			return queued_shader_variables_;
 		}
 
 		///////////////////////////////////////////////////////////////////////////
@@ -73,6 +77,12 @@ namespace lambda
 		void Shader::setKeepInMemory(bool keep_in_memory)
 		{
 			keep_in_memory_ = keep_in_memory;
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		void Shader::release(Shader* shader, const size_t& hash)
+		{
+			ShaderManager::getInstance()->destroy(shader, hash);
 		}
 
 
@@ -105,7 +115,9 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		VioletShaderHandle ShaderManager::get(Name name)
 		{
-			return get(manager_.GetHash(FileSystem::MakeRelative(name.getName())));
+			uint64_t hash = manager_.GetHash(FileSystem::MakeRelative(name.getName()));
+			LMB_ASSERT(manager_.HasHeader(hash), "Could not find texture: %s", name.getName().c_str());
+			return get(hash);
 		}
 
 		///////////////////////////////////////////////////////////////////////////
@@ -116,9 +128,10 @@ namespace lambda
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		void ShaderManager::destroy(VioletShaderHandle shader)
+		void ShaderManager::destroy(Shader* shader, const size_t& hash)
 		{
-			foundation::Memory::destruct<Shader>(shader.get());
+			foundation::Memory::destruct<Shader>(shader);
+			renderer_->destroyShader(hash);
 		}
 
 		///////////////////////////////////////////////////////////////////////////
@@ -137,6 +150,12 @@ namespace lambda
 				foundation::Memory::construct<ShaderManager>();
 
 			return s_instance;
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		void ShaderManager::setRenderer(platform::IRenderer* renderer)
+		{
+			getInstance()->renderer_ = renderer;
 		}
 
 		///////////////////////////////////////////////////////////////////////////

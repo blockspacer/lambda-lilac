@@ -6,6 +6,10 @@
 
 namespace lambda
 {
+	namespace platform
+	{
+		class IRenderer;
+	}
 	namespace asset
 	{
 		///////////////////////////////////////////////////////////////////////////
@@ -27,6 +31,8 @@ namespace lambda
 			bool getKeepInMemory() const;
 			void setKeepInMemory(bool keep_in_memory);
 
+			static void release(Shader* shader, const size_t& hash);
+
 		protected:
 			VioletShader getVioletShader() const { return shader_; }
 			friend class ShaderManager;
@@ -47,13 +53,14 @@ namespace lambda
 			VioletShaderHandle create(Name name, VioletShader Shader);
 			VioletShaderHandle get(Name name);
 			VioletShaderHandle get(uint64_t hash);
-			void destroy(VioletShaderHandle Shader);
+			void destroy(Shader* shader, const size_t& hash);
 			Array<Array<Vector<char>, VIOLET_LANG_COUNT>, (int)ShaderStages::kCount>
-				getData(const VioletShaderHandle& Shader);
+			getData(const VioletShaderHandle& Shader);
 
 
 		public:
 			static ShaderManager* getInstance();
+			static void setRenderer(platform::IRenderer* renderer);
 
 		protected:
 			VioletShaderManager& getManager();
@@ -61,6 +68,7 @@ namespace lambda
 
 		private:
 			VioletShaderManager manager_;
+			platform::IRenderer* renderer_;
 		};
 	}
 }

@@ -54,25 +54,49 @@ namespace lambda
 		  if (!data[(int)ShaderStages::kVertex][VIOLET_SPIRV].empty())
 		  {
 				VezPipelineShaderStageCreateInfo shader_stage{};
-				String src = (char*)data[(int)ShaderStages::kVertex][VIOLET_SPIRV].data();
-				if (compile(renderer_->getDevice(), src.c_str(), (uint32_t)src.size(), vs_, shader_stage, "main", VK_SHADER_STAGE_VERTEX_BIT))
+				if (compile(
+					renderer_->getDevice(),
+					(char*)data[(int)ShaderStages::kVertex][VIOLET_SPIRV].data(),
+					(uint32_t)data[(int)ShaderStages::kVertex][VIOLET_SPIRV].size(),
+					vs_,
+					shader_stage,
+					"VS",
+					VK_SHADER_STAGE_VERTEX_BIT))
+				{
 					shader_stages.push_back(shader_stage);
+				}
 		  }
 
 		  if (!data[(int)ShaderStages::kPixel][VIOLET_SPIRV].empty())
 		  {
 				VezPipelineShaderStageCreateInfo shader_stage{};
-				String src = (char*)data[(int)ShaderStages::kPixel][VIOLET_SPIRV].data();
-				if (compile(renderer_->getDevice(), src.c_str(), (uint32_t)src.size(), ps_, shader_stage, "main", VK_SHADER_STAGE_FRAGMENT_BIT))
+				if (compile(
+					renderer_->getDevice(),
+					(char*)data[(int)ShaderStages::kPixel][VIOLET_SPIRV].data(),
+					(uint32_t)data[(int)ShaderStages::kPixel][VIOLET_SPIRV].size(),
+					ps_,
+					shader_stage,
+					"PS",
+					VK_SHADER_STAGE_FRAGMENT_BIT))
+				{
 					shader_stages.push_back(shader_stage);
+				}
 		  }
 
 		  if (!data[(int)ShaderStages::kGeometry][VIOLET_SPIRV].empty())
 		  {
 				VezPipelineShaderStageCreateInfo shader_stage{};
-				String src = (char*)data[(int)ShaderStages::kGeometry][VIOLET_SPIRV].data();
-				if (compile(renderer_->getDevice(), src.c_str(), (uint32_t)src.size(), gs_, shader_stage, "main", VK_SHADER_STAGE_GEOMETRY_BIT))
+				if (compile(
+					renderer_->getDevice(),
+					(char*)data[(int)ShaderStages::kGeometry][VIOLET_SPIRV].data(),
+					(uint32_t)data[(int)ShaderStages::kGeometry][VIOLET_SPIRV].size(),
+					gs_,
+					shader_stage,
+					"GS",
+					VK_SHADER_STAGE_GEOMETRY_BIT))
+				{
 					shader_stages.push_back(shader_stage);
+				}
 		  }
 
 		   
@@ -82,37 +106,57 @@ namespace lambda
 		  result = vezCreateGraphicsPipeline(renderer_->getDevice(), &pipeline_create_info, &pipeline_);
 		  LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not create pipeline | %s", vkErrorCode(result));
 
-			for (uint32_t i = 0; i < (uint32_t)ShaderStages::kCount; ++i)
-			{
-				for (const auto& resource : shader->getResources((ShaderStages)i))
-				{
-					VulkanReflectionInfo info{};
-					switch (resource.type)
-					{
-					case VioletShaderResourceType::kConstantBuffer:
-						info.slot    = resource.slot;
-						info.binding = info.slot + 200;
-						info.set     = 0;
-						info.name    = "sampler";
-						samplers_.push_back(info);
-						break;
-					case VioletShaderResourceType::kSampler:
-						info.slot    = resource.slot;
-						info.binding = info.slot + 200;
-						info.set     = 0;
-						info.name    = "sampler";
-						samplers_.push_back(info);
-						break;
-					case VioletShaderResourceType::kTexture:
-						info.slot    = resource.slot;
-						info.binding = info.slot + 100;
-						info.set     = 0;
-						info.name    = "texture";
-						textures_.push_back(info);
-						break;
-					}
-				}
-			}
+		  // Reflection.
+		  for (uint32_t i = 0; i < (uint32_t)ShaderStages::kCount; ++i)
+		  {
+			  for (const auto& resource : shader->getResources((ShaderStages)i))
+			  {
+				  VulkanReflectionInfo info{};
+				  switch (resource.type)
+				  {
+				  case VioletShaderResourceType::kConstantBuffer:
+				  {
+					  Vector<platform::BufferVariable> variables;
+					  foundation::SharedPtr<void> data = foundation::Memory::makeShared(foundation::Memory::allocate(resource.size));
+					  memset(data.get(), 0, resource.size);
+
+					  for (const auto& item : resource.items)
+					  {
+						  platform::BufferVariable variable;
+						  variable.name = item.name;
+						  variable.count = 1;
+						  variable.size = item.size;
+						  variable.data = (char*)data.get() + item.offset;
+						  variables.push_back(variable);
+					  }
+
+					  VulkanBuffer buffer;
+					  buffer.buffer = (VulkanRenderBuffer*)renderer_->allocRenderBuffer(resource.size, platform::IRenderBuffer::kFlagConstant | platform::IRenderBuffer::kFlagDynamic);
+					  buffer.offset = 0;
+					  buffer.set = 0;
+					  buffer.binding = resource.slot;
+					  buffer.slot = buffer.slot - 0;
+					  buffer.shader_buffer = platform::ShaderBuffer(Name(resource.name), variables, data);
+					  buffers_.push_back(buffer);
+					  break;
+				  }
+				  case VioletShaderResourceType::kSampler:
+					  info.slot = resource.slot;
+					  info.binding = info.slot + 200;
+					  info.set = 0;
+					  info.name = resource.name;
+					  samplers_.push_back(info);
+					  break;
+				  case VioletShaderResourceType::kTexture:
+					  info.slot = resource.slot;
+					  info.binding = info.slot + 100;
+					  info.set = 0;
+					  info.name = resource.name;
+					  textures_.push_back(info);
+					  break;
+				  }
+			  }
+		  }
 
 		  reflect();
 	  }
@@ -236,10 +280,7 @@ namespace lambda
 			LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could reflect on pipeline | %s", vkErrorCode(result));
 
 			Vector<VezPipelineResource> vez_input_layout;
-			Vector<VezPipelineResource> vez_images;
-			Vector<VezPipelineResource> vez_samplers;
 			Vector<VezPipelineResource> vez_output;
-			Vector<VezPipelineResource> vez_uniform_buffers;
 			for (const VezPipelineResource& resource : resources)
 			{
 				switch (resource.resourceType)
@@ -249,81 +290,14 @@ namespace lambda
 					if ((resource.stages & VK_SHADER_STAGE_VERTEX_BIT))
 						vez_input_layout.push_back(resource);
 					break;
-				case VezPipelineResourceType::VEZ_PIPELINE_RESOURCE_TYPE_SAMPLED_IMAGE:
-					vez_images.push_back(resource);
-					break;
-				case VezPipelineResourceType::VEZ_PIPELINE_RESOURCE_TYPE_SAMPLER:
-					vez_samplers.push_back(resource);
-					break;
 				case VezPipelineResourceType::VEZ_PIPELINE_RESOURCE_TYPE_OUTPUT:
 					vez_output.push_back(resource);
-					break;
-				case VezPipelineResourceType::VEZ_PIPELINE_RESOURCE_TYPE_UNIFORM_BUFFER:
-					vez_uniform_buffers.push_back(resource);
 					break;
 				default:
 					break;
 				}
 			}
 		
-			// Uniform buffers.
-			for (const VezPipelineResource& uniform_buffer : vez_uniform_buffers)
-			{
-				String name = uniform_buffer.name;
-				if (name.find("type_") == 0)
-					name = name.substr(strlen("type_"));
-
-				Vector<platform::BufferVariable> variables;
-				foundation::SharedPtr<void> data = foundation::Memory::makeShared(foundation::Memory::allocate(uniform_buffer.size));
-				memset(data.get(), 0, uniform_buffer.size);
-
-				const VezMemberInfo* next_member = uniform_buffer.pMembers;
-				while (next_member)
-				{
-					platform::BufferVariable variable;
-					variable.name  = next_member->name;
-					variable.count = next_member->arraySize;
-					variable.size  = next_member->size;
-					variable.data  = (char*)data.get() + next_member->offset;
-					variables.push_back(variable);
-
-					next_member = next_member->pNext;
-				}
-
-				VulkanBuffer buffer;
-				buffer.buffer  = (VulkanRenderBuffer*)renderer_->allocRenderBuffer(uniform_buffer.size, platform::IRenderBuffer::kFlagConstant | platform::IRenderBuffer::kFlagDynamic);
-				buffer.offset  = uniform_buffer.offset;
-				buffer.set     = uniform_buffer.set;
-				buffer.binding = uniform_buffer.binding;
-				buffer.slot    = uniform_buffer.binding - 0;
-				buffer.shader_buffer = platform::ShaderBuffer(Name(name), variables, data);
-				buffers_.push_back(buffer);
-			}
-		
-			// Textures.
-			for (const VezPipelineResource& resource : vez_images)
-			{
-				VulkanReflectionInfo refl_info;
-				refl_info.name     = resource.name;
-				refl_info.set      = resource.set;
-				refl_info.binding  = resource.binding;
-				refl_info.slot     = resource.binding - 100;
-				if (eastl::find(textures_.begin(), textures_.end(), refl_info) == textures_.end())
-					textures_.push_back(refl_info);
-			}
-		
-			// Samplers.
-			for (const VezPipelineResource& resource : vez_samplers)
-			{
-				VulkanReflectionInfo refl_info;
-				refl_info.name     = resource.name;
-				refl_info.set      = resource.set;
-				refl_info.binding  = resource.binding;
-				refl_info.slot     = resource.binding - 200;
-				if (eastl::find(samplers_.begin(), samplers_.end(), refl_info) == samplers_.end())
-					samplers_.push_back(refl_info);
-			}
-
 			// Output.
 			for (const VezPipelineResource& resource : vez_output)
 			{

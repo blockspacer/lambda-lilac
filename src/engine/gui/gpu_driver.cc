@@ -150,7 +150,6 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		void MyGPUDriver::DestroyTexture(uint32_t texture_id)
 		{
-			asset::TextureManager::getInstance()->destroy(textures_[texture_id]);
 			textures_.erase(texture_id);
 		}
 
@@ -380,16 +379,19 @@ namespace lambda
 			renderer->setViewports({ viewport });
 			renderer->setScissorRects({ viewport });
 
-			for (int i = 0; i < 8; ++i)
-				renderer->setTexture(asset::VioletTextureHandle(), i);
-
 			if (state.texture_1_id)
 				BindTexture(0, state.texture_1_id);
+			else
+				renderer->setTexture(asset::VioletTextureHandle(), 0);
 			if (state.texture_2_id)
 				BindTexture(1, state.texture_2_id);
+			else
+				renderer->setTexture(asset::VioletTextureHandle(), 1);
 			if (state.texture_3_id)
 				BindTexture(2, state.texture_3_id);
-				
+			else
+				renderer->setTexture(asset::VioletTextureHandle(), 2);
+
 			BindShader(state);
 
 			asset::SubMesh sub_mesh = geometry_[geometry_id]->getSubMeshes()[0];

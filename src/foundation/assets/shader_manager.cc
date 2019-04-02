@@ -3,6 +3,7 @@
 #include <rapidjson/writer.h>
 #include <rapidjson/stringbuffer.h>
 #include <utils/console.h>
+#include <vector>
 
 namespace lambda
 {
@@ -152,10 +153,12 @@ namespace lambda
 			String str;
 			for (const VioletShaderResource& resource : shader_program.resources[stage_int])
 			{
-				// Size.
 				if (!str.empty())
 					str += ",";
-				str += toString((uint32_t)resource.type) + "|" + toString((uint32_t)resource.stage) + "|" + toString((uint32_t)resource.slot);
+				str += resource.name + "|" + toString((uint32_t)resource.type) + "|" + toString((uint32_t)resource.stage) + "|" + toString((uint32_t)resource.slot) + "|" + toString(resource.size);
+
+				for (const auto& item : resource.items)
+					str += "|" + item.name + "|" + toString(item.offset) + "|" + toString(item.size);
 			}
 
 			rapidjson::Value stage(rapidjson::Type::kStringType);
@@ -216,11 +219,27 @@ namespace lambda
 
 			for (const String& r : res)
 			{
-				Vector<String> indices = split(resources[stage_int].GetString(), '|');
+				Vector<String> indices = split(r, '|');
+				std::vector<String> v(indices.begin(), indices.end());
 				VioletShaderResource resource;
-				resource.type  = (VioletShaderResourceType)std::stoul(indices[0].c_str());
-				resource.stage = (ShaderStages)std::stoul(indices[1].c_str());
-				resource.slot  = (uint8_t)std::stoul(indices[2].c_str());
+
+				uint8_t idx = 0;
+
+				resource.name  = indices[idx++];
+				resource.type  = (VioletShaderResourceType)std::stoul(indices[idx++].c_str());
+				resource.stage = (ShaderStages)std::stoul(indices[idx++].c_str());
+				resource.slot  = (uint8_t)std::stoul(indices[idx++].c_str());
+				resource.size  = (uint32_t)std::stoul(indices[idx++].c_str());
+
+				while (idx < indices.size())
+				{
+					VioletShaderResource::Item item;
+					item.name   = indices[idx++];
+					item.offset = (uint32_t)std::stoul(indices[idx++].c_str());
+					item.size   = (uint32_t)std::stoul(indices[idx++].c_str());
+					resource.items.push_back(item);
+				}
+
 				program.resources[stage_int].push_back(resource);
 			}
 		}

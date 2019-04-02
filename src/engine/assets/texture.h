@@ -7,6 +7,10 @@
 
 namespace lambda
 {
+  namespace platform
+  {
+    class IRenderer;
+  }
   namespace asset
   {
     ///////////////////////////////////////////////////////////////////////////
@@ -58,12 +62,13 @@ namespace lambda
       uint32_t getLayerCount() const;
       const TextureLayer& getLayer(uint32_t layer) const;
       TextureLayer& getLayer(uint32_t layer);
-			bool getKeepInMemory() const;
-			void setKeepInMemory(bool keep_in_memory);
+	  bool getKeepInMemory() const;
+	  void setKeepInMemory(bool keep_in_memory);
+	  static void release(Texture* texture, const size_t& hash);
 
     private:
       Vector<TextureLayer> layers_;
-			bool keep_in_memory_;
+	  bool keep_in_memory_;
     };
     using VioletTextureHandle = VioletHandle<Texture>;
 
@@ -74,31 +79,32 @@ namespace lambda
       VioletTextureHandle create(Name name);
       VioletTextureHandle create(Name name, Texture texture);
       VioletTextureHandle create(Name name, VioletTexture texture);
-			VioletTextureHandle create(
-				Name name,
-				uint32_t width,
-				uint32_t height,
-				uint32_t layers = 1u,
-				TextureFormat format = TextureFormat::kR8G8B8A8,
-				uint32_t flags = 0u,
-				const Vector<char>& data = Vector<char>()
-			);
-			VioletTextureHandle create(
-				Name name,
-				uint32_t width,
-				uint32_t height,
-				uint32_t layers,
-				TextureFormat format,
-				uint32_t flags,
-				const Vector<unsigned char>& data
-			);
+	  VioletTextureHandle create(
+        Name name,
+        uint32_t width,
+        uint32_t height,
+        uint32_t layers = 1u,
+        TextureFormat format = TextureFormat::kR8G8B8A8,
+        uint32_t flags = 0u,
+        const Vector<char>& data = Vector<char>()
+      );
+      VioletTextureHandle create(
+        Name name,
+        uint32_t width,
+        uint32_t height,
+        uint32_t layers,
+        TextureFormat format,
+        uint32_t flags,
+        const Vector<unsigned char>& data
+      );
       VioletTextureHandle get(Name name);
       VioletTextureHandle get(uint64_t hash);
-			Vector<char> getData(VioletTextureHandle texture);
-      void destroy(VioletTextureHandle texture);
+	  Vector<char> getData(VioletTextureHandle texture);
+	  void destroy(Texture* texture, const size_t& hash);
 
     public:
       static TextureManager* getInstance();
+	  static void setRenderer(platform::IRenderer* renderer);
 
     protected:
       VioletTextureManager& getManager();
@@ -106,6 +112,7 @@ namespace lambda
 
     private:
       VioletTextureManager manager_;
+	  platform::IRenderer* renderer_;
     };
   }
 }

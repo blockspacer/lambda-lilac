@@ -133,6 +133,8 @@ namespace lambda
       virtual void destroyAsset(
         foundation::SharedPointer<asset::IAsset> asset
       ) = 0;
+	  virtual void destroyTexture(const size_t& hash) = 0;
+	  virtual void destroyShader(const size_t& hash) = 0;
     };
   }
 }

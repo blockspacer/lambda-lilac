@@ -35,7 +35,8 @@ namespace lambda
         const Vector<float>& v, 
         const Type& type
       );
-			void operator=(const ShaderVariable& other);
+	  void operator=(const ShaderVariable& other);
+	  bool operator==(const ShaderVariable& other) const;
 
       size_t getSize() const;
       void update(const ShaderVariable& other);
@@ -132,6 +133,12 @@ namespace lambda
 			name = other.name;
 			type = other.type;
 			data = other.data;
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		inline bool ShaderVariable::operator==(const ShaderVariable& other) const
+		{
+			return name == other.name && type == other.type;
 		}
 		
     ///////////////////////////////////////////////////////////////////////////

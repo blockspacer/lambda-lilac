@@ -12,7 +12,7 @@
         {
             "label": "builder",
             "type": "shell",
-            "command": "../bin/bin/RelWithDebInfo/lambda-builder.exe .",
+            "command": "../standalone/win64/lambda-builder.exe .",
             "problemMatcher": []
         }
     ]

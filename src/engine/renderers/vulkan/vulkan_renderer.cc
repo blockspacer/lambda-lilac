@@ -116,13 +116,13 @@ namespace lambda
 			? true : false;
 
 		if (is_vertex)
-			memory_stats_.vertex -= buffer->getSize();
+			memory_stats_.vertex -= ((VulkanRenderBuffer*)buffer)->getGPUSize();
 		if (is_index)
-			memory_stats_.index -= buffer->getSize();
+			memory_stats_.index -= ((VulkanRenderBuffer*)buffer)->getGPUSize();
 		if (is_constant)
-			memory_stats_.constant -= buffer->getSize();
+			memory_stats_.constant -= ((VulkanRenderBuffer*)buffer)->getGPUSize();
 
-		vezDestroyBuffer(device_, static_cast<VulkanRenderBuffer*>(buffer)->getBuffer());
+		vezDestroyBuffer(device_, ((VulkanRenderBuffer*)buffer)->getBuffer());
 		foundation::Memory::destruct(buffer);
 		buffer = nullptr;
 	}
@@ -142,32 +142,13 @@ namespace lambda
 				this
 				);
 
-		uint32_t size = 0u;
-		for (uint32_t i = 0u; i < texture->getLayerCount(); ++i)
-		{
-			uint32_t w = texture->getLayer(0u).getWidth();
-			uint32_t h = texture->getLayer(0u).getHeight();
-			uint32_t bpp, bpr, bpl;
-			for (uint32_t j = 0u; j < texture->getLayer(0u).getMipCount(); ++j)
-			{
-				calculateImageMemory(
-					texture->getLayer(0u).getFormat(),
-					w,
-					h,
-					bpp,
-					bpr,
-					bpl
-				);
-				size += bpl;
-				w /= 2u;
-				h /= 2u;
-			}
-		}
-		if ((texture->getLayer(0u).getFlags() & kTextureFlagIsRenderTarget)
-			!= 0u)
-			memory_stats_.render_target += size;
+		if ((texture->getLayer(0u).getFlags() & kTextureFlagIsRenderTarget) != 0u)
+			memory_stats_.render_target += vulkan_texture->getTexture()->getGPUSize();
 		else
-			memory_stats_.texture += size;
+			memory_stats_.texture += vulkan_texture->getTexture()->getGPUSize();
+
+		auto total = memory_stats_.vertex + memory_stats_.index + memory_stats_.constant + memory_stats_.texture + memory_stats_.render_target;
+		foundation::Debug(toString(TO_MB(total)) + "\n");
 
 		return vulkan_texture;
 	}
@@ -175,28 +156,12 @@ namespace lambda
 	///////////////////////////////////////////////////////////////////////////
 	void VulkanRenderer::freeRenderTexture(platform::IRenderTexture* texture)
 	{
-		uint32_t size = 0u;
-		for (uint32_t i = 0u; i < texture->getDepth(); ++i)
-		{
-			uint32_t w = texture->getWidth();
-			uint32_t h = texture->getHeight();
-			uint32_t bpp, bpr, bpl;
-			for (uint32_t j = 0u; j < texture->getMipCount(); ++j)
-			{
-				calculateImageMemory(texture->getFormat(), w, h, bpp, bpr, bpl);
-				size += bpl;
-				w /= 2u;
-				h /= 2u;
-			}
-		}
 		if ((texture->getFlags() & kTextureFlagIsRenderTarget) != 0u)
-			memory_stats_.render_target -= size;
+			memory_stats_.render_target -= ((VulkanRenderTexture*)texture)->getTexture()->getGPUSize();
 		else
-			memory_stats_.texture -= size;
+			memory_stats_.texture -= ((VulkanRenderTexture*)texture)->getTexture()->getGPUSize();
 
-		foundation::Memory::destruct(
-			((VulkanRenderTexture*)texture)->getTexture()
-		);
+		foundation::Memory::destruct(((VulkanRenderTexture*)texture)->getTexture());
 		foundation::Memory::destruct(texture);
 	}
 
@@ -217,6 +182,7 @@ namespace lambda
 	  , marker_depth_(0u)
 #endif
 	{
+		memset(&memory_stats_, 0, sizeof(memory_stats_));
 		memset(&state_, 0, sizeof(state_));
 		memory_.renderer = this;
 	}
@@ -433,6 +399,7 @@ namespace lambda
 #if VIOLET_DEBUG
 			enabled_extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 			enabled_extensions.push_back("VK_EXT_debug_report");
+			enabled_layers.push_back("VK_LAYER_RENDERDOC_Capture");
 #endif
 
 #if VIOLET_WIN32
@@ -451,25 +418,25 @@ namespace lambda
 			LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Failed to create instance | %s", vkErrorCode(result));
 
 #if VIOLET_DEBUG
-			VkDebugUtilsMessengerCreateInfoEXT debug_utils_messenger_create_info{};
-			debug_utils_messenger_create_info.sType           = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-			debug_utils_messenger_create_info.messageSeverity = 
-				//VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | 
-				//VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
-				VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-				VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT |
-				0;
-			debug_utils_messenger_create_info.messageType = 
-				VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-				VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-				VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT |
-				0;
-			debug_utils_messenger_create_info.pfnUserCallback = debugCallback;
-			debug_utils_messenger_create_info.pUserData       = nullptr;
+			//VkDebugUtilsMessengerCreateInfoEXT debug_utils_messenger_create_info{};
+			//debug_utils_messenger_create_info.sType           = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+			//debug_utils_messenger_create_info.messageSeverity = 
+			//	//VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | 
+			//	//VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+			//	VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+			//	VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT |
+			//	0;
+			//debug_utils_messenger_create_info.messageType = 
+			//	VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+			//	VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+			//	VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT |
+			//	0;
+			//debug_utils_messenger_create_info.pfnUserCallback = debugCallback;
+			//debug_utils_messenger_create_info.pUserData       = nullptr;
 		
-			PFN_vkCreateDebugUtilsMessengerEXT createDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance_, "vkCreateDebugUtilsMessengerEXT");
-			result = createDebugUtilsMessengerEXT(instance_, &debug_utils_messenger_create_info, VK_NULL_HANDLE, &debug_messenger_);
-			LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Failed to create debug utils messenger | %s", vkErrorCode(result));
+			//PFN_vkCreateDebugUtilsMessengerEXT createDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance_, "vkCreateDebugUtilsMessengerEXT");
+			//result = createDebugUtilsMessengerEXT(instance_, &debug_utils_messenger_create_info, VK_NULL_HANDLE, &debug_messenger_);
+			//LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Failed to create debug utils messenger | %s", vkErrorCode(result));
 #endif
 
 			// Get physical device.
@@ -566,6 +533,8 @@ namespace lambda
 			image_view_create_info.subresourceRange.levelCount = 1;
 			result = vezCreateImageView(device_, &image_view_create_info, &backbuffer_view_);
 			LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not create image view | %s", vkErrorCode(result));
+			backbuffer_width_  = image_create_info.extent.width;
+			backbuffer_height_ = image_create_info.extent.height;
 
 			createCommandBuffer();
 
@@ -579,11 +548,14 @@ namespace lambda
       setSamplerState(platform::SamplerState::LinearClamp(),        7u);
       setSamplerState(platform::SamplerState::AnisotrophicClamp(),  8u);
       setSamplerState(platform::SamplerState::PointBorder(),        9u);
-			setSamplerState(platform::SamplerState::LinearBorder(),       10u);
-			setSamplerState(platform::SamplerState::AnisotrophicBorder(), 11u);
+	  setSamplerState(platform::SamplerState::LinearBorder(),       10u);
+	  setSamplerState(platform::SamplerState::AnisotrophicBorder(), 11u);
       setSamplerState(platform::SamplerState::PointWrap(),          12u);
-			setSamplerState(platform::SamplerState::LinearWrap(),         13u);
-			setSamplerState(platform::SamplerState::AnisotrophicWrap(),   14u);
+      setSamplerState(platform::SamplerState::LinearWrap(),         13u);
+	  setSamplerState(platform::SamplerState::AnisotrophicWrap(),   14u);
+
+	  for (uint32_t i = 0; i < 16; ++i)
+		  setTexture(default_texture_, i);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -671,7 +643,7 @@ namespace lambda
 
 		beginTimer("Debug Rendering");
 		pushMarker("Debug Rendering");
-		world_->getDebugRenderer().Render(world_);
+		//world_->getDebugRenderer().Render(world_);
 		popMarker();
 		endTimer("Debug Rendering");
 
@@ -688,20 +660,20 @@ namespace lambda
 		copyToScreen(
 			world_->getPostProcessManager().getTarget(Name("gui")).getTexture()
 		);
+
 		popMarker();
 		endTimer("Copy To Screen");
 		
-		pushMarker("Present");
 		VkResult result;
 
 		// End command buffer recording.
-		command_buffer_.end();
-		VkCommandBuffer command_buffer = command_buffer_.getCommandBuffer();
+		command_buffer_.tryEnd();
+		Vector<VkCommandBuffer> command_buffer = command_buffer_.getCommandBuffers();
 
 		// Submit the command buffer to the graphics queue.
 		VezSubmitInfo submit_info{};
-		submit_info.commandBufferCount = 1;
-		submit_info.pCommandBuffers    = &command_buffer;
+		submit_info.commandBufferCount = (uint32_t)command_buffer.size();
+		submit_info.pCommandBuffers    = command_buffer.data();
 
 		// Request a wait semaphore to pass to present so it waits for rendering to complete.
 		VkSemaphore semaphore = VK_NULL_HANDLE;
@@ -728,6 +700,7 @@ namespace lambda
 
 		memory_.removeUnusedEntries();
 		foundation::GetFrameHeap()->update();
+		command_buffer_.reset();
 	}
 
 #pragma optimize ("", off)
@@ -736,113 +709,96 @@ namespace lambda
     {
 			command_buffer_.tryBegin();
 
-			// Update viewports.
-			//if (state_.dirty_viewports)
-			{
-				vezCmdSetViewport(0, state_.num_viewports, &state_.viewports[0]);
-				vezCmdSetViewportState(state_.num_viewports);
-				state_.dirty_viewports = false;
-			}
-
-			// Update scissors.
-			//if (state_.dirty_scissor_rects)
-			{
-				vezCmdSetScissor(0, state_.num_scissor_rects, &state_.scissor_rects[0]);
-				state_.dirty_scissor_rects = false;
-			}
+			VulkanShader* shader = memory_.getShader(state_.shader);
 
 			// Update framebuffer.
-			//if (state_.dirty_framebuffer)
+			///if (isDirty(DirtyState::kRenderTargets))
 			{
 				Framebuffer framebuffer{};
-				framebuffer.num_framebuffers = state_.shader->getNumRenderTargets();
-				framebuffer.rt_width = state_.rt_width;
+				framebuffer.num_framebuffers = 0;
+				framebuffer.rt_width  = state_.rt_width;
 				framebuffer.rt_height = state_.rt_height;
-				memcpy(framebuffer.render_targets, state_.render_targets, sizeof(VkImageView) * framebuffer.num_framebuffers);
 
-				if (state_.depth_target != VK_NULL_HANDLE)
-					framebuffer.render_targets[framebuffer.num_framebuffers++] = state_.depth_target;
+				for (uint32_t i = 0; i < shader->getNumRenderTargets(); ++i)
+					framebuffer.render_targets[framebuffer.num_framebuffers++] = vk_state_.render_targets[i];
 
-				state_.framebuffer = memory_.getFramebuffer(framebuffer);
-				state_.dirty_framebuffer = false;
+				if (vk_state_.depth_target)
+					framebuffer.render_targets[framebuffer.num_framebuffers++] = vk_state_.depth_target;
+
+				vk_state_.framebuffer = memory_.getFramebuffer(framebuffer);
+				cleanDirty(DirtyState::kRenderTargets);
 			}
 
 			// Begin a render pass.
-			Vector<VezAttachmentReference> attachment_references = getAttachmentReferences();
 			VezRenderPassBeginInfo render_pass_begin_info{};
-			render_pass_begin_info.framebuffer = state_.framebuffer;
-			render_pass_begin_info.attachmentCount = (uint32_t)attachment_references.size();
-			render_pass_begin_info.pAttachments = attachment_references.data();
+			render_pass_begin_info.framebuffer     = vk_state_.framebuffer->framebuffer;
+			render_pass_begin_info.attachmentCount = (uint32_t)vk_state_.framebuffer->attachment_references.size();
+			render_pass_begin_info.pAttachments    = vk_state_.framebuffer->attachment_references.data();
 			vezCmdBeginRenderPass(&render_pass_begin_info);
 
-			// Update shader.
-			//if (state_.dirty_shader)
+			// Update viewports.
+			///if (isDirty(DirtyState::kViewports))
 			{
-				state_.shader->bind();
-				state_.dirty_shader = false;
+				vezCmdSetViewport(0, state_.num_viewports, &vk_state_.viewports[0]);
+				vezCmdSetViewportState(state_.num_viewports);
+				cleanDirty(DirtyState::kViewports);
+			}
+
+			// Update scissors.
+			///if (isDirty(DirtyState::kScissorRects))
+			{
+				vezCmdSetScissor(0, state_.num_scissor_rects, &vk_state_.scissor_rects[0]);
+				cleanDirty(DirtyState::kScissorRects);
+			}
+
+			// Update shader.
+			///if (isDirty(DirtyState::kShader))
+			{
+				shader->bind();
+				cleanDirty(DirtyState::kShader);
 			}
 
 			// Update textures.
-			Vector<VulkanReflectionInfo> textures = state_.shader->getTextures();
+			Vector<VulkanReflectionInfo> textures = shader->getTextures();
 
-			//if (state_.dirty_textures)
+			///if (isDirty(DirtyState::kTextures))
 			{
-				/*for (uint16_t i = 0; i < 16 && state_.dirty_textures != 0; ++i)
-				{
-					if ((state_.dirty_textures & (1 << i)))
-					{
-						VkImageView view = state_.textures[i]->getTexture()->getMainView();
-						for (const VulkanReflectionInfo& texture : textures)
-						{
-							if (texture.binding == i)
-							{
-								vezCmdBindImageView(view, VK_NULL_HANDLE, texture.set, texture.binding, 0);
-							}
-						}
-		
-						state_.dirty_textures &= ~(1 << i);
-					}
-				}*/
-			}
-
-
-			for (const VulkanReflectionInfo& texture : textures)
-			{
-				if (!state_.textures[texture.slot])
-				{
-					setTexture(default_texture_, texture.slot);
-				}
-
-				VkImageView view = state_.textures[texture.slot]->getTexture()->getMainView();
-				vezCmdBindImageView(view, VK_NULL_HANDLE, texture.set, texture.binding, 0);
+				for (const VulkanReflectionInfo& texture : textures)
+					vezCmdBindImageView(vk_state_.textures[texture.slot], VK_NULL_HANDLE, texture.set, texture.binding, 0);
+				cleanDirty(DirtyState::kTextures);
 			}
 
 			// Update state manager.
-			Vector<VulkanReflectionInfo> samplers = state_.shader->getSamplers();
-			state_manager_.update(samplers, state_.shader->getNumRenderTargets());
+			Vector<VulkanReflectionInfo> samplers = shader->getSamplers();
+			state_manager_.update(samplers, shader->getNumRenderTargets());
+
+			for (const auto& variable : state_.shader->getQueuedShaderVariables())
+				shader->updateShaderVariable(variable);
 
 			// Update constant buffers.
-			for (auto& buffer : state_.shader->getBuffers())
+			for (auto& buffer : shader->getBuffers())
 				world_->getShaderVariableManager().updateBuffer(buffer.shader_buffer);
 
-			state_.shader->bindBuffers();
+			shader->bindBuffers();
+
+			VulkanMesh* mesh = memory_.getMesh(state_.mesh);
 
 			// Update mesh.
-			//if (state_.dirty_mesh)
+			///if (isDirty(DirtyState::kMesh))
 			{
-				state_.mesh->bind(state_.shader->getStages(), state_.sub_mesh);
-				state_.dirty_mesh = false;
+				mesh->bind(shader->getStages(), state_.sub_mesh);
+				cleanDirty(DirtyState::kMesh);
 			}
 
 			// Draw.
-			state_.mesh->draw(state_.sub_mesh);
+			mesh->draw(state_.sub_mesh);
 	
 			// Rend renderpass.
 			vezCmdEndRenderPass();
 
 			command_buffer_.tryEnd();
 			command_buffer_.tryBegin();
-    }
+	}
     
     ///////////////////////////////////////////////////////////////////////////
     void VulkanRenderer::drawInstanced(const Vector<glm::mat4>& matrices)
@@ -893,28 +849,13 @@ namespace lambda
     {
 		VulkanRenderTexture* src_texture = memory_.getTexture(texture);
 
-		VezImageCopy region{};
-		region.srcSubresource.mipLevel       = 0;
-		region.srcSubresource.baseArrayLayer = 0;
-		region.srcSubresource.layerCount     = 1;
-		region.dstSubresource.mipLevel       = 0;
-		region.dstSubresource.baseArrayLayer = 0;
-		region.dstSubresource.layerCount     = 1;
-		region.srcOffset.x = 0;
-		region.srcOffset.y = 0;
-		region.srcOffset.z = 0;
-		region.dstOffset.x = 0;
-		region.dstOffset.y = 0;
-		region.dstOffset.z = 0;
-		region.extent.width  = src_texture->getWidth();
-		region.extent.height = src_texture->getHeight();
-		vezCmdCopyImage(
+		copy(
 			src_texture->getTexture()->getTexture(src_texture->getTexture()->pingPongIdx()),
+			glm::uvec2(src_texture->getWidth(), src_texture->getHeight()),
 			backbuffer_,
-			1,
-			&region
+			glm::uvec2(backbuffer_width_, backbuffer_height_)
 		);
-    }
+	}
 
 	///////////////////////////////////////////////////////////////////////////
 	void VulkanRenderer::copyToTexture(const asset::VioletTextureHandle& src, const asset::VioletTextureHandle& dst)
@@ -922,26 +863,11 @@ namespace lambda
 		VulkanRenderTexture* src_texture = memory_.getTexture(src);
 		VulkanRenderTexture* dst_texture = memory_.getTexture(dst);
 
-		VezImageCopy region{};
-		region.srcSubresource.mipLevel       = 0;
-		region.srcSubresource.baseArrayLayer = 0;
-		region.srcSubresource.layerCount     = 1;
-		region.dstSubresource.mipLevel       = 0;
-		region.dstSubresource.baseArrayLayer = 0;
-		region.dstSubresource.layerCount     = 1;
-		region.srcOffset.x = 0;
-		region.srcOffset.y = 0;
-		region.srcOffset.z = 0;
-		region.dstOffset.x = 0;
-		region.dstOffset.y = 0;
-		region.dstOffset.z = 0;
-		region.extent.width  = src_texture->getWidth();
-		region.extent.height = src_texture->getHeight();
-		vezCmdCopyImage(
+		copy(
 			src_texture->getTexture()->getTexture(src_texture->getTexture()->pingPongIdx()),
+			glm::uvec2(src_texture->getWidth(), src_texture->getHeight()),
 			dst_texture->getTexture()->getTexture(dst_texture->getTexture()->pingPongIdx()),
-			1, 
-			&region
+			glm::uvec2(dst_texture->getWidth(), dst_texture->getHeight())
 		);
 	}
     
@@ -976,15 +902,15 @@ namespace lambda
 				viewports.push_back({
 					0.0f,
 					0.0f,
-					(float)world_->getWindow()->getSize().x,
-					(float)world_->getWindow()->getSize().y
+					(float)backbuffer_width_,
+					(float)backbuffer_height_
 				});
 				rtvs.push_back(backbuffer_view_);
 				scissor_rects.push_back({
 					0.0f,
 					0.0f,
-					(float)world_->getWindow()->getSize().x,
-					(float)world_->getWindow()->getSize().y
+					(float)backbuffer_width_,
+					(float)backbuffer_height_
 				});
 			}
 			else if (output.getTexture()->getLayer(0u).getFormat() == TextureFormat::kR24G8 ||
@@ -1050,7 +976,15 @@ namespace lambda
 		// Shader.
 		setScissorRects(scissor_rects);
 		setViewports(viewports);
-		setRenderTargets(rtvs, dsv, (uint32_t)viewports[0].z, (uint32_t)viewports[0].w);
+
+
+		state_.rt_width  = (uint32_t)viewports[0].z;
+		state_.rt_height = (uint32_t)viewports[0].w;
+
+		memcpy(vk_state_.render_targets, rtvs.data(), rtvs.size() * sizeof(VkImageView));
+		vk_state_.depth_target = dsv;
+		
+		makeDirty(DirtyState::kRenderTargets);
 	}
     
     ///////////////////////////////////////////////////////////////////////////
@@ -1058,15 +992,14 @@ namespace lambda
       asset::VioletTextureHandle handle,
       const glm::vec4& colour)
     {
+		return; // TODO (Hilze): Remove ASAP!
+
 		if (!handle)
 			return;
 
 		command_buffer_.tryBegin();
-
+		
 		VulkanRenderTexture* texture = memory_.getTexture(handle);
-
-		state_.dirty_viewports = true;
-		state_.dirty_scissor_rects = true;
 
 		VkViewport viewport{};
 		viewport.minDepth = 0.0f;
@@ -1075,13 +1008,14 @@ namespace lambda
 		viewport.y        = 0.0f;
 		viewport.width    = (float)texture->getWidth();
 		viewport.height   = (float)texture->getHeight();
+
+		vezCmdSetViewport(0, 1, &viewport);
 		VkRect2D scissor{};
 		scissor.offset.x = 0ul;
 		scissor.offset.y = 0ul;
 		scissor.extent.width  = texture->getWidth();
 		scissor.extent.height = texture->getHeight();
 
-		vezCmdSetViewport(0, 1, &viewport);
 		vezCmdSetScissor (0, 1, &scissor);
 
 		Framebuffer framebuffer{};
@@ -1089,19 +1023,30 @@ namespace lambda
 		framebuffer.rt_width          = texture->getWidth();
 		framebuffer.rt_height         = texture->getHeight();
 		framebuffer.render_targets[0] = texture->getTexture()->getMainView();
-		VezFramebuffer vez_framebuffer = memory_.getFramebuffer(framebuffer);
 
-		VezAttachmentReference attachment_reference{};
-		attachment_reference.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		memcpy(&attachment_reference.clearValue.color.float32[0], &colour.x, sizeof(colour));
-		attachment_reference.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-
+		VulkanFramebuffer* fb = memory_.getFramebuffer(framebuffer);
 		VezRenderPassBeginInfo render_pass_begin_info{};
-		render_pass_begin_info.framebuffer     = vez_framebuffer;
-		render_pass_begin_info.attachmentCount = 1;
-		render_pass_begin_info.pAttachments    = &attachment_reference;
+		render_pass_begin_info.framebuffer     = fb->framebuffer;
+		render_pass_begin_info.attachmentCount = (uint32_t)fb->attachment_references.size();
+		render_pass_begin_info.pAttachments    = fb->attachment_references.data();
 		vezCmdBeginRenderPass(&render_pass_begin_info);
+
+		VezImageSubresourceRange range{};
+		range.baseArrayLayer = 0;
+		range.baseMipLevel   = 0;
+		range.layerCount     = 1;
+		range.levelCount     = 1;
+		VkClearColorValue color{};
+		memcpy(color.float32, &colour.x, sizeof(colour));
+		vezCmdClearColorImage(texture->getTexture()->getTexture(texture->getTexture()->pingPongIdx()), &color, 1, &range);
 		vezCmdEndRenderPass();
+
+		command_buffer_.tryEnd();
+		command_buffer_.tryBegin();
+
+		makeDirty(DirtyState::kViewports);
+		makeDirty(DirtyState::kScissorRects);
+		makeDirty(DirtyState::kRenderTargets);
 	}
 
     ///////////////////////////////////////////////////////////////////////////
@@ -1113,10 +1058,7 @@ namespace lambda
 			dirty = true;
 
 		for (uint32_t i = 0; i < rects.size() && !dirty; ++i)
-			if ((uint32_t)rects[i].x != state_.scissor_rects[i].offset.x ||
-				(uint32_t)rects[i].y != state_.scissor_rects[i].offset.y ||
-				(uint32_t)rects[i].z != state_.scissor_rects[i].extent.width ||
-				(uint32_t)rects[i].w != state_.scissor_rects[i].extent.height)
+			if (rects[i] != state_.scissor_rects[i])
 				dirty = true;
 
 		if (dirty)
@@ -1124,12 +1066,13 @@ namespace lambda
 			state_.num_scissor_rects = (uint32_t)rects.size();
 			for (uint32_t i = 0; i < state_.num_scissor_rects; ++i)
 			{
-				state_.scissor_rects[i].offset.x      = (uint32_t)rects[i].x;
-				state_.scissor_rects[i].offset.y      = (uint32_t)rects[i].y;
-				state_.scissor_rects[i].extent.width  = (uint32_t)rects[i].z;
-				state_.scissor_rects[i].extent.height = (uint32_t)rects[i].w;
+				state_.scissor_rects[i] = rects[i];
+				vk_state_.scissor_rects[i].offset.x      = (uint32_t)rects[i].x;
+				vk_state_.scissor_rects[i].offset.y      = (uint32_t)rects[i].y;
+				vk_state_.scissor_rects[i].extent.width  = (uint32_t)rects[i].z;
+				vk_state_.scissor_rects[i].extent.height = (uint32_t)rects[i].w;
 			}
-			state_.dirty_scissor_rects = true;
+			makeDirty(DirtyState::kScissorRects);
 		}
 	}
 
@@ -1142,10 +1085,7 @@ namespace lambda
 			dirty = true;
 
 		for (uint32_t i = 0; i < rects.size() && !dirty; ++i)
-			if (rects[i].x != state_.viewports[i].x ||
-				rects[i].y != state_.viewports[i].y ||
-				rects[i].z != state_.viewports[i].width ||
-				rects[i].w != state_.viewports[i].height)
+			if (rects[i] != state_.viewports[i])
 				dirty = true;
 
 		if (dirty)
@@ -1153,14 +1093,15 @@ namespace lambda
 			state_.num_viewports = (uint32_t)rects.size();
 			for (uint32_t i = 0; i < state_.num_viewports; ++i)
 			{
-				state_.viewports[i].x        = rects[i].x;
-				state_.viewports[i].y        = rects[i].y;
-				state_.viewports[i].width    = rects[i].z;
-				state_.viewports[i].height   = rects[i].w;
-				state_.viewports[i].minDepth = 0.0f;
-				state_.viewports[i].maxDepth = 1.0f;
+				state_.viewports[i] = rects[i];
+				vk_state_.viewports[i].x        = rects[i].x;
+				vk_state_.viewports[i].y        = rects[i].y;
+				vk_state_.viewports[i].width    = rects[i].z;
+				vk_state_.viewports[i].height   = rects[i].w;
+				vk_state_.viewports[i].minDepth = 0.0f;
+				vk_state_.viewports[i].maxDepth = 1.0f;
 			}
-			state_.dirty_viewports = true;
+			makeDirty(DirtyState::kViewports);
 		}
 	}
 
@@ -1170,13 +1111,11 @@ namespace lambda
 		if (!mesh)
 			return;
 
-		VulkanMesh* m = memory_.getMesh(mesh);
-
-		if (m != state_.mesh)
+		if (mesh != state_.mesh)
 		{
 			state_manager_.bindTopology(mesh->getTopology());
-			state_.dirty_mesh = true;
-			state_.mesh = m;
+			state_.mesh = mesh;
+			makeDirty(DirtyState::kMesh);
 		}
 	}
 
@@ -1185,27 +1124,23 @@ namespace lambda
     {
 		if (sub_mesh_idx != state_.sub_mesh)
 		{
-			state_.dirty_mesh = true;
 			state_.sub_mesh = sub_mesh_idx;
+			makeDirty(DirtyState::kMesh);
 		}
 	}
 
     ///////////////////////////////////////////////////////////////////////////
     void VulkanRenderer::setShader(asset::VioletShaderHandle shader)
     {
-		if (!shader)
-			return;
+      if (!shader)
+        return;
 
-			VulkanShader* s = memory_.getShader(shader);
-
-			for (const auto& variable : shader->getQueuedShaderVariables())
-				s->updateShaderVariable(variable);
-
-			if (s != state_.shader)
-			{
-				state_.dirty_shader = true;
-				state_.shader = s;
-			}
+	  if (shader != state_.shader)
+	  {
+        makeDirty(DirtyState::kShader);
+		state_.shader    = shader;
+		vk_state_.shader = memory_.getShader(shader);
+	  }
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -1213,71 +1148,50 @@ namespace lambda
       asset::VioletTextureHandle texture, 
       uint8_t slot)
     {
-			if (!texture)
-				return;
-
-			VulkanRenderTexture* t = memory_.getTexture(texture);
-
-			if (t != state_.textures[slot])
-			{
-				state_.dirty_textures |= (1 << slot);
-				state_.textures[slot] = t;
-			}
+	  if (texture != state_.textures[slot])
+	  {
+        makeDirty(DirtyState::kTextures);
+        state_.textures[slot]    = texture;
+		vk_state_.textures[slot] = memory_.getTexture(texture ? texture : default_texture_)->getTexture()->getMainView();
+	  }
     }
 
 	///////////////////////////////////////////////////////////////////////////
 	void VulkanRenderer::setRenderTargets(Vector<asset::VioletTextureHandle> render_targets, asset::VioletTextureHandle depth_buffer)
 	{
-		Vector<VkImageView> iv_rt;
-		for (uint32_t i = 0; i < render_targets.size(); ++i)
-			iv_rt.push_back(memory_.getTexture(render_targets[i])->getTexture()->getMainView());
-
-		VulkanRenderTexture* dt = memory_.getTexture(depth_buffer);
-		VkImageView iv_dt = dt ? dt->getTexture()->getMainView() : VK_NULL_HANDLE;
-
-		uint32_t width, height;
-
-		if (render_targets.size() > 0)
-		{
-			width  = render_targets[0]->getLayer(0u).getWidth();
-			height = render_targets[0]->getLayer(0u).getHeight();
-		}
-		else if (depth_buffer)
-		{
-			width  = depth_buffer->getLayer(0u).getWidth();
-			height = depth_buffer->getLayer(0u).getHeight();
-		}
-
-		setRenderTargets(iv_rt, iv_dt, width, height);
-	}
-
-	///////////////////////////////////////////////////////////////////////////
-	void VulkanRenderer::setRenderTargets(
-		Vector<VkImageView> render_targets,
-		VkImageView depth_buffer,
-		uint32_t width,
-		uint32_t height
-	)
-	{
-		bool equal = true;
+		bool equal = false;
 		for (uint32_t i = 0; i < render_targets.size(); ++i)
 			if (render_targets[i] != state_.render_targets[i])
 				equal = false;
 
-		if (depth_buffer != state_.depth_target)
-			equal = false;
+		if (depth_buffer)
+			if (depth_buffer != state_.depth_target)
+				equal = false;
 
 		if (!equal)
 		{
 			for (uint32_t i = 0; i < render_targets.size(); ++i)
-				state_.render_targets[i] = render_targets[i];
+			{
+				state_.render_targets[i]    = render_targets[i];
+				vk_state_.render_targets[i] = memory_.getTexture(render_targets[i])->getTexture()->getMainView();
+			}
 
 			state_.depth_target = depth_buffer;
+			vk_state_.depth_target = depth_buffer ? memory_.getTexture(depth_buffer)->getTexture()->getMainView() : VK_NULL_HANDLE;
 
-			state_.rt_width = width;
-			state_.rt_height = height;
 
-			state_.dirty_framebuffer = true;
+			if (render_targets.size() > 0)
+			{
+				state_.rt_width  = render_targets[0]->getLayer(0u).getWidth();
+				state_.rt_height = render_targets[0]->getLayer(0u).getHeight();
+			}
+			else if (depth_buffer)
+			{
+				state_.rt_width  = depth_buffer->getLayer(0u).getWidth();
+				state_.rt_height = depth_buffer->getLayer(0u).getHeight();
+			}
+			
+			makeDirty(DirtyState::kRenderTargets);
 		}
 	}
 
@@ -1309,7 +1223,7 @@ namespace lambda
 			VkDebugMarkerMarkerInfoEXT marker_info{};
 			marker_info.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
 			memcpy(marker_info.color, kColors[marker_depth_++ % kColorCount], sizeof(float) * 4u);
-			debug_marker_begin_(command_buffer_.getCommandBuffer(), &marker_info);
+			debug_marker_begin_(command_buffer_.getActiveCommandBuffer(), &marker_info);
 		}
 #endif
     }
@@ -1323,7 +1237,7 @@ namespace lambda
 			VkDebugMarkerMarkerInfoEXT marker_info{};
 			marker_info.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
 			memcpy(marker_info.color, kColors[marker_depth_ % kColorCount], sizeof(float) * 4u);
-			debug_marker_insert_(command_buffer_.getCommandBuffer(), &marker_info);
+			debug_marker_insert_(command_buffer_.getActiveCommandBuffer(), &marker_info);
 		}
 #endif
     }
@@ -1334,7 +1248,7 @@ namespace lambda
 #if VIOLET_USE_GPU_MARKERS
 		if (has_debug_markers_)
 		{
-			debug_marker_end_(command_buffer_.getCommandBuffer());
+			debug_marker_end_(command_buffer_.getActiveCommandBuffer());
 			marker_depth_--;
 		}
 #endif
@@ -1372,7 +1286,7 @@ namespace lambda
 	///////////////////////////////////////////////////////////////////////////
 	VkCommandBuffer VulkanRenderer::getCommandBuffer() const
 	{
-		return command_buffer_.getCommandBuffer();
+		return command_buffer_.getActiveCommandBuffer();
 	}
 
     ///////////////////////////////////////////////////////////////////////////
@@ -1392,6 +1306,18 @@ namespace lambda
     }
 
 	///////////////////////////////////////////////////////////////////////////
+	void VulkanRenderer::destroyTexture(const size_t& hash)
+	{
+		memory_.removeTexture(hash);
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	void VulkanRenderer::destroyShader(const size_t& hash)
+	{
+		memory_.removeShader(hash);
+	}
+
+	///////////////////////////////////////////////////////////////////////////
 	void VulkanRenderer::createCommandBuffer()
 	{
 		// Get the graphics queue handle.
@@ -1401,28 +1327,40 @@ namespace lambda
 	}
 
 	///////////////////////////////////////////////////////////////////////////
-	Vector<VezAttachmentReference> VulkanRenderer::getAttachmentReferences()
+	void VulkanRenderer::copy(VkImage src, glm::uvec2 src_size, VkImage dst, glm::uvec2 dst_size)
 	{
-		Vector<VezAttachmentReference> attachment_references;
-
-		for (uint32_t i = 0; i < state_.shader->getNumRenderTargets(); ++i)
-		{
-			VezAttachmentReference attachment_reference{};
-			attachment_reference.loadOp  = VK_ATTACHMENT_LOAD_OP_LOAD;
-			attachment_reference.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-			attachment_references.push_back(attachment_reference);
-		}
-
-		if (state_.depth_target)
-		{
-			VezAttachmentReference attachment_reference{};
-			attachment_reference.loadOp  = VK_ATTACHMENT_LOAD_OP_LOAD;
-			attachment_reference.loadOp  = VK_ATTACHMENT_LOAD_OP_CLEAR;
-			attachment_reference.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-			attachment_references.push_back(attachment_reference);
-		}
+		command_buffer_.tryBegin();
 		
-		return attachment_references;
+		VezImageBlit region{};
+		region.srcSubresource.baseArrayLayer = 0;
+		region.srcSubresource.layerCount = 1;
+		region.srcSubresource.mipLevel = 0;
+		region.dstSubresource.baseArrayLayer = 0;
+		region.dstSubresource.layerCount = 1;
+		region.dstSubresource.mipLevel = 0;
+		region.srcOffsets[0].x = 0;
+		region.srcOffsets[0].y = 0;
+		region.srcOffsets[0].z = 0;
+		region.srcOffsets[1].x = src_size.x;
+		region.srcOffsets[1].y = src_size.y;
+		region.srcOffsets[1].z = 1;
+		region.dstOffsets[0].x = 0;
+		region.dstOffsets[0].y = 0;
+		region.dstOffsets[0].z = 0;
+		region.dstOffsets[1].x = dst_size.x;
+		region.dstOffsets[1].y = dst_size.y;
+		region.dstOffsets[1].z = 1;
+
+		vezCmdBlitImage(
+			src,
+			dst,
+			1,
+			&region,
+			VK_FILTER_NEAREST
+		);
+
+		command_buffer_.tryEnd();
+		command_buffer_.tryBegin();
 	}
 
     ///////////////////////////////////////////////////////////////////////////
@@ -1452,6 +1390,9 @@ namespace lambda
 		, buffer_(buffer)
 		, renderer_(renderer)
 	{
+		VkMemoryRequirements memory_requirements;
+		vkGetBufferMemoryRequirements(renderer_->getDevice(), buffer_, &memory_requirements);
+		gpu_size_ = (size_t)memory_requirements.size;
 	}
 
 	///////////////////////////////////////////////////////////////////////////
@@ -1483,6 +1424,12 @@ namespace lambda
 	uint32_t VulkanRenderBuffer::getSize() const
 	{
 		return size_;
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	size_t VulkanRenderBuffer::getGPUSize() const
+	{
+		return gpu_size_;
 	}
 
 	///////////////////////////////////////////////////////////////////////////
@@ -1574,27 +1521,23 @@ namespace lambda
 
 	///////////////////////////////////////////////////////////////////////////
 	VulkanCommandBuffer::VulkanCommandBuffer()
-		: command_buffer(VK_NULL_HANDLE)
-		, recording(false)
+		: recording(false)
+		, current_command_buffer(-1)
 	{
 	}
 
 	///////////////////////////////////////////////////////////////////////////
 	void VulkanCommandBuffer::create(VkDevice device, VkQueue graphics_queue)
 	{
-		VkResult result;
-		VezCommandBufferAllocateInfo cb_alloc_info{};
-		cb_alloc_info.queue              = graphics_queue;
-		cb_alloc_info.commandBufferCount = 1;
-		result = vezAllocateCommandBuffers(device, &cb_alloc_info, &command_buffer);
-		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not allocate command buffer | %s", vkErrorCode(result));
+		this->device = device;
+		this->graphics_queue = graphics_queue;
 	}
 
 	///////////////////////////////////////////////////////////////////////////
 	void VulkanCommandBuffer::destroy(VkDevice device)
 	{
 		LMB_ASSERT(!recording, "VULKAN: Command buffer was already in recording state");
-		vezFreeCommandBuffers(device, 1, &command_buffer);
+		vezFreeCommandBuffers(device, (uint32_t)command_buffers.size(), command_buffers.data());
 	}
 
 	///////////////////////////////////////////////////////////////////////////
@@ -1603,8 +1546,19 @@ namespace lambda
 		LMB_ASSERT(!recording, "VULKAN: Command buffer was already in recording state");
 		recording = true;
 	
+		if (++current_command_buffer >= command_buffers.size())
+		{
+			VkResult result;
+			VezCommandBufferAllocateInfo cb_alloc_info{};
+			cb_alloc_info.queue              = graphics_queue;
+			cb_alloc_info.commandBufferCount = 1;
+			command_buffers.push_back(VK_NULL_HANDLE);
+			result = vezAllocateCommandBuffers(device, &cb_alloc_info, &command_buffers.back());
+			LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not allocate command buffer | %s", vkErrorCode(result));
+		}
+
 		VkResult result;
-		result = vezBeginCommandBuffer(command_buffer, VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT);
+		result = vezBeginCommandBuffer(command_buffers[current_command_buffer], VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT);
 		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not begin command buffer | %s", vkErrorCode(result));
 	}
 
@@ -1620,23 +1574,51 @@ namespace lambda
 	}
 
 	///////////////////////////////////////////////////////////////////////////
-	void VulkanCommandBuffer::tryBegin()
+	bool VulkanCommandBuffer::tryBegin()
 	{
 		if (!recording)
+		{
 			begin();
+			return true;
+		}
+
+		return false;
 	}
 
 	///////////////////////////////////////////////////////////////////////////
-	void VulkanCommandBuffer::tryEnd()
+	bool VulkanCommandBuffer::tryEnd()
 	{
 		if (recording)
+		{
 			end();
+			return true;
+		}
+
+		return false;
 	}
 
 	///////////////////////////////////////////////////////////////////////////
-	VkCommandBuffer VulkanCommandBuffer::getCommandBuffer() const
+	bool VulkanCommandBuffer::isRecording() const
 	{
-		return command_buffer;
+		return recording;
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	VkCommandBuffer VulkanCommandBuffer::getActiveCommandBuffer() const
+	{
+		return command_buffers[current_command_buffer];
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	Vector<VkCommandBuffer> VulkanCommandBuffer::getCommandBuffers() const
+	{
+		return command_buffers;
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	void VulkanCommandBuffer::reset()
+	{
+		current_command_buffer = -1;
 	}
 
 	///////////////////////////////////////////////////////////////////////////
@@ -1661,6 +1643,7 @@ namespace lambda
 	}
 
 	///////////////////////////////////////////////////////////////////////////
+#pragma optimize ("", off)
 	VulkanRenderTexture* VulkanRenderer::Memory::getTexture(asset::VioletTextureHandle handle)
 	{
 		if (!handle)
@@ -1669,6 +1652,7 @@ namespace lambda
 		auto it = textures.find(handle.getHash());
 		if (it == textures.end())
 		{
+			size_t hash = handle.getHash();
 			VulkanRenderTexture* texture = (VulkanRenderTexture*)renderer->allocRenderTexture(handle);
 			Entry<VulkanRenderTexture*> entry;
 			entry.ptr = texture;
@@ -1702,21 +1686,31 @@ namespace lambda
 	}
 
 	///////////////////////////////////////////////////////////////////////////
-	VezFramebuffer VulkanRenderer::Memory::getFramebuffer(const Framebuffer& framebuffer)
+	VulkanFramebuffer* VulkanRenderer::Memory::getFramebuffer(const Framebuffer& framebuffer)
 	{
 		auto it = framebuffers.find(framebuffer);
 		if (it == framebuffers.end())
 		{
+			Entry<VulkanFramebuffer*> entry;
+			entry.ptr = foundation::Memory::construct<VulkanFramebuffer>();
+			entry.ptr->alloc = framebuffer;
 			VezFramebufferCreateInfo framebuffer_create_info{};
-			framebuffer_create_info.attachmentCount = framebuffer.num_framebuffers;
-			framebuffer_create_info.pAttachments    = &framebuffer.render_targets[0];
-			framebuffer_create_info.width           = framebuffer.rt_width;
-			framebuffer_create_info.height          = framebuffer.rt_height;
+			framebuffer_create_info.attachmentCount = entry.ptr->alloc.num_framebuffers;
+			framebuffer_create_info.pAttachments    = &entry.ptr->alloc.render_targets[0];
+			framebuffer_create_info.width           = entry.ptr->alloc.rt_width;
+			framebuffer_create_info.height          = entry.ptr->alloc.rt_height;
 			framebuffer_create_info.layers          = 1;
 
+			for (uint32_t i = 0; i < entry.ptr->alloc.num_framebuffers; ++i)
+			{
+				VezAttachmentReference attachment_reference{};
+				attachment_reference.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+				attachment_reference.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+				entry.ptr->attachment_references.push_back(attachment_reference);
+			}
+
 			VkResult result;
-			Entry<VezFramebuffer> entry;
-			result = vezCreateFramebuffer(renderer->getDevice(), &framebuffer_create_info, &entry.ptr);
+			result = vezCreateFramebuffer(renderer->getDevice(), &framebuffer_create_info, &entry.ptr->framebuffer);
 			LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not create frame buffer | %s", vkErrorCode(result));
 
 			entry.keep_in_memory = false;
@@ -1752,7 +1746,8 @@ namespace lambda
 		auto it = framebuffers.find(framebuffer);
 		if (it != framebuffers.end())
 		{
-			vezDestroyFramebuffer(renderer->getDevice(), it->second.ptr);
+			vezDestroyFramebuffer(renderer->getDevice(), it->second.ptr->framebuffer);
+			foundation::Memory::destruct(it->second.ptr);
 			framebuffers.erase(it);
 		}
 	}

@@ -18,6 +18,8 @@ struct ID3DUserDefinedAnnotation;
 #define GPU_MARKERS 1
 #define GPU_TIMERS 0
 
+#define MAX_TEXTURE_COUNT 16u
+
 namespace lambda
 {
   namespace windows
@@ -52,7 +54,7 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     struct D3D11Bound
     {
-      ID3D11ShaderResourceView* textures[8u];
+      ID3D11ShaderResourceView* textures[MAX_TEXTURE_COUNT];
       D3D11Mesh* mesh;
       D3D11Shader* shader;
       uint32_t sub_mesh_idx;
@@ -246,6 +248,8 @@ namespace lambda
       virtual void destroyAsset(
         foundation::SharedPointer<asset::IAsset> asset
       ) override;
+	  virtual void destroyTexture(const size_t& hash) override;
+	  virtual void destroyShader(const size_t& hash) override;
 
       void flush(Vector<IRenderAction*> actions);
       void present();
@@ -288,7 +292,6 @@ namespace lambda
       uint32_t sub_mesh_idx_;
       asset::VioletShaderHandle shader_;
       unsigned char highest_bound_texture_;
-      static const unsigned char MAX_TEXTURE_COUNT = 16u;
       ID3D11ShaderResourceView* textures_[MAX_TEXTURE_COUNT];
       bool texture_contains_alpha_[MAX_TEXTURE_COUNT];
 

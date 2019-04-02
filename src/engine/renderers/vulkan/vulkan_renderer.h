@@ -41,6 +41,8 @@ namespace eastl
 		std::size_t operator()(const lambda::linux::Framebuffer& k) const
 		{
 			size_t hash = 0ull;
+			lambda::hashCombine(hash, (size_t)k.rt_width);
+			lambda::hashCombine(hash, (size_t)k.rt_height);
 			for (uint32_t i = 0; i < k.num_framebuffers; ++i)
 				lambda::hashCombine(hash, (size_t)k.render_targets[i]);
 			return hash;
@@ -71,9 +73,10 @@ namespace lambda
 		  );
 		  virtual void*    lock()   override;
 		  virtual void     unlock() override;
-		  virtual uint32_t getFlags()  const override;
-		  virtual uint32_t getSize()   const override;
-		  VkBuffer         getBuffer() const;
+		  virtual uint32_t getFlags()   const override;
+		  virtual uint32_t getSize()    const override;
+		  size_t           getGPUSize() const;
+		  VkBuffer         getBuffer()  const;
 
 	  private:
 		  void* data_;
@@ -81,6 +84,7 @@ namespace lambda
 		  VkBuffer buffer_;
 		  uint32_t flags_;
 		  uint32_t size_;
+		  size_t   gpu_size_;
 	  };
 
 	  ///////////////////////////////////////////////////////////////////////////
@@ -127,13 +131,26 @@ namespace lambda
 		  void destroy(VkDevice device);
 		  void begin();
 		  void end();
-		  void tryBegin();
-		  void tryEnd();
-		  VkCommandBuffer getCommandBuffer() const;
+		  bool tryBegin();
+		  bool tryEnd();
+		  bool isRecording() const;
+		  VkCommandBuffer getActiveCommandBuffer() const;
+		  Vector<VkCommandBuffer> getCommandBuffers() const;
+		  void reset();
 
 	  private:
-		  VkCommandBuffer command_buffer;
+		  VkDevice device;
+		  VkQueue graphics_queue;
+		  Vector<VkCommandBuffer> command_buffers;
+		  int32_t current_command_buffer;
 		  bool recording;
+	  };
+
+	  struct VulkanFramebuffer
+	  {
+		  Framebuffer    alloc;
+		  VezFramebuffer framebuffer;
+		  Vector<VezAttachmentReference> attachment_references;
 	  };
 
     ///////////////////////////////////////////////////////////////////////////
@@ -141,11 +158,11 @@ namespace lambda
     {
       struct MemoryStats
       {
-        uint32_t vertex;
-        uint32_t index;
-        uint32_t constant;
-        uint32_t texture;
-        uint32_t render_target;
+        size_t vertex;
+        size_t index;
+        size_t constant;
+        size_t texture;
+        size_t render_target;
       } memory_stats_;
 #define TO_MB(bytes) (std::round(bytes / 10000) / 100)
 
@@ -225,12 +242,6 @@ namespace lambda
         Vector<asset::VioletTextureHandle> render_targets,
         asset::VioletTextureHandle depth_buffer
 	  ) override;
-	  void setRenderTargets(
-		  Vector<VkImageView> render_targets,
-		  VkImageView depth_buffer,
-		  uint32_t width,
-		  uint32_t height
-	  );
 
       virtual void pushMarker(const String& name) override;
       virtual void setMarker(const String& name) override;
@@ -260,11 +271,19 @@ namespace lambda
       virtual void destroyAsset(
         foundation::SharedPointer<asset::IAsset> asset
       ) override;
+	  virtual void destroyTexture(const size_t& hash) override;
+	  virtual void destroyShader(const size_t& hash) override;
 
 	private:
 		void createCommandBuffer();
 
-		Vector<VezAttachmentReference> getAttachmentReferences();
+		void copy(
+			VkImage src,
+			glm::uvec2 src_size,
+			VkImage dst,
+			glm::uvec2 dst_size
+		);
+
 
 	private:
 	  bool vsync_;
@@ -279,41 +298,64 @@ namespace lambda
 	  VkQueue graphics_queue_;
 	  VulkanCommandBuffer command_buffer_;
 
+	  enum class DirtyState : uint32_t
+	  {
+		  kTextures      = 1ul << 1ul,
+		  kShader        = 1ul << 2ul,
+		  kMesh          = 1ul << 3ul,
+		  kRenderTargets = 1ul << 4ul,
+		  kScissorRects  = 1ul << 5ul,
+		  kViewports     = 1ul << 6ul,
+	  };
+
+	  uint32_t dirty_state_;
+	  bool isDirty(DirtyState dirty_state) const { return (dirty_state_ & ((uint32_t)dirty_state)) != 0; }
+	  void makeDirty(DirtyState dirty_state) { dirty_state_ |= (uint32_t)dirty_state; }
+	  void cleanDirty(DirtyState dirty_state) { dirty_state_ &= ~((uint32_t)dirty_state); }
+	  void cleanAll() { dirty_state_ = ~0ul; }
+
 	  struct State
 	  {
-		  uint16_t dirty_textures;
-		  VulkanRenderTexture* textures[16];
-		  bool dirty_shader;
-		  VulkanShader* shader;
-		  bool dirty_mesh;
-		  VulkanMesh* mesh;
+		  asset::VioletTextureHandle textures[16];
+		  asset::VioletShaderHandle shader;
+		  asset::MeshHandle mesh;
 		  uint32_t sub_mesh;
 
-		  bool dirty_framebuffer;
-		  VkImageView render_targets[8];
-		  VkImageView depth_target;
+		  asset::VioletTextureHandle render_targets[8];
+		  asset::VioletTextureHandle depth_target;
 		  uint32_t rt_width;
 		  uint32_t rt_height;
-		  VezFramebuffer framebuffer;
 
-		  bool dirty_scissor_rects;
-		  VkRect2D scissor_rects[8];
+		  glm::vec4 scissor_rects[8];
+		  glm::vec4 viewports[8];
 		  uint32_t num_scissor_rects;
-
-		  bool dirty_viewports;
-		  VkViewport viewports[8];
 		  uint32_t num_viewports;
-
 	  } state_;
+
+	  struct VkState
+	  {
+		  VkImageView textures[16];
+		  VulkanShader* shader;
+		  VulkanMesh* mesh;
+		  VkImageView render_targets[8];
+		  VkImageView depth_target;
+
+		  VulkanFramebuffer* framebuffer;
+
+		  VkRect2D scissor_rects[8];
+		  VkViewport viewports[8];
+	  } vk_state_;
 
 	  double delta_time_;
 	  double total_time_;
 	  float  render_scale_;
 
-		VkImage backbuffer_;
-		VkImageView backbuffer_view_;
+	  VkImage backbuffer_;
+	  uint32_t backbuffer_width_;
+	  uint32_t backbuffer_height_;
+	  VkImageView backbuffer_view_;
 
-		asset::VioletTextureHandle default_texture_;
+	  asset::VioletTextureHandle default_texture_;
 
 	  struct Memory
 	  {
@@ -328,7 +370,7 @@ namespace lambda
 		  VulkanShader* getShader(asset::VioletShaderHandle handle);
 		  VulkanRenderTexture* getTexture(asset::VioletTextureHandle handle);
 		  VulkanMesh* getMesh(asset::MeshHandle handle);
-		  VezFramebuffer getFramebuffer(const Framebuffer& framebuffer);
+		  VulkanFramebuffer* getFramebuffer(const Framebuffer& framebuffer);
 		  void removeShader(asset::VioletShaderHandle handle);
 		  void removeTexture(asset::VioletTextureHandle handle);
 		  void removeMesh(asset::MeshHandle handle);
@@ -342,7 +384,7 @@ namespace lambda
 		  UnorderedMap<size_t, Entry<VulkanShader*>> shaders;
 		  UnorderedMap<size_t, Entry<VulkanRenderTexture*>> textures;
 		  UnorderedMap<size_t, Entry<VulkanMesh*>> meshes;
-		  UnorderedMap<Framebuffer, Entry<VezFramebuffer>> framebuffers;
+		  UnorderedMap<Framebuffer, Entry<VulkanFramebuffer*>> framebuffers;
 		  VulkanRenderer* renderer;
 	  } memory_;
 

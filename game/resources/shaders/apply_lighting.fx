@@ -22,6 +22,7 @@ Make_Texture2D(tex_light_map, 4);
 Make_Texture2D(tex_irradiance, 5);
 Make_Texture2D(tex_prefiltered, 6);
 Make_Texture2D(tex_brdfLUT, 7);
+Make_Texture2D(tex_SSAO, 8);
 
 Make_CBuffer(AmbientValues, 0)
 {
@@ -89,7 +90,9 @@ float4 PS(VSOutput pIn) : SV_TARGET0
   float3 specular = prefiltered * (F * brdf.x + brdf.y);
 
   float3 ambient = (kD * diffuse + specular) * ao * ambient_intensity;
-  
+
+  ambient *= tex_SSAO.Sample(SamLinearClamp, pIn.tex).r;
+
 #if VIOLET_GAMMA_CORRECT
   ambient = ambient / (ambient + 1.0f);
   ambient = pow(ambient, 1.0f / 2.2f);

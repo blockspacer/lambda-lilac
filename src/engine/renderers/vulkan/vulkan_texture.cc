@@ -61,6 +61,7 @@ namespace lambda
       VulkanRenderer* renderer) 
       : format_(formatToVulkanFormat(texture->getLayer(0u).getFormat()))
       , texture_index_(0u)
+      , size_(0u)
 	  , renderer_(renderer)
     {
 	  VkResult result;
@@ -120,6 +121,10 @@ namespace lambda
 	  {
 			result = vezCreateImage(renderer_->getDevice(), VEZ_MEMORY_GPU_ONLY, &image_create_info, &textures_[i]);
 			LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not create texture | %s", vkErrorCode(result));
+
+			VkMemoryRequirements memory_requirements{};
+			vkGetImageMemoryRequirements(renderer_->getDevice(), textures_[i], &memory_requirements);
+			size_ += (size_t)memory_requirements.size;
 	  }
 
 	  // Upload the data.
@@ -196,11 +201,12 @@ namespace lambda
       {
         if (srvs_[i] != VK_NULL_HANDLE)
           vezDestroyImageView(renderer_->getDevice(), srvs_[i]);
+		
 		for (auto& layer : layers_[i])
 			for (auto view : layer)
 				vezDestroyImageView(renderer_->getDevice(), view);
-
 		layers_[i].clear();
+
         if (textures_[i] != nullptr)
           vezDestroyImage(renderer_->getDevice(), textures_[i]);
       }
@@ -286,6 +292,12 @@ namespace lambda
     }
 
 	///////////////////////////////////////////////////////////////////////////
+	size_t VulkanTexture::getGPUSize() const
+	{
+		return size_;
+	}
+
+	///////////////////////////////////////////////////////////////////////////
 	void VulkanTexture::createMainViews(
       unsigned char layer_count,
       unsigned char mip_count)
@@ -302,8 +314,8 @@ namespace lambda
 			image_view_create_info.subresourceRange.baseMipLevel = 0;
 			image_view_create_info.subresourceRange.layerCount = layer_count;
 			image_view_create_info.subresourceRange.levelCount = mip_count;
+			
 			result = vezCreateImageView(renderer_->getDevice(), &image_view_create_info, &srvs_[i]);
-
 			LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not create dsv | %s", vkErrorCode(result));
 		}
 	}
