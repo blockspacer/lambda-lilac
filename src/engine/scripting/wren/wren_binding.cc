@@ -973,9 +973,15 @@ class TextureFormat {
           ); // TODO (Hilze): Fix ASAP!
         };
         if (strcmp(signature, "create(_,_,_)") == 0) return [](WrenVM* vm) {
+          Vector<unsigned char> bytes(wrenGetListCount(vm, 2));
+		  for (int i = 0; i < (int)bytes.size(); ++i)
+		  {
+            wrenGetListElement(vm, 2, i, 0);
+			bytes[i] = (unsigned char)wrenGetSlotDouble(vm, 0);
+		  }
+
           const glm::vec2& size = *GetForeign<glm::vec2>(vm, 1);
           asset::VioletTextureHandle& handle = *make(vm);
-          // TODO (Hilze): Do something with the bytes.
           TextureFormat format = 
             (TextureFormat)(uint32_t)wrenGetSlotDouble(vm, 3);
           handle = asset::TextureManager::getInstance()->create(
@@ -983,7 +989,9 @@ class TextureFormat {
             (uint32_t)size.x,
             (uint32_t)size.y,
             1u, 
-            format
+            format,
+			0u,
+			bytes
           ); // TODO (Hilze): Fix ASAP!
         };
 				if (strcmp(signature, "size") == 0) return [](WrenVM* vm) {
@@ -1016,11 +1024,6 @@ class TextureFormat {
 ///////////////////////////////////////////////////////////////////////////////
 foreign class Shader {
     foreign static load(name)
-
-    foreign setVariableFloat1(name, value)
-    foreign setVariableFloat2(name, value)
-    foreign setVariableFloat3(name, value)
-    foreign setVariableFloat4(name, value)
 }
 )";
         char* data = (char*)WREN_ALLOC(str.size() + 1u);
@@ -1063,54 +1066,9 @@ foreign class Shader {
       WrenForeignMethodFn Bind(const char* signature)
       {
         if (strcmp(signature, "load(_)") == 0) return [](WrenVM* vm) {
-          const char* ch = wrenGetSlotString(vm, 1);
-					//String str(strlen(ch), '\0');
-					//memcpy((void*)str.c_str(), ch, strlen(ch));
-					String str = ch;
-					Name name(str);
+          Name name(wrenGetSlotString(vm, 1));
           asset::VioletShaderHandle& handle = *make(vm);
-          static uint32_t s_idx = 0u;
-					handle = asset::ShaderManager::getInstance()->get(name.getName());
-        };
-        if (strcmp(signature, "setVariableFloat1(_,_)") == 0) 
-          return [](WrenVM* vm) {
-          asset::VioletShaderHandle& handle = *GetForeign<asset::VioletShaderHandle>(vm);
-          handle->setShaderVariable(
-            platform::ShaderVariable(
-              Name(wrenGetSlotString(vm, 1)), 
-              (float)wrenGetSlotDouble(vm, 2)
-            )
-          );
-        };
-        if (strcmp(signature, "setVariableFloat2(_,_)") == 0) 
-          return [](WrenVM* vm) {
-          asset::VioletShaderHandle& handle = *GetForeign<asset::VioletShaderHandle>(vm);
-          handle->setShaderVariable(
-            platform::ShaderVariable(
-              Name(wrenGetSlotString(vm, 1)), 
-              *GetForeign<glm::vec2>(vm, 2)
-            )
-          );
-        };
-        if (strcmp(signature, "setVariableFloat3(_,_)") == 0) 
-          return [](WrenVM* vm) {
-          asset::VioletShaderHandle& handle = *GetForeign<asset::VioletShaderHandle>(vm);
-          handle->setShaderVariable(
-            platform::ShaderVariable(
-              Name(wrenGetSlotString(vm, 1)), 
-              *GetForeign<glm::vec3>(vm, 2)
-            )
-          );
-        };
-        if (strcmp(signature, "setVariableFloat4(_,_)") == 0) 
-          return [](WrenVM* vm) {
-          asset::VioletShaderHandle& handle = *GetForeign<asset::VioletShaderHandle>(vm);
-          handle->setShaderVariable(
-            platform::ShaderVariable(
-              Name(wrenGetSlotString(vm, 1)),
-              *GetForeign<glm::vec4>(vm, 2)
-            )
-          );
+		  handle = asset::ShaderManager::getInstance()->get(name.getName());
         };
         return nullptr;
       }
@@ -3625,18 +3583,13 @@ class MonoBehaviour {
 ///// graphics.wren ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 class Graphics {
-    foreign static setVSync(enabled)
-    foreign static getVSync()
-    foreign static setRenderScale(scale)
-    foreign static getRenderScale()
-    foreign static setDirectionalShaders(generate, modify, publish)
-    foreign static setSpotLightShaders(generate, modify, publish)
-    foreign static setPointLightShaders(generate, modify, publish)
-    foreign static setCascadeShaders(generate, modify, publish)
-    foreign static setDirectionalShadersRSM(generate, modify, publish)
-    foreign static setSpotLightShadersRSM(generate, modify, publish)
-    foreign static setPointLightShadersRSM(generate, modify, publish)
-    foreign static setCascadeShadersRSM(generate, modify, publish)
+    foreign static vsync=(enabled)
+    foreign static vsync
+    foreign static renderScale=(scale)
+    foreign static renderScale
+    foreign static gui=(enabled)
+    foreign static gui
+    foreign static setLightShaders(generate, modify, modifyCount, publish, shadowType)
 }
 )";
         char* data = (char*)WREN_ALLOC(str.size() + 1u);
@@ -3645,95 +3598,31 @@ class Graphics {
       }
       WrenForeignMethodFn Bind(const char* signature)
       {
-        if (strcmp(signature, "setVSync(_)") == 0) return [](WrenVM* vm) {
+        if (strcmp(signature, "vsync=(_)") == 0) return [](WrenVM* vm) {
           g_world->getRenderer()->setVSync(wrenGetSlotBool(vm, 1));
         };
-        if (strcmp(signature, "getVSync()") == 0) return [](WrenVM* vm) {
+        if (strcmp(signature, "vsync") == 0) return [](WrenVM* vm) {
           wrenSetSlotDouble(vm, 0, g_world->getRenderer()->getVSync() ? 1.0 : 0.0);
         };
-        if (strcmp(signature, "setRenderScale(_)") == 0) return [](WrenVM* vm) {
+        if (strcmp(signature, "renderScale=(_)") == 0) return [](WrenVM* vm) {
           g_world->getRenderer()->setRenderScale((float)wrenGetSlotDouble(vm, 1));
         };
-        if (strcmp(signature, "getRenderScale()") == 0) return [](WrenVM* vm) {
+        if (strcmp(signature, "renderScale") == 0) return [](WrenVM* vm) {
           wrenSetSlotDouble(vm, 0, (float)g_world->getRenderer()->getRenderScale());
         };
-        if (strcmp(signature, "setDirectionalShaders(_,_,_)") == 0) return [](WrenVM* vm) {
-          const asset::VioletShaderHandle& generate = *GetForeign<asset::VioletShaderHandle>(vm, 1);
-          Vector<asset::VioletShaderHandle> modify(wrenGetListCount(vm, 2));
-          const asset::VioletShaderHandle& publish = *GetForeign<asset::VioletShaderHandle>(vm, 3);
-          for (int i = 0; i < (int)modify.size(); ++i)
-          {
-            wrenGetListElement(vm, 2, i, 0);
-            modify[i] = *GetForeign<asset::VioletShaderHandle>(vm, 0);
-          }
-
-          g_lightSystem->setShadersDirectional(generate, modify, publish);
-        };
-        if (strcmp(signature, "setSpotLightShaders(_,_,_)") == 0) return [](WrenVM* vm) {
-          const asset::VioletShaderHandle& generate = *GetForeign<asset::VioletShaderHandle>(vm, 1);
-          Vector<asset::VioletShaderHandle> modify(wrenGetListCount(vm, 2));
-          const asset::VioletShaderHandle& publish = *GetForeign<asset::VioletShaderHandle>(vm, 3);
-          for (int i = 0; i < (int)modify.size(); ++i)
-          {
-            wrenGetListElement(vm, 2, i, 0);
-            modify[i] = *GetForeign<asset::VioletShaderHandle>(vm, 1);
-          }
-
-          g_lightSystem->setShadersSpot(generate, modify, publish);
-        };
-        if (strcmp(signature, "setPointLightShaders(_,_,_)") == 0) return [](WrenVM* vm) {
-          const asset::VioletShaderHandle& generate = *GetForeign<asset::VioletShaderHandle>(vm, 1);
-          Vector<asset::VioletShaderHandle> modify(wrenGetListCount(vm, 2));
-          const asset::VioletShaderHandle& publish = *GetForeign<asset::VioletShaderHandle>(vm, 3);
-          for (int i = 0; i < (int)modify.size(); ++i)
-          {
-            wrenGetListElement(vm, 2, i, 0);
-            modify[i] = *GetForeign<asset::VioletShaderHandle>(vm, 1);
-          }
-
-          g_lightSystem->setShadersPoint(generate, modify, publish);
-        };
-        if (strcmp(signature, "setCascadeShaders(_,_,_)") == 0) return [](WrenVM* vm) {
-          const asset::VioletShaderHandle& generate = *GetForeign<asset::VioletShaderHandle>(vm, 1);
-          Vector<asset::VioletShaderHandle> modify(wrenGetListCount(vm, 2));
-          const asset::VioletShaderHandle& publish = *GetForeign<asset::VioletShaderHandle>(vm, 3);
-          for (int i = 0; i < (int)modify.size(); ++i)
-          {
-            wrenGetListElement(vm, 2, i, 0);
-            modify[i] = *GetForeign<asset::VioletShaderHandle>(vm, 1);
-          }
-
-          g_lightSystem->setShadersCascade(generate, modify, publish);
-        };
-        if (strcmp(signature, "setDirectionalShadersRSM(_,_,_)") == 0) return [](WrenVM* vm) {
-          const asset::VioletShaderHandle& generate = *GetForeign<asset::VioletShaderHandle>(vm, 1);
-          Vector<asset::VioletShaderHandle> modify(wrenGetListCount(vm, 2));
-          const asset::VioletShaderHandle& publish = *GetForeign<asset::VioletShaderHandle>(vm, 3);
-          for (int i = 0; i < (int)modify.size(); ++i)
-          {
-            wrenGetListElement(vm, 2, i, 0);
-            modify[i] = *GetForeign<asset::VioletShaderHandle>(vm, 1);
-          }
-
-          g_lightSystem->setShadersDirectionalRSM(generate, modify, publish);
-        };
-        if (strcmp(signature, "setSpotLightShadersRSM(_,_,_)") == 0) return [](WrenVM* vm) {
-          const asset::VioletShaderHandle& generate = *GetForeign<asset::VioletShaderHandle>(vm, 1);
-          Vector<asset::VioletShaderHandle> modify(wrenGetListCount(vm, 2));
-          const asset::VioletShaderHandle& publish = *GetForeign<asset::VioletShaderHandle>(vm, 3);
-          for (int i = 0; i < (int)modify.size(); ++i)
-          {
-            wrenGetListElement(vm, 2, i, 0);
-            modify[i] = *GetForeign<asset::VioletShaderHandle>(vm, 1);
-          }
-
-          g_lightSystem->setShadersSpotRSM(generate, modify, publish);
-        };
-        if (strcmp(signature, "setPointLightShadersRSM(_,_,_)") == 0) return [](WrenVM* vm) {
-          LMB_ASSERT(false, "NOT YET IMPLEMENTED");
-        };
-        if (strcmp(signature, "setCascadeShadersRSM(_,_,_)") == 0) return [](WrenVM* vm) {
-          LMB_ASSERT(false, "NOT YET IMPLEMENTED");
+		if (strcmp(signature, "gui=(_)") == 0) return [](WrenVM* vm) {
+			g_world->getGUI().setEnabled(wrenGetSlotBool(vm, 1));
+		};
+		if (strcmp(signature, "gui") == 0) return [](WrenVM* vm) {
+			wrenSetSlotDouble(vm, 0, g_world->getGUI().getEnabled() ? 1.0 : 0.0);
+		};
+        if (strcmp(signature, "setLightShaders(_,_,_,_,_)") == 0) return [](WrenVM* vm) {
+          String generate     = wrenGetSlotString(vm, 1);
+          String modify       = wrenGetSlotString(vm, 2);
+		  double modify_count = wrenGetSlotDouble(vm, 3);
+          String publish      = wrenGetSlotString(vm, 4);
+          String shadow_type  = wrenGetSlotString(vm, 5);
+          g_lightSystem->setShaders(generate, modify, (uint32_t)modify_count, publish, shadow_type);
         };
         return nullptr;
       }
@@ -3748,7 +3637,6 @@ class Graphics {
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 class PostProcess {
     foreign static addRenderTarget(name, render_scale, format)
-    foreign static addRenderTarget(name, width, height, format)
     foreign static addRenderTarget(name, texture)
     foreign static setRenderTargetFlag(name, flag, value)
     foreign static setFinalRenderTarget(name)
@@ -3768,15 +3656,6 @@ class PostProcess {
       }
       WrenForeignMethodFn Bind(const char* signature)
       {
-        if (strcmp(signature, "addRenderTarget(_,_,_,_)") == 0) return [](WrenVM* vm) {
-          auto handle = asset::TextureManager::getInstance()->create(Name(wrenGetSlotString(vm, 1)), (uint32_t)wrenGetSlotDouble(vm, 2), (uint32_t)wrenGetSlotDouble(vm, 3), 1u, (TextureFormat)(uint32_t)wrenGetSlotDouble(vm, 4), kTextureFlagIsRenderTarget);
-          g_world->getPostProcessManager().addTarget(platform::RenderTarget(Name(wrenGetSlotString(vm, 1)), handle));
-        };
-        if (strcmp(signature, "addRenderTarget(_,_,_)") == 0) return [](WrenVM* vm) {
-          g_world->getPostProcessManager().addTarget(
-            platform::RenderTarget(Name(wrenGetSlotString(vm, 1)), (float)wrenGetSlotDouble(vm, 2), (TextureFormat)(uint32_t)wrenGetSlotDouble(vm, 3))
-          );
-        };
         if (strcmp(signature, "addRenderTarget(_,_,_)") == 0) return [](WrenVM* vm) {
           g_world->getPostProcessManager().addTarget(
             platform::RenderTarget(Name(wrenGetSlotString(vm, 1)), (float)wrenGetSlotDouble(vm, 2), (TextureFormat)(uint32_t)wrenGetSlotDouble(vm, 3))
@@ -3842,7 +3721,7 @@ class PostProcess {
           String output = wrenGetSlotString(vm, 2);
 
           platform::RenderTarget& rt_input = g_world->getPostProcessManager().getTarget(input);
-					asset::VioletShaderHandle shader = asset::ShaderManager::getInstance()->get(Name("resources/shaders/irradiance_convolution.fx"));
+		  asset::VioletShaderHandle shader = asset::ShaderManager::getInstance()->get(Name("resources/shaders/irradiance_convolution.fx"));
 
           float as = (float)rt_input.getTexture()->getLayer(0u).getHeight() / (float)rt_input.getTexture()->getLayer(0u).getWidth();
 

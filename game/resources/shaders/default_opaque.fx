@@ -1,5 +1,5 @@
-#include "common.fx"
-#include "tbn.fx"
+#include "common.fxh"
+#include "tbn.fxh"
 
 #define VIOLET_PARALLAX_MAPPING 1
 #define NORMAL_MAPPING 1

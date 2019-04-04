@@ -1,5 +1,5 @@
-#include "common.fx"
-#include "tbn.fx"
+#include "common.fxh"
+#include "tbn.fxh"
 
 struct VSInput
 {

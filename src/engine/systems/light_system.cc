@@ -131,43 +131,15 @@ namespace lambda
     {
       return SpotLightComponent(entity, this);
     }
-    void LightSystem::setShadersDirectional(asset::VioletShaderHandle generate, Vector<asset::VioletShaderHandle> modify, asset::VioletShaderHandle publish)
-    {
-      shaders_directional_.shader_generate = generate;
-      shaders_directional_.shader_modify   = modify;
-      shaders_directional_.shader_publish  = publish;
-    }
-    void LightSystem::setShadersSpot(asset::VioletShaderHandle generate, Vector<asset::VioletShaderHandle> modify, asset::VioletShaderHandle publish)
-    {
-      shaders_spot_.shader_generate = generate;
-      shaders_spot_.shader_modify   = modify;
-      shaders_spot_.shader_publish  = publish;
-    }
-    void LightSystem::setShadersPoint(asset::VioletShaderHandle generate, Vector<asset::VioletShaderHandle> modify, asset::VioletShaderHandle publish)
-    {
-      shaders_point_.shader_generate = generate;
-      shaders_point_.shader_modify   = modify;
-      shaders_point_.shader_publish  = publish;
-    }
-    void LightSystem::setShadersCascade(asset::VioletShaderHandle generate, Vector<asset::VioletShaderHandle> modify, asset::VioletShaderHandle publish)
-    {
-      shaders_cascade_.shader_generate = generate;
-      shaders_cascade_.shader_modify   = modify;
-      shaders_cascade_.shader_publish  = publish;
-    }
-    void LightSystem::setShadersDirectionalRSM(asset::VioletShaderHandle generate, Vector<asset::VioletShaderHandle> modify, asset::VioletShaderHandle publish)
-    {
-      shaders_directional_rsm_.shader_generate = generate;
-      shaders_directional_rsm_.shader_modify   = modify;
-      shaders_directional_rsm_.shader_publish  = publish;
-    }
-    void LightSystem::setShadersSpotRSM(asset::VioletShaderHandle generate, Vector<asset::VioletShaderHandle> modify, asset::VioletShaderHandle publish)
-    {
-      shaders_spot_rsm_.shader_generate = generate;
-      shaders_spot_rsm_.shader_modify   = modify;
-      shaders_spot_rsm_.shader_publish  = publish;
-    }
-    void LightSystem::initialize(world::IWorld& world)
+	void LightSystem::setShaders(String generate, String modify, uint32_t modify_count, String publish, String shadow_type)
+	{
+		shader_generate_     = generate;
+		shader_modify_       = modify;
+		shader_modify_count_ = modify_count;
+		shader_publish_      = publish;
+		shader_shadow_type_  = shadow_type;
+	}
+	void LightSystem::initialize(world::IWorld& world)
     {
       transform_system_ = world.getScene().getSystem<TransformSystem>();
       mesh_render_system_ = world.getScene().getSystem<MeshRenderSystem>();
@@ -185,7 +157,7 @@ namespace lambda
       default_shadow_map_ = platform::RenderTarget(Name("__default_shadow_map__"),
         asset::TextureManager::getInstance()->create(
           Name("__default_shadow_map__"),
-          1u, 1u, 6u, TextureFormat::kR16G16B16A16
+          1u, 1u, 6u, TextureFormat::kR32G32
           , kTextureFlagIsRenderTarget // TODO (Hilze): Remove!
         )
       );
@@ -269,7 +241,6 @@ namespace lambda
         switch (data.type)
         {
         case LightType::kDirectional:
-          if (shaders_directional_.shader_generate != nullptr && shaders_directional_.shader_publish != nullptr)
           {
             renderer->pushMarker("Directional Light");
             renderDirectional(data.entity);
@@ -277,7 +248,6 @@ namespace lambda
           }
           break;
         case LightType::kSpot:
-          if (shaders_spot_.shader_generate != nullptr && shaders_spot_.shader_publish != nullptr)
           {
             renderer->pushMarker("Spot Light");
             renderSpot(data.entity);
@@ -285,7 +255,6 @@ namespace lambda
           }
           break;
         case LightType::kPoint:
-          if (shaders_point_.shader_generate != nullptr && shaders_point_.shader_publish != nullptr)
           {
             renderer->pushMarker("Point Light");
             renderPoint(data.entity);
@@ -293,7 +262,6 @@ namespace lambda
           }
           break;
         case LightType::kCascade:
-          if (shaders_cascade_.shader_generate != nullptr && shaders_cascade_.shader_publish != nullptr)
           {
             renderer->pushMarker("Cascade Light");
             renderCascade(data.entity);
@@ -466,7 +434,7 @@ namespace lambda
             data.shadow_map_size_px,
             data.shadow_map_size_px,
             layers,
-            TextureFormat::kR32G32B32A32,
+            TextureFormat::kR32G32,
             kTextureFlagIsRenderTarget
           )
         );
@@ -488,7 +456,6 @@ namespace lambda
     {
       foundation::SharedPointer<platform::IRenderer> renderer = world_->getRenderer();
       LightData& data = lookUpData(entity);
-      const ShaderPass& shader_pack = data.rsm ? shaders_directional_rsm_ : shaders_directional_;
 
       const TransformComponent transform = transform_system_->getComponent(entity);
       const glm::vec3 forward = glm::normalize(transform.getWorldForward());
@@ -539,6 +506,8 @@ namespace lambda
       world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("light_ambient"), data.ambient));
       world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("light_far"), data.depth.back()));
 
+	  String shadow_type = data.shadow_type == ShadowType::kNone ? "|NO_" : ("|" + shader_shadow_type_ + "_");
+	  String shader_type = shadow_type + "DIRECTIONAL";
 
       // Generate shadow maps.
       if (update && data.shadow_type != ShadowType::kNone)
@@ -563,7 +532,7 @@ namespace lambda
         renderer->bindShaderPass(
           platform::ShaderPass(
             Name("shadow_generate"),
-            shader_pack.shader_generate,
+			asset::ShaderManager::getInstance()->get(shader_generate_ + shader_type),
             {},
             output
           )
@@ -592,12 +561,21 @@ namespace lambda
         renderer->setBlendState(platform::BlendState::Alpha());
 
         // Draw all modify shaders.
-        for (const asset::VioletShaderHandle& it : shader_pack.shader_modify)
+		for (uint32_t i = 0; i < shader_modify_count_; ++i)
         {
           renderer->bindShaderPass(
             platform::ShaderPass(
               Name("shadow_modify"),
-              it,
+			  asset::ShaderManager::getInstance()->get(shader_modify_ + shadow_type + "HORIZONTAL"),
+              { shadow_maps.at(0u) },
+              { shadow_maps.at(0u) }
+            )
+          );
+          renderer->draw();
+          renderer->bindShaderPass(
+            platform::ShaderPass(
+              Name("shadow_modify"),
+			  asset::ShaderManager::getInstance()->get(shader_modify_ + shadow_type + "VERTICAL"),
               { shadow_maps.at(0u) },
               { shadow_maps.at(0u) }
             )
@@ -624,7 +602,7 @@ namespace lambda
       renderer->bindShaderPass(
         platform::ShaderPass(
           Name("shadow_publish"),
-          shader_pack.shader_publish,
+	      asset::ShaderManager::getInstance()->get(shader_publish_ + shader_type),
           input, {
             world_->getPostProcessManager().getTarget(Name("light_map"))
           }
@@ -645,11 +623,11 @@ namespace lambda
       renderer->draw();
       renderer->setBlendState(platform::BlendState::Alpha());
     }
+
     void LightSystem::renderSpot(const entity::Entity& entity)
     {
       foundation::SharedPointer<platform::IRenderer> renderer = world_->getRenderer();
       LightData& data = lookUpData(entity);
-      const ShaderPass& shader_pack = data.rsm ? shaders_spot_rsm_ : shaders_spot_;
 
       const TransformComponent transform = transform_system_->getComponent(entity);
       const glm::vec3 forward = glm::normalize(transform.getWorldForward());
@@ -701,7 +679,10 @@ namespace lambda
       world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("light_cut_off"), data.cut_off.asRad()));
       world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("light_outer_cut_off"), data.outer_cut_off.asRad()));
 
-      // Generate shadow maps.
+	  String shadow_type = data.shadow_type == ShadowType::kNone ? "|NO_" : ("|" + shader_shadow_type_ + "_");
+	  String shader_type = shadow_type + "SPOT";
+
+	  // Generate shadow maps.
       if (update && data.shadow_type != ShadowType::kNone)
       {
         if (data.shadow_type == ShadowType::kGenerateOnce)
@@ -724,7 +705,7 @@ namespace lambda
         renderer->bindShaderPass(
           platform::ShaderPass(
             Name("shadow_generate"),
-            shader_pack.shader_generate,
+            asset::ShaderManager::getInstance()->get(shader_generate_ + shader_type),
             {},
             output
           )
@@ -753,12 +734,21 @@ namespace lambda
         renderer->setRasterizerState(platform::RasterizerState::SolidBack());
         renderer->setBlendState(platform::BlendState::Alpha());
 
-        for (const asset::VioletShaderHandle& it : shader_pack.shader_modify)
-        {
+		for (uint32_t i = 0; i < shader_modify_count_; ++i)
+		{
           renderer->bindShaderPass(
             platform::ShaderPass(
               Name("shadow_modify"),
-              it,
+              asset::ShaderManager::getInstance()->get(shader_modify_ + shader_type + "VERTICAL"),
+              { shadow_maps.at(0u) },
+              { shadow_maps.at(0u) }
+            )
+          );
+          renderer->draw();
+          renderer->bindShaderPass(
+            platform::ShaderPass(
+              Name("shadow_modify"),
+              asset::ShaderManager::getInstance()->get(shader_modify_ + shader_type + "HORIZONTAL"),
               { shadow_maps.at(0u) },
               { shadow_maps.at(0u) }
             )
@@ -785,7 +775,7 @@ namespace lambda
       renderer->bindShaderPass(
         platform::ShaderPass(
           Name("shadow_publish"),
-          shader_pack.shader_publish,
+          asset::ShaderManager::getInstance()->get(shader_publish_ + shader_type),
           input, {
             world_->getPostProcessManager().getTarget(Name("light_map"))
           }
@@ -862,6 +852,9 @@ namespace lambda
 			world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("light_camera_position"), pos));
 			world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("light_far"),        data.depth.back()));
 	  
+			String shadow_type = data.shadow_type == ShadowType::kNone ? "|NO_" : ("|" + shader_shadow_type_ + "_");
+		    String shader_type = shadow_type + "POINT";
+
 			// Generate shadow maps.
 			if (update && data.shadow_type != ShadowType::kNone)
 			{
@@ -888,7 +881,7 @@ namespace lambda
 					renderer->bindShaderPass(
 						platform::ShaderPass(
 							Name("shadow_generate"),
-							shaders_point_.shader_generate,
+                            asset::ShaderManager::getInstance()->get(shader_generate_ + shader_type),
 							{},
 							{ shadow_map, depth_map }
 						)
@@ -919,18 +912,28 @@ namespace lambda
 					renderer->setSubMesh(0u);
 					renderer->setBlendState(platform::BlendState::Default());
 
-					for (const asset::VioletShaderHandle& it : shaders_point_.shader_modify)
+					// TODO (Hilze): Support blurring point lights.
+					/*for (uint32_t i = 0; i < shader_modify_count_; ++i)
 					{
 						renderer->bindShaderPass(
 							platform::ShaderPass(
 								Name("shadow_modify"),
-								it,
+								asset::ShaderManager::getInstance()->get(shader_modify_ + shadow_type + "HORIZONTAL"),
 								{ shadow_map },
 								{ shadow_map }
 							)
 						);
 						renderer->draw();
-					}
+						renderer->bindShaderPass(
+							platform::ShaderPass(
+								Name("shadow_modify"),
+								asset::ShaderManager::getInstance()->get(shader_modify_ + shadow_type + "VERTICAL"),
+								{ shadow_map },
+								{ shadow_map }
+							)
+						);
+						renderer->draw();
+					}*/
 
 					renderer->popMarker();
 				}
@@ -950,7 +953,7 @@ namespace lambda
 			renderer->bindShaderPass(
 			platform::ShaderPass(
 				Name("shadow_publish"),
-				shaders_point_.shader_publish,
+                asset::ShaderManager::getInstance()->get(shader_publish_ + shader_type),
 				{
 					shadow_map,
 					platform::RenderTarget(Name("texture"), data.texture),
@@ -998,7 +1001,10 @@ namespace lambda
       {
         data.dynamic_index = 0u;
       }
-        
+
+	  String shadow_type = data.shadow_type == ShadowType::kNone ? "|NO_" : ("|" + shader_shadow_type_ + "_");
+	  String shader_type = shadow_type + "CASCADE";
+
       // Generate shadow maps.
       if (update && data.shadow_type != ShadowType::kNone)
       {
@@ -1082,7 +1088,7 @@ namespace lambda
           renderer->bindShaderPass(
             platform::ShaderPass(
               Name("shadow_generate"),
-              shaders_cascade_.shader_generate,
+              asset::ShaderManager::getInstance()->get(shader_generate_ + shader_type),
               {},
               { data.render_target.at(i), data.depth_target.at(i) }
             )
@@ -1110,12 +1116,21 @@ namespace lambda
           renderer->setRasterizerState(platform::RasterizerState::SolidBack());
           renderer->setBlendState(platform::BlendState::Alpha());
 
-          for (const asset::VioletShaderHandle& it : shaders_cascade_.shader_modify)
-          {
+		  for (uint32_t i = 0; i < shader_modify_count_; ++i)
+		  {
             renderer->bindShaderPass(
               platform::ShaderPass(
                 Name("shadow_modify"),
-                it,
+                asset::ShaderManager::getInstance()->get(shader_modify_ + shadow_type + "HORIZONTAL"),
+                { data.render_target.at(i) },
+                { data.render_target.at(i) }
+              )
+            );
+            renderer->draw();
+            renderer->bindShaderPass(
+              platform::ShaderPass(
+                Name("shadow_modify"),
+                asset::ShaderManager::getInstance()->get(shader_modify_ + shadow_type + "VERTICAL"),
                 { data.render_target.at(i) },
                 { data.render_target.at(i) }
               )
@@ -1135,7 +1150,7 @@ namespace lambda
       renderer->bindShaderPass(
         platform::ShaderPass(
           Name("shadow_publish"),
-          shaders_cascade_.shader_publish,
+          asset::ShaderManager::getInstance()->get(shader_publish_ + shader_type),
           {
             data.render_target.at(0u),
             data.render_target.at(1u),

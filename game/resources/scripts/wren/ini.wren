@@ -16,6 +16,9 @@ class Ini {
     for(line in lines) {
       // Remove all white spaces before and after the line.
       line = line.trim()
+      if (line.contains("#")) {
+        line = line.split("#")[0]
+      }
 
       // It is a namespace.
       if (line.startsWith("[")) {

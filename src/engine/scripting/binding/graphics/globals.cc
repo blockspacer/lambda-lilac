@@ -14,7 +14,7 @@ namespace lambda
       {
         scripting::IScriptContext* g_script_context;
         components::LightSystem* g_light_system;
-
+/*
         void SetShadersDirectional(const uint64_t& generate, const void* input_array, const uint64_t& publish)
         {
           scripting::ScriptArray input_values = g_script_context->scriptArray(input_array);
@@ -105,19 +105,19 @@ namespace lambda
 
           g_light_system->setShadersSpotRSM(generate_shader, modify, publish_shader);
         }
-
+*/
         Map<lambda::String, void*> Bind(world::IWorld* world)
         {
           g_script_context = world->getScripting().get();
           g_light_system = world->getScene().getSystem<components::LightSystem>().get();
 
           return Map<lambda::String, void*>{
-            { "void Violet_Graphics_Globals::SetShadersDirectional(const uint64& in, const Array<uint64>& in, const uint64& in)",    (void*)SetShadersDirectional },
-            { "void Violet_Graphics_Globals::SetShadersPoint(const uint64& in, const Array<uint64>& in, const uint64& in)",          (void*)SetShadersPoint },
-            { "void Violet_Graphics_Globals::SetShadersSpot(const uint64& in, const Array<uint64>& in, const uint64& in)",           (void*)SetShadersSpot },
-            { "void Violet_Graphics_Globals::SetShadersCascade(const uint64& in, const Array<uint64>& in, const uint64& in)",        (void*)SetShadersCascade },
-            { "void Violet_Graphics_Globals::SetShadersDirectionalRSM(const uint64& in, const Array<uint64>& in, const uint64& in)", (void*)SetShadersDirectionalRSM },
-            { "void Violet_Graphics_Globals::SetShadersSpotRSM(const uint64& in, const Array<uint64>& in, const uint64& in)",        (void*)SetShadersSpotRSM }
+            //{ "void Violet_Graphics_Globals::SetShadersDirectional(const uint64& in, const Array<uint64>& in, const uint64& in)",    (void*)SetShadersDirectional },
+            //{ "void Violet_Graphics_Globals::SetShadersPoint(const uint64& in, const Array<uint64>& in, const uint64& in)",          (void*)SetShadersPoint },
+            //{ "void Violet_Graphics_Globals::SetShadersSpot(const uint64& in, const Array<uint64>& in, const uint64& in)",           (void*)SetShadersSpot },
+            //{ "void Violet_Graphics_Globals::SetShadersCascade(const uint64& in, const Array<uint64>& in, const uint64& in)",        (void*)SetShadersCascade },
+            //{ "void Violet_Graphics_Globals::SetShadersDirectionalRSM(const uint64& in, const Array<uint64>& in, const uint64& in)", (void*)SetShadersDirectionalRSM },
+            //{ "void Violet_Graphics_Globals::SetShadersSpotRSM(const uint64& in, const Array<uint64>& in, const uint64& in)",        (void*)SetShadersSpotRSM }
           };
         }
 

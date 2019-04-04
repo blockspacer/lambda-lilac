@@ -544,8 +544,8 @@ namespace lambda
             asset::Mesh::createScreenQuad()
           )
       );
-
-			full_screen_quad_.shader = asset::ShaderManager::getInstance()->get(Name("resources/shaders/full_screen_quad.fx"));
+	  
+	  full_screen_quad_.shader = asset::ShaderManager::getInstance()->get(Name("resources/shaders/full_screen_quad.fx"));
     }
     void D3D11Context::deinitialize()
     {
@@ -713,7 +713,6 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
-#pragma optimize ("", off)
     void D3D11Context::endFrame(bool display)
     {
       setMesh(full_screen_quad_.mesh);
@@ -730,6 +729,7 @@ namespace lambda
         {
           pushMarker(pass.getName().getName());
           bindShaderPass(pass);
+
           draw();
           popMarker();
         }
@@ -750,17 +750,18 @@ namespace lambda
       beginTimer("Copy To Screen");
       pushMarker("Copy To Screen");
 			
-			setBlendState(platform::BlendState::Alpha());
+	  setBlendState(platform::BlendState::Alpha());
 
-			copyToScreen(
-				world_->getPostProcessManager().getTarget(
-					world_->getPostProcessManager().getFinalTarget()
-				).getTexture()
-			);
-			copyToScreen(
-				world_->getPostProcessManager().getTarget(Name("gui")).getTexture()
-			);
-      popMarker();
+	  copyToScreen(
+	    world_->getPostProcessManager().getTarget(
+	     world_->getPostProcessManager().getFinalTarget()
+	    ).getTexture()
+	  );
+	  
+	  if (world_->getGUI().getEnabled())
+		  copyToScreen(world_->getPostProcessManager().getTarget(Name("gui")).getTexture());
+      
+	  popMarker();
       endTimer("Copy To Screen");
 
       //beginTimer("ImGUI");
@@ -948,6 +949,11 @@ namespace lambda
         context_.backbuffer.GetAddressOf(), 
         nullptr
       );
+
+	  bool src_use_drs = (texture->getLayer(0u).getFlags() & kTextureFlagDynamicScale) != 0u;
+	  float drs = world_->getShaderVariableManager().getShaderVariable(Name("dynamic_resolution_scale")).data.at(0);
+	  setShaderVariable(platform::ShaderVariable(Name("copy_resolution_scale"), src_use_drs ? drs : 1.0f));
+
 	  setScissorRects({ glm::vec4(0.0f, 0.0f, world_->getWindow()->getSize()) });
       setMesh(full_screen_quad_.mesh);
       setShader(full_screen_quad_.shader);
@@ -974,11 +980,14 @@ namespace lambda
 			unsigned int num_viewports = NUM_VIEWPORTS;
 			context_.context->RSGetViewports(&num_viewports, viewports);
 
+			bool dst_use_drs = (dst->getLayer(0u).getFlags() & kTextureFlagDynamicScale) != 0u;
+			float drs = world_->getShaderVariableManager().getShaderVariable(Name("dynamic_resolution_scale")).data.at(0);
+
 			glm::vec4 viewport(
 				0, 
 				0, 
-				dst->getLayer(0).getWidth(),
-				dst->getLayer(0).getHeight()
+				dst->getLayer(0).getWidth() * (dst_use_drs ? drs : 1.0f),
+				dst->getLayer(0).getHeight() * (dst_use_drs ? drs : 1.0f)
 			);
 			setViewports({ viewport });
 			setRasterizerState(platform::RasterizerState::SolidBack());
@@ -989,6 +998,10 @@ namespace lambda
 				&rtv,
 				nullptr
 			);
+
+			bool src_use_drs = (src->getLayer(0u).getFlags() & kTextureFlagDynamicScale) != 0u;
+			setShaderVariable(platform::ShaderVariable(Name("copy_resolution_scale"), src_use_drs ? drs : 1.0f));
+
 			setScissorRects({ viewport });
 			setMesh(full_screen_quad_.mesh);
 			setShader(full_screen_quad_.shader);
@@ -1086,8 +1099,7 @@ namespace lambda
               >> output.getMipMap())
           });
 
-          if (output.getTexture()->getLayer(0u).getFlags() &
-            kTextureFlagDynamicScale)
+          if ((output.getTexture()->getLayer(0u).getFlags() & kTextureFlagDynamicScale) != 0)
             viewports.back() *= dynamic_resolution_scale;
 
           scissor_rects.push_back({
@@ -1112,8 +1124,7 @@ namespace lambda
             >> shader_pass.getOutputs()[0u].getMipMap())
         });
 
-        if (shader_pass.getOutputs()[0u].getTexture()->getLayer(0u).getFlags() 
-          & kTextureFlagDynamicScale)
+        if ((shader_pass.getOutputs()[0u].getTexture()->getLayer(0u).getFlags() & kTextureFlagDynamicScale) != 0)
           viewports.back() *= dynamic_resolution_scale;
        
         scissor_rects.push_back({ 
@@ -1131,7 +1142,6 @@ namespace lambda
     }
     
     ///////////////////////////////////////////////////////////////////////////
-#pragma optimize("", off)
     void D3D11Context::clearRenderTarget(
       asset::VioletTextureHandle texture, 
       const glm::vec4& colour)
@@ -1239,9 +1249,6 @@ namespace lambda
 				return;
 
 			D3D11Shader* d3d11_shader = asset_manager_.getShader(shader);
-
-      for (const auto& variable : shader->getQueuedShaderVariables())
-        d3d11_shader->updateShaderVariable(variable);
 
       // Bind the shader.
       bound_.shader = d3d11_shader;
@@ -1531,7 +1538,6 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
-#pragma optimize ("", off)
     void D3D11Context::draw(ID3D11Buffer* buffer)
     {
       for (unsigned char i = 0; i < highest_bound_texture_; ++i)
@@ -1559,12 +1565,8 @@ namespace lambda
 			{
 				D3D11Shader* shader = asset_manager_.getShader(shader_);
 
-				for (auto& buffer : shader->getPsBuffers())
-					world_->getShaderVariableManager().updateBuffer(buffer);
-				for (auto& buffer : shader->getVsBuffers())
-					world_->getShaderVariableManager().updateBuffer(buffer);
-				for (auto& buffer : shader->getGsBuffers())
-					world_->getShaderVariableManager().updateBuffer(buffer);
+				for (auto& buffer : shader->getBuffers())
+					world_->getShaderVariableManager().updateBuffer(buffer.shader_buffer);
 
 				if (buffer == nullptr)
 				{
@@ -1589,8 +1591,8 @@ namespace lambda
 
 
     ///////////////////////////////////////////////////////////////////////////
-		std::atomic<int> k_can_read;
-		std::atomic<int> k_can_write;
+	std::atomic<int> k_can_read;
+    std::atomic<int> k_can_write;
     static Vector<IRenderAction*> k_flush_actions;
   
     ///////////////////////////////////////////////////////////////////////////

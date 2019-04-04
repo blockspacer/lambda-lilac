@@ -1,4 +1,4 @@
-#include "common.fx"
+#include "common.fxh"
 
 struct VSOutput
 {
@@ -16,7 +16,12 @@ VSOutput VS(uint id: SV_VertexID)
 
 Make_Texture2D(tex_to_screen, 0);
 
+Make_CBuffer(relScal, 0)
+{
+  float copy_resolution_scale;
+}
+
 float4 PS(VSOutput pIn) : SV_TARGET0
 {
-    return Sample(tex_to_screen, SamPointClamp, pIn.tex);
+  return tex_to_screen.Sample(SamPointClamp, pIn.tex * copy_resolution_scale);
 }

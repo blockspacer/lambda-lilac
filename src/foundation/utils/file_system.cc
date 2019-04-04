@@ -144,8 +144,7 @@ namespace lambda
   //////////////////////////////////////////////////////////////////////////////
   void FileSystem::SetBaseDir(const String& base_dir)
   {
-    s_base_dir_ = base_dir;
-    eastl::replace(s_base_dir_.begin(), s_base_dir_.end(), '\\', '/');
+    s_base_dir_ = FixFilePath(base_dir);
     if (s_base_dir_.back() != '/')
       s_base_dir_ += '/';
   }
@@ -159,14 +158,15 @@ namespace lambda
   //////////////////////////////////////////////////////////////////////////////
   String FileSystem::FullFilePath(const String& file)
   {
-     return s_base_dir_ + file;
+     String f = FixFilePath(file);
+
+     return s_base_dir_ + f;
   }
 
   //////////////////////////////////////////////////////////////////////////////
   String FileSystem::MakeRelative(const String& file)
   {
-    String f = file;
-    eastl::replace(f.begin(), f.end(), '\\', '/');
+    String f = FixFilePath(file);
     
     // Early out.
     String base_dir = GetBaseDir();
@@ -180,13 +180,39 @@ namespace lambda
     return f.substr(base_dir.size());
   }
 
+  String FileSystem::FixFilePath(const String& file)
+  {
+	  String f = file;
+	  eastl::replace(f.begin(), f.end(), '\\', '/');
+
+	  size_t idx = String::npos;
+	  do
+	  {
+		  idx = f.find("..");
+		  if (idx != String::npos)
+		  {
+			  size_t t_idx = f.substr(0, idx - 2).find_last_of("/");
+			  size_t t_beg = t_idx;
+			  size_t t_end = idx + 2;
+			  String new_str = f.substr(0, t_beg) + f.substr(t_end);
+			  f = new_str;
+		  }
+	  } while (idx != String::npos);
+
+	  return f;
+  }
+
 	//////////////////////////////////////////////////////////////////////////////
 	String FileSystem::RemoveName(const String& file)
 	{
-		String f = file;
-		eastl::replace(f.begin(), f.end(), '\\', '/');
+		String f = FixFilePath(file);
 		
-		return f.substr(0, f.find_last_of('/'));
+		f = f.substr(0, f.find_last_of('/'));
+
+		if (f.back() != '/')
+			f += "/";
+
+		return f;
 	}
 
   //////////////////////////////////////////////////////////////////////////////
@@ -280,8 +306,7 @@ namespace lambda
   //////////////////////////////////////////////////////////////////////////////
   String FileSystem::GetExtension(const String& file)
   {
-		String f = file;
-		eastl::replace(f.begin(), f.end(), '\\', '/');
+		String f = FixFilePath(file);
 
 		eastl_size_t last_dot   = f.find_last_of(".");
 		eastl_size_t last_slash = f.find_last_of("/");

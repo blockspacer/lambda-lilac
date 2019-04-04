@@ -34,22 +34,6 @@ namespace lambda
 
           return g_shaders.size() - 1u;
         }
-        void SetVariableFloat1(const uint64_t& shader_id, const String& name, const float& v)
-        {
-          g_shaders[shader_id]->setShaderVariable(platform::ShaderVariable(name, v));
-        }
-        void SetVariableFloat2(const uint64_t& shader_id, const String& name, const ScriptVec2& v)
-        {
-          g_shaders[shader_id]->setShaderVariable(platform::ShaderVariable(name, v));
-        }
-        void SetVariableFloat3(const uint64_t& shader_id, const String& name, const ScriptVec3& v)
-        {
-          g_shaders[shader_id]->setShaderVariable(platform::ShaderVariable(name, v));
-        }
-        void SetVariableFloat4(const uint64_t& shader_id, const String& name, const ScriptVec4& v)
-        {
-          g_shaders[shader_id]->setShaderVariable(platform::ShaderVariable(name, v));
-        }
         void IncRef(const uint64_t& id)
         {
           auto it = g_ref_counts.find(id);
@@ -85,10 +69,6 @@ namespace lambda
         {
           return Map<lambda::String, void*> {
             { "uint64 Violet_Assets_Shader::Load(const String&in)",                                               (void*)Load },
-            { "uint64 Violet_Assets_Shader::SetVariableFloat1(const uint64&in, const String&in, const float&in)", (void*)SetVariableFloat1 },
-            { "uint64 Violet_Assets_Shader::SetVariableFloat2(const uint64&in, const String&in, const Vec2&in)",  (void*)SetVariableFloat2 },
-            { "uint64 Violet_Assets_Shader::SetVariableFloat3(const uint64&in, const String&in, const Vec3&in)",  (void*)SetVariableFloat3 },
-            { "uint64 Violet_Assets_Shader::SetVariableFloat4(const uint64&in, const String&in, const Vec4&in)",  (void*)SetVariableFloat4 },
             { "void Violet_Assets_Shader::IncRef(const uint64& in)",                                              (void*)IncRef },
             { "void Violet_Assets_Shader::DecRef(const uint64& in)",                                              (void*)DecRef }
           };

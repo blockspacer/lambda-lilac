@@ -191,14 +191,14 @@ namespace lambda
       virtual void generateMipMaps(
         const asset::VioletTextureHandle& texture
       ) override;
-			virtual void copyToScreen(
-				const asset::VioletTextureHandle& texture
-			) override;
-			virtual void copyToTexture(
-				const asset::VioletTextureHandle& src,
-				const asset::VioletTextureHandle& dst
-			) override;
-			virtual void bindShaderPass(
+      virtual void copyToScreen(
+      	const asset::VioletTextureHandle& texture
+      ) override;
+      virtual void copyToTexture(
+      	const asset::VioletTextureHandle& src,
+      	const asset::VioletTextureHandle& dst
+      ) override;
+	  virtual void bindShaderPass(
         const platform::ShaderPass& shader_pass
       ) override;
       virtual void clearRenderTarget(

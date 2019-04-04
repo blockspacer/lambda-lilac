@@ -117,7 +117,7 @@ namespace lambda
           }
 
           frustum.Contains(&cull_data, 1u, cull_type);
-          //if (cull_data.visible)
+          if (cull_data.visible)
           {
             Renderable* renderable = 
               (Renderable*)foundation::GetFrameHeap()->alloc(
@@ -128,9 +128,9 @@ namespace lambda
             renderable->mesh = data->mesh;
             renderable->sub_mesh = data->sub_mesh;
             renderable->albedo_texture = data->albedo_texture;
-            renderable->normal_texture = data->normal_texture;
-            renderable->metallic_roughness_texture = data->metallic_roughness_texture;
-            renderable->metallicness = data->metallicness;
+			renderable->normal_texture = data->normal_texture;
+			renderable->metallic_roughness_texture = data->metallic_roughness_texture;
+			renderable->metallicness = data->metallicness;
             renderable->roughness = data->roughness;
             renderable->model_matrix = transform_system->getWorld(data->entity);
             
@@ -161,7 +161,7 @@ namespace lambda
       for (const utilities::Token& token : zone_manager.getTokens(frustum))
       {
         Renderable* data = (Renderable*)token.getUserData();
-        //if (data->mesh && frustum.ContainsAABB(data->min, data->max))
+        if (data->mesh && frustum.ContainsAABB(data->min, data->max))
         {
           Renderable* renderable = 
             (Renderable*)foundation::GetFrameHeap()->alloc(sizeof(Renderable));
@@ -171,8 +171,7 @@ namespace lambda
           renderable->sub_mesh = data->sub_mesh;
           renderable->albedo_texture = data->albedo_texture;
           renderable->normal_texture = data->normal_texture;
-          renderable->metallic_roughness_texture = 
-            data->metallic_roughness_texture;
+          renderable->metallic_roughness_texture = data->metallic_roughness_texture;
           renderable->metallicness = data->metallicness;
           renderable->roughness = data->roughness;
           renderable->model_matrix = data->model_matrix;

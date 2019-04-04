@@ -1,4 +1,5 @@
 #include <memory/memory.h>
+#include <memory/frame_heap.h>
 void* operator new  (std::size_t count)
 {
 	return lambda::foundation::Memory::allocate(count, lambda::foundation::Memory::new_allocator());
@@ -345,9 +346,30 @@ public:
 			  Name("dynamic_resolution_scale")
 		  ).data.at(0);
 
+	  static const float drs[] = {
+		  0.2f,
+		  0.4f,
+		  0.6f,
+		  0.8f,
+		  1.0f
+	  };
+
+	  bool scale_up   = false;
+	  bool scale_down = false;
+
 	  if (frame_counter.getFrames() < 60)
-		  dynamic_resolution_scale = max(dynamic_resolution_scale - 0.01f, 0.2f);
+	  {
+		  if (dynamic_resolution_scale < drs[(int)(((float)frame_counter.getFrames()) / 60.0f * 5.0f)])
+			  scale_up = true;
+		  else
+			  scale_down = true;
+	  }
 	  else if (dynamic_resolution_scale < 1.0f)
+		  scale_up = true;
+
+	  if (scale_down)
+		  dynamic_resolution_scale = max(dynamic_resolution_scale - 0.01f, drs[(int)(((float)frame_counter.getFrames()) / 60.0f * 5.0f)]);
+	  if (scale_up)
 		  dynamic_resolution_scale = min(dynamic_resolution_scale + 0.01f, 1.0f);
 
 	  getShaderVariableManager().setVariable(platform::ShaderVariable(Name("dynamic_resolution_scale"), dynamic_resolution_scale));

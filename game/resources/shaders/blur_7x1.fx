@@ -1,4 +1,13 @@
-#include "common.fx"
+[HORIZONTAL|VERTICAL]
+#include "common.fxh"
+
+#if TYPE == HORIZONTAL
+static const float2 BLUR_SCALE = float2(1.0f, 0.0f);
+#elif TYPE == VERTICAL
+static const float2 BLUR_SCALE = float2(0.0f, 1.0f);
+#else
+static const float BLUR_SCALE = 1.0f;
+#endif
 
 struct VSOutput
 {
@@ -21,10 +30,6 @@ Make_CBuffer(cbPostProcess, 0)
 };
 
 Make_Texture2D(tex_to_blur, 0);
-
-#ifndef BLUR_SCALE
-#define BLUR_SCALE 1.0f
-#endif
 
 static const float blur_table[4] = {
   1.0f / 64.0f,

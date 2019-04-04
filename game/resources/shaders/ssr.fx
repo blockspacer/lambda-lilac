@@ -1,4 +1,4 @@
-#include "common.fx"
+#include "common.fxh"
 
 Make_CBuffer(cbPostProcess, 0)
 {

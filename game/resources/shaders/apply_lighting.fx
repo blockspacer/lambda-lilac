@@ -1,5 +1,5 @@
-#include "common.fx"
-#include "sh.fx"
+#include "common.fxh"
+#include "sh.fxh"
 
 ///////////////////////////////////////////////////////////////////////////
 // Functions //////////////////////////////////////////////////////////////
@@ -26,7 +26,7 @@ Make_Texture2D(tex_SSAO, 8);
 
 Make_CBuffer(AmbientValues, 0)
 {
-  float ambient_intensity = 1.0f;
+  float ambient_intensity;
   float3 camera_position;
 }
 

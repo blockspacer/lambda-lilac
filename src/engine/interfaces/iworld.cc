@@ -6,6 +6,8 @@ namespace lambda
   namespace asset
   {
     UnorderedMap<size_t, int> VioletRefHandler::g_refs;
+	UnorderedMap<size_t, Name> VioletRefHandler::g_names;
+	Name VioletRefHandler::g_base_name;
   }
 
   namespace world
@@ -25,7 +27,8 @@ namespace lambda
       , scripting_(scripting)
       , imgui_(nullptr)
     {
-			shader_variable_manager_.setVariable(platform::ShaderVariable(Name("dynamic_resolution_scale"), 1.0f));
+			shader_variable_manager_.setVariable(platform::ShaderVariable(Name("dynamic_resolution_scale"), 0.5f));
+			shader_variable_manager_.setVariable(platform::ShaderVariable(Name("ambient_intensity"), 1.0f));
 
 			asset::TextureManager::setRenderer(renderer_.get());
 			asset::ShaderManager::setRenderer(renderer_.get());

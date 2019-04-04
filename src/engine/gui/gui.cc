@@ -111,6 +111,7 @@ namespace lambda
 			, world_(nullptr)
 			, renderer_(nullptr)
 			, view_(nullptr)
+			, enabled_(true)
 		{
 		}
 
@@ -202,6 +203,9 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		void GUI::update(double delta_time)
 		{
+			if (!enabled_)
+				return;
+
 			switch_ += delta_time;
 			if (switch_ < switch_time_)
 				return;
@@ -240,6 +244,9 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		bool GUI::handleWindowMessage(const platform::WindowMessage& message)
 		{
+			if (!enabled_)
+				return false;
+
 			switch (message.type)
 			{
 			case platform::WindowMessageType::kMouseMove:
@@ -306,6 +313,9 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		void GUI::executeJavaScript(String js)
 		{
+			if (!enabled_)
+				return;
+
 			JSContextRef js_context = view_->ptr->js_context();
 			JSStringRef str = JSStringCreateWithUTF8CString(js.c_str());
 
@@ -506,6 +516,14 @@ namespace lambda
 			);
 
 			handleException(exception, js_context);
+		}
+		void GUI::setEnabled(bool enabled)
+		{
+			enabled_ = enabled;
+		}
+		bool GUI::getEnabled() const
+		{
+			return enabled_;
 		}
 	}
 }

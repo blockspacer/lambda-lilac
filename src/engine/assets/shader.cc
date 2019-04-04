@@ -16,7 +16,6 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		Shader::Shader(const Shader& shader)
 			: shader_(shader.shader_)
-			, queued_shader_variables_(shader.queued_shader_variables_)
 			, keep_in_memory_(shader.keep_in_memory_)
 		{
 		}
@@ -52,22 +51,6 @@ namespace lambda
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		void Shader::setShaderVariable(const platform::ShaderVariable& variable)
-		{
-			auto it = eastl::find(queued_shader_variables_.begin(), queued_shader_variables_.end(), variable);
-			if (it != queued_shader_variables_.end())
-				*it = variable;
-			else
-				queued_shader_variables_.push_back(variable);
-		}
-
-		///////////////////////////////////////////////////////////////////////////
-		Vector<platform::ShaderVariable> Shader::getQueuedShaderVariables()
-		{
-			return queued_shader_variables_;
-		}
-
-		///////////////////////////////////////////////////////////////////////////
 		bool Shader::getKeepInMemory() const
 		{
 			return keep_in_memory_;
@@ -97,26 +80,65 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		VioletShaderHandle ShaderManager::create(Name name)
 		{
-			return VioletShaderHandle(foundation::Memory::construct<Shader>(), name);
+			VioletShaderHandle handle;
+
+			auto it = shader_cache_.find(name.getHash());
+			if (it == shader_cache_.end())
+			{
+				handle = VioletShaderHandle(foundation::Memory::construct<Shader>(), name);
+				shader_cache_.insert(eastl::make_pair(name.getHash(), handle.get()));
+			}
+			else
+				handle = VioletShaderHandle(it->second, name);
+
+			return handle;
 		}
 
 		///////////////////////////////////////////////////////////////////////////
 		VioletShaderHandle ShaderManager::create(Name name, Shader shader)
 		{
-			return VioletShaderHandle(foundation::Memory::construct<Shader>(shader), name);
+			VioletShaderHandle handle;
+
+			auto it = shader_cache_.find(name.getHash());
+			if (it == shader_cache_.end())
+			{
+				handle = VioletShaderHandle(foundation::Memory::construct<Shader>(shader), name);
+				shader_cache_.insert(eastl::make_pair(name.getHash(), handle.get()));
+			}
+			else
+				handle = VioletShaderHandle(it->second, name);
+
+			return handle;
 		}
 
 		///////////////////////////////////////////////////////////////////////////
 		VioletShaderHandle ShaderManager::create(Name name, VioletShader shader)
 		{
-			return VioletShaderHandle(foundation::Memory::construct<Shader>(shader), name);
+			VioletShaderHandle handle;
+
+			auto it = shader_cache_.find(name.getHash());
+			if (it == shader_cache_.end())
+			{
+				handle = VioletShaderHandle(foundation::Memory::construct<Shader>(shader), name);
+				shader_cache_.insert(eastl::make_pair(name.getHash(), handle.get()));
+			}
+			else
+				handle = VioletShaderHandle(it->second, name);
+
+			return handle;
 		}
 
 		///////////////////////////////////////////////////////////////////////////
 		VioletShaderHandle ShaderManager::get(Name name)
 		{
-			uint64_t hash = manager_.GetHash(FileSystem::MakeRelative(name.getName()));
-			LMB_ASSERT(manager_.HasHeader(hash), "Could not find texture: %s", name.getName().c_str());
+			String str = FileSystem::MakeRelative(name.getName());
+			if (str.find('|') == String::npos)
+			{
+				str += "|DEFAULT";
+				name = str;
+			}
+			uint64_t hash = manager_.GetHash(str);
+			LMB_ASSERT(manager_.HasHeader(hash), "Could not find shader: %s", name.getName().c_str());
 			return get(hash);
 		}
 
@@ -130,6 +152,10 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		void ShaderManager::destroy(Shader* shader, const size_t& hash)
 		{
+			auto it = shader_cache_.find(hash);
+			if (it != shader_cache_.end())
+				shader_cache_.erase(it);
+
 			foundation::Memory::destruct<Shader>(shader);
 			renderer_->destroyShader(hash);
 		}

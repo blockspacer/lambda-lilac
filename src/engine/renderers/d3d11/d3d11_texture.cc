@@ -167,8 +167,7 @@ namespace lambda
           &textures_[i]
         );
 
-        LMB_ASSERT(SUCCEEDED(result), 
-          "D3D11 TEXTURE: Failed to create texture!");
+        LMB_ASSERT(SUCCEEDED(result), "D3D11 TEXTURE: Failed to create texture | %i", result);
       }
 
       // Create shader resource view.
@@ -220,7 +219,7 @@ namespace lambda
 				{
 					D3D11_MAPPED_SUBRESOURCE mapped_resource;
 					HRESULT result = context->Map(textures_[0], i, D3D11_MAP_WRITE_DISCARD, 0, &mapped_resource);
-					LMB_ASSERT(SUCCEEDED(result), "D3D11 TEXTURE: Could not bind texture!");
+					LMB_ASSERT(SUCCEEDED(result), "D3D11 TEXTURE: Could not bind texture | %i", result);
 					memcpy(mapped_resource.pData, layer.getData().data(), mapped_resource.DepthPitch);
 					context->Unmap(textures_[0], i);
 
@@ -253,14 +252,13 @@ namespace lambda
       context->GenerateMips(srvs_[texture_index_]);
     }
 
-#pragma optimize("", off)
     ///////////////////////////////////////////////////////////////////////////
     ID3D11DepthStencilView* D3D11Texture::getDSV(
 	  unsigned char idx,
 	  unsigned char layer,
 	  unsigned char mip_map) const
     {
-      LMB_ASSERT(layers_[idx].size() >= layer && layers_[idx][layer].dsvs.size() >= mip_map, "getDSV(Idx: %i, Layer: %i, MipMap: %i)", idx, layer, mip_map);
+      LMB_ASSERT(layers_[idx].size() >= layer && layers_[idx][layer].dsvs.size() >= mip_map, "D3D11 TEXTURE: getDSV(Idx: %i, Layer: %i, MipMap: %i)", idx, layer, mip_map);
       return layers_[idx][layer].dsvs[mip_map];
     }
 
@@ -270,14 +268,14 @@ namespace lambda
       unsigned char layer, 
       unsigned char mip_map) const
     {
-      LMB_ASSERT(layers_[idx].size() >= layer && layers_[idx][layer].rtvs.size() >= mip_map, "getRTV(Idx: %i, Layer: %i, MipMap: %i)", idx, layer, mip_map);
+      LMB_ASSERT(layers_[idx].size() >= layer && layers_[idx][layer].rtvs.size() >= mip_map, "D3D11 TEXTURE: getRTV(Idx: %i, Layer: %i, MipMap: %i)", idx, layer, mip_map);
       return layers_[idx][layer].rtvs[mip_map];
     }
 
     ///////////////////////////////////////////////////////////////////////////
     void D3D11Texture::pingPong()
     {
-      LMB_ASSERT(srvs_[1u] != nullptr, "Only one texture was created");
+      LMB_ASSERT(srvs_[1u] != nullptr, "D3D11 TEXTURE: Only one texture was created");
       texture_index_ = (texture_index_ == 0u) ? 1u : 0u;
     }
 
@@ -290,14 +288,14 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     const ID3D11Texture2D* D3D11Texture::getTexture(unsigned char idx) const
     {
-      LMB_ASSERT(srvs_[idx] != nullptr, "getTexture(%i) : Texture at index was nullptr", idx);
+      LMB_ASSERT(srvs_[idx] != nullptr, "D3D11 TEXTURE: getTexture(%i) : Texture at index was nullptr", idx);
       return textures_[idx];
     }
 
     ///////////////////////////////////////////////////////////////////////////
     ID3D11Texture2D* D3D11Texture::getTexture(unsigned char idx)
     {
-      LMB_ASSERT(srvs_[idx] != nullptr, "getTexture(%i) : Texture at index was nullptr", idx);
+      LMB_ASSERT(srvs_[idx] != nullptr, "D3D11 TEXTURE: getTexture(%i) : Texture at index was nullptr", idx);
       return textures_[idx];
     }
 
@@ -335,7 +333,7 @@ namespace lambda
 			  &desc,
 			  &srvs_[i]
 		  );
-		  LMB_ASSERT(SUCCEEDED(result), "D3D11 TEXTURE: Failed to create srv!");
+		  LMB_ASSERT(SUCCEEDED(result), "D3D11 TEXTURE: Failed to create srv | %i", result);
 	  }
 	}
 
@@ -364,7 +362,7 @@ namespace lambda
 					  &desc,
 					  &layers_[i][l].rtvs[m]
 				  );
-				  LMB_ASSERT(SUCCEEDED(result), "D3D11 TEXTURE: Failed to create rtv!");
+				  LMB_ASSERT(SUCCEEDED(result), "D3D11 TEXTURE: Failed to create rtv | %i", result);
 			  }
 		  }
       }
@@ -395,7 +393,7 @@ namespace lambda
 					  &desc,
 					  &layers_[i][l].dsvs[m]
 				  );
-				  LMB_ASSERT(SUCCEEDED(result), "D3D11 TEXTURE: Failed to create dsv!");
+				  LMB_ASSERT(SUCCEEDED(result), "D3D11 TEXTURE: Failed to create dsv | %i", result);
 			  }
 		  }
       }

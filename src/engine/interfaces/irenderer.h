@@ -90,10 +90,10 @@ namespace lambda
         const asset::VioletTextureHandle& texture
       ) = 0;
       virtual void copyToScreen(const asset::VioletTextureHandle& texture) = 0;
-			virtual void copyToTexture(
-				const asset::VioletTextureHandle& src,
-				const asset::VioletTextureHandle& dst
-			) = 0;
+	  virtual void copyToTexture(
+        const asset::VioletTextureHandle& src,
+        const asset::VioletTextureHandle& dst
+	  ) = 0;
       virtual void bindShaderPass(const platform::ShaderPass& shader_pass) = 0;
       virtual void clearRenderTarget(
         asset::VioletTextureHandle texture, 
@@ -125,8 +125,8 @@ namespace lambda
 
       virtual void setRenderScale(const float& render_scale) = 0;
       virtual float getRenderScale() = 0;
-      virtual void setVSync(bool vsync) = 0;
-      virtual bool getVSync() const = 0;
+	  virtual void setVSync(bool vsync) = 0;
+	  virtual bool getVSync() const = 0;
 
       virtual void setShaderVariable(const ShaderVariable& variable) = 0;
 

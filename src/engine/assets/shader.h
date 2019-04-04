@@ -25,9 +25,6 @@ namespace lambda
 			Vector<char> getByteCode(ShaderStages stage, int type) const;
 			Vector<VioletShaderResource> getResources(ShaderStages stage) const;
 
-			void setShaderVariable(const platform::ShaderVariable& variable);
-			Vector<platform::ShaderVariable> getQueuedShaderVariables();
-
 			bool getKeepInMemory() const;
 			void setKeepInMemory(bool keep_in_memory);
 
@@ -40,7 +37,6 @@ namespace lambda
 		private:
 			bool keep_in_memory_;
 			VioletShader shader_;
-			Vector<platform::ShaderVariable> queued_shader_variables_;
 		};
 		typedef VioletHandle<Shader> VioletShaderHandle;
 
@@ -69,6 +65,8 @@ namespace lambda
 		private:
 			VioletShaderManager manager_;
 			platform::IRenderer* renderer_;
+
+			UnorderedMap<uint64_t, Shader*> shader_cache_;
 		};
 	}
 }

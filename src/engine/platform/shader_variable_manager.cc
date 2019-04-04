@@ -58,7 +58,8 @@ namespace lambda
       for (BufferVariable& variable : buffer.getVariables())
       {
         size_t idx = getIdx(variable.name);
-        if (idx != UINT64_MAX&& variable.count < getCount(idx))
+		auto count = getCount(idx);
+        if (idx != UINT64_MAX && variable.count < count)
         {
           variable.count = getCount(idx);
           memcpy(

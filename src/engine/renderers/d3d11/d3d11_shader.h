@@ -25,8 +25,10 @@ namespace lambda
     struct D3D11Buffer
     {
       D3D11RenderBuffer* buffer;
+	  platform::ShaderBuffer shader_buffer;
       size_t slot = 0u;
       bool bound = false;
+	  ShaderStages stage;
     };
 
     ///////////////////////////////////////////////////////////////////////////
@@ -42,16 +44,11 @@ namespace lambda
 
       void updateShaderVariable(const platform::ShaderVariable& variable);
 
-      Vector<platform::ShaderBuffer>& getVsBuffers();
-      Vector<platform::ShaderBuffer>& getPsBuffers();
-      Vector<platform::ShaderBuffer>& getGsBuffers();
+      Vector<D3D11Buffer>& getBuffers();
+	  const Vector<VioletShaderResource>& getTextures();
+	  const Vector<VioletShaderResource>& getSamplers();
 
     private:
-      void reflect(
-        ID3D10Blob* blob, 
-        Vector<platform::ShaderBuffer>& buffers, 
-        Vector<D3D11Buffer>& d3d11_buffers
-      );
       void reflectInputLayout(ID3D10Blob* blob, ID3D11Device* device);
 
     private:
@@ -59,15 +56,13 @@ namespace lambda
       Microsoft::WRL::ComPtr<ID3D11PixelShader>    ps_;
       Microsoft::WRL::ComPtr<ID3D11GeometryShader> gs_;
       Microsoft::WRL::ComPtr<ID3D11InputLayout>    il_;
-			Vector<uint32_t> stages_;
+	  
+	  Vector<VioletShaderResource> textures_;
+	  Vector<VioletShaderResource> samplers_;
+      Vector<D3D11Buffer> buffers_;
+	  Vector<uint32_t> stages_;
 
       D3D11Context* context_;
-      Vector<platform::ShaderBuffer> vs_buffers_;
-      Vector<platform::ShaderBuffer> ps_buffers_;
-      Vector<platform::ShaderBuffer> gs_buffers_;
-      Vector<D3D11Buffer> vs_d3d11_buffers_;
-      Vector<D3D11Buffer> ps_d3d11_buffers_;
-      Vector<D3D11Buffer> gs_d3d11_buffers_;
     };
   }
 }

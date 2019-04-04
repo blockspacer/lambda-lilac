@@ -1,4 +1,4 @@
-#include "common.fx"
+#include "common.fxh"
 
 cbuffer buffer0 : register(b0)
 {

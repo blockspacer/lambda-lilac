@@ -13,6 +13,8 @@
 
 #ifdef min
 #undef min
+#endif
+#ifdef max
 #undef max
 #endif
 
@@ -47,7 +49,11 @@ namespace lambda
 			void bindJavaScriptCallback(String name, JavaScriptCallback callback, const void* user_data = nullptr);
 			void bindJavaScriptCallback(String name, JavaScriptCallbackWithRetval callback, const void* user_data = nullptr);
 
+			void setEnabled(bool enabled);
+			bool getEnabled() const;
+
 		private:
+			bool enabled_;
 			double switch_time_;
 			double switch_;
 			glm::ivec2 mouse_position_;

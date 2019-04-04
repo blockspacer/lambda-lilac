@@ -1,5 +1,5 @@
-#include "common.fx"
-#include "atmosphere.fx"
+#include "common.fxh"
+#include "atmosphere.fxh"
 
 Make_CBuffer(cbPerPass, 0)
 {

@@ -1,4 +1,13 @@
-#include "common.fx"
+[HORIZONTAL|VERTICAL]
+#include "common.fxh"
+
+#if TYPE == HORIZONTAL
+static const float2 BLUR_SCALE = float2(1.0f, 0.0f);
+#elif TYPE == VERTICAL
+static const float2 BLUR_SCALE = float2(0.0f, 1.0f);
+#else
+static const float BLUR_SCALE = 1.0f;
+#endif
 
 struct VSOutput
 {

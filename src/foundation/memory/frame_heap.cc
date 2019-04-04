@@ -57,7 +57,7 @@ namespace lambda
     }
     void* FrameHeap::alloc(uint32_t size)
     {
-      if (allocated_ + size < heap_sizes_[current_frame_heap_])
+      if (allocated_ + size <= heap_sizes_[current_frame_heap_])
       {
         void* data = (char*)frame_heaps_[current_frame_heap_] + allocated_;
         allocated_ += size;

@@ -370,6 +370,8 @@ void removeFile(
 		shader_compiler.RemoveShader(shader_compiler.GetHash(file));
 		lambda::foundation::Info("[SHA] " + file + " removed!\n");
 	}
+  else if (extension == "fxh")
+    Warning("[SHA] " + file + " removed!\n");
   else if (extension == "as")
     Warning("[AS-] " + file + " removed!\n");
   else if (extension == "wren")
@@ -442,7 +444,6 @@ public:
 	int w = 0, h = 0, c = 0;
 };
 
-#pragma optimize("", off)
 void handleDMRA(const lambda::String& file, const lambda::String& extension)
 {
 	bool is_ao  = file.find("_ao."  + extension) != lambda::String::npos;
@@ -554,10 +555,12 @@ bool updateFile(
 	  return false;
     }
   }
+  else if (extension == "fxh")
+    Warning("[SHA]" + file + " changed!\n");
   else if (extension == "as")
-	  Warning("[AS-] " + file + " changed!\n");
+    Warning("[AS-] " + file + " changed!\n");
   else if (extension == "wren")
-	  Warning("[WRE] " + file + " changed!\n");
+    Warning("[WRE] " + file + " changed!\n");
   else if (extension == "glb")
     Warning("[MDL] " + file + " changed!\n");
   else if (extension == "ttf")

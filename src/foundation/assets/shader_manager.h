@@ -37,6 +37,9 @@ namespace lambda
 
 	struct VioletShader
 	{
+		VioletShader() {}
+		~VioletShader() {}
+
 		uint64_t hash;
 		String file_path;
 		Array<Array<Pair<uint32_t, uint32_t>, VIOLET_LANG_COUNT>, (size_t)ShaderStages::kCount> blob_sizes;

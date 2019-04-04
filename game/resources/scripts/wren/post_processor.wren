@@ -22,7 +22,7 @@ class PostProcessor {
     PostProcess.addRenderTarget("normal",              1.0, TextureFormat.R8G8B8A8)
     PostProcess.addRenderTarget("metallic_roughness",  1.0, TextureFormat.R8G8B8A8)
     PostProcess.addRenderTarget("depth_buffer",        1.0, TextureFormat.D32)
-    PostProcess.addRenderTarget("post_process_buffer", 1.0, TextureFormat.R32G32B32A32)
+    PostProcess.addRenderTarget("post_process_buffer", 1.0, TextureFormat.R16G16B16A16)
 
     // Set the final pass.
     PostProcess.setFinalRenderTarget("post_process_buffer")
@@ -80,40 +80,28 @@ class PostProcessor {
   }
 
   copyAlbedoToPostProcessBuffer() {
-    PostProcess.addShaderPass("apply_lighting", Shader.load("resources/shaders/copy.fx"), [ "albedo" ], [ "post_process_buffer" ])
+    PostProcess.addShaderPass("copy_albedo_to_post_process_buffer", Shader.load("resources/shaders/copy.fx"), [ "albedo" ], [ "post_process_buffer" ])
   }
 
   shadowMapping(enabled) {
     if (!enabled) return
 
     // Get all shared shaders.
-    var generate_d = Shader.load("resources/shaders/vsm_generate_directional.fx")
-    var generate_p = Shader.load("resources/shaders/vsm_generate_point.fx")
-    var generate_s = Shader.load("resources/shaders/vsm_generate_spot.fx")
-    var blur_x = Shader.load("resources/shaders/vsm_blur_7x1.fx")
-    var blur_y = Shader.load("resources/shaders/vsm_blur_7x1.fx")
-    blur_x.setVariableFloat2("blur_scale", Vec2.new(1.0, 0.0))
-    blur_y.setVariableFloat2("blur_scale", Vec2.new(0.0, 1.0))
-    var modify = [ blur_x, blur_y ]
+    var generate    = "resources/shaders/shadow_mapping/generate.fx"
+    var modify      = "resources/shaders/shadow_mapping/blur_7x1.fx"
+    var modifyCount = 2
+    var apply       = "resources/shaders/shadow_mapping/shadow_mapping.fx"
+    var shadowType  = "ESM"
 
     // Set all lighting shaders.
-    Graphics.setDirectionalShaders(generate_d, modify, Shader.load("resources/shaders/shadow_mapping_directional.fx"))
-    Graphics.setPointLightShaders( generate_p, [], Shader.load("resources/shaders/shadow_mapping_point.fx"))
-    Graphics.setSpotLightShaders(  generate_s, modify, Shader.load("resources/shaders/shadow_mapping_spot.fx"))
-    Graphics.setCascadeShaders(    generate_d, modify, Shader.load("resources/shaders/shadow_mapping_cascade.fx"))
-
-    // Set RSM shaders.
-    // I'm actually using Reflective Variance Shadow Maps.
-    var rsm_generate = Shader.load("resources/shaders/rvsm_generate.fx")
-    Graphics.setDirectionalShadersRSM(rsm_generate, modify, Shader.load("resources/shaders/reflective_shadow_mapping_directional.fx"))
-    Graphics.setSpotLightShadersRSM(rsm_generate, modify, Shader.load("resources/shaders/reflective_shadow_mapping_spot.fx"))
+    Graphics.setLightShaders(generate, modify, modifyCount, apply, shadowType)
   }
   applyLighting(enabled) {
     PostProcess.addShaderPass("apply_lighting", Shader.load("resources/shaders/apply_lighting.fx"), [ "post_process_buffer", "position", "normal", "metallic_roughness", "light_map", "irradiance_map", "prefiltered", "brdf_lut", "ssao_target" ], [ "post_process_buffer" ])
   }
   ssao(enabled, blur_scale, blur_passes, render_target_scale) {
     if (!enabled) {
-      PostProcess.addRenderTarget("ssao_target", Texture.create(Vec2.new(1.0), TextureFormat.R8G8B8A8))
+      PostProcess.addRenderTarget("ssao_target", Texture.create(Vec2.new(1.0), [ 255, 255, 255, 255 ], TextureFormat.R8G8B8A8))
       return
     }
 
@@ -125,7 +113,7 @@ class PostProcessor {
     PostProcess.addShaderPass("ssao", Shader.load("resources/shaders/ssao.fx"), [ "position", "normal", "random_texture", "depth_buffer" ], [ "ssao_target" ])
 
     // // Horizontal blur.
-    var shader_blur_x = Shader.load("resources/shaders/blur_horizontal.fx")
+    var shader_blur_x = Shader.load("resources/shaders/blur_7x1.fx|HORIZONTAL")
 
     var i = 0
     while (i < blur_passes.x && blur_scale.x > 0.0) {
@@ -134,7 +122,7 @@ class PostProcessor {
     }
 
     // Vertical blur.
-    var shader_blur_y = Shader.load("resources/shaders/blur_vertical.fx")
+    var shader_blur_y = Shader.load("resources/shaders/blur_7x1.fx|VERTICAL")
 
     i = 0
     while (i < blur_passes.y && blur_scale.y > 0.0) {
@@ -153,14 +141,14 @@ class PostProcessor {
     if (!enabled) return
 
     // Add the render target.
-    PostProcess.addRenderTarget("bloom_target", render_target_scale, TextureFormat.R32G32B32A32)
+    PostProcess.addRenderTarget("bloom_target", render_target_scale, TextureFormat.R16G16B16A16)
 
     // Bloom extract.
     var shader_extract = Shader.load("resources/shaders/bloom_extract.fx")
     PostProcess.addShaderPass("bloom_extract", shader_extract, [ "post_process_buffer" ], [ "bloom_target" ])
 
     // Bloom blur horizontal.
-    var shader_blur_x  = Shader.load("resources/shaders/blur_horizontal.fx")
+    var shader_blur_x  = Shader.load("resources/shaders/blur_7x1.fx|HORIZONTAL")
 
     var i = 0
     while (i < blur_passes.x && blur_scale.x > 0.0) {
@@ -169,7 +157,7 @@ class PostProcessor {
     }
 
     // Bloom blur vertical.
-    var shader_blur_y  = Shader.load("resources/shaders/blur_vertical.fx")
+    var shader_blur_y  = Shader.load("resources/shaders/blur_7x1.fx|VERTICAL")
 
     i = 0
     while (i < blur_passes.y && blur_scale.y > 0.0) {
@@ -194,11 +182,11 @@ class PostProcessor {
     if (!enabled) return
 
     // Add required render targets.
-    PostProcess.addRenderTarget("dof_target", render_target_scale, TextureFormat.R32G32B32A32)
-    PostProcess.addRenderTarget("dof_pos", Texture.create(Vec2.new(1.0), [ 16.0 ], TextureFormat.R32G32B32A32))
+    PostProcess.addRenderTarget("dof_target", render_target_scale, TextureFormat.R16G16B16A16)
+    PostProcess.addRenderTarget("dof_pos", Texture.create(Vec2.new(1.0), [ 0, 0 ], TextureFormat.R16))
 
     // Blur horizontal.
-    var shader_blur_x = Shader.load("resources/shaders/blur_horizontal.fx")
+    var shader_blur_x = Shader.load("resources/shaders/blur_7x1.fx|HORIZONTAL")
 
     var i = 0
     while (i < blur_passes.x && blur_scale.x > 0.0) {
@@ -207,7 +195,7 @@ class PostProcessor {
     }
 
     // Blur vertical.
-    var shader_blur_y = Shader.load("resources/shaders/blur_vertical.fx")
+    var shader_blur_y = Shader.load("resources/shaders/blur_7x1.fx|VERTICAL")
 
     i = 0
     while (i < blur_passes.y && blur_scale.y > 0.0) {
@@ -230,7 +218,6 @@ class PostProcessor {
     PostProcess.addShaderPass("ssr", Shader.load("resources/shaders/ssr.fx"), [ "post_process_buffer", "position", "normal" ], [ "post_process_buffer" ])
   }
   gui(enabled) {
-    if (!enabled) return
-    PostProcess.addShaderPass("apply_gui", Shader.load("resources/shaders/apply_gui.fx"), [ "post_process_buffer", "gui" ], [ "post_process_buffer" ])
+    Graphics.gui = enabled
   }
 }

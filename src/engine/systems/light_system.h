@@ -156,20 +156,16 @@ namespace lambda
       /*
       * Generate: [Input] Nothing [Output] Shadow map.
       * Modify:   [Input] Shadow map [Output] Shadow map.
+	  * Modify Count: The amount of time the modify shader needs to be applied.
       * Publish:  [Input] Shadow map | Position | Normal | Metallic_Roughness [Output] Light map.
+	  * Shadow Type: The type of shadows that should be used.
       */
-      void setShadersDirectional(asset::VioletShaderHandle generate, Vector<asset::VioletShaderHandle> modify, asset::VioletShaderHandle publish);
-      void setShadersSpot(asset::VioletShaderHandle generate, Vector<asset::VioletShaderHandle> modify, asset::VioletShaderHandle publish);
-      void setShadersPoint(asset::VioletShaderHandle generate, Vector<asset::VioletShaderHandle> modify, asset::VioletShaderHandle publish);
-      void setShadersCascade(asset::VioletShaderHandle generate, Vector<asset::VioletShaderHandle> modify, asset::VioletShaderHandle publish);
-      
-      void setShadersDirectionalRSM(asset::VioletShaderHandle generate, Vector<asset::VioletShaderHandle> modify, asset::VioletShaderHandle publish);
-      void setShadersSpotRSM(asset::VioletShaderHandle generate, Vector<asset::VioletShaderHandle> modify, asset::VioletShaderHandle publish);
+	  void setShaders(String generate, String modify, uint32_t modify_count, String publish, String shadow_type);
 
       virtual void initialize(world::IWorld& world) override;
       virtual void deinitialize() override;
       virtual void onRender() override;
-			virtual void collectGarbage() override;
+      virtual void collectGarbage() override;
 
       void setColour(const entity::Entity& entity, const glm::vec3& colour);
       glm::vec3 getColour(const entity::Entity& entity) const;
@@ -213,25 +209,18 @@ namespace lambda
 
     private:
       Vector<LightData> data_;
-			Map<entity::Entity, uint32_t> entity_to_data_;
-			Map<uint32_t, entity::Entity> data_to_entity_;
-			Set<entity::Entity> marked_for_delete_;
-			Queue<uint32_t> unused_data_entries_;
+	  Map<entity::Entity, uint32_t> entity_to_data_;
+	  Map<uint32_t, entity::Entity> data_to_entity_;
+	  Set<entity::Entity> marked_for_delete_;
+	  Queue<uint32_t> unused_data_entries_;
 
       asset::MeshHandle full_screen_mesh_;
 
-      struct ShaderPass
-      {
-        asset::VioletShaderHandle         shader_generate;
-        Vector<asset::VioletShaderHandle> shader_modify;
-        asset::VioletShaderHandle         shader_publish;
-      };
-      ShaderPass shaders_directional_;
-      ShaderPass shaders_directional_rsm_;
-      ShaderPass shaders_spot_;
-      ShaderPass shaders_spot_rsm_;
-      ShaderPass shaders_point_;
-      ShaderPass shaders_cascade_;
+	  String shader_generate_;
+	  String shader_modify_;
+	  uint32_t shader_modify_count_;
+	  String shader_publish_;
+	  String shader_shadow_type_;
 
       platform::RenderTarget default_shadow_map_;
       asset::VioletTextureHandle default_texture_;

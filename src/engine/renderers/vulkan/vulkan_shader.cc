@@ -124,18 +124,18 @@ namespace lambda
 					  {
 						  platform::BufferVariable variable;
 						  variable.name = item.name;
-						  variable.count = 1;
+						  variable.count = 0;
 						  variable.size = item.size;
 						  variable.data = (char*)data.get() + item.offset;
 						  variables.push_back(variable);
 					  }
 
 					  VulkanBuffer buffer;
-					  buffer.buffer = (VulkanRenderBuffer*)renderer_->allocRenderBuffer(resource.size, platform::IRenderBuffer::kFlagConstant | platform::IRenderBuffer::kFlagDynamic);
-					  buffer.offset = 0;
-					  buffer.set = 0;
+					  buffer.buffer  = (VulkanRenderBuffer*)renderer_->allocRenderBuffer(resource.size, platform::IRenderBuffer::kFlagConstant | platform::IRenderBuffer::kFlagDynamic);
+					  buffer.offset  = 0;
+					  buffer.set     = 0;
 					  buffer.binding = resource.slot;
-					  buffer.slot = buffer.slot - 0;
+					  buffer.slot    = resource.slot - 0;
 					  buffer.shader_buffer = platform::ShaderBuffer(Name(resource.name), variables, data);
 					  buffers_.push_back(buffer);
 					  break;
