@@ -36,6 +36,10 @@ namespace lambda
       asset::VioletShaderHandle shader,
       D3D11Context* context)
       : context_(context)
+      , vs_(nullptr)
+      , ps_(nullptr)
+      , gs_(nullptr)
+      , il_(nullptr)
     {
 		auto data = asset::ShaderManager::getInstance()->getData(shader);
 
@@ -68,8 +72,9 @@ namespace lambda
 				)))
 					vs_ = nullptr;
 
-				reflectInputLayout(vs_blob, context_->getD3D11Device());
-				vs_blob->Release();
+				if (vs_)
+					reflectInputLayout(vs_blob, context_->getD3D11Device());
+				if (vs_blob) vs_blob->Release();
 			}
 
 			if (ps_blob)
@@ -82,7 +87,7 @@ namespace lambda
 				)))
 					ps_ = nullptr;
 
-				ps_blob->Release();
+				if (ps_blob) ps_blob->Release();
 			}
 
 			if (gs_blob)
@@ -95,7 +100,7 @@ namespace lambda
 				)))
 					gs_ = nullptr;
 
-				gs_blob->Release();
+				if (gs_blob) gs_blob->Release();
 			}
 
 			for (uint32_t i = 0; i < (uint32_t)ShaderStages::kCount; ++i)
@@ -143,9 +148,10 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     D3D11Shader::~D3D11Shader()
     {
-      ps_.Reset();
-      vs_.Reset();
-      il_.Reset();
+	  if (ps_) ps_->Release(), ps_ = nullptr;
+	  if (vs_) vs_->Release(), vs_ = nullptr;
+	  if (gs_) gs_->Release(), gs_ = nullptr;
+	  if (il_) il_->Release(), il_ = nullptr;
 
 	  for (auto& buffer : buffers_)
 		  context_->freeRenderBuffer((platform::IRenderBuffer*&)buffer.buffer);
@@ -156,10 +162,10 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     void D3D11Shader::bind()
     {
-      context_->getD3D11Context()->VSSetShader(vs_.Get(), nullptr, 0);
-      context_->getD3D11Context()->PSSetShader(ps_.Get(), nullptr, 0);
-      context_->getD3D11Context()->GSSetShader(gs_.Get(), nullptr, 0);
-      context_->getD3D11Context()->IASetInputLayout(il_.Get());
+      context_->getD3D11Context()->VSSetShader(vs_, nullptr, 0);
+      context_->getD3D11Context()->PSSetShader(ps_, nullptr, 0);
+      context_->getD3D11Context()->GSSetShader(gs_, nullptr, 0);
+      context_->getD3D11Context()->IASetInputLayout(il_);
     }
 
     ///////////////////////////////////////////////////////////////////////////

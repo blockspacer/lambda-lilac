@@ -268,6 +268,7 @@ namespace lambda
       unsigned char layer, 
       unsigned char mip_map) const
     {
+      LMB_ASSERT(is_render_target_, "D3D11 TEXTURE: Tried to get a render target for a texture that was created without the kTextureFlagIsRenderTarget flag");
       LMB_ASSERT(layers_[idx].size() >= layer && layers_[idx][layer].rtvs.size() >= mip_map, "D3D11 TEXTURE: getRTV(Idx: %i, Layer: %i, MipMap: %i)", idx, layer, mip_map);
       return layers_[idx][layer].rtvs[mip_map];
     }
@@ -275,7 +276,7 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     void D3D11Texture::pingPong()
     {
-      LMB_ASSERT(srvs_[1u] != nullptr, "D3D11 TEXTURE: Only one texture was created");
+      LMB_ASSERT(is_render_target_, "D3D11 TEXTURE: Only render targets can be ping ponged");
       texture_index_ = (texture_index_ == 0u) ? 1u : 0u;
     }
 

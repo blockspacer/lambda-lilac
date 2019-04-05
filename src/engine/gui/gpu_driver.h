@@ -82,6 +82,7 @@ namespace lambda
 			UnorderedMap<uint32_t, asset::VioletTextureHandle> textures_;
 			UnorderedMap<uint32_t, asset::VioletTextureHandle> render_targets_;
 			UnorderedMap<uint32_t, asset::MeshHandle>          geometry_;
+			asset::VioletShaderHandle                          shader_;
 
 			uint32_t next_texture_id_       = 1;
 			uint32_t next_render_buffer_id_ = 1;

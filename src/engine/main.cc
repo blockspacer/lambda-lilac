@@ -454,10 +454,8 @@ private:
 int main(int argc, char** argv)
 {
   LMB_ASSERT(argc != 1, "No project folder was speficied!")
-  LMB_ASSERT(argc != 2, "No entry script was specified!")
 
   lambda::FileSystem::SetBaseDir(argv[1]);
-  String script(argv[2]);
 
   {
 #if defined VIOLET_RENDERER_D3D11
@@ -485,10 +483,10 @@ int main(int argc, char** argv)
 
 #if defined VIOLET_SCRIPTING_WREN
       foundation::SharedPointer<scripting::IScriptContext> scripting = foundation::Memory::constructShared<scripting::WrenContext>();
-      script = "resources/scripts/wren/main.wren";
+	  String script = "resources/scripts/wren/main.wren";
 #elif defined VIOLET_SCRIPTING_ANGEL
       foundation::SharedPointer<scripting::IScriptContext> scripting = foundation::Memory::constructShared<scripting::AngelScriptContext>();
-      script = "resources/scripts/angelscript/main.as";
+	  String script = "resources/scripts/angelscript/main.as";
 #else
 #error No valid scripting engine found!
 #endif

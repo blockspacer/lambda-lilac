@@ -123,10 +123,16 @@ namespace lambda
 			if (platform.gpu_driver())
 			{
 				foundation::Memory::destruct(platform.gpu_driver());
-				foundation::Memory::destruct(platform.file_system());
-				foundation::Memory::destruct(platform.font_loader());
 				platform.set_gpu_driver(nullptr);
+			}
+			if (platform.file_system())
+			{
+				foundation::Memory::destruct(platform.file_system());
 				platform.set_file_system(nullptr);
+			}
+			if (platform.font_loader())
+			{
+				foundation::Memory::destruct(platform.font_loader());
 				platform.set_font_loader(nullptr);
 			}
 
@@ -173,7 +179,7 @@ namespace lambda
 
 			VioletTexture texture;
 			texture.flags = kTextureFlagIsRenderTarget;
-			texture.format = TextureFormat::kR8G8B8A8;
+			texture.format = TextureFormat::kB8G8R8A8;
 			texture.width = 1280u;
 			texture.height = 720u;
 			texture.mip_count = 1u;

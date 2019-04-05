@@ -51,15 +51,6 @@ namespace lambda
       asset::VioletShaderHandle shader;
     };
 
-    ///////////////////////////////////////////////////////////////////////////
-    struct D3D11Bound
-    {
-      ID3D11ShaderResourceView* textures[MAX_TEXTURE_COUNT];
-      D3D11Mesh* mesh;
-      D3D11Shader* shader;
-      uint32_t sub_mesh_idx;
-    };
-
     struct IRenderAction;
 
     ///////////////////////////////////////////////////////////////////////////
@@ -280,20 +271,54 @@ namespace lambda
       
       D3D11XContext context_;
       D3D11Default default_;
-      D3D11Bound   bound_;
 
-      glm::mat4x4 model_;
       glm::vec2 screen_size_;
-      glm::vec2 metallic_roughness_;
       double delta_time_ = 0.0f;
       double total_time_ = 0.0f;
 
-      asset::MeshHandle mesh_;
-      uint32_t sub_mesh_idx_;
-      asset::VioletShaderHandle shader_;
-      unsigned char highest_bound_texture_;
-      ID3D11ShaderResourceView* textures_[MAX_TEXTURE_COUNT];
-      bool texture_contains_alpha_[MAX_TEXTURE_COUNT];
+	  struct State
+	  {
+		  uint8_t                    num_scissor_rects;
+		  glm::vec4                  scissor_rects[8u];
+		  uint8_t                    num_viewports;
+		  glm::vec4                  viewports[8u];
+		  uint8_t                    num_render_targets;
+		  asset::VioletTextureHandle render_targets[8u];
+		  asset::VioletTextureHandle depth_target;
+		  asset::VioletTextureHandle textures[MAX_TEXTURE_COUNT];
+		  uint16_t                   dirty_textures;
+		  asset::MeshHandle          mesh;
+		  uint32_t                   sub_mesh;
+		  asset::VioletShaderHandle  shader;
+	  } state_;
+
+	  struct DXState
+	  {
+		  D3D11_RECT                scissor_rects[8u];
+		  D3D11_VIEWPORT            viewports[8u];
+		  ID3D11RenderTargetView*   render_targets[8u];
+		  ID3D11DepthStencilView*   depth_target;
+		  ID3D11ShaderResourceView* textures[MAX_TEXTURE_COUNT];
+		  D3D11Shader*              shader;
+		  D3D11Mesh*                mesh;
+	  } dx_state_;
+
+	  enum class DirtyStates : uint32_t
+	  {
+		  kViewports     = 1ull << 1ull,
+		  kScissorRects  = 1ull << 2ull,
+		  kRenderTargets = 1ull << 3ull,
+		  kTextures      = 1ull << 4ull,
+		  kMesh          = 1ull << 5ull,
+		  kShader        = 1ull << 6ull,
+	  };
+
+	  uint32_t dirty_state_;
+	  bool isDirty(DirtyStates state) { return (dirty_state_ & ((uint32_t)state)) != 0u; }
+	  void makeDirty(DirtyStates state) { dirty_state_ |= ((uint32_t)state); }
+	  void cleanDirty(DirtyStates state) { dirty_state_ &= ~((uint32_t)state); }
+	  void invalidateAll() { dirty_state_ = ~0ul; }
+	  void cleanAll() { dirty_state_ = 0ul; }
 
 #if GPU_MARKERS
       Microsoft::WRL::ComPtr<ID3DUserDefinedAnnotation> 
@@ -314,12 +339,12 @@ namespace lambda
         D3D11RenderTexture* getTexture(asset::VioletTextureHandle texture);
         void removeTexture(asset::VioletTextureHandle texture);
         void removeTexture(size_t texture);
-				D3D11Mesh* getMesh(asset::MeshHandle mesh);
-				void removeMesh(asset::MeshHandle mesh);
-				void removeMesh(size_t mesh);
-				D3D11Shader* getShader(asset::VioletShaderHandle shader);
-				void removeShader(asset::VioletShaderHandle shader);
-				void removeShader(size_t shader);
+		D3D11Mesh* getMesh(asset::MeshHandle mesh);
+		void removeMesh(asset::MeshHandle mesh);
+		void removeMesh(size_t mesh);
+		D3D11Shader* getShader(asset::VioletShaderHandle shader);
+		void removeShader(asset::VioletShaderHandle shader);
+		void removeShader(size_t shader);
         void setD3D11Context(D3D11Context* context);
         void setDevice(ID3D11Device* device);
         void setContext(ID3D11DeviceContext* context);

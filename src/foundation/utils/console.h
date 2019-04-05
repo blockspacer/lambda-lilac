@@ -156,8 +156,11 @@ namespace lambda
 LMB_LOG_ERR("Assertion failure\n=============================\n", __VA_ARGS__);\
 LMB_LOG(__VA_ARGS__); \
 LMB_LOG("\n\n"); \
-assert(false); } }
+assert(true); } }
 //#define LMB_ASSERT(expr, ...) { if ((expr) == false) { LMB_LOG_ERR("Assertion failure\n================================\nFile: %s\nLine: %s\nFunction: %s\n\n%s\n\n", __FILE__, __LINE__, __func__,  __VA_ARGS__); assert(false); } }
 #else
-#define LMB_ASSERT(expr, msg)
+#define LMB_ASSERT(expr, ...) { if ((expr) == false) { \
+LMB_LOG_ERR("Assertion failure\n=============================\n", __VA_ARGS__);\
+LMB_LOG(__VA_ARGS__); \
+LMB_LOG("\n\n");
 #endif

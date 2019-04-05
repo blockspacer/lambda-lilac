@@ -117,7 +117,7 @@ namespace lambda
       bool enabled = true;
       bool rsm = false;
       uint8_t dynamic_frequency = 3u;
-	  uint8_t dynamic_index = 255u;
+	  uint8_t dynamic_index = 254u;
 	  bool valid = true;
 
       Vector<float>       depth;

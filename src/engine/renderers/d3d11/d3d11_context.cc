@@ -348,15 +348,11 @@ namespace lambda
     void D3D11Context::setWindow(
       foundation::SharedPointer<platform::IWindow> window)
     {
-      bound_.mesh   = nullptr;
-      bound_.shader = nullptr;
-      for (uint8_t i = 0u; i < MAX_TEXTURE_COUNT; ++i)
-      {
-        bound_.textures[i] = nullptr;
-        textures_[i] = nullptr;
-      }
-      mesh_ = asset::MeshHandle();
-      shader_ = asset::VioletShaderHandle();
+		memset(&state_, 0, sizeof(state_));
+		state_.sub_mesh = UINT32_MAX;
+		memset(&dx_state_, 0, sizeof(dx_state_));
+		invalidateAll();
+
       
       asset::AssetManager::getInstance().destroyAllGPUAssets();
       asset_manager_ = D3D11AssetManager();
@@ -546,6 +542,11 @@ namespace lambda
       );
 	  
 	  full_screen_quad_.shader = asset::ShaderManager::getInstance()->get(Name("resources/shaders/full_screen_quad.fx"));
+
+	  memset(&state_, 0, sizeof(state_));
+	  state_.sub_mesh = UINT32_MAX;
+	  memset(&dx_state_, 0, sizeof(dx_state_));
+	  invalidateAll();
     }
     void D3D11Context::deinitialize()
     {
@@ -676,13 +677,10 @@ namespace lambda
       setSamplerState(platform::SamplerState::LinearWrap(), 0u);
       setRasterizerState(platform::RasterizerState::SolidFront());
 
-      setMesh(asset::MeshHandle());
-      setShader(asset::VioletShaderHandle());
-      setSubMesh(0);
-      for (unsigned char i = 0u; i < 8u; ++i)
-      {
-        setTexture(asset::VioletTextureHandle(), i);
-      }
+	  memset(&state_,    0, sizeof(state_));
+	  state_.sub_mesh = UINT32_MAX;
+	  memset(&dx_state_, 0, sizeof(dx_state_));
+	  invalidateAll();
 
       // Handle markers.
 #if GPU_TIMERS
@@ -713,6 +711,7 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
+#pragma optimize ("", off)
     void D3D11Context::endFrame(bool display)
     {
       setMesh(full_screen_quad_.mesh);
@@ -721,6 +720,8 @@ namespace lambda
       setBlendState(platform::BlendState::Default());
       setDepthStencilState(platform::DepthStencilState::Default());
 
+	  context_.context->OMSetRenderTargets(0u, nullptr, nullptr);
+	  
       beginTimer("Post Processing");
       pushMarker("Post Processing");
       for (auto& pass : world_->getPostProcessManager().getPasses())
@@ -935,83 +936,61 @@ namespace lambda
       if (!texture)
         return;
 
-      ID3D11RasterizerState* rs_state;
-      context_.context->RSGetState(&rs_state);
-      static const unsigned int NUM_VIEWPORTS = 1u;
-      D3D11_VIEWPORT viewports[NUM_VIEWPORTS];
-      unsigned int num_viewports = NUM_VIEWPORTS;
-      context_.context->RSGetViewports(&num_viewports, viewports);
+	  Vector<glm::vec4> scissor_rects(state_.scissor_rects, state_.scissor_rects + state_.num_scissor_rects);
+	  Vector<glm::vec4> viewports(state_.viewports, state_.viewports + state_.num_viewports);
+	  Vector<asset::VioletTextureHandle> render_targets(state_.render_targets, state_.render_targets + state_.num_render_targets);
+	  Vector<asset::VioletTextureHandle> textures(state_.textures, state_.textures + MAX_TEXTURE_COUNT);
+	  asset::VioletShaderHandle  shader   = state_.shader;
+	  asset::MeshHandle          mesh     = state_.mesh;
+	  uint32_t                   sub_mesh = state_.sub_mesh;
+
+	  ID3D11ShaderResourceView* srv = nullptr;
+	  for (uint32_t i = 0; i < MAX_TEXTURE_COUNT; ++i)
+	  {
+		  setTexture(asset::VioletTextureHandle(), i);
+		  context_.context->PSSetShaderResources(i, 1, &srv);
+	  }
 
       setViewports({ default_.viewport });
-      setRasterizerState(platform::RasterizerState::SolidBack());
-      context_.context->OMSetRenderTargets(
-        1u, 
-        context_.backbuffer.GetAddressOf(), 
-        nullptr
-      );
+	  setScissorRects({ { 0.0f, 0.0f, world_->getWindow()->getSize().x, world_->getWindow()->getSize().y } });
+	  setMesh(full_screen_quad_.mesh);
+	  setShader(full_screen_quad_.shader);
+	  setSubMesh(0u);
+	  setTexture(texture, 0u);
+	  setRenderTargets({ context_.backbuffer.Get() }, nullptr);
+	  setRasterizerState(platform::RasterizerState::SolidBack());
 
 	  bool src_use_drs = (texture->getLayer(0u).getFlags() & kTextureFlagDynamicScale) != 0u;
 	  float drs = world_->getShaderVariableManager().getShaderVariable(Name("dynamic_resolution_scale")).data.at(0);
 	  setShaderVariable(platform::ShaderVariable(Name("copy_resolution_scale"), src_use_drs ? drs : 1.0f));
 
-	  setScissorRects({ glm::vec4(0.0f, 0.0f, world_->getWindow()->getSize()) });
-      setMesh(full_screen_quad_.mesh);
-      setShader(full_screen_quad_.shader);
-      setSubMesh(0u);
-      setTexture(texture, 0u);
       draw();
 
-      context_.context->RSSetViewports(num_viewports, viewports);
-      context_.context->RSSetState(rs_state);
+	  setViewports(viewports);
+	  setScissorRects(scissor_rects);
+	  setMesh(mesh);
+	  setShader(shader);
+	  setSubMesh(sub_mesh);
+	  for (uint32_t i = 0; i < MAX_TEXTURE_COUNT; ++i)
+		setTexture(textures[i], i);
+	  setRenderTargets(render_targets, state_.depth_target);
     }
   
 
-		///////////////////////////////////////////////////////////////////////////
-		void D3D11Context::copyToTexture(const asset::VioletTextureHandle& src,
-			const asset::VioletTextureHandle& dst)
-		{
-			if (!src || !dst)
-				return;
+	///////////////////////////////////////////////////////////////////////////
+	void D3D11Context::copyToTexture(const asset::VioletTextureHandle& src,
+		const asset::VioletTextureHandle& dst)
+	{
+		if (!src || !dst)
+			return;
 
-			ID3D11RasterizerState* rs_state;
-			context_.context->RSGetState(&rs_state);
-			static const unsigned int NUM_VIEWPORTS = 1u;
-			D3D11_VIEWPORT viewports[NUM_VIEWPORTS];
-			unsigned int num_viewports = NUM_VIEWPORTS;
-			context_.context->RSGetViewports(&num_viewports, viewports);
-
-			bool dst_use_drs = (dst->getLayer(0u).getFlags() & kTextureFlagDynamicScale) != 0u;
-			float drs = world_->getShaderVariableManager().getShaderVariable(Name("dynamic_resolution_scale")).data.at(0);
-
-			glm::vec4 viewport(
-				0, 
-				0, 
-				dst->getLayer(0).getWidth() * (dst_use_drs ? drs : 1.0f),
-				dst->getLayer(0).getHeight() * (dst_use_drs ? drs : 1.0f)
-			);
-			setViewports({ viewport });
-			setRasterizerState(platform::RasterizerState::SolidBack());
-			setBlendState(platform::BlendState::Default());
-			auto rtv = getRTV(dst);
-			context_.context->OMSetRenderTargets(
-				1u,
-				&rtv,
-				nullptr
-			);
-
-			bool src_use_drs = (src->getLayer(0u).getFlags() & kTextureFlagDynamicScale) != 0u;
-			setShaderVariable(platform::ShaderVariable(Name("copy_resolution_scale"), src_use_drs ? drs : 1.0f));
-
-			setScissorRects({ viewport });
-			setMesh(full_screen_quad_.mesh);
-			setShader(full_screen_quad_.shader);
-			setSubMesh(0u);
-			setTexture(src, 0u);
-			draw();
-
-			context_.context->RSSetViewports(num_viewports, viewports);
-			context_.context->RSSetState(rs_state);
-		}
+		auto src_tex = asset_manager_.getTexture(src)->getTexture();
+		auto dst_tex = asset_manager_.getTexture(dst)->getTexture();
+		context_.context->CopyResource(
+			dst_tex->getTexture(dst_tex->pingPongIdx()),
+			src_tex->getTexture(src_tex->pingPongIdx())
+		);
+	}
 
     ///////////////////////////////////////////////////////////////////////////
     void D3D11Context::bindShaderPass(const platform::ShaderPass& shader_pass)
@@ -1021,24 +1000,24 @@ namespace lambda
           Name("dynamic_resolution_scale")
         ).data.at(0);
       
-      context_.context->OMSetRenderTargets(0, nullptr, nullptr);
-
-			{
-				memset(bound_.textures, 0, sizeof(bound_.textures));
-				memset(textures_, 0, sizeof(textures_));
-				ID3D11ShaderResourceView* srvs[8];
-				memset(srvs, 0, sizeof(srvs));
-				context_.context->PSSetShaderResources(0, 8, srvs);
-			}
-
       // set shader and related stuff.
       setShader(shader_pass.getShader());
       
       // Inputs.
-      for (unsigned char i = 0; i < shader_pass.getInputs().size(); ++i)
+	  for (uint32_t i = 0u; i < MAX_TEXTURE_COUNT; ++i)
+	  {
+		  if (state_.textures[i])
+		  {
+			  setTexture(asset::VioletTextureHandle(), i);
+			  ID3D11ShaderResourceView* srv = nullptr;
+			  context_.context->PSSetShaderResources(i, 1, &srv);
+		  }
+	  }
+      
+	  for (uint32_t i = 0; i < shader_pass.getInputs().size(); ++i)
       {
         auto& input = shader_pass.getInputs().at(i);
-        LMB_ASSERT(false == input.isBackBuffer(), "TODO (Hilze): Fill in");
+        LMB_ASSERT(!input.isBackBuffer(), "TODO (Hilze): Fill in");
         setTexture(input.getTexture(), i);
       }
 
@@ -1116,12 +1095,8 @@ namespace lambda
         viewports.push_back({
           0.0f,
           0.0f,
-          (float)(
-            shader_pass.getOutputs()[0u].getTexture()->getLayer(0u).getWidth()  
-            >> shader_pass.getOutputs()[0u].getMipMap()),
-          (float)(
-            shader_pass.getOutputs()[0u].getTexture()->getLayer(0u).getHeight() 
-            >> shader_pass.getOutputs()[0u].getMipMap())
+          (float)(shader_pass.getOutputs()[0u].getTexture()->getLayer(0u).getWidth()  >> shader_pass.getOutputs()[0u].getMipMap()),
+          (float)(shader_pass.getOutputs()[0u].getTexture()->getLayer(0u).getHeight() >> shader_pass.getOutputs()[0u].getMipMap())
         });
 
         if ((shader_pass.getOutputs()[0u].getTexture()->getLayer(0u).getFlags() & kTextureFlagDynamicScale) != 0)
@@ -1184,77 +1159,87 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
 	void D3D11Context::setScissorRects(const Vector<glm::vec4>& rects)
     {
-      Vector<D3D11_RECT> scissor_rects;
+		bool is_dirty = rects.size() != state_.num_scissor_rects;
 
-	  for (const auto& rect : rects)
-	  {
-		  D3D11_RECT scissor_rect;
-		  scissor_rect.left   = (LONG)rect.x;
-		  scissor_rect.right  = (LONG)rect.x + (LONG)rect.z;
-		  scissor_rect.top    = (LONG)rect.y;
-		  scissor_rect.bottom = (LONG)rect.y + (LONG)rect.w;
-		  scissor_rects.push_back(scissor_rect);
-	  }
+		for (uint8_t i = 0; i < rects.size() && !is_dirty; ++i)
+			is_dirty = state_.scissor_rects[i] != rects[i];
 
-      context_.context->RSSetScissorRects((UINT)scissor_rects.size(), scissor_rects.data());
+		if (is_dirty)
+		{
+			state_.num_scissor_rects = (uint8_t)rects.size();
+
+			for (uint8_t i = 0; i < state_.num_scissor_rects; ++i)
+			{
+				state_.scissor_rects[i] = rects[i];
+				dx_state_.scissor_rects[i].left   = (LONG)state_.scissor_rects[i].x;
+				dx_state_.scissor_rects[i].right  = (LONG)state_.scissor_rects[i].x + (LONG)state_.scissor_rects[i].z;
+				dx_state_.scissor_rects[i].top    = (LONG)state_.scissor_rects[i].y;
+				dx_state_.scissor_rects[i].bottom = (LONG)state_.scissor_rects[i].y + (LONG)state_.scissor_rects[i].w;
+			}
+			makeDirty(DirtyStates::kScissorRects);
+		}
     }
   
     ///////////////////////////////////////////////////////////////////////////
     void D3D11Context::setViewports(const Vector<glm::vec4>& rects)
     {
-      Vector<D3D11_VIEWPORT> viewports(rects.size());
+		bool is_dirty = rects.size() != state_.num_viewports;
 
-      for (uint8_t i = 0u; i < rects.size(); ++i)
-      {
-        D3D11_VIEWPORT& viewport = viewports.at(i);
-        const::glm::vec4& rect = rects.at(i);
-        viewport.TopLeftX = rect.x;
-        viewport.TopLeftY = rect.y;
-        viewport.Width    = rect.z;
-        viewport.Height   = rect.w;
-        viewport.MinDepth = 0.0f;
-        viewport.MaxDepth = 1.0f;
-      }
+		for (uint8_t i = 0; i < rects.size() && !is_dirty; ++i)
+			is_dirty = state_.viewports[i] != rects[i];
 
-      context_.context->RSSetViewports(
-        (UINT)viewports.size(), 
-        viewports.data()
-      );
+		if (is_dirty)
+		{
+			state_.num_viewports = (uint8_t)rects.size();
+
+			for (uint8_t i = 0; i < state_.num_viewports; ++i)
+			{
+				state_.viewports[i] = rects[i];
+				dx_state_.viewports[i].TopLeftX = state_.viewports[i].x;
+				dx_state_.viewports[i].TopLeftY = state_.viewports[i].y;
+				dx_state_.viewports[i].Width = state_.viewports[i].z;
+				dx_state_.viewports[i].Height = state_.viewports[i].w;
+				dx_state_.viewports[i].MinDepth = 0.0f;
+				dx_state_.viewports[i].MaxDepth = 1.0f;
+			}
+			makeDirty(DirtyStates::kViewports);
+		}
     }
 
     ///////////////////////////////////////////////////////////////////////////
     void D3D11Context::setMesh(asset::MeshHandle mesh)
     {
-      mesh_ = mesh;
+      if (state_.mesh == mesh)
+		return;
+
+	  state_.mesh = mesh;
+	  dx_state_.mesh = asset_manager_.getMesh(mesh);
+	  makeDirty(DirtyStates::kMesh);
     }
 
     ///////////////////////////////////////////////////////////////////////////
     void D3D11Context::setSubMesh(const uint32_t& sub_mesh_idx)
     {
-      sub_mesh_idx_ = sub_mesh_idx;
+		if (sub_mesh_idx == state_.sub_mesh)
+			return;
+
+		state_.sub_mesh = sub_mesh_idx;
+		makeDirty(DirtyStates::kMesh);
     }
 
     ///////////////////////////////////////////////////////////////////////////
     void D3D11Context::setShader(asset::VioletShaderHandle shader)
     {
-      if (shader_ == shader)
+      if (state_.shader == shader)
         return;
-			
-			if (shader_)
-				asset_manager_.getShader(shader_)->unbind();
-			
-			shader_ = shader;
 
-			if (!shader)
-				return;
 
-			D3D11Shader* d3d11_shader = asset_manager_.getShader(shader);
+	  if (dx_state_.shader)
+		  dx_state_.shader->unbind();
 
-      // Bind the shader.
-      bound_.shader = d3d11_shader;
-      
-	  if (d3d11_shader)
-        d3d11_shader->bind();
+	  state_.shader = shader;
+	  dx_state_.shader = asset_manager_.getShader(shader);
+	  makeDirty(DirtyStates::kShader);
     }
    
     ///////////////////////////////////////////////////////////////////////////
@@ -1262,26 +1247,24 @@ namespace lambda
       asset::VioletTextureHandle texture, 
       uint8_t slot)
     {
-      if (!texture)
-        return;
+      if (texture == state_.textures[slot])
+		  return;
 
-      if (slot + 1 > highest_bound_texture_)
-        highest_bound_texture_ = slot + 1;
+	  LMB_ASSERT(slot < MAX_TEXTURE_COUNT, "D3D11 CONTEXT: Tried to bind a texture out of range");
 
-      if (slot == 0)
-        world_->getShaderVariableManager().setVariable(
-          platform::ShaderVariable(
-            Name("inv_texture_size"), 
-            1.0f / glm::vec2(
-              (float)texture->getLayer(0u).getWidth(),
-              (float)texture->getLayer(0u).getHeight()
-            ))
-        );
+	  if (slot == 0)
+	  {
+		  glm::vec2 val(1.0f);
+		  if (texture)
+			  val = 1.0f / glm::vec2((float)texture->getLayer(0u).getWidth(), (float)texture->getLayer(0u).getHeight());
+		  platform::ShaderVariable var(Name("inv_texture_size"), val);
+		  world_->getShaderVariableManager().setVariable(var);
+	  }
 
-      assert(slot < MAX_TEXTURE_COUNT);
-      texture_contains_alpha_[slot] = texture->getLayer(0u).containsAlpha();
-      textures_[slot] = 
-        asset_manager_.getTexture(texture)->getTexture()->getSRV();
+	  state_.textures[slot] = texture;
+      dx_state_.textures[slot] = (state_.textures[slot]) ? asset_manager_.getTexture(state_.textures[slot])->getTexture()->getSRV() : nullptr;
+	  makeDirty(DirtyStates::kTextures);
+	  state_.dirty_textures |= 1ull << slot;
     }
 
 		///////////////////////////////////////////////////////////////////////////
@@ -1289,11 +1272,24 @@ namespace lambda
 			Vector<asset::VioletTextureHandle> render_targets,
 			asset::VioletTextureHandle depth_buffer)
 		{
-			Vector<ID3D11RenderTargetView*> rtvs(render_targets.size());
-			for (uint32_t i = 0; i < render_targets.size(); ++i)
-				rtvs[i] = getRTV(render_targets[i]);
+			bool is_dirty = (state_.num_render_targets != render_targets.size()) || (state_.depth_target != depth_buffer);
 
-			setRenderTargets(rtvs, getDSV(depth_buffer));
+			for (uint8_t i = 0; i < (uint8_t)render_targets.size() && !is_dirty; ++i)
+				is_dirty = state_.render_targets[i] != render_targets[i];
+
+			if (is_dirty)
+			{
+				Vector<ID3D11RenderTargetView*> rtvs(render_targets.size());
+				for (uint32_t i = 0; i < render_targets.size(); ++i)
+				{
+					state_.render_targets[i] = render_targets[i];
+					rtvs[i] = getRTV(state_.render_targets[i]);
+				}
+
+				state_.depth_target = depth_buffer;
+
+				setRenderTargets(rtvs, getDSV(depth_buffer));
+			}
 		}
 
 		///////////////////////////////////////////////////////////////////////////
@@ -1301,11 +1297,15 @@ namespace lambda
 			Vector<ID3D11RenderTargetView*> render_targets, 
 			ID3D11DepthStencilView* depth_buffer)
 		{
-			context_.context->OMSetRenderTargets(
-				(UINT)render_targets.size(),
-				render_targets.data(),
-				depth_buffer
-			);
+			memset(dx_state_.render_targets, 0, sizeof(dx_state_.render_targets));
+			state_.num_render_targets = (uint8_t)render_targets.size();
+			for (uint8_t i = 0; i < (uint8_t)render_targets.size(); ++i)
+			{
+				dx_state_.render_targets[i] = render_targets[i];
+			}
+
+			dx_state_.depth_target = depth_buffer;
+			makeDirty(DirtyStates::kRenderTargets);
 		}
 
     ///////////////////////////////////////////////////////////////////////////
@@ -1540,45 +1540,72 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     void D3D11Context::draw(ID3D11Buffer* buffer)
     {
-      for (unsigned char i = 0; i < highest_bound_texture_; ++i)
-      {
-        if (textures_[i] != nullptr&& bound_.textures[i] != textures_[i])
-          bound_.textures[i] = textures_[i];
-        context_.context->PSSetShaderResources(i, 1u, &bound_.textures[i]);
-      }
+		D3D11Shader* shader = dx_state_.shader;
+		D3D11Mesh*   mesh   = dx_state_.mesh;
 
-      D3D11Mesh* mesh = asset_manager_.getMesh(mesh_);
+		LMB_ASSERT(shader, "D3D11 CONTEXT: There was no valid shader bound");
+		LMB_ASSERT(mesh,   "D3D11 CONTEXT: There was no valid mesh bound");
 
-      // Bind the mesh.
-      if (mesh != bound_.mesh || sub_mesh_idx_ != bound_.sub_mesh_idx)
-      {
-        state_manager_.bindTopology(mesh_->getTopology());
+		if (isDirty(DirtyStates::kShader))
+		{
+			shader->bind();
+		}
 
-        bound_.mesh = mesh;
-        bound_.sub_mesh_idx = sub_mesh_idx_;
-        Vector<uint32_t> stages = bound_.shader->getStages();
-        mesh->bind(stages, mesh_, sub_mesh_idx_);
-        mesh_->updated();
-      }
+		if (isDirty(DirtyStates::kViewports))
+		{
+			context_.context->RSSetViewports(state_.num_viewports, dx_state_.viewports);
+		}
 
-			if (shader_)
+		if (isDirty(DirtyStates::kScissorRects))
+		{
+			context_.context->RSSetScissorRects(state_.num_scissor_rects, dx_state_.scissor_rects);
+		}
+
+		if (isDirty(DirtyStates::kRenderTargets))
+		{
+			context_.context->OMSetRenderTargets(state_.num_render_targets, dx_state_.render_targets, dx_state_.depth_target);
+		}
+
+		// TODO (Hilze): Add support for isDirty here. Should probably have a dirty state per stage.
+		if (isDirty(DirtyStates::kTextures))
+		{
+			for (uint16_t i = 0; i < 16 && state_.dirty_textures != 0; ++i)
 			{
-				D3D11Shader* shader = asset_manager_.getShader(shader_);
-
-				for (auto& buffer : shader->getBuffers())
-					world_->getShaderVariableManager().updateBuffer(buffer.shader_buffer);
-
-				if (buffer == nullptr)
+				if ((state_.dirty_textures & (1 << i)))
 				{
-					shader->bindBuffers();
-					mesh->draw(mesh_, sub_mesh_idx_);
-				}
-				else
-				{
-					shader->bindBuffers();
-					mesh->draw(mesh_, sub_mesh_idx_);
+					context_.context->PSSetShaderResources(i, 1, &dx_state_.textures[i]);
+					state_.dirty_textures &= ~(1 << i);
 				}
 			}
+		}
+
+		if (isDirty(DirtyStates::kMesh) || isDirty(DirtyStates::kShader))
+		{
+			state_manager_.bindTopology(state_.mesh->getTopology());
+
+			Vector<uint32_t> stages = shader->getStages();
+			mesh->bind(stages, state_.mesh, state_.sub_mesh);
+			state_.mesh->updated();
+		}
+
+		if (shader)
+		{
+			for (auto& buffer : shader->getBuffers())
+				world_->getShaderVariableManager().updateBuffer(buffer.shader_buffer);
+
+			if (buffer == nullptr)
+			{
+				shader->bindBuffers();
+				mesh->draw(state_.mesh, state_.sub_mesh);
+			}
+			else
+			{
+				shader->bindBuffers();
+				mesh->draw(state_.mesh, state_.sub_mesh);
+			}
+		}
+
+		cleanAll();
     }
  
     ///////////////////////////////////////////////////////////////////////////

@@ -154,22 +154,23 @@ namespace lambda
         Name("__fs_quad__"), foundation::Memory::constructShared<lambda::asset::Mesh>(asset::Mesh::createScreenQuad())
       );
 
+	  Vector<char> data(4);
+	  float clear_value[2] = { FLT_MAX, FLT_MAX };
+	  memcpy(data.data(), clear_value, sizeof(float) * 2);
+
       default_shadow_map_ = platform::RenderTarget(Name("__default_shadow_map__"),
         asset::TextureManager::getInstance()->create(
           Name("__default_shadow_map__"),
-          1u, 1u, 6u, TextureFormat::kR32G32
-          , kTextureFlagIsRenderTarget // TODO (Hilze): Remove!
+          1u, 1u, 6u, TextureFormat::kR32G32, 0
         )
       );
       
       default_texture_ = asset::TextureManager::getInstance()->create(
         Name("__default_light_texture__"),
         1u, 1u, 1u, TextureFormat::kR8G8B8A8,
-        kTextureFlagIsRenderTarget, // TODO (Hilze): Remove!
+        0,
         Vector<char>(4, 255)
       );
-
-      world_->getRenderer()->clearRenderTarget(default_shadow_map_.getTexture(), glm::vec4(1.0f));
     }
     void LightSystem::deinitialize()
     {
@@ -598,7 +599,8 @@ namespace lambda
         world_->getPostProcessManager().getTarget(Name("normal")),
         world_->getPostProcessManager().getTarget(Name("metallic_roughness"))
       };
-      if (shadow_maps.size() > 1u) input.insert(input.end(), shadow_maps.begin() + 1u, shadow_maps.end());
+      if (shadow_maps.size() > 1u)
+		  input.insert(input.end(), shadow_maps.begin() + 1u, shadow_maps.end());
       renderer->bindShaderPass(
         platform::ShaderPass(
           Name("shadow_publish"),
@@ -912,34 +914,39 @@ namespace lambda
 					renderer->setSubMesh(0u);
 					renderer->setBlendState(platform::BlendState::Default());
 
-					// TODO (Hilze): Support blurring point lights.
-					/*for (uint32_t i = 0; i < shader_modify_count_; ++i)
+					for (int l = 0; l < 6; ++l)
 					{
-						renderer->bindShaderPass(
-							platform::ShaderPass(
-								Name("shadow_modify"),
-								asset::ShaderManager::getInstance()->get(shader_modify_ + shadow_type + "HORIZONTAL"),
-								{ shadow_map },
-								{ shadow_map }
-							)
-						);
-						renderer->draw();
-						renderer->bindShaderPass(
-							platform::ShaderPass(
-								Name("shadow_modify"),
-								asset::ShaderManager::getInstance()->get(shader_modify_ + shadow_type + "VERTICAL"),
-								{ shadow_map },
-								{ shadow_map }
-							)
-						);
-						renderer->draw();
-					}*/
+						shadow_map.setLayer(l);
+						renderer->setShaderVariable(platform::ShaderVariable(Name("face"), (float)l));
+						for (uint32_t i = 0; i < shader_modify_count_; ++i)
+						{
+							renderer->bindShaderPass(
+								platform::ShaderPass(
+									Name("shadow_modify"),
+									asset::ShaderManager::getInstance()->get(shader_modify_ + shadow_type + "HORIZONTAL_CUBE"),
+									{ shadow_map },
+									{ shadow_map }
+								)
+							);
+							renderer->draw();
+							renderer->bindShaderPass(
+								platform::ShaderPass(
+									Name("shadow_modify"),
+									asset::ShaderManager::getInstance()->get(shader_modify_ + shadow_type + "VERTICAL_CUBE"),
+									{ shadow_map },
+									{ shadow_map }
+								)
+							);
+							renderer->draw();
+
+						}
+					}
 
 					renderer->popMarker();
 				}
 		
-				shadow_map.setLayer(0);
-				depth_map.setLayer(0);
+				shadow_map.setLayer(-1);
+				depth_map.setLayer(-1);
 			}
 
 			// Render lights to the light map.

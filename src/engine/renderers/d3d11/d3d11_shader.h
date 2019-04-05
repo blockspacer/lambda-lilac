@@ -32,15 +32,15 @@ namespace lambda
     };
 
     ///////////////////////////////////////////////////////////////////////////
-    class D3D11Shader : public asset::IGPUAsset
+    class D3D11Shader
     {
     public:
       D3D11Shader(asset::VioletShaderHandle shader, D3D11Context* context);
-      virtual ~D3D11Shader() override;
+      ~D3D11Shader();
       void bind();
       void unbind();
       void bindBuffers();
-			Vector<uint32_t> getStages() const;
+	  Vector<uint32_t> getStages() const;
 
       void updateShaderVariable(const platform::ShaderVariable& variable);
 
@@ -52,10 +52,10 @@ namespace lambda
       void reflectInputLayout(ID3D10Blob* blob, ID3D11Device* device);
 
     private:
-      Microsoft::WRL::ComPtr<ID3D11VertexShader>   vs_;
-      Microsoft::WRL::ComPtr<ID3D11PixelShader>    ps_;
-      Microsoft::WRL::ComPtr<ID3D11GeometryShader> gs_;
-      Microsoft::WRL::ComPtr<ID3D11InputLayout>    il_;
+      ID3D11VertexShader*   vs_;
+      ID3D11PixelShader*    ps_;
+      ID3D11GeometryShader* gs_;
+      ID3D11InputLayout*    il_;
 	  
 	  Vector<VioletShaderResource> textures_;
 	  Vector<VioletShaderResource> samplers_;

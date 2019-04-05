@@ -8,11 +8,13 @@
 #define Lilac_SamplerState_Offset 200
 #define Make_CBuffer(name, slot) [[vk::binding(slot + Lilac_CBuffer_Offset)]] cbuffer name : register(b##slot)
 #define Make_Texture2D(name, slot) [[vk::binding(slot + Lilac_Texture_Offset)]] Texture2D name : register(t##slot)
+#define Make_Texture2DArray(name, slot) [[vk::binding(slot + Lilac_Texture_Offset)]] Texture2DArray name : register(t##slot)
 #define Make_TextureCube(name, slot) [[vk::binding(slot + Lilac_Texture_Offset)]] TextureCube name : register(t##slot)
 #define Make_SamplerState(name, slot) [[vk::binding(slot + Lilac_SamplerState_Offset)]] SamplerState name : register(s##slot)
 #else
 #define Make_CBuffer(name, slot) cbuffer name : register(b##slot)
 #define Make_Texture2D(name, slot) Texture2D name : register(t##slot)
+#define Make_Texture2DArray(name, slot) Texture2DArray name : register(t##slot)
 #define Make_TextureCube(name, slot) TextureCube name : register(t##slot)
 #define Make_SamplerState(name, slot) SamplerState name : register(s##slot)
 #endif
