@@ -77,7 +77,7 @@ namespace lambda
 		int res = LZ4_decompress_safe(data.data(), decompressed_data.data(), (int)data.size() - sizeof(uint32_t), (int)decompressed_data.size());
 
 		if (res < 0)
-			LMB_ASSERT(false, "AssetManager: Could not decompress the data.")
+			LMB_ASSERT(false, "AssetManager: Could not decompress the data.");
 		else
 			decompressed_data.resize((uint64_t)res);
 

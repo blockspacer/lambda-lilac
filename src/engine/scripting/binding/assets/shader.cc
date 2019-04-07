@@ -2,7 +2,6 @@
 #include <platform/scene.h>
 #include <assets/shader.h>
 #include <assets/shader_io.h>
-#include <assets/asset_manager.h>
 #include <scripting/script_vector.h>
 
 namespace lambda

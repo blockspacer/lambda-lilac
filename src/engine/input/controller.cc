@@ -1,9 +1,12 @@
 #include "controller.h"
 #include <utils/console.h>
 
-#if LAMBDA_WIN32
-#include <Windows.h>
+#if VIOLET_WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 #include <Xinput.h>
+#undef min
+#undef max
 #endif
 
 namespace lambda
@@ -17,7 +20,7 @@ namespace lambda
     }
 
     ////////////////////////////////////////////////////////////////////////////
-#if LAMBDA_WIN32
+#if VIOLET_WIN32
     void Controller::rumble(float lhs, float rhs) const
     {
       XINPUT_VIBRATION rumble{};
@@ -38,7 +41,7 @@ namespace lambda
     }
 
     ////////////////////////////////////////////////////////////////////////////
-#if LAMBDA_WIN32
+#if VIOLET_WIN32
     bool Controller::axesInDeadzone(const Axes& axis) const
     {
       float value = axes_[(unsigned char)axis];
@@ -108,7 +111,7 @@ namespace lambda
     ////////////////////////////////////////////////////////////////////////////
     void Controller::update()
     {
-#if LAMBDA_WIN32
+#if VIOLET_WIN32
       XINPUT_STATE state{};
       DWORD result = XInputGetState(id_,&state);
 
@@ -150,7 +153,7 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
-#if LAMBDA_WIN32
+#if VIOLET_WIN32
     unsigned short Controller::buttonToXInputButton(const Axes& axis) const
     {
       static const WORD buttonToXInputButton[] = {

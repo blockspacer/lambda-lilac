@@ -42,25 +42,30 @@ void operator delete[](void* ptr, std::size_t sz)
 }
 
 #include "assets/shader.h"
-#include <iostream>
-#include "systems/transform_system.h"
-#include "platform/scene.h"
+#include "assets/mesh.h"
+#include "assets/shader.h"
+#include "assets/wave.h"
+
 #include "systems/entity_system.h"
 #include "systems/transform_system.h"
 #include "systems/camera_system.h"
 #include "systems/mesh_render_system.h"
 #include "systems/light_system.h"
-#include "assets/mesh_io.h"
-#include "assets/shader_io.h"
-#include <containers/containers.h>
-#include <fstream>
-#include "scripting/binding/script_binding.h"
-#include <INIReader.h>
 #include "utils/mt_manager.h"
-#include <utils/file_system.h>
-#include <utils/utilities.h>
-#include <algorithm>
+#include "utils/file_system.h"
+#include "utils/utilities.h"
 #include "utils/profiler.h"
+
+#include "systems/transform_system.h"
+#include "platform/scene.h"
+#include "scripting/binding/script_binding.h"
+#include <containers/containers.h>
+
+#include <INIReader.h>
+
+#include <fstream>
+#include <iostream>
+#include <algorithm>
 
 #if defined VIOLET_RENDERER_D3D11
 #include "renderers/d3d11/d3d11_renderer.h"
@@ -217,16 +222,14 @@ public:
   MyWorld(
     foundation::SharedPointer<platform::IWindow> window,
     foundation::SharedPointer<platform::IRenderer> renderer,
-    foundation::SharedPointer<asset::AssetManager> asset_manager,
     foundation::SharedPointer<scripting::IScriptContext> scripting,
     foundation::SharedPointer<platform::IImGUI> imgui
-  ) : IWorld(window, renderer, asset_manager, scripting, imgui) {}
+  ) : IWorld(window, renderer, scripting, imgui) {}
 
   virtual ~MyWorld() {};
 
   void initialize() override
   {
-		getGUI().loadURL("file:///resources/web-pages/menu.html");
 	}
   void deinitialize() override
   {
@@ -284,7 +287,7 @@ public:
 
 			// Profiler.
 
-#define XX(x) imgui->imTextMultiLine(toString(round(utilities::Profiler::getInstance().getTime(x), 3u)) + " - " + x);
+#define XX(x) imgui->imTextMultiLine(toString(round(getProfiler().getTime(x), 3u)) + " - " + x);
 			XX("Scripting: CollectGarbage");
 			XX("Scripting: FixedUpdate");
 			XX("Scripting: Update");
@@ -373,62 +376,6 @@ public:
 		  dynamic_resolution_scale = min(dynamic_resolution_scale + 0.01f, 1.0f);
 
 	  getShaderVariableManager().setVariable(platform::ShaderVariable(Name("dynamic_resolution_scale"), dynamic_resolution_scale));
-
-		return;
-
-    foundation::SharedPointer<platform::IImGUI> imgui = getImGUI();
-
-    bool cursor_open = false;
-    imgui->imBegin("cursor", cursor_open, getWindow()->getSize() / 2u - 1u, glm::vec2(3.0f, 3.0f), 0u);
-    imgui->imEnd();
-
-    frameInfo();
-
-    static bool menu_right = true;
-    //if (menu_right)
-    {
-      static asset::VioletTextureHandle selected_texture;
-
-      float preview_image_height = 200.0f;
-      float max_image_width = 100.0f;
-      static bool selected_open = false;
-      if (imgui->imBegin("Buffers", menu_right, glm::vec2(getWindow()->getSize().x - (max_image_width + 25.0f), 0.0f), glm::vec2(max_image_width + 25.0f, getWindow()->getSize().y - (selected_open ? preview_image_height : 0.0f))))
-      {
-        Vector<String> render_targets;
-        for (const auto& it : getPostProcessManager().getAllTargets())
-          render_targets.push_back(it.first.getName());
-        std::sort(render_targets.begin(), render_targets.end());
-
-        for (const String& render_target : render_targets)
-        {
-          asset::VioletTextureHandle texture = getPostProcessManager().getTarget(Name(render_target)).getTexture();
-          if (imgui->imButtonImage(texture, glm::vec2(max_image_width)))
-          {
-            if (selected_texture != texture)
-            {
-              selected_texture = texture;
-              selected_open    = true;
-            }
-            else
-              selected_open = !selected_open;
-          }
-          imgui->imLabel(render_target);
-        }
-      }
-      imgui->imEnd();
-
-      if (selected_open)
-      {
-        glm::vec2 selected_size(preview_image_height);
-        float selected_aspect = (float)selected_texture->getLayer(0u).getWidth() / (float)selected_texture->getLayer(0u).getHeight();
-        selected_size.x = floorf((selected_aspect > 1.0f) ? (selected_size.x * selected_aspect) : (selected_size.y * selected_aspect));
-
-        if (imgui->imBegin("Selected", selected_open, glm::vec2(getWindow()->getSize().x - selected_size.x, getWindow()->getSize().y - selected_size.y), selected_size, platform::ImGUIFlags::kNoScrollbar))
-          imgui->imImage(selected_texture, selected_size);
-
-        imgui->imEnd();
-      }
-    }
   }
 
   virtual void fixedUpdate() override
@@ -453,7 +400,7 @@ private:
 
 int main(int argc, char** argv)
 {
-  LMB_ASSERT(argc != 1, "No project folder was speficied!")
+	LMB_ASSERT(argc != 1, "No project folder was speficied!");
 
   lambda::FileSystem::SetBaseDir(argv[1]);
 
@@ -501,12 +448,9 @@ int main(int argc, char** argv)
 #error No valid imgui found!
 #endif
 
-      foundation::SharedPointer<asset::AssetManager> asset_manager = foundation::Memory::constructShared<asset::AssetManager>();
-
       window->create(glm::uvec2(1280u, 720u), "Engine");
-      asset_manager->initialize(renderer);
 
-      MyWorld world(window, renderer, asset_manager, scripting, imgui);
+      MyWorld world(window, renderer, scripting, imgui);
       imgui->setFont("resources/fonts/DroidSans.ttf", 16.0f);
 
       scripting::ScriptBinding(&world);
@@ -516,6 +460,12 @@ int main(int argc, char** argv)
 
       scripting->terminate();
       scripting::ScriptRelease();
+
+			foundation::Memory::destruct(asset::ShaderManager::getInstance());
+			foundation::Memory::destruct(asset::TextureManager::getInstance());
+			foundation::Memory::destruct(asset::WaveManager::getInstance());
+			foundation::Memory::destruct(asset::MeshManager::getInstance());
+			foundation::Memory::destruct(foundation::GetFrameHeap());
 	  }
   }
 

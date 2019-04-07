@@ -67,31 +67,28 @@ static const float3 g_transfer_func = 1.0f;
 float4 PS(VSOutput pIn) : SV_TARGET0
 {
   // Ambient.
-  float3 N = normalize(Sample(tex_normal, SamLinearClamp, pIn.tex).rgb * 2.0f - 1.0f);
-  float3 V = normalize(camera_position - Sample(tex_position, SamLinearClamp, pIn.tex).rgb);
-  float3 R = reflect(-V, N);
-  float3 mra = Sample(tex_mra, SamLinearClamp, pIn.tex).rgb;
-  float  metallic  = mra.r;
-  float  roughness = mra.g;
-  float  ao        = mra.b;
-  float3 F0 = lerp(0.04f, 1.0f, metallic);
+  const float3 N = normalize(Sample(tex_normal, SamLinearClamp, pIn.tex).rgb * 2.0f - 1.0f);
+  const float3 V = normalize(camera_position - Sample(tex_position, SamLinearClamp, pIn.tex).rgb);
+  const float3 R = reflect(-V, N);
+  const float3 mra = Sample(tex_mra, SamLinearClamp, pIn.tex).rgb;
+  const float  metallic  = mra.r;
+  const float  roughness = mra.g;
+  const float  ao        = mra.b * Sample(tex_SSAO, SamLinearClamp, pIn.tex).a;
+  const float3 F0 = lerp(0.04f, 1.0f, metallic);
 
-  float3 F  = FresnelSchlickRoughness(max(dot(N, V), 0.0f), F0, roughness);
+  const float3 F  = FresnelSchlickRoughness(max(dot(N, V), 0.0f), F0, roughness);
 
-  float3 kS = F;
-  float3 kD = 1.0f - kS;
-  kD       *= 1.0f - metallic;
+  const float3 kS = F;
+  const float3 kD = (1.0f - kS) * (1.0f - metallic);
 
-  float3 diffuse = tex_irradiance.Sample(SamLinearClamp, SampleSphericalMap(N)).rgb * 1.0f;
+  const float3 diffuse = tex_irradiance.Sample(SamLinearClamp, SampleSphericalMap(N)).rgb * 1.0f;
 
   const float MAX_REFLECTION_LOD = 4.0f;
-  float3 prefiltered = tex_prefiltered.SampleLevel(SamLinearClamp, SampleSphericalMap(R), roughness * MAX_REFLECTION_LOD).rgb;
-  float2 brdf = tex_brdfLUT.Sample(SamLinearClamp, float2(max(dot(N, V), 0.0f), roughness)).rg;
-  float3 specular = prefiltered * (F * brdf.x + brdf.y);
+  const float3 prefiltered = tex_prefiltered.SampleLevel(SamLinearClamp, SampleSphericalMap(R), roughness * MAX_REFLECTION_LOD).rgb;
+  const float2 brdf = tex_brdfLUT.Sample(SamLinearClamp, float2(max(dot(N, V), 0.0f), roughness)).rg;
+  const float3 specular = prefiltered * (F * brdf.x + brdf.y);
 
-  float3 ambient = (kD * diffuse + specular) * ao * ambient_intensity;
-
-  ambient *= Sample(tex_SSAO, SamLinearClamp, pIn.tex).r;
+  const float3 ambient = (kD * diffuse + specular) * ao * ambient_intensity;
 
 #if VIOLET_GAMMA_CORRECT
   ambient = ambient / (ambient + 1.0f);
@@ -99,8 +96,8 @@ float4 PS(VSOutput pIn) : SV_TARGET0
 #endif
 
   // Lighting.
-  float4 albedo = Sample(tex_albedo, SamLinearClamp, pIn.tex);
-  float3 light  = Sample(tex_light_map, SamLinearClamp, pIn.tex).rgb;
+  const float4 albedo = Sample(tex_albedo, SamLinearClamp, pIn.tex);
+  const float3 light  = Sample(tex_light_map, SamLinearClamp, pIn.tex).rgb;
 
   //ambient.rgb = EvalSH(N, g_coefficients, g_transfer_func);
   //light   = 1.0f; // Get rid of light so we can debug the SH.

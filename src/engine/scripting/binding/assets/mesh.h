@@ -13,7 +13,7 @@ namespace lambda
     {
       namespace mesh
       {
-        extern asset::MeshHandle Get(const uint64_t id);
+        extern asset::VioletMeshHandle Get(const uint64_t id);
         extern Map<lambda::String, void*> Bind(world::IWorld* world);
         void Unbind();
       }

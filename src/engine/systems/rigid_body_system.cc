@@ -111,6 +111,14 @@ namespace lambda
     }
     void RigidBodySystem::deinitialize()
     {
+			Vector<entity::Entity> entities;
+			for (const auto& it : entity_to_data_)
+				entities.push_back(it.first);
+
+			for (const auto& entity : entities)
+				removeComponent(entity);
+			collectGarbage();
+
       collider_system_ = nullptr;
       transform_system_.reset();
       physics_world_->deinitialize();

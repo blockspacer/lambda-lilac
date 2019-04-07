@@ -102,6 +102,7 @@ namespace lambda
       wrenReleaseHandle(vm_, world_.fixed_update);
       wrenReleaseHandle(vm_, world_.class_);
 
+			WrenRelease(vm_);
       wrenFreeVM(vm_);
       vm_ = nullptr;
 

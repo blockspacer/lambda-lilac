@@ -11,7 +11,8 @@ namespace lambda
       static constexpr uint32_t kHeapCount    = 3u;
       static constexpr uint32_t kHistoryCount = 10u;
 
-      FrameHeap();
+			FrameHeap();
+			~FrameHeap();
       void update();
       void* alloc(uint32_t size);
       template<typename T>

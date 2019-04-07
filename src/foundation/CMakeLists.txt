@@ -36,6 +36,8 @@ SET(UtilsSources
   "utils/colour.cc"
   "utils/console.h"
   "utils/console.cc"
+  "utils/stack_trace.h"
+  "utils/stack_trace.cc"
   "utils/file_system.h"
   "utils/file_system.cc"
   "utils/profiler.h"
@@ -60,6 +62,6 @@ SET(Sources
 )
 
 ADD_LIBRARY(lambda-foundation ${Sources})
-TARGET_LINK_LIBRARIES(lambda-foundation PUBLIC eastl glm lz4 rapidjson)
+TARGET_LINK_LIBRARIES(lambda-foundation PUBLIC eastl glm lz4 rapidjson StackWalker)
 
 TARGET_INCLUDE_DIRECTORIES(lambda-foundation PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

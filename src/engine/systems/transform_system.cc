@@ -129,6 +129,13 @@ namespace lambda
 
     void TransformSystem::deinitialize()
     {
+			Vector<entity::Entity> entities;
+			for (const auto& it : data_.entity_to_data_)
+				entities.push_back(it.first);
+
+			for (const auto& entity : entities)
+				removeComponent(entity);
+			collectGarbage();
     }
 
     TransformSystem::~TransformSystem()

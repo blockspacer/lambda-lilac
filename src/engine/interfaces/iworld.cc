@@ -6,8 +6,7 @@ namespace lambda
   namespace asset
   {
     UnorderedMap<size_t, int> VioletRefHandler::g_refs;
-	UnorderedMap<size_t, Name> VioletRefHandler::g_names;
-	Name VioletRefHandler::g_base_name;
+	  UnorderedMap<size_t, Name> VioletRefHandler::g_names;
   }
 
   namespace world
@@ -16,13 +15,11 @@ namespace lambda
     IWorld::IWorld(
       foundation::SharedPointer<platform::IWindow> window,
       foundation::SharedPointer<platform::IRenderer> renderer,
-      foundation::SharedPointer<asset::AssetManager> asset_manager,
       foundation::SharedPointer<scripting::IScriptContext> scripting,
       foundation::SharedPointer<platform::IImGUI> imgui
     )
       : window_(nullptr)
       , renderer_(renderer)
-      , asset_manager_(asset_manager)
       , input_manager_(keyboard_, mouse_, controller_manager_)
       , scripting_(scripting)
       , imgui_(nullptr)
@@ -32,6 +29,7 @@ namespace lambda
 
 			asset::TextureManager::setRenderer(renderer_.get());
 			asset::ShaderManager::setRenderer(renderer_.get());
+			asset::MeshManager::setRenderer(renderer_.get());
 
 			renderer_->initialize(this);
 			setWindow(window);
@@ -80,7 +78,7 @@ namespace lambda
           time_step_count++ < max_step_count_count)
         {
 					fixedUpdate();
-					utilities::Profiler::getInstance().startTimer("Scripting: FixedUpdate");
+					profiler_.startTimer("Scripting: FixedUpdate");
 					time_step_remainer -= time_step;
           scripting_->executeFunction(
             "Game::FixedUpdate", 
@@ -88,17 +86,17 @@ namespace lambda
               scripting::ScriptValue((float)time_step) 
             }
           );
-					utilities::Profiler::getInstance().endTimer("Scripting: FixedUpdate");
+					profiler_.endTimer("Scripting: FixedUpdate");
 
-					utilities::Profiler::getInstance().startTimer("Systems: FixedUpdate");
+					profiler_.startTimer("Systems: FixedUpdate");
 					for (auto& system : getScene().getAllSystems())
             system->fixedUpdate(time_step);
-					utilities::Profiler::getInstance().endTimer("Systems: FixedUpdate");
+					profiler_.endTimer("Systems: FixedUpdate");
 
-					utilities::Profiler::getInstance().startTimer("Systems: FixedCollectGarbage");
+					profiler_.startTimer("Systems: FixedCollectGarbage");
 					for (auto& system : getScene().getAllSystems())
 						system->collectGarbage();
-					utilities::Profiler::getInstance().endTimer("Systems: FixedCollectGarbage");
+					profiler_.endTimer("Systems: FixedCollectGarbage");
         }
         if (time_step_remainer >= time_step)
         {
@@ -108,57 +106,57 @@ namespace lambda
 
 				update(delta_time_);
 
-				utilities::Profiler::getInstance().startTimer("GUI: Update");
+				profiler_.startTimer("GUI: Update");
 				gui_.update(delta_time_);
-				utilities::Profiler::getInstance().endTimer("GUI: Update");
+				profiler_.endTimer("GUI: Update");
 
-				utilities::Profiler::getInstance().startTimer("Scripting: Update");
+				profiler_.startTimer("Scripting: Update");
 				scripting_->executeFunction(
           "Game::Update", 
           { 
             scripting::ScriptValue((float)delta_time_) 
           }
         );
-				utilities::Profiler::getInstance().endTimer("Scripting: Update");
+				profiler_.endTimer("Scripting: Update");
 
-				utilities::Profiler::getInstance().startTimer("Systems: Update");
+				profiler_.startTimer("Systems: Update");
 				for (auto& system : getScene().getAllSystems())
           system->update(delta_time_);
-				utilities::Profiler::getInstance().endTimer("Systems: Update");
+				profiler_.endTimer("Systems: Update");
 
-				//utilities::Profiler::getInstance().startTimer("ImGUI: Update");
+				//profiler_.startTimer("ImGUI: Update");
 				//imgui_->update(delta_time_);
-				//utilities::Profiler::getInstance().endTimer("ImGUI: Update");
+				//profiler_.endTimer("ImGUI: Update");
         
-				utilities::Profiler::getInstance().startTimer("Renderer: Update");
+				profiler_.startTimer("Renderer: Update");
 				renderer_->update(delta_time_);
-				utilities::Profiler::getInstance().endTimer("Renderer: Update");
+				profiler_.endTimer("Renderer: Update");
 
-				utilities::Profiler::getInstance().startTimer("Scripting: CollectGarbage");
+				profiler_.startTimer("Scripting: CollectGarbage");
 				scripting_->collectGarbage();
-				utilities::Profiler::getInstance().endTimer("Scripting: CollectGarbage");
+				profiler_.endTimer("Scripting: CollectGarbage");
 
-				utilities::Profiler::getInstance().startTimer("Systems: CollectGarbage");
+				profiler_.startTimer("Systems: CollectGarbage");
 				for (auto& system : getScene().getAllSystems())
 					system->collectGarbage();
-				utilities::Profiler::getInstance().endTimer("Systems: CollectGarbage");
+				profiler_.endTimer("Systems: CollectGarbage");
 
-				utilities::Profiler::getInstance().startTimer("Renderer: StartFrame");
+				profiler_.startTimer("Renderer: StartFrame");
 				renderer_->startFrame();
-				utilities::Profiler::getInstance().endTimer("Renderer: StartFrame");
+				profiler_.endTimer("Renderer: StartFrame");
 
-				utilities::Profiler::getInstance().startTimer("Systems: OnRender");
+				profiler_.startTimer("Systems: OnRender");
 				for (auto& system : getScene().getAllSystems())
           system->onRender();
-				utilities::Profiler::getInstance().endTimer("Systems: OnRender");
+				profiler_.endTimer("Systems: OnRender");
 
-				//utilities::Profiler::getInstance().startTimer("ImGUI: GenerateCommandList");
+				//profiler_.startTimer("ImGUI: GenerateCommandList");
 				//imgui_->generateCommandList();
-				//utilities::Profiler::getInstance().endTimer("ImGUI: GenerateCommandList");
+				//profiler_.endTimer("ImGUI: GenerateCommandList");
         
-				utilities::Profiler::getInstance().startTimer("Renderer: EndFrame");
+				profiler_.startTimer("Renderer: EndFrame");
 				renderer_->endFrame();
-				utilities::Profiler::getInstance().endTimer("Renderer: EndFrame");
+				profiler_.endTimer("Renderer: EndFrame");
       }
 
       scripting_->executeFunction("Game::Terminate", {});
@@ -251,12 +249,6 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    foundation::SharedPointer<asset::AssetManager> IWorld::getAssetManager()
-    {
-      return asset_manager_;
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
     foundation::SharedPointer<scripting::IScriptContext> IWorld::getScripting()
     {
       return scripting_;
@@ -332,6 +324,11 @@ namespace lambda
 		gui::GUI& IWorld::getGUI()
 		{
 			return gui_;
+		}
+
+		utilities::Profiler& IWorld::getProfiler()
+		{
+			return profiler_;
 		}
   }
 }

@@ -73,3 +73,6 @@
 [submodule "deps/V-EZ"]
 	path = deps/V-EZ
 	url = https://github.com/GPUOpen-LibrariesAndSDKs/V-EZ.git
+[submodule "deps/StackWalker"]
+	path = deps/StackWalker
+	url = https://github.com/JochenKalmbach/StackWalker.git

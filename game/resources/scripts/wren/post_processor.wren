@@ -7,6 +7,7 @@ import "Core/Shader" for Shader
 import "Core/Mesh" for Mesh
 
 import "Core/Graphics" for Graphics
+import "Core/GUI" for GUI
 import "Core/PostProcess" for PostProcess
 
 import "resources/scripts/wren/ini" for Ini
@@ -39,7 +40,7 @@ class PostProcessor {
       ini_reader["Lighting", "Enabled"]
     )
     ssao(
-      ini_reader["SSAO", "Enabled"], 
+      ini_reader["SSAO", "Strength"], 
       Vec2.new(ini_reader["SSAO", "BlurScaleX"], ini_reader["SSAO", "BlurScaleY"]), 
       Vec2.new(ini_reader["SSAO", "BlurPassesX"], ini_reader["SSAO", "BlurPassesY"]), 
       ini_reader["SSAO", "TargetScale"]
@@ -99,18 +100,18 @@ class PostProcessor {
   applyLighting(enabled) {
     PostProcess.addShaderPass("apply_lighting", Shader.load("resources/shaders/apply_lighting.fx"), [ "post_process_buffer", "position", "normal", "metallic_roughness", "light_map", "irradiance_map", "prefiltered", "brdf_lut", "ssao_target" ], [ "post_process_buffer" ])
   }
-  ssao(enabled, blur_scale, blur_passes, render_target_scale) {
-    if (!enabled) {
-      PostProcess.addRenderTarget("ssao_target", Texture.create(Vec2.new(1.0), [ 255, 255, 255, 255 ], TextureFormat.R8G8B8A8))
+  ssao(strength, blur_scale, blur_passes, render_target_scale) {
+    if (strength == 0 || strength > 5) {
+      PostProcess.addRenderTarget("ssao_target", Texture.create(Vec2.new(1.0), [ 255 ], TextureFormat.A8))
       return
     }
 
     // Add the required render targets.
-    PostProcess.addRenderTarget("ssao_target", render_target_scale, TextureFormat.R8G8B8A8)
+    PostProcess.addRenderTarget("ssao_target", render_target_scale, TextureFormat.A8)
     PostProcess.addRenderTarget("random_texture", Texture.load("resources/textures/lighting/noise.png"))
 
     // Add the main SSAO pass.
-    PostProcess.addShaderPass("ssao", Shader.load("resources/shaders/ssao.fx"), [ "position", "normal", "random_texture", "depth_buffer" ], [ "ssao_target" ])
+    PostProcess.addShaderPass("ssao", Shader.load("resources/shaders/ssao.fx|STRENGTH%(strength)"), [ "position", "normal", "random_texture", "depth_buffer" ], [ "ssao_target" ])
 
     // // Horizontal blur.
     var shader_blur_x = Shader.load("resources/shaders/blur_7x1.fx|HORIZONTAL")
@@ -218,6 +219,6 @@ class PostProcessor {
     PostProcess.addShaderPass("ssr", Shader.load("resources/shaders/ssr.fx"), [ "post_process_buffer", "position", "normal" ], [ "post_process_buffer" ])
   }
   gui(enabled) {
-    Graphics.gui = enabled
+    GUI.enabled = enabled
   }
 }

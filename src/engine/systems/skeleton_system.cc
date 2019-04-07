@@ -30,6 +30,13 @@ namespace lambda
     }
     void SkeletonSystem::deinitialize()
     {
+			Vector<entity::Entity> entities;
+			for (const auto& it : entity_to_data_)
+				entities.push_back(it.first);
+
+			for (const auto& entity : entities)
+				removeComponent(entity);
+			collectGarbage();
     }
     void SkeletonSystem::update(const double& delta_time)
     {

@@ -1,3 +1,4 @@
+[STRENGTH1|STRENGTH2|STRENGTH3|STRENGTH4|STRENGTH5]
 #include "common.fxh"
 
 Make_CBuffer(cbPostProcess, 0)
@@ -11,6 +12,18 @@ Make_CBuffer(cbPostProcess, 0)
   float bias          = 0.025f;
   float sample_radius = 0.0025f;
 };
+
+#if TYPE == STRENGTH1 || TYPE == DEFAULT
+static const float kStrength = 1.0f;
+#elif TYPE == STRENGTH2
+static const float kStrength = 2.0f;
+#elif TYPE == STRENGTH3
+static const float kStrength = 3.0f;
+#elif TYPE == STRENGTH4
+static const float kStrength = 4.0f;
+#elif TYPE == STRENGTH5
+static const float kStrength = 5.0f;
+#endif
 
 static const int kKernelCount = 64;
 static const float3 kKernels[kKernelCount] = {
@@ -99,8 +112,8 @@ Make_Texture2D(tex_normal, 1);
 Make_Texture2D(tex_random, 2);
 Make_Texture2D(tex_depth, 3);
 
-static const float kSurfaceEpsilon = 0.05f;
-static const float kOcclusionRadius = 0.25f;
+static const float kSurfaceEpsilon = 0.025f;
+static const float kOcclusionRadius = 0.125f;
 static const float kOcclusionFadeStart = 0.2f;
 static const float kOcclusionFadeEnd = 1.0f;
 
@@ -231,5 +244,5 @@ float4 PS(VSOutput pIn) : SV_Target0
 	const float access = 1.0f - occlusionSum;
 
 	// Sharpen the contrast of the SSAO map to make the SSAO affect more dramatic.
-	return saturate(pow(access, 2.0f));
+	return saturate(pow(access, kStrength));
 }

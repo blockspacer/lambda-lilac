@@ -51,7 +51,7 @@ namespace lambda
     ////////////////////////////////////////////////////////////////////////////
     void* EASTLAllocator::allocate(size_t n, int /*flags*/)
     {
-      return Memory::allocate(n);
+      return foundation::Memory::allocate(n);
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -60,13 +60,13 @@ namespace lambda
                                    size_t /*offset*/,
                                    int /*flags*/)
     {
-      return Memory::allocate(n , alignment);
+      return foundation::Memory::allocate(n , alignment);
     }
 
     ////////////////////////////////////////////////////////////////////////////
     void EASTLAllocator::deallocate(void* p, size_t /*n*/)
     {
-      Memory::deallocate(p);
+			foundation::Memory::deallocate(p);
     }
 
     ////////////////////////////////////////////////////////////////////////////

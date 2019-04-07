@@ -2,6 +2,7 @@
 #include <iostream>
 #include <cassert>
 #include "containers/containers.h"
+#include "stack_trace.h"
 #define LOG_TO_FILE 1
 
 #ifndef LOG_TO_FILE
@@ -22,7 +23,8 @@ namespace lambda
     };
 
     extern void Log(LogPriority priority, const char* format, ...);
-    extern void LogToFile(const String& msg);
+		extern void LogToFile(const String& msg);
+		extern void LogToFile(const char* msg);
 
 #define LMB_LOG(...)      (Log(lambda::foundation::LogPriority::kNone,    __VA_ARGS__))
 #define LMB_LOG_INFO(...) (Log(lambda::foundation::LogPriority::kInfo,    __VA_ARGS__))
@@ -145,22 +147,20 @@ namespace lambda
   }                                                                                  
 }
 
-// TODO (Hilze): Make this a global state.
-//#if defined(_DEBUG) && !defined(VIOLET_ASSERT)
-#define VIOLET_ASSERT
-//#endif
-
 // No asserts in release mode.
-#ifdef VIOLET_ASSERT
-#define LMB_ASSERT(expr, ...) { if ((expr) == false) { \
+#if VIOLET_DEBUG
+#define LMB_ASSERT(expr, ...) do { if ((expr) == false) { \
 LMB_LOG_ERR("Assertion failure\n=============================\n", __VA_ARGS__);\
 LMB_LOG(__VA_ARGS__); \
+LMB_LOG("\n\nCallstack:\n"); \
+LMB_LOG(captureCallStack()); \
 LMB_LOG("\n\n"); \
-assert(true); } }
+__debugbreak();\
+assert(true); } } while (0)
 //#define LMB_ASSERT(expr, ...) { if ((expr) == false) { LMB_LOG_ERR("Assertion failure\n================================\nFile: %s\nLine: %s\nFunction: %s\n\n%s\n\n", __FILE__, __LINE__, __func__,  __VA_ARGS__); assert(false); } }
 #else
-#define LMB_ASSERT(expr, ...) { if ((expr) == false) { \
+#define LMB_ASSERT(expr, ...) do { if ((expr) == false) { \
 LMB_LOG_ERR("Assertion failure\n=============================\n", __VA_ARGS__);\
 LMB_LOG(__VA_ARGS__); \
-LMB_LOG("\n\n");
+LMB_LOG("\n\n"); } while (0)
 #endif

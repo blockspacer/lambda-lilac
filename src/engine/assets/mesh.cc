@@ -1,6 +1,8 @@
 #include "mesh.h"
 #include "utils/angle.h"
 #include <glm/gtx/orthonormalize.hpp>
+#include "interfaces/irenderer.h"
+#include "assets/mesh_io.h"
 
 namespace lambda
 {
@@ -34,9 +36,8 @@ namespace lambda
     Mesh::~Mesh()
     {
       textures_.resize(0u);
-      Buffer null_buffer;
-			for (const auto& it : buffer_)
-				set(it.first, null_buffer);
+			buffer_.clear();
+			changed_.clear();
       sub_meshes_.resize(0u);
     }
     
@@ -68,31 +69,15 @@ namespace lambda
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void Mesh::set(const uint32_t& hash, const Buffer& buffer)
     {
-      Buffer& b = buffer_[hash];
-      if (b.data != nullptr)
-      {
-        foundation::Memory::deallocate(b.data);
-        b.data = nullptr;
-      }
-      b.count = buffer.count;
-      b.size  = buffer.size;
-      if (buffer.data != nullptr)
-      {
-        b.data = foundation::Memory::allocate(buffer.count * buffer.size);
-        memcpy(b.data, buffer.data, buffer.count * buffer.size);
-      }
+			buffer_[hash] = buffer;
       changed_[hash] = true;
     }
     
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void Mesh::clear(bool has_changed)
     {
-      Buffer null_buffer;
-			for (auto& it : buffer_)
-			{
-				set(it.first, null_buffer);
-				markAsChanged(it.first);
-			}
+			buffer_.clear();
+			changed_.clear();
     }
     
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -140,7 +125,7 @@ namespace lambda
 				if (tangents[i] != glm::vec3(0.0f, 0.0f, 0.0f))
 					tangents[i] = glm::normalize(tangents[i]);
 
-      set(MeshElements::kTangents, tangents);
+      set(MeshElements::kTangents, Buffer(tangents));
     }
     
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -285,6 +270,12 @@ namespace lambda
 
 			return mesh;
     }
+
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		void Mesh::release(Mesh* mesh, const size_t& hash)
+		{
+			MeshManager::getInstance()->destroy(mesh, hash);
+		}
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void getMinMax(const Vector<glm::vec3>& positions, glm::vec3& min, glm::vec3& max)
@@ -913,5 +904,81 @@ namespace lambda
 
       return sphere;
     }
+
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		VioletMeshHandle lambda::asset::MeshManager::create(Name name)
+		{
+			VioletMeshHandle handle;
+
+			auto it = mesh_cache_.find(name.getHash());
+			if (it == mesh_cache_.end())
+			{
+				handle = VioletMeshHandle(foundation::Memory::construct<Mesh>(), name);
+				mesh_cache_.insert(eastl::make_pair(name.getHash(), handle.get()));
+			}
+			else
+				handle = VioletMeshHandle(it->second, name);
+
+			return handle;
+		}
+
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		VioletMeshHandle lambda::asset::MeshManager::create(Name name, Mesh mesh)
+		{
+			VioletMeshHandle handle;
+
+			auto it = mesh_cache_.find(name.getHash());
+			if (it == mesh_cache_.end())
+			{
+				handle = VioletMeshHandle(foundation::Memory::construct<Mesh>(mesh), name);
+				mesh_cache_.insert(eastl::make_pair(name.getHash(), handle.get()));
+			}
+			else
+				handle = VioletMeshHandle(it->second, name);
+
+			return handle;
+		}
+
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		VioletMeshHandle lambda::asset::MeshManager::get(Name name)
+		{
+			return create(name, io::MeshIO::asAsset(io::MeshIO::load(name.getName())));
+		}
+
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		void lambda::asset::MeshManager::destroy(Mesh* mesh, const size_t& hash)
+		{
+			if (mesh_cache_.empty())
+				return;
+
+			auto it = mesh_cache_.find(hash);
+			if (it != mesh_cache_.end())
+				mesh_cache_.erase(it);
+
+			foundation::Memory::destruct<Mesh>(mesh);
+			renderer_->destroyMesh(hash);
+		}
+
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		MeshManager* lambda::asset::MeshManager::getInstance()
+		{
+			static MeshManager* s_instance =
+				foundation::Memory::construct<MeshManager>();
+
+			return s_instance;
+		}
+
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		void lambda::asset::MeshManager::setRenderer(platform::IRenderer* renderer)
+		{
+			getInstance()->renderer_ = renderer;
+		}
+
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		MeshManager::~MeshManager()
+		{
+			while (!mesh_cache_.empty())
+				destroy(mesh_cache_.begin()->second, mesh_cache_.begin()->first);
+		}
   }
 }

@@ -5,7 +5,6 @@
 #include <assets/mesh.h>
 #include <assets/mesh_io.h>
 #include <utils/mesh_decimator.h>
-#include <assets/asset_manager.h>
 
 namespace lambda
 {
@@ -19,9 +18,9 @@ namespace lambda
 
         Map<uint64_t, int16_t> g_ref_counts;
         UnorderedMap<String, uint64_t> g_mesh_ids;
-        Vector<asset::MeshHandle> g_meshes;
+        Vector<asset::VioletMeshHandle> g_meshes;
         
-        uint64_t Add(asset::MeshHandle mesh, const String& name)
+        uint64_t Add(asset::VioletMeshHandle mesh, const String& name)
         {
           g_mesh_ids.insert(eastl::make_pair(name, g_meshes.size()));
           uint64_t mesh_id = g_meshes.size();
@@ -32,11 +31,7 @@ namespace lambda
         {
           if (g_mesh_ids.find(file_path) == g_mesh_ids.end())
           {
-            io::MeshIO::Mesh mesh = io::MeshIO::load(file_path.c_str());
-            asset::Mesh input = io::MeshIO::asAsset(mesh);
-            asset::MeshHandle mesh_handle = asset::AssetManager::getInstance().createAsset(
-              file_path, foundation::Memory::constructShared<asset::Mesh>(input)
-            );
+						asset::VioletMeshHandle mesh_handle = asset::MeshManager::getInstance()->get(file_path);
             return Add(mesh_handle, file_path);
           }
           else
@@ -47,9 +42,7 @@ namespace lambda
           static size_t sid = 0u;
           String name = "__created_mesh_" + toString(sid++) + "__";
 
-          asset::MeshHandle mesh_handle = asset::AssetManager::getInstance().createAsset(
-            name, foundation::Memory::constructShared<asset::Mesh>()
-          );
+					asset::VioletMeshHandle mesh_handle = asset::MeshManager::getInstance()->create(name);
           return Add(mesh_handle, name);
         }
         uint64_t CreateDefault(const String& type)
@@ -57,19 +50,13 @@ namespace lambda
           static size_t sid = 0u;
           String name = "__generated_mesh_" + toString(sid++) + "__";
 
-          asset::MeshHandle mesh_handle;
+          asset::VioletMeshHandle mesh_handle;
           if (type == "cube")
-            mesh_handle = asset::AssetManager::getInstance().createAsset(
-              name, foundation::Memory::constructShared<asset::Mesh>(asset::Mesh::createCube())
-            );
+            mesh_handle = asset::MeshManager::getInstance()->create(name, asset::Mesh::createCube());
           else if (type == "cylinder")
-            mesh_handle = asset::AssetManager::getInstance().createAsset(
-              name, foundation::Memory::constructShared<asset::Mesh>(asset::Mesh::createCylinder())
-            );
+						mesh_handle = asset::MeshManager::getInstance()->create(name, asset::Mesh::createCylinder());
           else if (type == "sphere")
-            mesh_handle = asset::AssetManager::getInstance().createAsset(
-              name, foundation::Memory::constructShared<asset::Mesh>(asset::Mesh::createSphere())
-            );
+						mesh_handle = asset::MeshManager::getInstance()->create(name, asset::Mesh::createSphere());
 
           return Add(mesh_handle, name);
         }
@@ -163,7 +150,7 @@ namespace lambda
           asset::Mesh mesh;
           platform::MeshDecimator decimator;
           decimator.decimate(g_meshes[in_id].get(), &mesh, reduction, target_error);
-          asset::MeshHandle mesh_handle = asset::AssetManager::getInstance().createAsset(Name(name), foundation::Memory::constructShared<asset::Mesh>(mesh));
+          asset::VioletMeshHandle mesh_handle = asset::MeshManager::getInstance()->create(Name(name), mesh);
 
           return Add(mesh_handle, name);
         }
@@ -192,7 +179,7 @@ namespace lambda
           it->second--;
         }
 
-        asset::MeshHandle Get(const uint64_t id)
+        asset::VioletMeshHandle Get(const uint64_t id)
         {
           return g_meshes[id];
         }

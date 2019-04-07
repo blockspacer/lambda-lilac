@@ -82,6 +82,14 @@ namespace lambda
     }
     void ColliderSystem::deinitialize()
     {
+			Vector<entity::Entity> entities;
+			for (const auto& it : entity_to_data_)
+				entities.push_back(it.first);
+
+			for (const auto& entity : entities)
+				removeComponent(entity);
+			collectGarbage();
+
       rigid_body_system_.reset();
       transform_system_.reset();
     }
@@ -98,7 +106,7 @@ namespace lambda
 		lookUpData(entity).collision_body->makeCapsuleCollider();
     }
 
-    void ColliderSystem::makeMeshCollider(const entity::Entity& entity, asset::MeshHandle mesh, const uint32_t& sub_mesh_id)
+    void ColliderSystem::makeMeshCollider(const entity::Entity& entity, asset::VioletMeshHandle mesh, const uint32_t& sub_mesh_id)
     {
 		lookUpData(entity).collision_body->makeMeshCollider(mesh, sub_mesh_id);
 	}
@@ -149,7 +157,7 @@ namespace lambda
     {
 		system_->makeCapsule(entity_);
 	}
-    void ColliderComponent::makeMeshCollider(asset::MeshHandle mesh, const uint32_t& sub_mesh_id)
+    void ColliderComponent::makeMeshCollider(asset::VioletMeshHandle mesh, const uint32_t& sub_mesh_id)
     {
 		system_->makeMeshCollider(entity_, mesh, sub_mesh_id);
     }

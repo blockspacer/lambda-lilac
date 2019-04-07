@@ -12,7 +12,7 @@ namespace lambda
     {
       entity::Entity entity;
       glm::mat4x4 model_matrix;
-      asset::MeshHandle mesh;
+      asset::VioletMeshHandle mesh;
       uint32_t sub_mesh = 0u;
       asset::VioletTextureHandle albedo_texture;
       asset::VioletTextureHandle normal_texture;

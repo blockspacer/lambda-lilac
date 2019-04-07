@@ -99,7 +99,7 @@ namespace lambda
 
     private:
 	  struct Data {
-	    asset::MeshHandle mesh;
+	    asset::VioletMeshHandle mesh;
 		Vector<glm::vec3> positions;
 		Vector<glm::vec4> colours;
 	  } lines_, tris_;

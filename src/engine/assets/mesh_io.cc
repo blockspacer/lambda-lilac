@@ -5,7 +5,6 @@
 #include <iostream>
 #include "utils/decompose_matrix.h"
 #include "texture.h"
-#include "asset_manager.h"
 #include <utils/console.h>
 #include <utils/file_system.h>
 

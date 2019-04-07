@@ -81,7 +81,7 @@ namespace lambda
 			virtual void makeBoxCollider() override;
 			virtual void makeSphereCollider() override;
 			virtual void makeCapsuleCollider() override;
-			virtual void makeMeshCollider(asset::MeshHandle mesh, uint32_t sub_mesh_id) override;
+			virtual void makeMeshCollider(asset::VioletMeshHandle mesh, uint32_t sub_mesh_id) override;
 			void makeShape(btCollisionShape* shape, btTriangleMesh* triangle_mesh = nullptr);
 
 			void destroyBody();
@@ -101,6 +101,9 @@ namespace lambda
 			uint8_t angular_constraints_;
 			uint16_t layers_;
 			float mass_;
+
+			int* indices_;
+			glm::vec3* vertices_;
 		};
 
 		///////////////////////////////////////////////////////////////////////////

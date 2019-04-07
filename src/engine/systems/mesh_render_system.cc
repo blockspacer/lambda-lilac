@@ -2,7 +2,6 @@
 #include "transform_system.h"
 #include "entity_system.h"
 #include <glm/glm.hpp>
-#include "assets/asset_manager.h"
 #include <containers/containers.h>
 #include "assets/texture.h"
 #include "platform/blend_state.h"
@@ -97,7 +96,7 @@ namespace lambda
     {
       for (auto& it : data_)
       {
-        it.mesh.reset();
+        it.mesh = nullptr;
         it.sub_mesh = 0u;
         // TODO (Hilze): Implement.
         //it.albedo_texture.reset();
@@ -106,7 +105,7 @@ namespace lambda
       transform_system_.reset();
       entity_system_.reset();
     }
-    void MeshRenderSystem::setMesh(const entity::Entity& entity, asset::MeshHandle mesh)
+    void MeshRenderSystem::setMesh(const entity::Entity& entity, asset::VioletMeshHandle mesh)
     {
       lookUpData(entity).mesh = mesh;
     }
@@ -134,7 +133,7 @@ namespace lambda
     {
       lookUpData(entity).metallic_roughness_texture = texture;
     }
-    asset::MeshHandle MeshRenderSystem::getMesh(const entity::Entity& entity)
+    asset::VioletMeshHandle MeshRenderSystem::getMesh(const entity::Entity& entity)
     {
       return lookUpData(entity).mesh;
     }
@@ -162,7 +161,7 @@ namespace lambda
     {
       return lookUpData(entity).roughness;
     }
-    void MeshRenderSystem::attachMesh(const entity::Entity& entity, asset::MeshHandle mesh)
+    void MeshRenderSystem::attachMesh(const entity::Entity& entity, asset::VioletMeshHandle mesh)
     {
       // Get all textures.
       Vector<asset::VioletTextureHandle> textures = mesh->getAttachedTextures();
@@ -345,6 +344,14 @@ namespace lambda
     }
     void MeshRenderSystem::deinitialize()
     {
+			Vector<entity::Entity> entities;
+			for (const auto& it : entity_to_data_)
+				entities.push_back(it.first);
+
+			for (const auto& entity : entities)
+				removeComponent(entity);
+			collectGarbage();
+
       entity_system_.reset();
       transform_system_.reset();
 
@@ -570,11 +577,11 @@ namespace lambda
       IComponent(entity::Entity()), system_(nullptr)
     {
     }
-    void MeshRenderComponent::setMesh(asset::MeshHandle mesh)
+    void MeshRenderComponent::setMesh(asset::VioletMeshHandle mesh)
     {
       system_->setMesh(entity_, mesh);
     }
-    asset::MeshHandle MeshRenderComponent::getMesh() const
+    asset::VioletMeshHandle MeshRenderComponent::getMesh() const
     {
       return system_->getMesh(entity_);
     }
@@ -626,7 +633,7 @@ namespace lambda
     {
       system_->setAlbedoTexture(entity_, texture);
     }
-    void MeshRenderComponent::attachMesh(asset::MeshHandle mesh)
+    void MeshRenderComponent::attachMesh(asset::VioletMeshHandle mesh)
     {
       system_->attachMesh(entity_, mesh);
     }

@@ -152,6 +152,9 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		void ShaderManager::destroy(Shader* shader, const size_t& hash)
 		{
+			if (shader_cache_.empty())
+				return;
+
 			auto it = shader_cache_.find(hash);
 			if (it != shader_cache_.end())
 				shader_cache_.erase(it);
@@ -182,6 +185,13 @@ namespace lambda
 		void ShaderManager::setRenderer(platform::IRenderer* renderer)
 		{
 			getInstance()->renderer_ = renderer;
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		ShaderManager::~ShaderManager()
+		{
+			while (!shader_cache_.empty())
+				destroy(shader_cache_.begin()->second, shader_cache_.begin()->first);
 		}
 
 		///////////////////////////////////////////////////////////////////////////

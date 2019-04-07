@@ -247,7 +247,7 @@ namespace lambda
     fseek(fp, 0, SEEK_SET);
     fwrite(header, header_size, 1u, fp);
     fclose(fp);
-    foundation::Memory::deallocate(nullHeader);
+		foundation::Memory::deallocate(nullHeader);
   }
 
 #ifdef VIOLET_WIN32

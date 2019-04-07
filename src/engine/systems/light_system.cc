@@ -150,9 +150,7 @@ namespace lambda
         1.0f, TextureFormat::kR16G16B16A16
       ));
 
-      full_screen_mesh_ = asset::AssetManager::getInstance().createAsset(
-        Name("__fs_quad__"), foundation::Memory::constructShared<lambda::asset::Mesh>(asset::Mesh::createScreenQuad())
-      );
+      full_screen_mesh_ = asset::MeshManager::getInstance()->create(Name("__fs_quad__"), asset::Mesh::createScreenQuad());
 
 	  Vector<char> data(4);
 	  float clear_value[2] = { FLT_MAX, FLT_MAX };
@@ -174,6 +172,14 @@ namespace lambda
     }
     void LightSystem::deinitialize()
     {
+			Vector<entity::Entity> entities;
+			for (const auto& it : entity_to_data_)
+				entities.push_back(it.first);
+
+			for (const auto& entity : entities)
+				removeComponent(entity);
+			collectGarbage();
+
       camera_system_.reset();
       mesh_render_system_.reset();
       transform_system_.reset();
@@ -914,7 +920,8 @@ namespace lambda
 					renderer->setSubMesh(0u);
 					renderer->setBlendState(platform::BlendState::Default());
 
-					for (int l = 0; l < 6; ++l)
+					// TODO (Hilze): Support the blurring of cubemaps.
+					/*for (int l = 0; l < 6; ++l)
 					{
 						shadow_map.setLayer(l);
 						renderer->setShaderVariable(platform::ShaderVariable(Name("face"), (float)l));
@@ -940,7 +947,7 @@ namespace lambda
 							renderer->draw();
 
 						}
-					}
+					}*/
 
 					renderer->popMarker();
 				}

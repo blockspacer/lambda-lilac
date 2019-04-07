@@ -34,6 +34,9 @@ namespace lambda
     }
     bool MonoBehaviourSystem::hasComponent(const entity::Entity& entity) const
     {
+			if (entity_to_data_.empty())
+				return false;
+
       return entity_to_data_.find(entity) != entity_to_data_.end();
     }
     void MonoBehaviourSystem::removeComponent(const entity::Entity& entity)
@@ -83,7 +86,13 @@ namespace lambda
     }
     void MonoBehaviourSystem::deinitialize()
     {
-      world_ = nullptr;
+			Vector<entity::Entity> entities;
+			for (const auto& it : entity_to_data_)
+				entities.push_back(it.first);
+
+			for (const auto& entity : entities)
+				removeComponent(entity);
+			collectGarbage();
     }
 		void MonoBehaviourSystem::update(const double& delta_time)
 		{

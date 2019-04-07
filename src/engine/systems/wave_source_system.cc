@@ -22,6 +22,14 @@ namespace lambda
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void WaveSourceSystem::deinitialize()
     {
+			Vector<entity::Entity> entities;
+			for (const auto& it : entity_to_data_)
+				entities.push_back(it.first);
+
+			for (const auto& entity : entities)
+				removeComponent(entity);
+			collectGarbage();
+
       for (const auto& data : data_)
         if (engine_->isValidVoiceHandle(data.handle))
           engine_->stop(data.handle);

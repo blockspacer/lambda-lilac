@@ -21,6 +21,15 @@ namespace lambda
       for (uint32_t i = 0u; i < kHistoryCount; ++i)
         size_history_[i] = 0u;
     }
+		FrameHeap::~FrameHeap()
+		{
+			for (const auto& frame_heap : frame_heaps_)
+				foundation::Memory::deallocate(frame_heap);
+
+			for (const auto& temp_allocs : temp_allocs_)
+				for (const auto& alloc : temp_allocs)
+					foundation::Memory::deallocate(alloc);
+		}
     void FrameHeap::update()
     {
       // Calculate the size of this alloc.
@@ -44,14 +53,14 @@ namespace lambda
       if (heap_sizes_[current_frame_heap_] != size)
       {
         if (frame_heaps_[current_frame_heap_] != nullptr)
-          foundation::Memory::deallocate(frame_heaps_[current_frame_heap_]);
+					foundation::Memory::deallocate(frame_heaps_[current_frame_heap_]);
         heap_sizes_[current_frame_heap_] = size;
         frame_heaps_[current_frame_heap_] = foundation::Memory::allocate(size);
       }
       
       // Remove the previous temporary allocs.
       for (const auto& temp_alloc : temp_allocs_[current_frame_heap_])
-        foundation::Memory::deallocate(temp_alloc);
+				foundation::Memory::deallocate(temp_alloc);
       temp_allocs_[current_frame_heap_].resize(0u);
 
     }

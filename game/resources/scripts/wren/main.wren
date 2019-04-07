@@ -96,6 +96,7 @@ class World {
           _camera.transform.worldPosition = new_position
         }
 
+        GUI.loadURL("file:///resources/web-pages/menu.html")
         GUI.bindCallback("changedSetting(_,_)", this)
         GUI.bindCallback("movedToMenu(_)", this)
     }

@@ -85,7 +85,7 @@ namespace lambda
       virtual void setScissorRects(const Vector<glm::vec4>& rects) override;
       virtual void setViewports(const Vector<glm::vec4>& rects);
 
-      virtual void setMesh(asset::MeshHandle mesh) override;
+      virtual void setMesh(asset::VioletMeshHandle mesh) override;
       virtual void setSubMesh(const uint32_t& sub_mesh_idx) override;
       virtual void setShader(asset::VioletShaderHandle shader) override;
       virtual void setTexture(
@@ -119,11 +119,9 @@ namespace lambda
       ) override;
 
     protected:
-      virtual void destroyAsset(
-        foundation::SharedPointer<asset::IAsset> asset
-      ) override;
 	  virtual void destroyTexture(const size_t& hash) override;
-	  virtual void destroyShader(const size_t& hash) override;
+		virtual void destroyShader(const size_t& hash) override;
+		virtual void destroyMesh(const size_t& hash) override;
 
     private:
       D3D11Context* context_;

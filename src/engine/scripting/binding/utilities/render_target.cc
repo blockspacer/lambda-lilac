@@ -4,7 +4,6 @@
 #include <interfaces/iworld.h>
 #include <interfaces/irenderer.h>
 #include <platform/post_process_manager.h>
-#include <assets/asset_manager.h>
 #include <assets/shader_io.h>
 #include <assets/texture.h>
 #include <algorithm>
@@ -65,9 +64,7 @@ namespace lambda
           violet_texture.hash      = hash(output);
           asset::VioletTextureHandle texture = asset::TextureManager::getInstance()->create(output, violet_texture);
 
-          auto mesh = asset::AssetManager::getInstance().createAsset<asset::Mesh>(Name("__hammerhead_mesh__"),
-            foundation::Memory::constructShared<asset::Mesh>(asset::Mesh::createScreenQuad())
-            );
+          auto mesh = asset::MeshManager::getInstance()->create(Name("__hammerhead_mesh__"), asset::Mesh::createScreenQuad());
           g_world->getRenderer()->setMesh(mesh);
           g_world->getRenderer()->setSubMesh(0u);
 
@@ -109,9 +106,7 @@ namespace lambda
           violet_texture.hash      = hash(output);
           asset::VioletTextureHandle texture = asset::TextureManager::getInstance()->create(output, violet_texture);
 
-          auto mesh = asset::AssetManager::getInstance().createAsset<asset::Mesh>(Name("__irradiance_convolution_mesh__"),
-            foundation::Memory::constructShared<asset::Mesh>(asset::Mesh::createScreenQuad())
-          );
+          auto mesh = asset::MeshManager::getInstance()->create(Name("__irradiance_convolution_mesh__"), asset::Mesh::createScreenQuad());
           g_world->getRenderer()->setMesh(mesh);
           g_world->getRenderer()->setSubMesh(0u);
 

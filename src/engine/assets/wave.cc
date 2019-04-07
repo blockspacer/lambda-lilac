@@ -63,19 +63,52 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     VioletWaveHandle WaveManager::create(Name name)
     {
-      return VioletWaveHandle(foundation::Memory::construct<Wave>(), name);
+			VioletWaveHandle handle;
+
+			auto it = wave_cache_.find(name.getHash());
+			if (it == wave_cache_.end())
+			{
+				handle = VioletWaveHandle(foundation::Memory::construct<Wave>(), name);
+				wave_cache_.insert(eastl::make_pair(name.getHash(), handle.get()));
+			}
+			else
+				handle = VioletWaveHandle(it->second, name);
+
+			return handle;
     }
 
     ///////////////////////////////////////////////////////////////////////////
     VioletWaveHandle WaveManager::create(Name name, Wave wave)
     {
-      return VioletWaveHandle(foundation::Memory::construct<Wave>(wave), name);
+			VioletWaveHandle handle;
+
+			auto it = wave_cache_.find(name.getHash());
+			if (it == wave_cache_.end())
+			{
+				handle = VioletWaveHandle(foundation::Memory::construct<Wave>(wave), name);
+				wave_cache_.insert(eastl::make_pair(name.getHash(), handle.get()));
+			}
+			else
+				handle = VioletWaveHandle(it->second, name);
+
+			return handle;
     }
 
     ///////////////////////////////////////////////////////////////////////////
     VioletWaveHandle WaveManager::create(Name name, VioletWave wave)
     {
-      return VioletWaveHandle(foundation::Memory::construct<Wave>(wave), name);
+			VioletWaveHandle handle;
+
+			auto it = wave_cache_.find(name.getHash());
+			if (it == wave_cache_.end())
+			{
+				handle = VioletWaveHandle(foundation::Memory::construct<Wave>(wave), name);
+				wave_cache_.insert(eastl::make_pair(name.getHash(), handle.get()));
+			}
+			else
+				handle = VioletWaveHandle(it->second, name);
+
+			return handle;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -94,7 +127,14 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     void WaveManager::destroy(Wave* wave, const size_t& hash)
     {
-      foundation::Memory::destruct<Wave>(wave);
+			if (wave_cache_.empty())
+				return;
+
+			auto it = wave_cache_.find(hash);
+			if (it != wave_cache_.end())
+				wave_cache_.erase(it);
+
+			foundation::Memory::destruct<Wave>(wave);
     }
     
     ///////////////////////////////////////////////////////////////////////////
@@ -105,6 +145,13 @@ namespace lambda
       
       return s_instance;
     }
+
+		///////////////////////////////////////////////////////////////////////////
+		WaveManager::~WaveManager()
+		{
+			while (!wave_cache_.empty())
+				destroy(wave_cache_.begin()->second, wave_cache_.begin()->first);
+		}
     
     ///////////////////////////////////////////////////////////////////////////
     VioletWaveManager& WaveManager::getManager()

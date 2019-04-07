@@ -136,11 +136,7 @@ namespace lambda
 				platform.set_font_loader(nullptr);
 			}
 
-			view_->ptr->Release();
-			renderer_->ptr->Release();
-			foundation::Memory::destruct(view_->ptr->view_listener());
-			foundation::Memory::destruct(view_);
-			foundation::Memory::destruct(renderer_);
+			foundation::Memory::destruct(view_->view_listener());
 		}
 
 		///////////////////////////////////////////////////////////////////////////
@@ -169,11 +165,11 @@ namespace lambda
 				platform.set_font_loader(font_loader);
 			}
 
-			renderer_ = foundation::Memory::construct<RW>(ultralight::Renderer::Create());
-			view_     = foundation::Memory::construct<VW>(renderer_->ptr->CreateView(1280u, 720u, true));
+			renderer_ = ultralight::Renderer::Create();
+			view_     = renderer_->CreateView(1280u, 720u, true);
 			ViewListenerImpl* view_listener =
 				foundation::Memory::construct<ViewListenerImpl>();
-			view_->ptr->set_view_listener(view_listener);
+			view_->set_view_listener(view_listener);
 
 			texture_ = asset::TextureManager::getInstance()->create(Name("__gui"));
 
@@ -193,16 +189,19 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		void GUI::loadURL(String url)
 		{
+			if (!enabled_)
+				return;
+
 			LoadListenerImpl* load_listener =
 				foundation::Memory::construct<LoadListenerImpl>();
-			view_->ptr->set_load_listener(load_listener);
+			view_->set_load_listener(load_listener);
 
-			view_->ptr->LoadURL(url.c_str());
+			view_->LoadURL(url.c_str());
 
 			while (!load_listener->isFinished())
-				renderer_->ptr->Update();
+				renderer_->Update();
 
-			view_->ptr->set_load_listener(nullptr);
+			view_->set_load_listener(nullptr);
 			foundation::Memory::destruct(load_listener);
 		}
 
@@ -217,7 +216,7 @@ namespace lambda
 				return;
 			switch_ -= switch_time_;
 
-			renderer_->ptr->Update();
+			renderer_->Update();
 
 			gui::MyGPUDriver* driver =
 				(gui::MyGPUDriver*)ultralight::Platform::instance().gpu_driver();
@@ -228,7 +227,7 @@ namespace lambda
 
 				// Render all active views to command lists 
 				// and dispatch calls to GPUDriver
-				renderer_->ptr->Render();
+				renderer_->Render();
 
 				driver->EndSynchronize();
 
@@ -239,7 +238,7 @@ namespace lambda
 
 					world_->getRenderer()->copyToTexture(
 						driver->GetRenderBuffer(
-							view_->ptr->render_target().render_buffer_id
+							view_->render_target().render_buffer_id
 						),
 						texture_
 					);
@@ -264,7 +263,7 @@ namespace lambda
 				mouse_event.x = mouse_position_.x;
 				mouse_event.y = mouse_position_.y;
 				mouse_event.button = ultralight::MouseEvent::kButton_None;
-				view_->ptr->FireMouseEvent(mouse_event);
+				view_->FireMouseEvent(mouse_event);
 				break;
 			}
 			case platform::WindowMessageType::kMouseButton:
@@ -284,12 +283,12 @@ namespace lambda
 				mouse_event.x = mouse_position_.x;
 				mouse_event.y = mouse_position_.y;
 				mouse_event.button = button;
-				view_->ptr->FireMouseEvent(mouse_event);
+				view_->FireMouseEvent(mouse_event);
 				break;
 			}
 			case platform::WindowMessageType::kResize:
 			{
-				view_->ptr->Resize(message.data[0], message.data[1]);
+				view_->Resize(message.data[0], message.data[1]);
 				texture_->getLayer(0).resize(message.data[0], message.data[1]);
 				break;
 			}
@@ -322,7 +321,7 @@ namespace lambda
 			if (!enabled_)
 				return;
 
-			JSContextRef js_context = view_->ptr->js_context();
+			JSContextRef js_context = view_->js_context();
 			JSStringRef str = JSStringCreateWithUTF8CString(js.c_str());
 
 			JSValueRef exception = JSValueMakeNull(js_context);
@@ -463,7 +462,7 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		void GUI::bindJavaScriptCallback(String name, JavaScriptCallback callback, const void* user_data)
 		{
-			JSContextRef js_context = view_->ptr->js_context();
+			JSContextRef js_context = view_->js_context();
 			JSStringRef str = JSStringCreateWithUTF8CString(name.c_str());
 
 			JSObjectRef global_object = JSContextGetGlobalObject(js_context);
@@ -495,7 +494,7 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		void GUI::bindJavaScriptCallback(String name, JavaScriptCallbackWithRetval callback, const void* user_data)
 		{
-			JSContextRef js_context = view_->ptr->js_context();
+			JSContextRef js_context = view_->js_context();
 			JSStringRef str = JSStringCreateWithUTF8CString(name.c_str());
 
 			JSObjectRef global_object = JSContextGetGlobalObject(js_context);

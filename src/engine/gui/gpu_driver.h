@@ -81,14 +81,14 @@ namespace lambda
 
 			UnorderedMap<uint32_t, asset::VioletTextureHandle> textures_;
 			UnorderedMap<uint32_t, asset::VioletTextureHandle> render_targets_;
-			UnorderedMap<uint32_t, asset::MeshHandle>          geometry_;
+			UnorderedMap<uint32_t, asset::VioletMeshHandle>          geometry_;
 			asset::VioletShaderHandle                          shader_;
 
 			uint32_t next_texture_id_       = 1;
 			uint32_t next_render_buffer_id_ = 1;
 			uint32_t next_geometry_id_      = 1;
 
-			std::vector<ultralight::Command> command_list_;
+			Vector<ultralight::Command> command_list_;
 			int batch_count_;
 
 			asset::VioletShaderHandle shader_fill_;

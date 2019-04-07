@@ -26,8 +26,36 @@
 #define NO_SHADOWS  1
 #endif
 
+float linearStep(float min, float max, float val)
+{
+  return clamp((val - min) / (max - min), 0.0f, 1.0f);
+}
 
-#include "publish.fxh"
+#if VSM
+float calcShadow(float2 moments, float compare)
+{
+  float p = step(compare, moments.x);
+  float variance = max(moments.y - moments.x * moments.x, 0.001f);
+
+  float d = (compare - moments.x);
+  float p_max = linearStep(0.2f, 1.0f, variance / (variance + d * d));
+
+  return min(max(p, p_max), 1.0f);
+}
+#elif ESM
+static const float kESMMultiplier = 5.0f;
+
+float calcShadow(float2 moments, float compare)
+{
+  const float val = clamp(exp((moments.x - compare) * kESMMultiplier), 0.0f, 1.0f);
+  return linearStep(0.2f, 1.0f, val);
+}
+#else
+float calcShadow(float2 moments, float compare)
+{
+  return 1.0f;
+}
+#endif
 
 #if LIGHT_POINT
 Make_TextureCube(tex_shadow_map, 0);
@@ -100,7 +128,7 @@ float4 PS(VSOutput pIn) : SV_TARGET0
 #if NO_SHADOWS
   float light_factor = 1.0f;
 #else 
-  float2 shadow_map_depth = tex_shadow_map.Sample(SamAnisotrophicClamp, coords).xy;
+  float2 shadow_map_depth = tex_shadow_map.Sample(SamLinearClamp, coords).xy;
   float cs = calcShadow(shadow_map_depth, position_depth);
 
   if (cs <= 0.0f || hide_shadows >= 1.0f)

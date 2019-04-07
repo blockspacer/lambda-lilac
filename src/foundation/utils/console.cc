@@ -1,7 +1,9 @@
 #include "console.h"
 
-#ifdef _WIN32
+#ifdef VIOLET_WIN32
 #include <Windows.h>
+#undef min
+#undef max
 #endif
 
 #include <fstream>
@@ -27,8 +29,9 @@ namespace lambda
       va_end(args);
 
       va_start(args, format);
-      String msg(size, '\0');
-      vsnprintf((char*)msg.data(), size, format, args);
+			char* msg = (char*)malloc(size);
+			memset(msg, '\0', size);
+      vsnprintf(msg, size, format, args);
       va_end(args);
 
       switch (priority)
@@ -53,6 +56,8 @@ namespace lambda
 #if LOG_TO_FILE == 1
       LogToFile(msg);
 #endif
+
+			free(msg);
     }
     
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -69,14 +74,15 @@ namespace lambda
 #ifdef VIOLET_OSX
         String time = std::ctime(&t);
 #else
-        String time(26u, '\0');
-        ctime_s((char*)time.data(), 26u, &t);
-        time.resize(time.find('\n'));
+				char* time = (char*)malloc(26u);
+				memset(time, '\0', 26u);
+        ctime_s(time, 26u, &t);
 #endif
-        eastl::replace(time.begin(), time.end(), ' ', '-');
-        eastl::replace(time.begin(), time.end(), ':', '-');
         String output_file = FileSystem::GetBaseDir() + "logs/" + time + ".log";
         fout.open(stlString(output_file));
+#ifndef VIOLET_OSX
+				free(time);
+#endif
       }
       return fout;
     }
@@ -84,8 +90,14 @@ namespace lambda
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void LogToFile(const String& msg)
     {
-      LogFile() << msg.c_str();
+      LogToFile(msg.c_str());
     }
+
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		void LogToFile(const char* msg)
+		{
+			LogFile() << msg;
+		}
     
 #ifdef VIOLET_WIN32
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

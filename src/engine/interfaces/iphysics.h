@@ -78,7 +78,7 @@ namespace lambda
 		  virtual void makeBoxCollider() = 0;
 		  virtual void makeSphereCollider() = 0;
 		  virtual void makeCapsuleCollider() = 0;
-		  virtual void makeMeshCollider(asset::MeshHandle mesh, uint32_t sub_mesh_id) = 0;
+		  virtual void makeMeshCollider(asset::VioletMeshHandle mesh, uint32_t sub_mesh_id) = 0;
 	  };
 
 	  class IPhysicsWorld

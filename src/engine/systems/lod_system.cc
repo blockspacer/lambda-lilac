@@ -5,7 +5,7 @@ namespace lambda
 {
   namespace components
   {
-    void LOD::setMesh(asset::MeshHandle mesh)
+    void LOD::setMesh(asset::VioletMeshHandle mesh)
     {
       mesh_ = mesh;
     }
@@ -13,7 +13,7 @@ namespace lambda
     {
       distance_ = distance;
     }
-    asset::MeshHandle LOD::getMesh() const
+    asset::VioletMeshHandle LOD::getMesh() const
     {
       return mesh_;
     }
@@ -116,6 +116,17 @@ namespace lambda
     }
     void LODSystem::deinitialize()
     {
+			Vector<entity::Entity> entities;
+			for (const auto& it : entity_to_data_)
+				entities.push_back(it.first);
+
+			for (const auto& entity : entities)
+				removeComponent(entity);
+			collectGarbage();
+
+			transform_system_ = nullptr;
+			mesh_render_system_ = nullptr;
+			camera_system_ = nullptr;
     }
     void LODSystem::update(const double& delta_time)
     {

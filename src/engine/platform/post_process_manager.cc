@@ -1,5 +1,4 @@
 #include "post_process_manager.h"
-#include "assets/asset_manager.h"
 #include <interfaces/iworld.h>
 
 namespace lambda

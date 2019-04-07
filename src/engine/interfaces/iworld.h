@@ -8,12 +8,12 @@
 #include "input/keyboard.h"
 #include "input/controller.h"
 #include "input/input_manager.h"
-#include "assets/asset_manager.h"
 #include "interfaces/iscript_context.h"
 #include "iimgui.h"
 #include "platform/shader_variable_manager.h"
 #include "platform/debug_renderer.h"
 #include "platform/post_process_manager.h"
+#include "utils/profiler.h"
 #include "gui/gui.h"
 
 namespace lambda
@@ -27,7 +27,6 @@ namespace lambda
       IWorld(
         foundation::SharedPointer<platform::IWindow> window, 
         foundation::SharedPointer<platform::IRenderer> renderer,
-        foundation::SharedPointer<asset::AssetManager> asset_manager,
         foundation::SharedPointer<scripting::IScriptContext> scripting,
         foundation::SharedPointer<platform::IImGUI> imgui
       );
@@ -52,7 +51,6 @@ namespace lambda
       Scene& getScene();
       foundation::SharedPointer<platform::IRenderer> getRenderer();
       foundation::SharedPointer<platform::IWindow> getWindow();
-      foundation::SharedPointer<asset::AssetManager> getAssetManager();
       foundation::SharedPointer<scripting::IScriptContext> getScripting();
       foundation::SharedPointer<platform::IImGUI> getImGUI();
       void setImGUI(foundation::SharedPointer<platform::IImGUI> imgui);
@@ -65,6 +63,7 @@ namespace lambda
       platform::DebugRenderer& getDebugRenderer();
       platform::PostProcessManager& getPostProcessManager();
 			gui::GUI& getGUI();
+			utilities::Profiler& getProfiler();
 
     private:
 			platform::ShaderVariableManager shader_variable_manager_;
@@ -74,7 +73,6 @@ namespace lambda
       double delta_time_;
       foundation::SharedPointer<platform::IWindow> window_;
       foundation::SharedPointer<platform::IRenderer> renderer_;
-      foundation::SharedPointer<asset::AssetManager> asset_manager_;
       Scene scene_;
       utilities::Timer timer_;
       io::Input<io::Mouse::State> mouse_;
@@ -84,6 +82,7 @@ namespace lambda
       foundation::SharedPointer<scripting::IScriptContext> scripting_;
       foundation::SharedPointer<platform::IImGUI> imgui_;
 			gui::GUI gui_;
+			utilities::Profiler profiler_;
     };
   }
 }

@@ -4,7 +4,10 @@ namespace lambda
 {
 	namespace utilities
 	{
-		Profiler Profiler::s_instance_;
+		///////////////////////////////////////////////////////////////////////////
+		Profiler::~Profiler()
+		{
+		}
 
 		///////////////////////////////////////////////////////////////////////////
 		void Profiler::startTimer(String name)
@@ -26,12 +29,6 @@ namespace lambda
 				return 0.0;
 			else
 				return it->second;
-		}
-
-		///////////////////////////////////////////////////////////////////////////
-		Profiler& Profiler::getInstance()
-		{
-			return s_instance_;
 		}
 	}
 }

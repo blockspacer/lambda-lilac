@@ -106,71 +106,6 @@ class Console {
 				return nullptr;
 			}
 		}
-		namespace GUI
-		{
-			/////////////////////////////////////////////////////////////////////////
-			char* Load()
-			{
-				String str = R"(
-///////////////////////////////////////////////////////////////////////////////
-///// gui.wren ////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-class GUI {
-    foreign static executeJavaScript(string)
-    foreign static bindCallback(name, object)
-}
-)";
-				char* data = (char*)WREN_ALLOC(str.size() + 1u);
-				memcpy(data, str.data(), str.size() + 1u);
-				return data;
-			}
-
-			struct UserDataWrapper
-			{
-				WrenHandle* object;
-				WrenHandle* function;
-			};
-
-			/////////////////////////////////////////////////////////////////////////
-			void callback(Vector<lambda::gui::JSVal> js_args, const void* user_data)
-			{
-				const UserDataWrapper& ud = *(UserDataWrapper*)user_data;
-
-				Vector<ScriptValue> args;
-				for (uint32_t i = 0; i < js_args.size(); ++i)
-				{
-					if (js_args[i].isBool())
-						args.push_back(ScriptValue(js_args[i].asBool()));
-					else if (js_args[i].isNumber())
-						args.push_back(ScriptValue(js_args[i].asNumber()));
-					else if (js_args[i].isString())
-						args.push_back(ScriptValue(String(js_args[i].asString())));
-				}
-
-				g_world->getScripting()->executeFunction(ud.object, ud.function, args);
-			}
-
-			WrenForeignMethodFn Bind(const char* signature)
-			{
-				if (strcmp(signature, "executeJavaScript(_)") == 0) return [](WrenVM* vm) {
-					g_world->getGUI().executeJavaScript(wrenGetSlotString(vm, 1));
-				};
-				if (strcmp(signature, "bindCallback(_,_)") == 0) return [](WrenVM* vm) {
-					String name = wrenGetSlotString(vm, 1);
-					UserDataWrapper* user_data = 
-						foundation::Memory::construct<UserDataWrapper>();
-					user_data->object   = wrenGetSlotHandle(vm, 2);
-					wrenSetSlotHandle(vm, 0, user_data->object);
-					user_data->function = wrenMakeCallHandle(vm, name.c_str());
-					g_world->getGUI().bindJavaScriptCallback(
-						name.substr(0, name.find("(")),
-						callback,
-						user_data
-					);
-				};
-				return nullptr;
-			}
-		}
     namespace Vec2
     {
 
@@ -1175,9 +1110,9 @@ foreign class Mesh {
       WrenHandle* handle = nullptr;
     
       /////////////////////////////////////////////////////////////////////////
-      asset::MeshHandle* make(
+      asset::VioletMeshHandle* make(
         WrenVM* vm, 
-        asset::MeshHandle val = asset::MeshHandle())
+        asset::VioletMeshHandle val = asset::VioletMeshHandle())
       {
         if (handle == nullptr)
         {
@@ -1185,8 +1120,8 @@ foreign class Mesh {
           handle = wrenGetSlotHandle(vm, 0);
         }
         wrenSetSlotHandle(vm, 1, handle);
-        asset::MeshHandle* data = MakeForeign<asset::MeshHandle>(vm, 0, 1);
-        memcpy(data, &val, sizeof(asset::MeshHandle));
+        asset::VioletMeshHandle* data = MakeForeign<asset::VioletMeshHandle>(vm, 0, 1);
+        memcpy(data, &val, sizeof(asset::VioletMeshHandle));
         return data;
       }
 
@@ -1198,8 +1133,8 @@ foreign class Mesh {
           make(vm);
         },
           [](void* data) {
-          asset::MeshHandle& handle = *((asset::MeshHandle*)data);
-          handle.reset();
+          asset::VioletMeshHandle& handle = *((asset::VioletMeshHandle*)data);
+          handle = nullptr;
         }
         };
       }
@@ -1209,56 +1144,32 @@ foreign class Mesh {
       {
         if (strcmp(signature, "load(_)") == 0) return [](WrenVM* vm) {
           Name name(wrenGetSlotString(vm, 1));
-          asset::MeshHandle& handle = *make(vm);
-          auto io_mesh = io::MeshIO::load(name.getName().c_str());
-		  handle = asset::AssetManager::getInstance().createAsset<asset::Mesh>(
-            name, 
-            foundation::Memory::constructShared<asset::Mesh>(
-              io::MeshIO::asAsset(io_mesh)
-            )
-          );
+					*make(vm) = asset::MeshManager::getInstance()->get(name);
         };
         if (strcmp(signature, "generate(_)") == 0) return [](WrenVM* vm) {
           static uint32_t s_idx = 0u;
           String type = wrenGetSlotString(vm, 1);
           Name name("__generated_mesh_" + toString(s_idx++) + "__");
-          asset::MeshHandle& handle = *make(vm);
+          asset::VioletMeshHandle& handle = *make(vm);
           if (type == "cube")
-            handle = asset::AssetManager::getInstance().createAsset(
-              name, 
-              foundation::Memory::constructShared<asset::Mesh>(
-                asset::Mesh::createCube()
-              )
-            );
+            handle = asset::MeshManager::getInstance()->create(name, asset::Mesh::createCube());
           else if (type == "cylinder")
-            handle = asset::AssetManager::getInstance().createAsset(
-              name, 
-              foundation::Memory::constructShared<asset::Mesh>(
-                asset::Mesh::createCylinder()
-              )
-            );
+						handle = asset::MeshManager::getInstance()->create(name, asset::Mesh::createCylinder());
           else if (type == "sphere")
-            handle = asset::AssetManager::getInstance().createAsset(
-              name,
-              foundation::Memory::constructShared<asset::Mesh>(
-                asset::Mesh::createSphere()
-              )
-            );
+						handle = asset::MeshManager::getInstance()->create(name, asset::Mesh::createSphere());
         };
         if (strcmp(signature, "create()") == 0) return [](WrenVM* vm) {
           static uint32_t s_idx = 0u;
           Name name("__created_mesh_" + toString(s_idx++) + "__");
-          asset::MeshHandle& handle = *make(vm);
-          handle = asset::AssetManager::getInstance().createAsset(
-            name, foundation::Memory::constructShared<asset::Mesh>()
-          );
+          asset::VioletMeshHandle& handle = *make(vm);
+					handle = asset::MeshManager::getInstance()->create(name);
         };
         if (strcmp(signature, "subMeshCount") == 0) return [](WrenVM* vm) {
-          asset::MeshHandle& handle = *GetForeign<asset::MeshHandle>(vm);
+          asset::VioletMeshHandle& handle = *GetForeign<asset::VioletMeshHandle>(vm);
           wrenSetSlotDouble(vm, 0, (double)handle->getSubMeshes().size());
         };
         if (strcmp(signature, "positions=(_)") == 0) return [](WrenVM* vm) {
-          asset::MeshHandle mesh = *GetForeign<asset::MeshHandle>(vm);
+          asset::VioletMeshHandle mesh = *GetForeign<asset::VioletMeshHandle>(vm);
 
           Vector<glm::vec3> positions(wrenGetListCount(vm, 1));
           for (int i = 0; i < (int)positions.size(); ++i)
@@ -1292,7 +1203,7 @@ foreign class Mesh {
           mesh->setSubMeshes(sub_meshes);
         };
         if (strcmp(signature, "normals=(_)") == 0) return [](WrenVM* vm) {
-          asset::MeshHandle mesh = *GetForeign<asset::MeshHandle>(vm);
+          asset::VioletMeshHandle mesh = *GetForeign<asset::VioletMeshHandle>(vm);
 
           Vector<glm::vec3> normals(wrenGetListCount(vm, 1));
           for (int i = 0; i < (int)normals.size(); ++i)
@@ -1312,7 +1223,7 @@ foreign class Mesh {
           mesh->setSubMeshes(sub_meshes);
         };
         if (strcmp(signature, "texCoords=(_)") == 0) return [](WrenVM* vm) {
-          asset::MeshHandle mesh = *GetForeign<asset::MeshHandle>(vm);
+          asset::VioletMeshHandle mesh = *GetForeign<asset::VioletMeshHandle>(vm);
 
           Vector<glm::vec2> tex_coords(wrenGetListCount(vm, 1));
           for (int i = 0; i < (int)tex_coords.size(); ++i)
@@ -1332,7 +1243,7 @@ foreign class Mesh {
           mesh->setSubMeshes(sub_meshes);
         };
         if (strcmp(signature, "colours=(_)") == 0) return [](WrenVM* vm) {
-          asset::MeshHandle mesh = *GetForeign<asset::MeshHandle>(vm);
+          asset::VioletMeshHandle mesh = *GetForeign<asset::VioletMeshHandle>(vm);
 
           Vector<glm::vec4> colours(wrenGetListCount(vm, 1));
           for (int i = 0; i < (int)colours.size(); ++i)
@@ -1352,7 +1263,7 @@ foreign class Mesh {
           mesh->setSubMeshes(sub_meshes);
         };
         if (strcmp(signature, "tangents=(_)") == 0) return [](WrenVM* vm) {
-          asset::MeshHandle mesh = *GetForeign<asset::MeshHandle>(vm);
+          asset::VioletMeshHandle mesh = *GetForeign<asset::VioletMeshHandle>(vm);
 
           Vector<glm::vec3> tangents(wrenGetListCount(vm, 1));
           for (int i = 0; i < (int)tangents.size(); ++i)
@@ -1372,7 +1283,7 @@ foreign class Mesh {
           mesh->setSubMeshes(sub_meshes);
         };
         if (strcmp(signature, "joints=(_)") == 0) return [](WrenVM* vm) {
-          asset::MeshHandle mesh = *GetForeign<asset::MeshHandle>(vm);
+          asset::VioletMeshHandle mesh = *GetForeign<asset::VioletMeshHandle>(vm);
 
           Vector<glm::vec4> joints(wrenGetListCount(vm, 1));
           for (int i = 0; i < (int)joints.size(); ++i)
@@ -1392,7 +1303,7 @@ foreign class Mesh {
           mesh->setSubMeshes(sub_meshes);
         };
         if (strcmp(signature, "weights=(_)") == 0) return [](WrenVM* vm) {
-          asset::MeshHandle mesh = *GetForeign<asset::MeshHandle>(vm);
+          asset::VioletMeshHandle mesh = *GetForeign<asset::VioletMeshHandle>(vm);
 
           Vector<glm::vec4> weights(wrenGetListCount(vm, 1));
           for (int i = 0; i < (int)weights.size(); ++i)
@@ -1412,7 +1323,7 @@ foreign class Mesh {
           mesh->setSubMeshes(sub_meshes);
         };
         if (strcmp(signature, "indices=(_)") == 0) return [](WrenVM* vm) {
-          asset::MeshHandle mesh = *GetForeign<asset::MeshHandle>(vm);
+          asset::VioletMeshHandle mesh = *GetForeign<asset::VioletMeshHandle>(vm);
 
           Vector<uint32_t> indices(wrenGetListCount(vm, 1));
           for (int i = 0; i < (int)indices.size(); ++i)
@@ -1457,7 +1368,7 @@ foreign class Mesh {
         };
         if (strcmp(signature, "recalculateTangents()") == 0) 
           return [](WrenVM* vm) {
-          asset::MeshHandle mesh = *GetForeign<asset::MeshHandle>(vm);
+          asset::VioletMeshHandle mesh = *GetForeign<asset::VioletMeshHandle>(vm);
           mesh->recalculateTangents();
         };
         return nullptr;
@@ -1671,14 +1582,15 @@ foreign class Mesh {
 
 		void release(entity::Entity e)
 		{
+			if (g_nameSystem->hasComponent(e))          g_nameSystem->removeComponent(e);
 			if (g_transformSystem->hasComponent(e))     g_transformSystem->removeComponent(e);
 			if (g_cameraSystem->hasComponent(e))        g_cameraSystem->removeComponent(e);
+			if (g_lightSystem->hasComponent(e))         g_lightSystem->removeComponent(e);
 			if (g_meshRenderSystem->hasComponent(e))    g_meshRenderSystem->removeComponent(e);
 			if (g_lodSystem->hasComponent(e))           g_lodSystem->removeComponent(e);
 			if (g_rigidBodySystem->hasComponent(e))     g_rigidBodySystem->removeComponent(e);
 			if (g_waveSourceSystem->hasComponent(e))    g_waveSourceSystem->removeComponent(e);
 			if (g_colliderSystem->hasComponent(e))      g_colliderSystem->removeComponent(e);
-			if (g_lightSystem->hasComponent(e))         g_lightSystem->removeComponent(e);
 			if (g_monoBehaviourSystem->hasComponent(e)) g_monoBehaviourSystem->removeComponent(e);
 			//g_entitySystem->destroyEntity(e);
 		}
@@ -1718,6 +1630,16 @@ foreign class Mesh {
 				vec.push_back(e);
 				for (auto child : g_transformSystem->getChildren(e))
 					getAll(vec, child);
+			}
+
+			void freeAll(WrenVM* vm)
+			{
+				Vector<entity::Entity> entities;
+				for (const auto& it : entity_to_data_)
+					entities.push_back(it.first);
+
+				for (const auto& entity : entities)
+					free(vm, entity);
 			}
 
 			void free(WrenVM* vm, entity::Entity e)
@@ -2500,12 +2422,12 @@ foreign class MeshRender {
         };
         if (strcmp(signature, "attach(_)") == 0) return [](WrenVM* vm) {
           GetForeign<MeshRenderHandle>(vm)->handle.attachMesh(
-            *GetForeign<asset::MeshHandle>(vm, 1)
+            *GetForeign<asset::VioletMeshHandle>(vm, 1)
           );
         };
         if (strcmp(signature, "mesh=(_)") == 0) return [](WrenVM* vm) {
           GetForeign<MeshRenderHandle>(vm)->handle.setMesh(
-            *GetForeign<asset::MeshHandle>(vm, 1)
+            *GetForeign<asset::VioletMeshHandle>(vm, 1)
           );
         };
         if (strcmp(signature, "mesh") == 0) return [](WrenVM* vm) {
@@ -2670,14 +2592,14 @@ foreign class Lod {
         };
         if (strcmp(signature, "addLod(_,_)") == 0) return [](WrenVM* vm) {
           components::LOD lod;
-          lod.setMesh(*GetForeign<asset::MeshHandle>(vm, 1));
+          lod.setMesh(*GetForeign<asset::VioletMeshHandle>(vm, 1));
           lod.setDistance((float)wrenGetSlotDouble(vm, 2));
           GetForeign<LODHandle>(vm)->handle.addLOD(lod);
         };
         if (strcmp(signature, "addLodRecursive(_,_)") == 0) 
           return [](WrenVM* vm) {
           components::LOD lod;
-          lod.setMesh(*GetForeign<asset::MeshHandle>(vm, 1));
+          lod.setMesh(*GetForeign<asset::VioletMeshHandle>(vm, 1));
           lod.setDistance((float)wrenGetSlotDouble(vm, 2));
 
           entity::Entity e = GetForeign<LODHandle>(vm)->handle.entity();
@@ -3136,7 +3058,7 @@ foreign class Collider {
         }
         };
       }
-      void addMeshCollider(entity::Entity entity, asset::MeshHandle mesh)
+      void addMeshCollider(entity::Entity entity, asset::VioletMeshHandle mesh)
       {
         bool add_mesh_collider = false;
 
@@ -3202,10 +3124,10 @@ foreign class Collider {
           GetForeign<ColliderHandle>(vm)->handle.makeCapsuleCollider();
         };
         if (strcmp(signature, "makeMeshCollider(_,_)") == 0) return [](WrenVM* vm) {
-          GetForeign<ColliderHandle>(vm)->handle.makeMeshCollider(*GetForeign<asset::MeshHandle>(vm, 1), (uint32_t)wrenGetSlotDouble(vm, 2));
+          GetForeign<ColliderHandle>(vm)->handle.makeMeshCollider(*GetForeign<asset::VioletMeshHandle>(vm, 1), (uint32_t)wrenGetSlotDouble(vm, 2));
         };
         if (strcmp(signature, "makeMeshColliderRecursive(_)") == 0) return [](WrenVM* vm) {
-          addMeshCollider(GetForeign<ColliderHandle>(vm)->handle.entity(), *GetForeign<asset::MeshHandle>(vm, 1));
+          addMeshCollider(GetForeign<ColliderHandle>(vm)->handle.entity(), *GetForeign<asset::VioletMeshHandle>(vm, 1));
         };
         if (strcmp(signature, "layers") == 0) return [](WrenVM* vm) {
           wrenSetSlotDouble(vm, 0, (double)GetForeign<ColliderHandle>(vm)->handle.getLayers());
@@ -3574,11 +3496,11 @@ class MonoBehaviour {
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    namespace Graphics
-    {
-      char* Load()
-      {
-        String str = R"(
+		namespace Graphics
+		{
+			char* Load()
+			{
+				String str = R"(
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///// graphics.wren ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -3587,47 +3509,119 @@ class Graphics {
     foreign static vsync
     foreign static renderScale=(scale)
     foreign static renderScale
-    foreign static gui=(enabled)
-    foreign static gui
     foreign static setLightShaders(generate, modify, modifyCount, publish, shadowType)
 }
 )";
-        char* data = (char*)WREN_ALLOC(str.size() + 1u);
-        memcpy(data, str.data(), str.size() + 1u);
-        return data;
-      }
-      WrenForeignMethodFn Bind(const char* signature)
-      {
-        if (strcmp(signature, "vsync=(_)") == 0) return [](WrenVM* vm) {
-          g_world->getRenderer()->setVSync(wrenGetSlotBool(vm, 1));
-        };
-        if (strcmp(signature, "vsync") == 0) return [](WrenVM* vm) {
-          wrenSetSlotDouble(vm, 0, g_world->getRenderer()->getVSync() ? 1.0 : 0.0);
-        };
-        if (strcmp(signature, "renderScale=(_)") == 0) return [](WrenVM* vm) {
-          g_world->getRenderer()->setRenderScale((float)wrenGetSlotDouble(vm, 1));
-        };
-        if (strcmp(signature, "renderScale") == 0) return [](WrenVM* vm) {
-          wrenSetSlotDouble(vm, 0, (float)g_world->getRenderer()->getRenderScale());
-        };
-		if (strcmp(signature, "gui=(_)") == 0) return [](WrenVM* vm) {
-			g_world->getGUI().setEnabled(wrenGetSlotBool(vm, 1));
-		};
-		if (strcmp(signature, "gui") == 0) return [](WrenVM* vm) {
-			wrenSetSlotDouble(vm, 0, g_world->getGUI().getEnabled() ? 1.0 : 0.0);
-		};
-        if (strcmp(signature, "setLightShaders(_,_,_,_,_)") == 0) return [](WrenVM* vm) {
-          String generate     = wrenGetSlotString(vm, 1);
-          String modify       = wrenGetSlotString(vm, 2);
-		  double modify_count = wrenGetSlotDouble(vm, 3);
-          String publish      = wrenGetSlotString(vm, 4);
-          String shadow_type  = wrenGetSlotString(vm, 5);
-          g_lightSystem->setShaders(generate, modify, (uint32_t)modify_count, publish, shadow_type);
-        };
-        return nullptr;
-      }
-    }
-    namespace PostProcess
+				char* data = (char*)WREN_ALLOC(str.size() + 1u);
+				memcpy(data, str.data(), str.size() + 1u);
+				return data;
+			}
+			WrenForeignMethodFn Bind(const char* signature)
+			{
+				if (strcmp(signature, "vsync=(_)") == 0) return [](WrenVM* vm) {
+					g_world->getRenderer()->setVSync(wrenGetSlotBool(vm, 1));
+				};
+				if (strcmp(signature, "vsync") == 0) return [](WrenVM* vm) {
+					wrenSetSlotDouble(vm, 0, g_world->getRenderer()->getVSync() ? 1.0 : 0.0);
+				};
+				if (strcmp(signature, "renderScale=(_)") == 0) return [](WrenVM* vm) {
+					g_world->getRenderer()->setRenderScale((float)wrenGetSlotDouble(vm, 1));
+				};
+				if (strcmp(signature, "renderScale") == 0) return [](WrenVM* vm) {
+					wrenSetSlotDouble(vm, 0, (float)g_world->getRenderer()->getRenderScale());
+				};
+				if (strcmp(signature, "setLightShaders(_,_,_,_,_)") == 0) return [](WrenVM* vm) {
+					String generate = wrenGetSlotString(vm, 1);
+					String modify = wrenGetSlotString(vm, 2);
+					double modify_count = wrenGetSlotDouble(vm, 3);
+					String publish = wrenGetSlotString(vm, 4);
+					String shadow_type = wrenGetSlotString(vm, 5);
+					g_lightSystem->setShaders(generate, modify, (uint32_t)modify_count, publish, shadow_type);
+				};
+				return nullptr;
+			}
+		}
+		namespace GUI
+		{
+			/////////////////////////////////////////////////////////////////////////
+			char* Load()
+			{
+				String str = R"(
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///// gui.wren ////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+class GUI {
+    foreign static enabled=(enabled)
+    foreign static enabled
+    foreign static loadURL(url)
+    foreign static executeJavaScript(string)
+    foreign static bindCallback(name, object)
+}
+)";
+				char* data = (char*)WREN_ALLOC(str.size() + 1u);
+				memcpy(data, str.data(), str.size() + 1u);
+				return data;
+			}
+
+			/////////////////////////////////////////////////////////////////////////
+			struct UserDataWrapper
+			{
+				WrenHandle* object;
+				WrenHandle* function;
+			};
+
+			/////////////////////////////////////////////////////////////////////////
+			void callback(Vector<lambda::gui::JSVal> js_args, const void* user_data)
+			{
+				const UserDataWrapper& ud = *(UserDataWrapper*)user_data;
+
+				Vector<ScriptValue> args;
+				for (uint32_t i = 0; i < js_args.size(); ++i)
+				{
+					if (js_args[i].isBool())
+						args.push_back(ScriptValue(js_args[i].asBool()));
+					else if (js_args[i].isNumber())
+						args.push_back(ScriptValue(js_args[i].asNumber()));
+					else if (js_args[i].isString())
+						args.push_back(ScriptValue(String(js_args[i].asString())));
+				}
+
+				g_world->getScripting()->executeFunction(ud.object, ud.function, args);
+			}
+
+			/////////////////////////////////////////////////////////////////////////
+			WrenForeignMethodFn Bind(const char* signature)
+			{
+				if (strcmp(signature, "enabled=(_)") == 0) return [](WrenVM* vm) {
+					g_world->getGUI().setEnabled(wrenGetSlotBool(vm, 1));
+				};
+				if (strcmp(signature, "enabled") == 0) return [](WrenVM* vm) {
+					wrenSetSlotDouble(vm, 0, g_world->getGUI().getEnabled() ? 1.0 : 0.0);
+				};
+				if (strcmp(signature, "loadURL(_)") == 0) return [](WrenVM* vm) {
+					String url = wrenGetSlotString(vm, 1);
+					g_world->getGUI().loadURL(url);
+				};
+				if (strcmp(signature, "executeJavaScript(_)") == 0) return [](WrenVM* vm) {
+					g_world->getGUI().executeJavaScript(wrenGetSlotString(vm, 1));
+				};
+				if (strcmp(signature, "bindCallback(_,_)") == 0) return [](WrenVM* vm) {
+					String name = wrenGetSlotString(vm, 1);
+					UserDataWrapper* user_data =
+						foundation::Memory::construct<UserDataWrapper>();
+					user_data->object = wrenGetSlotHandle(vm, 2);
+					wrenSetSlotHandle(vm, 0, user_data->object);
+					user_data->function = wrenMakeCallHandle(vm, name.c_str());
+					g_world->getGUI().bindJavaScriptCallback(
+						name.substr(0, name.find("(")),
+						callback,
+						user_data
+					);
+				};
+				return nullptr;
+			}
+		}
+		namespace PostProcess
     {
       char* Load()
       {
@@ -3735,9 +3729,7 @@ class PostProcess {
           violet_texture.hash = hash(output);
           asset::VioletTextureHandle texture = asset::TextureManager::getInstance()->create(output, violet_texture);
 
-          auto mesh = asset::AssetManager::getInstance().createAsset<asset::Mesh>(Name("__irradiance_convolution_mesh__"),
-            foundation::Memory::constructShared<asset::Mesh>(asset::Mesh::createScreenQuad())
-            );
+          auto mesh = asset::MeshManager::getInstance()->create(Name("__irradiance_convolution_mesh__"), asset::Mesh::createScreenQuad());
           g_world->getRenderer()->setMesh(mesh);
           g_world->getRenderer()->setSubMesh(0u);
 
@@ -3773,9 +3765,7 @@ class PostProcess {
           violet_texture.hash = hash(output);
           asset::VioletTextureHandle texture = asset::TextureManager::getInstance()->create(output, violet_texture);
 
-          auto mesh = asset::AssetManager::getInstance().createAsset<asset::Mesh>(Name("__hammerhead_mesh__"),
-            foundation::Memory::constructShared<asset::Mesh>(asset::Mesh::createScreenQuad())
-          );
+          auto mesh = asset::MeshManager::getInstance()->create(Name("__hammerhead_mesh__"), asset::Mesh::createScreenQuad());
           g_world->getRenderer()->setMesh(mesh);
           g_world->getRenderer()->setSubMesh(0u);
 
@@ -4790,205 +4780,204 @@ class Assert {
     }
 
 	///////////////////////////////////////////////////////////////////////////
-    WrenForeignMethodFn wrenBindForeignMethod(
-      WrenVM* vm, 
-      const char* module, 
-      const char* className, 
-      bool isStatic, 
-      const char* signature)
-    {
-      if (strstr(module, "Core") != 0)
-      {
-        if (hashEqual(className, "Console"))
-          return Console::Bind(signature);
-		if (hashEqual(className, "GUI"))
-          return GUI::Bind(signature);
-        if (hashEqual(className, "Vec2")) 
-          return Vec2::Bind(signature);
-        if (hashEqual(className, "Vec3"))    
-          return Vec3::Bind(signature);
-        if (hashEqual(className, "Vec4"))     
-          return Vec4::Bind(signature);
-        if (hashEqual(className, "Quat"))      
-          return Quat::Bind(signature);
-        if (hashEqual(className, "Texture"))   
-          return Texture::Bind(signature);
-        if (hashEqual(className, "Shader"))      
-          return Shader::Bind(signature);
-        if (hashEqual(className, "Wave"))        
-          return Wave::Bind(signature);
-        if (hashEqual(className, "Mesh"))        
-          return Mesh::Bind(signature);
-        if (hashEqual(className, "GameObject"))  
-          return GameObject::Bind(signature);
-        if (hashEqual(className, "Transform"))  
-          return Transform::Bind(signature);
-        if (hashEqual(className, "Camera"))     
-          return Camera::Bind(signature);
-        if (hashEqual(className, "MeshRender"))  
-          return MeshRender::Bind(signature);
-        if (hashEqual(className, "Lod"))         
-          return LOD::Bind(signature);
-        if (hashEqual(className, "RigidBody"))   
-          return RigidBody::Bind(signature);
-        if (hashEqual(className, "WaveSource"))  
-          return WaveSource::Bind(signature);
-        if (hashEqual(className, "Collider"))   
-          return Collider::Bind(signature);
-        if (hashEqual(className, "Light"))      
-          return Light::Bind(signature);
-        if (hashEqual(className, "MonoBehaviour")) 
-          return MonoBehaviour::Bind(signature);
-        if (hashEqual(className, "Graphics"))     
-          return Graphics::Bind(signature);
-        if (hashEqual(className, "PostProcess"))  
-          return PostProcess::Bind(signature);
-        if (hashEqual(className, "Input"))       
-          return Input::Bind(signature);
-        if (hashEqual(className, "Math"))        
-          return Math::Bind(signature);
-		if (hashEqual(className, "Time"))
-          return Time::Bind(signature);
-		if (hashEqual(className, "Sort"))
-          return Sort::Bind(signature);
-		if (hashEqual(className, "Debug"))
+		WrenForeignMethodFn wrenBindForeignMethod(
+			WrenVM* vm,
+			const char* module,
+			const char* className,
+			bool isStatic,
+			const char* signature)
+		{
+			if (strstr(module, "Core") != 0)
+			{
+				if (hashEqual(className, "Console"))
+					return Console::Bind(signature);
+				if (hashEqual(className, "Vec2"))
+					return Vec2::Bind(signature);
+				if (hashEqual(className, "Vec3"))
+					return Vec3::Bind(signature);
+				if (hashEqual(className, "Vec4"))
+					return Vec4::Bind(signature);
+				if (hashEqual(className, "Quat"))
+					return Quat::Bind(signature);
+				if (hashEqual(className, "Texture"))
+					return Texture::Bind(signature);
+				if (hashEqual(className, "Shader"))
+					return Shader::Bind(signature);
+				if (hashEqual(className, "Wave"))
+					return Wave::Bind(signature);
+				if (hashEqual(className, "Mesh"))
+					return Mesh::Bind(signature);
+				if (hashEqual(className, "GameObject"))
+					return GameObject::Bind(signature);
+				if (hashEqual(className, "Transform"))
+					return Transform::Bind(signature);
+				if (hashEqual(className, "Camera"))
+					return Camera::Bind(signature);
+				if (hashEqual(className, "MeshRender"))
+					return MeshRender::Bind(signature);
+				if (hashEqual(className, "Lod"))
+					return LOD::Bind(signature);
+				if (hashEqual(className, "RigidBody"))
+					return RigidBody::Bind(signature);
+				if (hashEqual(className, "WaveSource"))
+					return WaveSource::Bind(signature);
+				if (hashEqual(className, "Collider"))
+					return Collider::Bind(signature);
+				if (hashEqual(className, "Light"))
+					return Light::Bind(signature);
+				if (hashEqual(className, "MonoBehaviour"))
+					return MonoBehaviour::Bind(signature);
+				if (hashEqual(className, "Graphics"))
+					return Graphics::Bind(signature);
+				if (hashEqual(className, "GUI"))
+					return GUI::Bind(signature);
+				if (hashEqual(className, "PostProcess"))
+					return PostProcess::Bind(signature);
+				if (hashEqual(className, "Input"))
+					return Input::Bind(signature);
+				if (hashEqual(className, "Math"))
+					return Math::Bind(signature);
+				if (hashEqual(className, "Time"))
+					return Time::Bind(signature);
+				if (hashEqual(className, "Sort"))
+					return Sort::Bind(signature);
+				if (hashEqual(className, "Debug"))
 					return Debug::Bind(signature);
-		if (hashEqual(className, "Physics"))
+				if (hashEqual(className, "Physics"))
 					return Physics::Bind(signature);
-		if (hashEqual(className, "Manifold"))
+				if (hashEqual(className, "Manifold"))
 					return Manifold::Bind(signature);
-        if (hashEqual(className, "File"))         
+				if (hashEqual(className, "File"))
 					return File::Bind(signature);
-        if (hashEqual(className, "Noise"))      
+				if (hashEqual(className, "Noise"))
 					return Noise::Bind(signature);
-        if (hashEqual(className, "Assert"))      
+				if (hashEqual(className, "Assert"))
 					return Assert::Bind(signature);
-      }
+			}
 
-      return nullptr;
-    }
+			return nullptr;
+		}
 
 		///////////////////////////////////////////////////////////////////////////
-    char* wrenLoadModule(WrenVM* vm, const char* name_cstr)
-    {
-      if (strstr(name_cstr, "Core") != 0)
-      {
-        if (hashEqual(name_cstr + 5u, "Console"))
+		char* wrenLoadModule(WrenVM* vm, const char* name_cstr)
+		{
+			if (strstr(name_cstr, "Core") != 0)
+			{
+				if (hashEqual(name_cstr + 5u, "Console"))
 					return Console::Load();
-		if (hashEqual(name_cstr + 5u, "GUI"))
-					return GUI::Load();
-        if (hashEqual(name_cstr + 5u, "Vec2"))        
+				if (hashEqual(name_cstr + 5u, "Vec2"))
 					return Vec2::Load();
-        if (hashEqual(name_cstr + 5u, "Vec3"))        
+				if (hashEqual(name_cstr + 5u, "Vec3"))
 					return Vec3::Load();
-        if (hashEqual(name_cstr + 5u, "Vec4"))        
+				if (hashEqual(name_cstr + 5u, "Vec4"))
 					return Vec4::Load();
-        if (hashEqual(name_cstr + 5u, "Quat"))        
+				if (hashEqual(name_cstr + 5u, "Quat"))
 					return Quat::Load();
-        if (hashEqual(name_cstr + 5u, "Texture"))      
+				if (hashEqual(name_cstr + 5u, "Texture"))
 					return Texture::Load();
-        if (hashEqual(name_cstr + 5u, "Shader"))       
+				if (hashEqual(name_cstr + 5u, "Shader"))
 					return Shader::Load();
-        if (hashEqual(name_cstr + 5u, "Wave"))        
+				if (hashEqual(name_cstr + 5u, "Wave"))
 					return Wave::Load();
-        if (hashEqual(name_cstr + 5u, "Mesh"))        
+				if (hashEqual(name_cstr + 5u, "Mesh"))
 					return Mesh::Load();
-        if (hashEqual(name_cstr + 5u, "GameObject"))   
+				if (hashEqual(name_cstr + 5u, "GameObject"))
 					return GameObject::Load();
-        if (hashEqual(name_cstr + 5u, "Transform"))   
+				if (hashEqual(name_cstr + 5u, "Transform"))
 					return Transform::Load();
-        if (hashEqual(name_cstr + 5u, "Camera"))      
+				if (hashEqual(name_cstr + 5u, "Camera"))
 					return Camera::Load();
-        if (hashEqual(name_cstr + 5u, "MeshRender"))  
+				if (hashEqual(name_cstr + 5u, "MeshRender"))
 					return MeshRender::Load();
-        if (hashEqual(name_cstr + 5u, "Lod"))         
+				if (hashEqual(name_cstr + 5u, "Lod"))
 					return LOD::Load();
-        if (hashEqual(name_cstr + 5u, "RigidBody"))    
+				if (hashEqual(name_cstr + 5u, "RigidBody"))
 					return RigidBody::Load();
-        if (hashEqual(name_cstr + 5u, "WaveSource"))  
+				if (hashEqual(name_cstr + 5u, "WaveSource"))
 					return WaveSource::Load();
-        if (hashEqual(name_cstr + 5u, "Collider"))     
+				if (hashEqual(name_cstr + 5u, "Collider"))
 					return Collider::Load();
-        if (hashEqual(name_cstr + 5u, "Light"))        
+				if (hashEqual(name_cstr + 5u, "Light"))
 					return Light::Load();
-        if (hashEqual(name_cstr + 5u, "MonoBehaviour"))
+				if (hashEqual(name_cstr + 5u, "MonoBehaviour"))
 					return MonoBehaviour::Load();
-        if (hashEqual(name_cstr + 5u, "Graphics"))     
+				if (hashEqual(name_cstr + 5u, "Graphics"))
 					return Graphics::Load();
-        if (hashEqual(name_cstr + 5u, "PostProcess")) 
+				if (hashEqual(name_cstr + 5u, "GUI"))
+					return GUI::Load();
+				if (hashEqual(name_cstr + 5u, "PostProcess"))
 					return PostProcess::Load();
-        if (hashEqual(name_cstr + 5u, "Input"))        
+				if (hashEqual(name_cstr + 5u, "Input"))
 					return Input::Load();
-        if (hashEqual(name_cstr + 5u, "Math"))       
+				if (hashEqual(name_cstr + 5u, "Math"))
 					return Math::Load();
-		if (hashEqual(name_cstr + 5u, "Time"))
-			return Time::Load();
-		if (hashEqual(name_cstr + 5u, "PhysicsConstraints"))
-			return PhysicsConstraints::Load();
-		if (hashEqual(name_cstr + 5u, "Sort"))
-			return Sort::Load();
-		if (hashEqual(name_cstr + 5u, "Debug"))
+				if (hashEqual(name_cstr + 5u, "Time"))
+					return Time::Load();
+				if (hashEqual(name_cstr + 5u, "PhysicsConstraints"))
+					return PhysicsConstraints::Load();
+				if (hashEqual(name_cstr + 5u, "Sort"))
+					return Sort::Load();
+				if (hashEqual(name_cstr + 5u, "Debug"))
 					return Debug::Load();
-		if (hashEqual(name_cstr + 5u, "Physics"))
+				if (hashEqual(name_cstr + 5u, "Physics"))
 					return Physics::Load();
-		if (hashEqual(name_cstr + 5u, "Manifold"))
+				if (hashEqual(name_cstr + 5u, "Manifold"))
 					return Manifold::Load();
-        if (hashEqual(name_cstr + 5u, "File"))        
+				if (hashEqual(name_cstr + 5u, "File"))
 					return File::Load();
-        if (hashEqual(name_cstr + 5u, "Noise"))      
+				if (hashEqual(name_cstr + 5u, "Noise"))
 					return Noise::Load();
-        if (hashEqual(name_cstr + 5u, "Assert"))    
+				if (hashEqual(name_cstr + 5u, "Assert"))
 					return Assert::Load();
-      }
-      else
-      {
-        String str = FileSystem::FileToString(String(name_cstr) + ".wren");
-        char* data = (char*)WREN_ALLOC(str.size() + 1u);
-        memcpy(data, str.data(), str.size() + 1u);
-        return data;
-      }
+			}
+			else
+			{
+				String str = FileSystem::FileToString(String(name_cstr) + ".wren");
+				char* data = (char*)WREN_ALLOC(str.size() + 1u);
+				memcpy(data, str.data(), str.size() + 1u);
+				return data;
+			}
 
-      return nullptr;
-    };
-
-		///////////////////////////////////////////////////////////////////////////
-    extern void WrenBind(void* config)
-    {
-      WrenConfiguration* configuration = (WrenConfiguration*)config;
-      configuration->bindForeignClassFn  = wrenBindForeignClass;
-      configuration->bindForeignMethodFn = wrenBindForeignMethod;
-      configuration->loadModuleFn        = wrenLoadModule;
-
-    }
+			return nullptr;
+		}
 
 		///////////////////////////////////////////////////////////////////////////
-    extern void WrenSetWorld(world::IWorld* world)
-    {
+		extern void WrenBind(void* config)
+		{
+			WrenConfiguration* configuration = (WrenConfiguration*)config;
+			configuration->bindForeignClassFn = wrenBindForeignClass;
+			configuration->bindForeignMethodFn = wrenBindForeignMethod;
+			configuration->loadModuleFn = wrenLoadModule;
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		extern void WrenSetWorld(world::IWorld* world)
+		{
 			g_scriptingData = foundation::Memory::construct<ScriptingData>();
-      g_world               = world;
-	  g_entitySystem        =
+			g_world = world;
+			g_entitySystem =
 				world->getScene().getSystem<entity::EntitySystem>().get();
-	  g_nameSystem          =
+			g_nameSystem =
 				world->getScene().getSystem<components::NameSystem>().get();
-      g_transformSystem     = 
+			g_transformSystem =
 				world->getScene().getSystem<components::TransformSystem>().get();
-      g_cameraSystem        = 
+			g_cameraSystem =
 				world->getScene().getSystem<components::CameraSystem>().get();
-	  g_lodSystem           =
+			g_lodSystem =
 				world->getScene().getSystem<components::LODSystem>().get();
-      g_lightSystem         = 
+			g_lightSystem =
 				world->getScene().getSystem<components::LightSystem>().get();
-      g_meshRenderSystem    = 
+			g_meshRenderSystem =
 				world->getScene().getSystem<components::MeshRenderSystem>().get();
-      g_rigidBodySystem     =
+			g_rigidBodySystem =
 				world->getScene().getSystem<components::RigidBodySystem>().get();
-      g_waveSourceSystem    = 
+			g_waveSourceSystem =
 				world->getScene().getSystem<components::WaveSourceSystem>().get();
-      g_colliderSystem      =
+			g_colliderSystem =
 				world->getScene().getSystem<components::ColliderSystem>().get();
-      g_monoBehaviourSystem = 
+			g_monoBehaviourSystem =
 				world->getScene().getSystem<components::MonoBehaviourSystem>().get();
-    }
+		}
 
 		///////////////////////////////////////////////////////////////////////////
 		extern void WrenHandleValue(WrenVM* vm, const ScriptValue& value, int slot)
@@ -5017,9 +5006,9 @@ class Assert {
 				wrenSetSlotDouble(vm, slot, (double)value.getFloat()); break;
 			case ScriptValue::kDouble:
 				wrenSetSlotDouble(vm, slot, value.getDouble()); break;
-			case ScriptValue::kVec2:    
+			case ScriptValue::kVec2:
 				Vec2::makeAt(vm, slot, slot + 1, (glm::vec2)value.getVec2()); break;
-			case ScriptValue::kVec3:    
+			case ScriptValue::kVec3:
 				Vec3::makeAt(vm, slot, slot + 1, (glm::vec3)value.getVec3()); break;
 			case ScriptValue::kVec4:
 				Vec4::makeAt(vm, slot, slot + 1, (glm::vec4)value.getVec4()); break;
@@ -5038,38 +5027,49 @@ class Assert {
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-    extern void WrenRelease(WrenVM* vm)
-    {
-      foundation::Memory::destruct(g_scriptingData);
-      wrenReleaseHandle(vm, Vec2::handle);
-      wrenReleaseHandle(vm, Vec3::handle);
-      wrenReleaseHandle(vm, Vec4::handle);
-      wrenReleaseHandle(vm, Quat::handle);
-      wrenReleaseHandle(vm, Texture::handle);
-      wrenReleaseHandle(vm, Shader::handle);
-      wrenReleaseHandle(vm, Wave::handle);
-      wrenReleaseHandle(vm, Mesh::handle);
-      wrenReleaseHandle(vm, GameObject::handle);
-      wrenReleaseHandle(vm, Transform::handle);
-      wrenReleaseHandle(vm, Camera::handle);
-      wrenReleaseHandle(vm, MeshRender::handle);
-      wrenReleaseHandle(vm, LOD::handle);
-      wrenReleaseHandle(vm, RigidBody::handle);
-      wrenReleaseHandle(vm, WaveSource::handle);
-      wrenReleaseHandle(vm, Collider::handle);
-      wrenReleaseHandle(vm, Light::handle);
-	  wrenReleaseHandle(vm, Manifold::handle);
-	  wrenReleaseHandle(vm, File::handle);
-      wrenReleaseHandle(vm, Noise::handle);
-      
-      g_world            = nullptr;
-      g_entitySystem     = nullptr;
-	  g_nameSystem       = nullptr;
-      g_transformSystem  = nullptr;
-	  g_lodSystem        = nullptr;
-      g_cameraSystem     = nullptr;
-      g_lightSystem      = nullptr;
-      g_meshRenderSystem = nullptr;
-    }
+		extern void WrenRelease(WrenVM* vm)
+		{
+			g_scriptingData->freeAll(vm);
+			foundation::Memory::destruct(g_scriptingData);
+			g_scriptingData = nullptr;
+
+#define SAFE_RELEASE(vm, handle) if (handle) { wrenReleaseHandle(vm, handle); handle = nullptr; }
+
+			SAFE_RELEASE(vm, Vec2::handle);
+			SAFE_RELEASE(vm, Vec3::handle);
+			SAFE_RELEASE(vm, Vec4::handle);
+			SAFE_RELEASE(vm, Quat::handle);
+			SAFE_RELEASE(vm, Texture::handle);
+			SAFE_RELEASE(vm, Shader::handle);
+			SAFE_RELEASE(vm, Wave::handle);
+			SAFE_RELEASE(vm, Mesh::handle);
+			SAFE_RELEASE(vm, GameObject::handle);
+			SAFE_RELEASE(vm, Transform::handle);
+			SAFE_RELEASE(vm, Camera::handle);
+			SAFE_RELEASE(vm, MeshRender::handle);
+			SAFE_RELEASE(vm, LOD::handle);
+			SAFE_RELEASE(vm, RigidBody::handle);
+			SAFE_RELEASE(vm, WaveSource::handle);
+			SAFE_RELEASE(vm, Collider::handle);
+			SAFE_RELEASE(vm, Light::handle);
+			SAFE_RELEASE(vm, Manifold::handle);
+			SAFE_RELEASE(vm, File::handle);
+			SAFE_RELEASE(vm, Noise::handle);
+
+			g_monoBehaviourSystem->deinitialize();
+
+			g_world               = nullptr;
+			g_entitySystem        = nullptr;
+			g_nameSystem          = nullptr;
+			g_transformSystem     = nullptr;
+			g_cameraSystem        = nullptr;
+			g_lodSystem           = nullptr;
+			g_lightSystem         = nullptr;
+			g_meshRenderSystem    = nullptr;
+			g_rigidBodySystem     = nullptr;
+			g_waveSourceSystem    = nullptr;
+			g_colliderSystem      = nullptr;
+			g_monoBehaviourSystem = nullptr;
+		}
   }
 }

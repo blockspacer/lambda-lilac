@@ -1,9 +1,6 @@
 #include "iallocator.h"
 #include "utils/console.h"
 
-#define LMB_OPEN_ALLOCATIONS
-#define LMB_BUFFER_OVERFLOW
-
 namespace lambda
 {
   namespace foundation
@@ -31,15 +28,15 @@ namespace lambda
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     IAllocator::~IAllocator()
     {
-#ifdef LMB_OPEN_ALLOCATIONS
+#ifdef VIOLET_OPEN_ALLOCATIONS
       assert(open_allocations_ == 0 && allocated_ == 0);
 #endif
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void* IAllocator::Allocate(size_t size, size_t align)
+		void* IAllocator::Allocate(size_t size, size_t align)
     {
-#ifdef LMB_BUFFER_OVERFLOW
+#ifdef VIOLET_BUFFER_OVERFLOW
       // TODO (Hilze): Fix this. Very serious issue!
       if (allocated_ + size > max_size_)
       {
@@ -54,10 +51,11 @@ namespace lambda
       allocated_ += size;
       ++open_allocations_;
 
-      return AllocateImpl(size, align);
-    }
+			return AllocateImpl(size, align);
+		}
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#pragma optimize ("", off)
     size_t IAllocator::Deallocate(void* ptr)
     {
       size_t deallocated = DeallocateImpl(ptr);

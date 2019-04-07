@@ -1,12 +1,14 @@
 #ifdef VIOLET_WIN32
 #include "win32_window.h"
+#define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <windowsx.h>
 #include <iostream>
 #ifdef HIGH_DPI
 #include <ShellScalingAPI.h>
 #endif
-#include "renderers/d3d11/d3d11_renderer.h"
+#undef min
+#undef max
 
 namespace lambda
 {

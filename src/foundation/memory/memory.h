@@ -40,8 +40,8 @@ namespace lambda
     public:
       using DefaultAllocator = MallocAllocator;
 
-      static void* allocate(size_t size, size_t align, IAllocator* allocator = default_allocator());
-      static void* allocate(size_t size, IAllocator* allocator = default_allocator());
+			static void* allocate(size_t size, size_t align, IAllocator* allocator = default_allocator());
+			static void* allocate(size_t size, IAllocator* allocator = default_allocator());
       static void* reallocate(void* data, size_t size, IAllocator* allocator = default_allocator());
       static void deallocate(void* ptr);
       template <typename T, typename ... Args>
@@ -104,7 +104,7 @@ namespace lambda
     template<typename T, typename ...Args>
     inline T* Memory::construct(Args&& ...args)
     {
-      T* allocated = reinterpret_cast<T*>(allocate(sizeof(T)));
+			T* allocated = reinterpret_cast<T*>(allocate(sizeof(T)));
       new (allocated) T(eastl::forward<Args>(args)...);
 
       return allocated;
@@ -114,7 +114,7 @@ namespace lambda
     template <typename T, typename ... Args>
     inline T* Memory::construct(IAllocator* allocator, Args&&... args)
     {
-      T* allocated = reinterpret_cast<T*>(allocate(sizeof(T), allocator));
+			T* allocated = reinterpret_cast<T*>(allocate(sizeof(T), allocator));
       new (allocated) T(eastl::forward<Args>(args)...);
 
       return allocated;

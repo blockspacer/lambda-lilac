@@ -106,6 +106,8 @@ namespace lambda
 		  , collision_shape_(nullptr)
 		  , triangle_mesh_(nullptr)
 		  , mass_(1.0f)
+			, indices_(nullptr)
+			, vertices_(nullptr)
 	  {
 		  collision_shape_ = foundation::Memory::construct<btEmptyShape>();
 		  createBody();
@@ -115,7 +117,15 @@ namespace lambda
 	  BulletCollisionBody::~BulletCollisionBody()
 	  {
 		  destroyBody();
-		  foundation::Memory::destruct(collision_shape_);
+		 
+			if (collision_shape_)
+				foundation::Memory::destruct(collision_shape_);
+			if (triangle_mesh_)
+				foundation::Memory::destruct(triangle_mesh_);
+			if (indices_)
+				foundation::Memory::deallocate(indices_);
+			if (vertices_)
+				foundation::Memory::deallocate(vertices_);
 	  }
 
 	  ///////////////////////////////////////////////////////////////////////////
@@ -336,22 +346,28 @@ namespace lambda
 	  }
 
 	  ///////////////////////////////////////////////////////////////////////////
-	  void BulletCollisionBody::makeMeshCollider(asset::MeshHandle mesh, uint32_t sub_mesh_id)
+	  void BulletCollisionBody::makeMeshCollider(asset::VioletMeshHandle mesh, uint32_t sub_mesh_id)
 	  {
 		  // Get the indices.
 		  glm::vec3 scale = world_->getScene().getSystem<components::TransformSystem>()->getWorldScale(entity_);
 		  asset::SubMesh sub_mesh = mesh->getSubMeshes().at(sub_mesh_id);
 		  auto index_offset = sub_mesh.offsets[asset::MeshElements::kIndices];
 		  auto vertex_offset = sub_mesh.offsets[asset::MeshElements::kPositions];
-		  int* indices = (int*)foundation::Memory::allocate(index_offset.count * sizeof(int));
-		  glm::vec3* vertices = (glm::vec3*)foundation::Memory::allocate(vertex_offset.count * sizeof(glm::vec3));
+
+			if (indices_)
+				foundation::Memory::deallocate(indices_);
+			indices_ = (int*)foundation::Memory::allocate(index_offset.count * sizeof(int));
+
+			if (vertices_)
+				foundation::Memory::deallocate(vertices_);
+			vertices_ = (glm::vec3*)foundation::Memory::allocate(vertex_offset.count * sizeof(glm::vec3));
 
 		  auto mii = mesh->get(asset::MeshElements::kIndices);
 		  auto mpi = mesh->get(asset::MeshElements::kPositions);
 
-		  memcpy(vertices, (char*)mpi.data + vertex_offset.offset, vertex_offset.count * mpi.size);
+		  memcpy(vertices_, (char*)mpi.data + vertex_offset.offset, vertex_offset.count * mpi.size);
 		  for (uint32_t i = 0; i < vertex_offset.count; ++i)
-			  vertices[i] *= scale;
+				vertices_[i] *= scale;
 
 		  if (sizeof(uint16_t) == mii.size)
 		  {
@@ -359,7 +375,7 @@ namespace lambda
 			  memcpy(idx.data(), (char*)mii.data + index_offset.offset, index_offset.count * mii.size);
 
 			  for (size_t i = 0u; i < index_offset.count; ++i)
-				  indices[i] = (int)idx.at(i);
+					indices_[i] = (int)idx.at(i);
 		  }
 		  else
 		  {
@@ -367,7 +383,7 @@ namespace lambda
 			  memcpy(idx.data(), (char*)mii.data + index_offset.offset, index_offset.count * mii.size);
 
 			  for (size_t i = 0u; i < index_offset.count; ++i)
-				  indices[i] = (int)idx.at(i);
+					indices_[i] = (int)idx.at(i);
 		  }
 
 		  bool is_aabb = true;
@@ -375,7 +391,7 @@ namespace lambda
 		  glm::vec3 max = sub_mesh.max * scale;
 		  for (uint32_t i = 0; i < index_offset.count; ++i)
 		  {
-			  const glm::vec3& vertex = vertices[indices[i]];
+			  const glm::vec3& vertex = vertices_[indices_[i]];
 			  if (!allCornersClose(vertex, min, max))
 				  is_aabb = false;
 		  }
@@ -391,15 +407,15 @@ namespace lambda
 		  }
 
 		  for (uint32_t i = 0; i < vertex_offset.count; ++i)
-			  vertices[i] *= VIOLET_PHYSICS_SCALE;
+				vertices_[i] *= VIOLET_PHYSICS_SCALE;
 
 		  auto* triangle_mesh = foundation::Memory::construct<btTriangleMesh>(false, false);
 
 		  for (uint32_t i = 0; i < index_offset.count; i += 3)
 		  {
-			  auto v1 = vertices[indices[i + 0]];
-			  auto v2 = vertices[indices[i + 1]];
-			  auto v3 = vertices[indices[i + 2]];
+			  auto v1 = vertices_[indices_[i + 0]];
+			  auto v2 = vertices_[indices_[i + 1]];
+			  auto v3 = vertices_[indices_[i + 2]];
 			  triangle_mesh->addTriangle(
 				  btVector3(v1.x, v1.y, v1.z),
 				  btVector3(v2.x, v2.y, v2.z),

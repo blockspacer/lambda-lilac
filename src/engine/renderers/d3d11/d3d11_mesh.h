@@ -15,18 +15,18 @@ namespace lambda
     class D3D11RenderBuffer;
 
     ///////////////////////////////////////////////////////////////////////////
-    class D3D11Mesh : public asset::IGPUAsset
+    class D3D11Mesh
     {
     public:
       D3D11Mesh(D3D11Context* context);
-      virtual ~D3D11Mesh() override;
+      ~D3D11Mesh();
 
       void bind(
         const Vector<uint32_t>& stages,
-				asset::MeshHandle mesh,
+				asset::VioletMeshHandle mesh,
         const uint32_t& sub_mesh_idx
       );
-      void draw(asset::MeshHandle mesh, const uint32_t& sub_mesh_idx);
+      void draw(asset::VioletMeshHandle mesh, const uint32_t& sub_mesh_idx);
 
     private:
       void update(

@@ -1,9 +1,5 @@
 SET(AssetsSources
-  "assets/asset.h"
-  "assets/asset.cc"
   "assets/asset_handle.h"
-  "assets/asset_manager.h"
-  "assets/asset_manager.cc"
   "assets/mesh.h"
   "assets/mesh.cc"
   "assets/mesh_io.h"

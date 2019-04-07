@@ -24,7 +24,7 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     void D3D11Mesh::bind(
       const Vector<uint32_t>& stages,
-      asset::MeshHandle mesh,
+      asset::VioletMeshHandle mesh,
       const uint32_t& sub_mesh_idx)
     {
       Vector<UINT> strides;
@@ -87,7 +87,7 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    void D3D11Mesh::draw(asset::MeshHandle mesh, const uint32_t& sub_mesh_idx)
+    void D3D11Mesh::draw(asset::VioletMeshHandle mesh, const uint32_t& sub_mesh_idx)
     {
       asset::SubMesh& sub_mesh = mesh->getSubMeshes().at(sub_mesh_idx);
      

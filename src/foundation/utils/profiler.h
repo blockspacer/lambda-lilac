@@ -9,13 +9,12 @@ namespace lambda
 		class Profiler
 		{
 		public:
+			~Profiler();
 			void startTimer(String name);
 			void endTimer(String name);
 			double getTime(String name) const;
-			static Profiler& getInstance();
 		
 		private:
-			static Profiler s_instance_;
 			UnorderedMap<String, Timer> timers_;
 			UnorderedMap<String, double> values_;
 		};

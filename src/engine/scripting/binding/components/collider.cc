@@ -28,7 +28,7 @@ namespace lambda
         {
           g_collider_system->removeComponent((entity::Entity)id);
         }
-        void AddMeshCollider(entity::Entity entity, asset::MeshHandle mesh)
+        void AddMeshCollider(entity::Entity entity, asset::VioletMeshHandle mesh)
         {
           if (true == g_mesh_render_system->hasComponent(entity) &&
             mesh == g_mesh_render_system->getMesh(entity) &&

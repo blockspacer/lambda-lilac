@@ -26,6 +26,7 @@ function(LinkDependencies)
 
   
   SET(USE_EASTL           FALSE)
+  SET(USE_STACKWALKER     FALSE)
   SET(USE_ENET            FALSE)
   SET(USE_VEZ             FALSE)
   SET(USE_ASSIMP          FALSE)
@@ -53,7 +54,8 @@ function(LinkDependencies)
   # /// FOUNDATION ////////////////////////////////////////////////
   # ///////////////////////////////////////////////////////////////
   IF(${VIOLET_CONFIG_FOUNDATION})
-	SET(USE_EASTL TRUE)
+	  SET(USE_EASTL TRUE)
+	  SET(USE_STACKWALKER TRUE)
   ENDIF()
 
 
@@ -63,7 +65,7 @@ function(LinkDependencies)
   # /// NETWORKING ////////////////////////////////////////////////
   # ///////////////////////////////////////////////////////////////
   IF(${VIOLET_CONFIG_NETWORKING})
-	SET(USE_ENET TRUE)
+  	SET(USE_ENET TRUE)
   ENDIF()
 
 
@@ -74,11 +76,11 @@ function(LinkDependencies)
   # ///////////////////////////////////////////////////////////////
   IF(${VIOLET_CONFIG_ENGINE})
     IF(${VIOLET_RENDERER} STREQUAL "Vulkan")
-	  SET(USE_VEZ TRUE)
+	    SET(USE_VEZ TRUE)
     ENDIF()
 
     IF(${VIOLET_ASSET_ASSIMP})
-	  SET(USE_ASSIMP TRUE)
+	    SET(USE_ASSIMP TRUE)
     ENDIF()
     
     IF (${VIOLET_GUI} STREQUAL "Ultralight")
@@ -86,44 +88,44 @@ function(LinkDependencies)
     ENDIF()
 	
     IF(${VIOLET_PHYSICS} STREQUAL "Bullet3")
-	  SET(USE_BULLET3 TRUE)
+	    SET(USE_BULLET3 TRUE)
     ENDIF()
 	
     IF(${VIOLET_PHYSICS} STREQUAL "React")
-	  SET(USE_REACT TRUE)
+	    SET(USE_REACT TRUE)
     ENDIF()
 	
-	SET(USE_FASTNOISE TRUE)
-	SET(USE_GLM TRUE)
-	SET(USE_INIH TRUE)
-	SET(USE_MESHDECIMATION TRUE)
-	SET(USE_SOLOUD TRUE)
-	SET(USE_STB TRUE)
+    SET(USE_FASTNOISE TRUE)
+    SET(USE_GLM TRUE)
+    SET(USE_INIH TRUE)
+    SET(USE_MESHDECIMATION TRUE)
+    SET(USE_SOLOUD TRUE)
+    SET(USE_STB TRUE)
     SET(USE_RAPIDJSON TRUE)
-	SET(USE_TINYGLTF TRUE)
+	  SET(USE_TINYGLTF TRUE)
 
     IF(${VIOLET_SCRIPTING} STREQUAL "AngelScript")
-	  SET(USE_ANGELSCRIPT TRUE)
+	    SET(USE_ANGELSCRIPT TRUE)
     ENDIF()
 
     IF(${VIOLET_SCRIPTING} STREQUAL "Wren")
-	  SET(USE_WREN TRUE)
+	    SET(USE_WREN TRUE)
     ENDIF()
 
     IF(${VIOLET_IMGUI} STREQUAL "Nuklear")
-	  SET(USE_NUKLEAR TRUE)
+	    SET(USE_NUKLEAR TRUE)
     ENDIF()
 
     IF(${VIOLET_IMGUI} STREQUAL "Dear ImGUI")
-	  SET(USE_DEAR TRUE)
+	    SET(USE_DEAR TRUE)
     ENDIF()
 
     IF(${VIOLET_WINDOW} STREQUAL "GLFW")
-	  SET(USE_GLFW TRUE)
+	    SET(USE_GLFW TRUE)
     ENDIF()
 
     IF(${VIOLET_WINDOW} STREQUAL "SDL2")
-	  SET(USE_SDL2 TRUE)
+	    SET(USE_SDL2 TRUE)
     ENDIF()
   ENDIF()
 
@@ -135,16 +137,16 @@ function(LinkDependencies)
   # ///////////////////////////////////////////////////////////////
   IF(${VIOLET_CONFIG_TOOLS})
     IF (${VIOLET_SHADER_CONDUCTOR})
-	  SET(USE_SHADERCONDUCTOR TRUE)
+	    SET(USE_SHADERCONDUCTOR TRUE)
     ENDIF()
 	
-	SET(USE_STB TRUE)
+    SET(USE_STB TRUE)
     SET(USE_RAPIDJSON TRUE)
-	SET(USE_SOLOUD TRUE)
-	SET(USE_GLM TRUE)
+    SET(USE_SOLOUD TRUE)
+    SET(USE_GLM TRUE)
     
     IF(${VIOLET_DIRECTX_TEX})
-	  SET(USE_DIRECTXTEX TRUE)
+	    SET(USE_DIRECTXTEX TRUE)
     ENDIF()
   ENDIF()
 
@@ -169,6 +171,13 @@ function(LinkDependencies)
     TARGET_LINK_LIBRARIES(eastl INTERFACE EASTL EAAssert EAStdC EAMain EATest EAThread)
     TARGET_INCLUDE_DIRECTORIES(eastl INTERFACE "deps/eastl/include")
     SetSolutionFolder("deps/memory"     EABase_ide EASTL EAAssert_ide EAMain_ide EAStdC EATest EAThread_ide)
+  ENDIF()
+  
+  IF(${USE_STACKWALKER})
+    ADD_SUBDIRECTORY("deps/StackWalker")
+    SET(StackWalker_DISABLE_TESTS ON CACHE BOOL "" FORCE)
+    TARGET_INCLUDE_DIRECTORIES(StackWalker INTERFACE "deps/StackWalker/main")
+    SetSolutionFolder("deps/stackwalker" StackWalker)
   ENDIF()
   
   IF(${USE_ENET})

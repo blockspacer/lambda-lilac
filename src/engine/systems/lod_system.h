@@ -15,9 +15,9 @@ namespace lambda
     class LOD
     {
     public:
-      void setMesh(asset::MeshHandle mesh);
+      void setMesh(asset::VioletMeshHandle mesh);
       void setDistance(const float& distance);
-      asset::MeshHandle getMesh() const;
+      asset::VioletMeshHandle getMesh() const;
       float getDistance() const;
 
       bool operator<(const LOD& other) const
@@ -30,7 +30,7 @@ namespace lambda
       }
 
     private:
-      asset::MeshHandle mesh_;
+      asset::VioletMeshHandle mesh_;
       float distance_; // Distance AFTER which this LOD should be used.
     };
 

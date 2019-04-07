@@ -3,6 +3,10 @@
 #include <cstddef>
 #include <atomic>
 
+#define VIOLET_DEBUG_MEMORY 1
+#define VIOLET_OPEN_ALLOCATIONS 0
+#define VIOLET_BUFFER_OVERFLOW 0
+
 namespace lambda
 {
   namespace foundation
@@ -23,10 +27,10 @@ namespace lambda
       virtual ~IAllocator();
 
     protected:
-      void* Allocate(size_t size, size_t align);
-      size_t Deallocate(void* ptr);
-      virtual void* AllocateImpl(size_t size, size_t align) = 0;
-      virtual size_t DeallocateImpl(void* ptr) = 0;
+			size_t Deallocate(void* ptr);
+			virtual size_t DeallocateImpl(void* ptr) = 0;
+			void* Allocate(size_t size, size_t align);
+			virtual void* AllocateImpl(size_t size, size_t align) = 0;
 
     private:
       const size_t max_size_;

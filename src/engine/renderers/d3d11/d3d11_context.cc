@@ -4,7 +4,6 @@
 #include "assets/shader.h"
 #include "d3d11_shader.h"
 #include "d3d11_mesh.h"
-#include "assets/asset_manager.h"
 #include "d3d11_texture.h"
 #include "utils/decompose_matrix.h"
 #include "platform/shader_variable.h"
@@ -19,539 +18,537 @@
 
 namespace lambda
 {
-  namespace windows
-  {
-    ///////////////////////////////////////////////////////////////////////////
-    D3D11RenderBuffer::D3D11RenderBuffer(
-      uint32_t size, 
-      uint32_t flags, 
-      ID3D11Buffer* buffer, 
-      ID3D11DeviceContext* context) 
-      : size_(size)
-      , flags_(flags)
-      , buffer_(buffer)
-      , context_(context)
-    {
-    }
+	namespace windows
+	{
+		///////////////////////////////////////////////////////////////////////////
+		D3D11RenderBuffer::D3D11RenderBuffer(
+			uint32_t size,
+			uint32_t flags,
+			ID3D11Buffer* buffer,
+			ID3D11DeviceContext* context)
+			: size_(size)
+			, flags_(flags)
+			, buffer_(buffer)
+			, context_(context)
+		{
+		}
 
-    ///////////////////////////////////////////////////////////////////////////
-    void* D3D11RenderBuffer::lock()
-    {
-      LMB_ASSERT(flags_ & kFlagDynamic, "TODO (Hilze): Fill in");
+		///////////////////////////////////////////////////////////////////////////
+		void* D3D11RenderBuffer::lock()
+		{
+			LMB_ASSERT(flags_ & kFlagDynamic, "TODO (Hilze): Fill in");
 
-      D3D11_MAPPED_SUBRESOURCE resource;
-      context_->Map(buffer_, 0u, D3D11_MAP_WRITE_DISCARD, 0u, &resource);
-      return resource.pData;
-    }
+			D3D11_MAPPED_SUBRESOURCE resource;
+			context_->Map(buffer_, 0u, D3D11_MAP_WRITE_DISCARD, 0u, &resource);
+			return resource.pData;
+		}
 
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11RenderBuffer::unlock()
-    {
-      LMB_ASSERT(flags_ & kFlagDynamic, "TODO (Hilze): Fill in");
-      
-      context_->Unmap(buffer_, 0u);
-    }
+		///////////////////////////////////////////////////////////////////////////
+		void D3D11RenderBuffer::unlock()
+		{
+			LMB_ASSERT(flags_ & kFlagDynamic, "TODO (Hilze): Fill in");
 
-    ///////////////////////////////////////////////////////////////////////////
-    uint32_t D3D11RenderBuffer::getFlags() const
-    {
-      return flags_;
-    }
+			context_->Unmap(buffer_, 0u);
+		}
 
-    ///////////////////////////////////////////////////////////////////////////
-    uint32_t D3D11RenderBuffer::getSize() const
-    {
-      return size_;
-    }
+		///////////////////////////////////////////////////////////////////////////
+		uint32_t D3D11RenderBuffer::getFlags() const
+		{
+			return flags_;
+		}
 
-    ///////////////////////////////////////////////////////////////////////////
-    ID3D11Buffer* D3D11RenderBuffer::getBuffer() const
-    {
-      return buffer_;
-    }
+		///////////////////////////////////////////////////////////////////////////
+		uint32_t D3D11RenderBuffer::getSize() const
+		{
+			return size_;
+		}
 
-    ///////////////////////////////////////////////////////////////////////////
-    D3D11RenderTexture::D3D11RenderTexture(
-      uint32_t width, 
-      uint32_t height, 
-      uint32_t depth,
-      uint32_t mip_count, 
-      TextureFormat format, 
-      uint32_t flags, 
-      D3D11Texture* texture, 
-      ID3D11DeviceContext* context)
-      : flags_(flags)
-      , width_(width)
-      , height_(height)
-      , depth_(depth)
-      , mip_count_(mip_count)
-      , format_(format)
-      , texture_(texture)
-      , context_(context)
-    {
-    }
-   
-    ///////////////////////////////////////////////////////////////////////////
-    void* D3D11RenderTexture::lock(uint32_t level)
-    {
-      //LMB_ASSERT(flags_ & kFlagDynamic, "TODO (Hilze): Fill in");
+		///////////////////////////////////////////////////////////////////////////
+		ID3D11Buffer* D3D11RenderBuffer::getBuffer() const
+		{
+			return buffer_;
+		}
 
-      D3D11_MAPPED_SUBRESOURCE resource;
-      context_->Map(
-        texture_->getTexture(0u), 
-        level, 
-        D3D11_MAP_WRITE_DISCARD, 
-        0u, 
-        &resource
-      );
-      
-      return resource.pData;
-    }
-    
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11RenderTexture::unlock(uint32_t level)
-    {
-      //LMB_ASSERT(flags_ & kFlagDynamic, "TODO (Hilze): Fill in");
+		///////////////////////////////////////////////////////////////////////////
+		D3D11RenderTexture::D3D11RenderTexture(
+			uint32_t width,
+			uint32_t height,
+			uint32_t depth,
+			uint32_t mip_count,
+			TextureFormat format,
+			uint32_t flags,
+			D3D11Texture* texture,
+			ID3D11DeviceContext* context)
+			: flags_(flags)
+			, width_(width)
+			, height_(height)
+			, depth_(depth)
+			, mip_count_(mip_count)
+			, format_(format)
+			, texture_(texture)
+			, context_(context)
+		{
+		}
 
-      context_->Unmap(texture_->getTexture(0u), level);
-    }
-    
-    ///////////////////////////////////////////////////////////////////////////
-    uint32_t D3D11RenderTexture::getWidth() const
-    {
-      return width_;
-    }
-    
-    ///////////////////////////////////////////////////////////////////////////
-    uint32_t D3D11RenderTexture::getHeight() const
-    {
-      return height_;
-    }
-    
-    ///////////////////////////////////////////////////////////////////////////
-    uint32_t D3D11RenderTexture::getDepth() const
-    {
-      return depth_;
-    }
+		///////////////////////////////////////////////////////////////////////////
+		void* D3D11RenderTexture::lock(uint32_t level)
+		{
+			//LMB_ASSERT(flags_ & kFlagDynamic, "TODO (Hilze): Fill in");
 
-    ///////////////////////////////////////////////////////////////////////////
-    uint32_t D3D11RenderTexture::getMipCount() const
-    {
-      return mip_count_;
-    }
+			D3D11_MAPPED_SUBRESOURCE resource;
+			context_->Map(
+				texture_->getTexture(0u),
+				level,
+				D3D11_MAP_WRITE_DISCARD,
+				0u,
+				&resource
+			);
 
-    ///////////////////////////////////////////////////////////////////////////
-    uint32_t D3D11RenderTexture::getFlags() const
-    {
-      return flags_;
-    }
+			return resource.pData;
+		}
 
-    ///////////////////////////////////////////////////////////////////////////
-    TextureFormat D3D11RenderTexture::getFormat() const
-    {
-      return format_;
-    }
+		///////////////////////////////////////////////////////////////////////////
+		void D3D11RenderTexture::unlock(uint32_t level)
+		{
+			//LMB_ASSERT(flags_ & kFlagDynamic, "TODO (Hilze): Fill in");
 
-    ///////////////////////////////////////////////////////////////////////////
-    D3D11Texture* D3D11RenderTexture::getTexture() const
-    {
-      return texture_;
-    }
+			context_->Unmap(texture_->getTexture(0u), level);
+		}
 
-    ///////////////////////////////////////////////////////////////////////////
-    platform::IRenderBuffer* D3D11Context::allocRenderBuffer(
-      uint32_t size, 
-      uint32_t flags, 
-      void* data)
-    {
-      const bool is_dynamic   = 
-        (flags & platform::IRenderBuffer::kFlagDynamic)   ? true : false;
-      const bool is_staging   = 
-        (flags & platform::IRenderBuffer::kFlagStaging)   ? true : false;
-      const bool is_immutable = 
-        (flags & platform::IRenderBuffer::kFlagImmutable) ? true : false;
-      const bool is_vertex    = 
-        (flags & platform::IRenderBuffer::kFlagVertex)    ? true : false;
-      const bool is_index     = 
-        (flags & platform::IRenderBuffer::kFlagIndex)     ? true : false;
-      const bool is_constant  = 
-        (flags & platform::IRenderBuffer::kFlagConstant)  ? true : false;
+		///////////////////////////////////////////////////////////////////////////
+		uint32_t D3D11RenderTexture::getWidth() const
+		{
+			return width_;
+		}
 
-      D3D11_BUFFER_DESC buffer_desc{};
-      buffer_desc.ByteWidth           = size;
-      buffer_desc.Usage               = is_dynamic ? D3D11_USAGE_DYNAMIC      : 
-        (is_staging ? D3D11_USAGE_STAGING     : 
-        (is_immutable ? D3D11_USAGE_IMMUTABLE : D3D11_USAGE_DEFAULT));
-      buffer_desc.BindFlags           = is_vertex  ? D3D11_BIND_VERTEX_BUFFER : 
-        (is_index   ? D3D11_BIND_INDEX_BUFFER : 
-        (is_constant  ? D3D11_BIND_CONSTANT_BUFFER : 0u));
-      buffer_desc.CPUAccessFlags      = is_dynamic ? D3D11_CPU_ACCESS_WRITE   : 
-        (is_staging ? D3D11_CPU_ACCESS_WRITE  : 0u);
-      buffer_desc.MiscFlags           = 0u;
-      buffer_desc.StructureByteStride = 0u;
+		///////////////////////////////////////////////////////////////////////////
+		uint32_t D3D11RenderTexture::getHeight() const
+		{
+			return height_;
+		}
 
-      D3D11_SUBRESOURCE_DATA subresource{};
-      subresource.pSysMem = data;
+		///////////////////////////////////////////////////////////////////////////
+		uint32_t D3D11RenderTexture::getDepth() const
+		{
+			return depth_;
+		}
 
-      ID3D11Buffer* buffer;
-      context_.device->CreateBuffer(
-        &buffer_desc, 
-        data ? &subresource : nullptr, 
-        &buffer
-      );
+		///////////////////////////////////////////////////////////////////////////
+		uint32_t D3D11RenderTexture::getMipCount() const
+		{
+			return mip_count_;
+		}
 
-      if (is_vertex)
-        memory_stats_.vertex   += size;
-      if (is_index)
-        memory_stats_.index    += size;
-      if (is_constant)
-        memory_stats_.constant += size;
+		///////////////////////////////////////////////////////////////////////////
+		uint32_t D3D11RenderTexture::getFlags() const
+		{
+			return flags_;
+		}
 
-      return foundation::Memory::construct<D3D11RenderBuffer>(
-        size, 
-        flags, 
-        buffer, 
-        context_.context.Get()
-        );
-    }
+		///////////////////////////////////////////////////////////////////////////
+		TextureFormat D3D11RenderTexture::getFormat() const
+		{
+			return format_;
+		}
 
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Context::freeRenderBuffer(platform::IRenderBuffer*& buffer)
-    {
-      const bool is_vertex   = 
-        (buffer->getFlags() & platform::IRenderBuffer::kFlagVertex)   
-        ? true : false;
-      const bool is_index    = 
-        (buffer->getFlags() & platform::IRenderBuffer::kFlagIndex)   
-        ? true : false;
-      const bool is_constant = 
-        (buffer->getFlags() & platform::IRenderBuffer::kFlagConstant)  
-        ? true : false;
+		///////////////////////////////////////////////////////////////////////////
+		D3D11Texture* D3D11RenderTexture::getTexture() const
+		{
+			return texture_;
+		}
 
-      if (is_vertex)
-        memory_stats_.vertex   -= buffer->getSize();
-      if (is_index)
-        memory_stats_.index    -= buffer->getSize();
-      if (is_constant)
-        memory_stats_.constant -= buffer->getSize();
+		///////////////////////////////////////////////////////////////////////////
+		platform::IRenderBuffer* D3D11Context::allocRenderBuffer(
+			uint32_t size,
+			uint32_t flags,
+			void* data)
+		{
+			const bool is_dynamic =
+				(flags & platform::IRenderBuffer::kFlagDynamic) ? true : false;
+			const bool is_staging =
+				(flags & platform::IRenderBuffer::kFlagStaging) ? true : false;
+			const bool is_immutable =
+				(flags & platform::IRenderBuffer::kFlagImmutable) ? true : false;
+			const bool is_vertex =
+				(flags & platform::IRenderBuffer::kFlagVertex) ? true : false;
+			const bool is_index =
+				(flags & platform::IRenderBuffer::kFlagIndex) ? true : false;
+			const bool is_constant =
+				(flags & platform::IRenderBuffer::kFlagConstant) ? true : false;
 
-      static_cast<D3D11RenderBuffer*>(buffer)->getBuffer()->Release();
-      foundation::Memory::destruct(buffer);
-      buffer = nullptr;
-    }
-  
-    ///////////////////////////////////////////////////////////////////////////
-    platform::IRenderTexture* D3D11Context::allocRenderTexture(
-      asset::VioletTextureHandle texture)
-    {
-      //const bool generate_mips = 
-      //  (texture->getLayer(0u).getFlags() & kTextureFlagMipMaps) 
-      //    ? true : false;
-      //const uint32_t mip_count = 
-      //  generate_mips ? 
-      //    ((uint32_t)floorf(std::log2f(std::fminf(
-      //      (float)texture->getLayer(0u).getWidth(), 
-      //      (float)texture->getLayer(0u).getHeight())) + 1.0f)) : 1u;
+			D3D11_BUFFER_DESC buffer_desc{};
+			buffer_desc.ByteWidth = size;
+			buffer_desc.Usage = is_dynamic ? D3D11_USAGE_DYNAMIC :
+				(is_staging ? D3D11_USAGE_STAGING :
+				(is_immutable ? D3D11_USAGE_IMMUTABLE : D3D11_USAGE_DEFAULT));
+			buffer_desc.BindFlags = is_vertex ? D3D11_BIND_VERTEX_BUFFER :
+				(is_index ? D3D11_BIND_INDEX_BUFFER :
+				(is_constant ? D3D11_BIND_CONSTANT_BUFFER : 0u));
+			buffer_desc.CPUAccessFlags = is_dynamic ? D3D11_CPU_ACCESS_WRITE :
+				(is_staging ? D3D11_CPU_ACCESS_WRITE : 0u);
+			buffer_desc.MiscFlags = 0u;
+			buffer_desc.StructureByteStride = 0u;
 
-      D3D11RenderTexture* d3d11_texture = 
-        foundation::Memory::construct<D3D11RenderTexture>(
-        texture->getLayer(0u).getWidth(),
-        texture->getLayer(0u).getHeight(),
-        texture->getLayerCount(),
-        texture->getLayer(0u).getMipCount(),
-        texture->getLayer(0u).getFormat(),
-        texture->getLayer(0u).getFlags(),
-        foundation::Memory::construct<D3D11Texture>(
-          texture, 
-          context_.device.Get(), 
-          context_.context.Get()
-        ),
-        context_.context.Get()
-      );
+			D3D11_SUBRESOURCE_DATA subresource{};
+			subresource.pSysMem = data;
 
-      uint32_t size = 0u;
-      for (uint32_t i = 0u; i < texture->getLayerCount(); ++i)
-      {
-        uint32_t w = texture->getLayer(0u).getWidth();
-        uint32_t h = texture->getLayer(0u).getHeight();
-        uint32_t bpp, bpr, bpl;
-        for (uint32_t j = 0u; j < texture->getLayer(0u).getMipCount(); ++j)
-        {
-          calculateImageMemory(
-            texture->getLayer(0u).getFormat(),
-            w, 
-            h, 
-            bpp, 
-            bpr, 
-            bpl
-          );
-          size += bpl;
-          w /= 2u;
-          h /= 2u;
-        }
-      }
-      if ((texture->getLayer(0u).getFlags() & kTextureFlagIsRenderTarget) 
-        != 0u)
-        memory_stats_.render_target += size;
-      else
-        memory_stats_.texture += size;
+			ID3D11Buffer* buffer;
+			context_.device->CreateBuffer(
+				&buffer_desc,
+				data ? &subresource : nullptr,
+				&buffer
+			);
 
-      return d3d11_texture;
-    }
+			if (is_vertex)
+				memory_stats_.vertex += size;
+			if (is_index)
+				memory_stats_.index += size;
+			if (is_constant)
+				memory_stats_.constant += size;
 
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Context::freeRenderTexture(platform::IRenderTexture*& texture)
-    {
-      uint32_t size = 0u;
-      for (uint32_t i = 0u; i < texture->getDepth(); ++i)
-      {
-        uint32_t w = texture->getWidth();
-        uint32_t h = texture->getHeight();
-        uint32_t bpp, bpr, bpl;
-        for (uint32_t j = 0u; j < texture->getMipCount(); ++j)
-        {
-          calculateImageMemory(texture->getFormat(), w, h, bpp, bpr, bpl);
-          size += bpl;
-          w /= 2u;
-          h /= 2u;
-        }
-      }
-      if ((texture->getFlags() & kTextureFlagIsRenderTarget) != 0u)
-        memory_stats_.render_target -= size;
-      else
-        memory_stats_.texture -= size;
+			return foundation::Memory::construct<D3D11RenderBuffer>(
+				size,
+				flags,
+				buffer,
+				context_.context.Get()
+				);
+		}
 
-      foundation::Memory::destruct(
-        ((D3D11RenderTexture*)texture)->getTexture()
-      );
-      foundation::Memory::destruct(texture);
-    }
-   
-    ///////////////////////////////////////////////////////////////////////////
-    ID3D11DeviceContext* D3D11Context::getD3D11Context() const
-    {
-      return context_.context.Get();
-    }
-    
-    ///////////////////////////////////////////////////////////////////////////
-    ID3D11Device* D3D11Context::getD3D11Device() const
-    {
-      return context_.device.Get();
-    }
-    
-    ///////////////////////////////////////////////////////////////////////////
-    D3D11Context::~D3D11Context()
-    {
-    }
+		///////////////////////////////////////////////////////////////////////////
+		void D3D11Context::freeRenderBuffer(platform::IRenderBuffer*& buffer)
+		{
+			const bool is_vertex =
+				(buffer->getFlags() & platform::IRenderBuffer::kFlagVertex)
+				? true : false;
+			const bool is_index =
+				(buffer->getFlags() & platform::IRenderBuffer::kFlagIndex)
+				? true : false;
+			const bool is_constant =
+				(buffer->getFlags() & platform::IRenderBuffer::kFlagConstant)
+				? true : false;
 
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Context::setWindow(
-      foundation::SharedPointer<platform::IWindow> window)
-    {
-		memset(&state_, 0, sizeof(state_));
-		state_.sub_mesh = UINT32_MAX;
-		memset(&dx_state_, 0, sizeof(dx_state_));
-		invalidateAll();
+			if (is_vertex)
+				memory_stats_.vertex -= buffer->getSize();
+			if (is_index)
+				memory_stats_.index -= buffer->getSize();
+			if (is_constant)
+				memory_stats_.constant -= buffer->getSize();
 
-      
-      asset::AssetManager::getInstance().destroyAllGPUAssets();
-      asset_manager_ = D3D11AssetManager();
+			static_cast<D3D11RenderBuffer*>(buffer)->getBuffer()->Release();
+			foundation::Memory::destruct(buffer);
+			buffer = nullptr;
+		}
 
-      // Create device and context.
-      {
-        HRESULT result;
-        DXGI_SWAP_CHAIN_DESC swap_chain_desc{};
-        IDXGIAdapter* adapter = nullptr;
+		///////////////////////////////////////////////////////////////////////////
+		platform::IRenderTexture* D3D11Context::allocRenderTexture(
+			asset::VioletTextureHandle texture)
+		{
+			//const bool generate_mips = 
+			//  (texture->getLayer(0u).getFlags() & kTextureFlagMipMaps) 
+			//    ? true : false;
+			//const uint32_t mip_count = 
+			//  generate_mips ? 
+			//    ((uint32_t)floorf(std::log2f(std::fminf(
+			//      (float)texture->getLayer(0u).getWidth(), 
+			//      (float)texture->getLayer(0u).getHeight())) + 1.0f)) : 1u;
 
-        swap_chain_desc.BufferDesc.Width  = window->getSize().x;
-        swap_chain_desc.BufferDesc.Height = window->getSize().y;
-        swap_chain_desc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        swap_chain_desc.BufferDesc.RefreshRate.Numerator = 60;
-        swap_chain_desc.BufferDesc.RefreshRate.Denominator = 1;
-        swap_chain_desc.BufferDesc.ScanlineOrdering =
-          DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
-        swap_chain_desc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
+			D3D11RenderTexture* d3d11_texture =
+				foundation::Memory::construct<D3D11RenderTexture>(
+					texture->getLayer(0u).getWidth(),
+					texture->getLayer(0u).getHeight(),
+					texture->getLayerCount(),
+					texture->getLayer(0u).getMipCount(),
+					texture->getLayer(0u).getFormat(),
+					texture->getLayer(0u).getFlags(),
+					foundation::Memory::construct<D3D11Texture>(
+						texture,
+						context_.device.Get(),
+						context_.context.Get()
+						),
+					context_.context.Get()
+					);
 
-        swap_chain_desc.BufferCount        = 1;
-        swap_chain_desc.OutputWindow       = (HWND)window->getWindow();
-        swap_chain_desc.SampleDesc.Count   = 1;
-        swap_chain_desc.SampleDesc.Quality = 0;
-        swap_chain_desc.Windowed           = true;
-        swap_chain_desc.BufferUsage        = 
-          DXGI_USAGE_RENDER_TARGET_OUTPUT | DXGI_USAGE_SHADER_INPUT;
-        swap_chain_desc.SwapEffect         =
-          DXGI_SWAP_EFFECT_DISCARD;// DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
-        swap_chain_desc.Flags              =
-          DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+			uint32_t size = 0u;
+			for (uint32_t i = 0u; i < texture->getLayerCount(); ++i)
+			{
+				uint32_t w = texture->getLayer(0u).getWidth();
+				uint32_t h = texture->getLayer(0u).getHeight();
+				uint32_t bpp, bpr, bpl;
+				for (uint32_t j = 0u; j < texture->getLayer(0u).getMipCount(); ++j)
+				{
+					calculateImageMemory(
+						texture->getLayer(0u).getFormat(),
+						w,
+						h,
+						bpp,
+						bpr,
+						bpl
+					);
+					size += bpl;
+					w /= 2u;
+					h /= 2u;
+				}
+			}
+			if ((texture->getLayer(0u).getFlags() & kTextureFlagIsRenderTarget)
+				!= 0u)
+				memory_stats_.render_target += size;
+			else
+				memory_stats_.texture += size;
+
+			return d3d11_texture;
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		void D3D11Context::freeRenderTexture(platform::IRenderTexture*& texture)
+		{
+			uint32_t size = 0u;
+			for (uint32_t i = 0u; i < texture->getDepth(); ++i)
+			{
+				uint32_t w = texture->getWidth();
+				uint32_t h = texture->getHeight();
+				uint32_t bpp, bpr, bpl;
+				for (uint32_t j = 0u; j < texture->getMipCount(); ++j)
+				{
+					calculateImageMemory(texture->getFormat(), w, h, bpp, bpr, bpl);
+					size += bpl;
+					w /= 2u;
+					h /= 2u;
+				}
+			}
+			if ((texture->getFlags() & kTextureFlagIsRenderTarget) != 0u)
+				memory_stats_.render_target -= size;
+			else
+				memory_stats_.texture -= size;
+
+			foundation::Memory::destruct(
+				((D3D11RenderTexture*)texture)->getTexture()
+			);
+			foundation::Memory::destruct(texture);
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		ID3D11DeviceContext* D3D11Context::getD3D11Context() const
+		{
+			return context_.context.Get();
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		ID3D11Device* D3D11Context::getD3D11Device() const
+		{
+			return context_.device.Get();
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		D3D11Context::~D3D11Context()
+		{
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		void D3D11Context::setWindow(
+			foundation::SharedPointer<platform::IWindow> window)
+		{
+			memset(&state_, 0, sizeof(state_));
+			state_.sub_mesh = UINT32_MAX;
+			memset(&dx_state_, 0, sizeof(dx_state_));
+			invalidateAll();
+
+			asset_manager_ = D3D11AssetManager();
+
+			// Create device and context.
+			{
+				HRESULT result;
+				DXGI_SWAP_CHAIN_DESC swap_chain_desc{};
+				IDXGIAdapter* adapter = nullptr;
+
+				swap_chain_desc.BufferDesc.Width = window->getSize().x;
+				swap_chain_desc.BufferDesc.Height = window->getSize().y;
+				swap_chain_desc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+				swap_chain_desc.BufferDesc.RefreshRate.Numerator = 60;
+				swap_chain_desc.BufferDesc.RefreshRate.Denominator = 1;
+				swap_chain_desc.BufferDesc.ScanlineOrdering =
+					DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
+				swap_chain_desc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
+
+				swap_chain_desc.BufferCount = 1;
+				swap_chain_desc.OutputWindow = (HWND)window->getWindow();
+				swap_chain_desc.SampleDesc.Count = 1;
+				swap_chain_desc.SampleDesc.Quality = 0;
+				swap_chain_desc.Windowed = true;
+				swap_chain_desc.BufferUsage =
+					DXGI_USAGE_RENDER_TARGET_OUTPUT | DXGI_USAGE_SHADER_INPUT;
+				swap_chain_desc.SwapEffect =
+					DXGI_SWAP_EFFECT_DISCARD;// DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+				swap_chain_desc.Flags =
+					DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 
 #ifdef ENUM_ADAPTERS
-        IDXGIFactory* factory = nullptr;
-        CreateDXGIFactory(IID_PPV_ARGS(&factory));
+				IDXGIFactory* factory = nullptr;
+				CreateDXGIFactory(IID_PPV_ARGS(&factory));
 
-        int idx = -1;
-        IDXGIAdapter* selected_adapter = 0;
-        size_t dedicated_memory = 0;
-        while (SUCCEEDED(factory->EnumAdapters(++idx,&adapter)))
-        {
-          DXGI_ADAPTER_DESC desc{};
-          adapter->GetDesc(&desc);
-          if (desc.DedicatedVideoMemory > dedicated_memory)
-          {
-            if (selected_adapter != nullptr)
-            {
-              selected_adapter->Release();
-            }
-            dedicated_memory = desc.DedicatedVideoMemory;
-            selected_adapter = adapter;
-          }
-          else
-          {
-            adapter->Release();
-          }
-        }
-        adapter = selected_adapter;
+				int idx = -1;
+				IDXGIAdapter* selected_adapter = 0;
+				size_t dedicated_memory = 0;
+				while (SUCCEEDED(factory->EnumAdapters(++idx, &adapter)))
+				{
+					DXGI_ADAPTER_DESC desc{};
+					adapter->GetDesc(&desc);
+					if (desc.DedicatedVideoMemory > dedicated_memory)
+					{
+						if (selected_adapter != nullptr)
+						{
+							selected_adapter->Release();
+						}
+						dedicated_memory = desc.DedicatedVideoMemory;
+						selected_adapter = adapter;
+					}
+					else
+					{
+						adapter->Release();
+					}
+				}
+				adapter = selected_adapter;
 #endif
-        D3D_FEATURE_LEVEL feature_level[] = {
-          D3D_FEATURE_LEVEL_11_1,
-          D3D_FEATURE_LEVEL_11_0,
-          D3D_FEATURE_LEVEL_10_1,
-          D3D_FEATURE_LEVEL_10_0,
-          D3D_FEATURE_LEVEL_9_3,
-          D3D_FEATURE_LEVEL_9_2,
-          D3D_FEATURE_LEVEL_9_1
-        };
-        D3D_FEATURE_LEVEL supported_level;
+				D3D_FEATURE_LEVEL feature_level[] = {
+					D3D_FEATURE_LEVEL_11_1,
+					D3D_FEATURE_LEVEL_11_0,
+					D3D_FEATURE_LEVEL_10_1,
+					D3D_FEATURE_LEVEL_10_0,
+					D3D_FEATURE_LEVEL_9_3,
+					D3D_FEATURE_LEVEL_9_2,
+					D3D_FEATURE_LEVEL_9_1
+			};
+				D3D_FEATURE_LEVEL supported_level;
 
-        UINT create_device_flags = 0;
+				UINT create_device_flags = 0;
 #if VIOLET_DEBUG
-        create_device_flags |= D3D11_CREATE_DEVICE_DEBUG;
+				create_device_flags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
-        D3D_DRIVER_TYPE driver_types[] = {
-          D3D_DRIVER_TYPE_HARDWARE,
-          D3D_DRIVER_TYPE_REFERENCE,
-          D3D_DRIVER_TYPE_SOFTWARE,
-          D3D_DRIVER_TYPE_WARP,
-          D3D_DRIVER_TYPE_NULL,
-          D3D_DRIVER_TYPE_UNKNOWN,
-        };
+				D3D_DRIVER_TYPE driver_types[] = {
+					D3D_DRIVER_TYPE_HARDWARE,
+					D3D_DRIVER_TYPE_REFERENCE,
+					D3D_DRIVER_TYPE_SOFTWARE,
+					D3D_DRIVER_TYPE_WARP,
+					D3D_DRIVER_TYPE_NULL,
+					D3D_DRIVER_TYPE_UNKNOWN,
+				};
 
-        for (int i = 0; i < _countof(driver_types); ++i)
-        {
-          result = D3D11CreateDeviceAndSwapChain(
-            adapter,
-            driver_types[i],
-            NULL,
-            create_device_flags,
-            feature_level,
-            sizeof(feature_level) / sizeof(feature_level[0]),
-            D3D11_SDK_VERSION,
-            &swap_chain_desc,
-            context_.swap_chain.ReleaseAndGetAddressOf(),
-            context_.device.ReleaseAndGetAddressOf(),
-            &supported_level,
-            context_.context.ReleaseAndGetAddressOf()
-          );
-          if (result == E_INVALIDARG)
-          {
-            D3D11CreateDeviceAndSwapChain(
-              adapter,
-              driver_types[i],
-              NULL,
-              create_device_flags,
-              &feature_level[1],
-              sizeof(feature_level) / sizeof(feature_level[0]) - 1,
-              D3D11_SDK_VERSION,
-              &swap_chain_desc,
-              context_.swap_chain.ReleaseAndGetAddressOf(),
-              context_.device.ReleaseAndGetAddressOf(),
-              &supported_level,
-              context_.context.ReleaseAndGetAddressOf()
-            );
-          }
+				for (int i = 0; i < _countof(driver_types); ++i)
+				{
+					result = D3D11CreateDeviceAndSwapChain(
+						adapter,
+						driver_types[i],
+						NULL,
+						create_device_flags,
+						feature_level,
+						sizeof(feature_level) / sizeof(feature_level[0]),
+						D3D11_SDK_VERSION,
+						&swap_chain_desc,
+						context_.swap_chain.ReleaseAndGetAddressOf(),
+						context_.device.ReleaseAndGetAddressOf(),
+						&supported_level,
+						context_.context.ReleaseAndGetAddressOf()
+					);
+					if (result == E_INVALIDARG)
+					{
+						D3D11CreateDeviceAndSwapChain(
+							adapter,
+							driver_types[i],
+							NULL,
+							create_device_flags,
+							&feature_level[1],
+							sizeof(feature_level) / sizeof(feature_level[0]) - 1,
+							D3D11_SDK_VERSION,
+							&swap_chain_desc,
+							context_.swap_chain.ReleaseAndGetAddressOf(),
+							context_.device.ReleaseAndGetAddressOf(),
+							&supported_level,
+							context_.context.ReleaseAndGetAddressOf()
+						);
+					}
 
-          if (SUCCEEDED(result))
-          {
-            foundation::Info("Renderer: Using feature level " + 
-              toString(supported_level) + "\n");
-            foundation::Info("Renderer: Using driver type " + 
-              toString(i) + "\n");
-            break;
-          }
-        }
+					if (SUCCEEDED(result))
+					{
+						foundation::Info("Renderer: Using feature level " +
+							toString(supported_level) + "\n");
+						foundation::Info("Renderer: Using driver type " +
+							toString(i) + "\n");
+						break;
+					}
+				}
 
-        if (FAILED(result))
-        {
-          MessageBoxA((HWND)window->getWindow(), 
-            "CreateDeviceAndSwapChain failed!", "Graphics Error", 0);
-          return;
-        }
-      }
+				if (FAILED(result))
+				{
+					MessageBoxA((HWND)window->getWindow(),
+						"CreateDeviceAndSwapChain failed!", "Graphics Error", 0);
+					return;
+				}
+		}
 
 #if GPU_MARKERS
-      HRESULT result = context_.context->QueryInterface(
-        IID_PPV_ARGS(user_defined_annotation_.ReleaseAndGetAddressOf())
-      );
+			HRESULT result = context_.context->QueryInterface(
+				IID_PPV_ARGS(user_defined_annotation_.ReleaseAndGetAddressOf())
+			);
 
-      if (FAILED(result))
-      {
-        MessageBoxA((HWND)window->getWindow(), 
-          "QueryInterface failed!", "Graphics Error", 0);
-        return;
-      }
+			if (FAILED(result))
+			{
+				MessageBoxA((HWND)window->getWindow(),
+					"QueryInterface failed!", "Graphics Error", 0);
+				return;
+			}
 #endif
 
 #if GPU_TIMERS
-      D3D11_QUERY_DESC query_desc{};
-      query_desc.Query = D3D11_QUERY_TIMESTAMP_DISJOINT;
-      context_.device->CreateQuery(
-        &query_desc, 
-        timer_disjoint_.ReleaseAndGetAddressOf()
-      );
+			D3D11_QUERY_DESC query_desc{};
+			query_desc.Query = D3D11_QUERY_TIMESTAMP_DISJOINT;
+			context_.device->CreateQuery(
+				&query_desc,
+				timer_disjoint_.ReleaseAndGetAddressOf()
+			);
 #endif
 
-      state_manager_.initialize(context_.device, context_.context);
-      asset_manager_.setD3D11Context(this);
-      asset_manager_.setDevice(context_.device.Get());
-      asset_manager_.setContext(context_.context.Get());
+			state_manager_.initialize(context_.device, context_.context);
+			asset_manager_.setD3D11Context(this);
+			asset_manager_.setDevice(context_.device.Get());
+			asset_manager_.setContext(context_.context.Get());
 
-      resize();
-      setVSync(context_.vsync);
+			resize();
+			setVSync(context_.vsync);
 
-      setSamplerState(platform::SamplerState::PointClamp(),         6u);
-      setSamplerState(platform::SamplerState::LinearClamp(),        7u);
-      setSamplerState(platform::SamplerState::AnisotrophicClamp(),  8u);
-      setSamplerState(platform::SamplerState::PointBorder(),        9u);
-	  setSamplerState(platform::SamplerState::LinearBorder(),       10u);
-	  setSamplerState(platform::SamplerState::AnisotrophicBorder(), 11u);
-      setSamplerState(platform::SamplerState::PointWrap(),          12u);
-	  setSamplerState(platform::SamplerState::LinearWrap(),         13u);
-	  setSamplerState(platform::SamplerState::AnisotrophicWrap(),   14u);
-    }
+			setSamplerState(platform::SamplerState::PointClamp(), 6u);
+			setSamplerState(platform::SamplerState::LinearClamp(), 7u);
+			setSamplerState(platform::SamplerState::AnisotrophicClamp(), 8u);
+			setSamplerState(platform::SamplerState::PointBorder(), 9u);
+			setSamplerState(platform::SamplerState::LinearBorder(), 10u);
+			setSamplerState(platform::SamplerState::AnisotrophicBorder(), 11u);
+			setSamplerState(platform::SamplerState::PointWrap(), 12u);
+			setSamplerState(platform::SamplerState::LinearWrap(), 13u);
+			setSamplerState(platform::SamplerState::AnisotrophicWrap(), 14u);
+	}
 
     ///////////////////////////////////////////////////////////////////////////
-    void D3D11Context::initialize(world::IWorld* world)
-    {
+		void D3D11Context::initialize(world::IWorld* world)
+		{
 			world_ = world;
 
-      full_screen_quad_.mesh = 
-        asset::AssetManager::getInstance().createAsset<asset::Mesh>(
-          Name("__full_screen_quad_mesh__"),
-          foundation::Memory::constructShared<asset::Mesh>(
-            asset::Mesh::createScreenQuad()
-          )
-      );
-	  
-	  full_screen_quad_.shader = asset::ShaderManager::getInstance()->get(Name("resources/shaders/full_screen_quad.fx"));
+			full_screen_quad_.mesh = asset::MeshManager::getInstance()->create(Name("__full_screen_quad_mesh__"), asset::Mesh::createScreenQuad());
+			full_screen_quad_.shader = asset::ShaderManager::getInstance()->get(Name("resources/shaders/full_screen_quad.fx"));
 
-	  memset(&state_, 0, sizeof(state_));
-	  state_.sub_mesh = UINT32_MAX;
-	  memset(&dx_state_, 0, sizeof(dx_state_));
-	  invalidateAll();
-    }
-    void D3D11Context::deinitialize()
-    {
-      world_->getWindow().reset();
-    }
+			memset(&state_, 0, sizeof(state_));
+			state_.sub_mesh = UINT32_MAX;
+			memset(&dx_state_, 0, sizeof(dx_state_));
+			invalidateAll();
+		}
+		void D3D11Context::deinitialize()
+		{
+			world_->getWindow().reset();
+
+			asset_manager_.deleteAllAssets();
+			memset(&state_, 0, sizeof(state_));
+			context_.backbuffer = nullptr;
+			context_.swap_chain = nullptr;
+			context_.context = nullptr;
+			context_.device = nullptr;
+		}
     void D3D11Context::resize()
     {
       unsigned int width  = 0;
@@ -941,7 +938,7 @@ namespace lambda
 	  Vector<asset::VioletTextureHandle> render_targets(state_.render_targets, state_.render_targets + state_.num_render_targets);
 	  Vector<asset::VioletTextureHandle> textures(state_.textures, state_.textures + MAX_TEXTURE_COUNT);
 	  asset::VioletShaderHandle  shader   = state_.shader;
-	  asset::MeshHandle          mesh     = state_.mesh;
+	  asset::VioletMeshHandle    mesh     = state_.mesh;
 	  uint32_t                   sub_mesh = state_.sub_mesh;
 
 	  ID3D11ShaderResourceView* srv = nullptr;
@@ -984,11 +981,25 @@ namespace lambda
 		if (!src || !dst)
 			return;
 
+		D3D11_BOX box = {};
+		box.left = 0u;
+		box.top = 0u;
+		box.front = 0u;
+		box.right = (UINT)src->getLayer(0u).getWidth();
+		box.bottom = (UINT)src->getLayer(0u).getHeight();
+		box.back = 1u;
+
 		auto src_tex = asset_manager_.getTexture(src)->getTexture();
 		auto dst_tex = asset_manager_.getTexture(dst)->getTexture();
-		context_.context->CopyResource(
+		context_.context->CopySubresourceRegion(
 			dst_tex->getTexture(dst_tex->pingPongIdx()),
-			src_tex->getTexture(src_tex->pingPongIdx())
+			0u,
+			0u,
+			0u,
+			0u,
+			src_tex->getTexture(src_tex->pingPongIdx()),
+			0u,
+			&box
 		);
 	}
 
@@ -1207,7 +1218,7 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    void D3D11Context::setMesh(asset::MeshHandle mesh)
+    void D3D11Context::setMesh(asset::VioletMeshHandle mesh)
     {
       if (state_.mesh == mesh)
 		return;
@@ -1483,16 +1494,6 @@ namespace lambda
       return context_.vsync;
     }
 
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Context::destroyAsset(
-      foundation::SharedPointer<asset::IAsset> asset)
-    {
-      /*if (static_cast<D3D11Texture*>(asset->gpuData().get()))
-      {
-        render_target_manager_.destroy((D3D11Texture*)asset->gpuData().get());
-      }*/
-    }
-
 	///////////////////////////////////////////////////////////////////////////
 	void D3D11Context::destroyTexture(const size_t& hash)
 	{
@@ -1503,6 +1504,12 @@ namespace lambda
 	void D3D11Context::destroyShader(const size_t& hash)
 	{
 		asset_manager_.removeShader(hash);
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	void D3D11Context::destroyMesh(const size_t& hash)
+	{
+		asset_manager_.removeMesh(hash);
 	}
     
     ///////////////////////////////////////////////////////////////////////////
@@ -1669,8 +1676,7 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     D3D11Context::D3D11AssetManager::~D3D11AssetManager()
     {
-      for (const auto& it : textures_)
-        removeTexture(it.first);
+			deleteAllAssets();
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -1738,9 +1744,9 @@ namespace lambda
     }
     
     ///////////////////////////////////////////////////////////////////////////
-    D3D11Mesh* D3D11Context::D3D11AssetManager::getMesh(asset::MeshHandle mesh)
+    D3D11Mesh* D3D11Context::D3D11AssetManager::getMesh(asset::VioletMeshHandle mesh)
     {
-      auto it = meshes_.find(mesh.id);
+      auto it = meshes_.find(mesh.getHash());
 
       if (it == meshes_.end())
       {
@@ -1749,12 +1755,12 @@ namespace lambda
         
         meshes_.insert(
           eastl::make_pair(
-            mesh.id, 
+            mesh.getHash(),
             RefType<D3D11Mesh>{ d3d11_mesh, 0u, 0.0f, false }
           )
         );
 
-        it = meshes_.find(mesh.id);
+        it = meshes_.find(mesh.getHash());
       }
 
       it->second.ref++;
@@ -1762,9 +1768,9 @@ namespace lambda
     }
    
     ///////////////////////////////////////////////////////////////////////////
-    void D3D11Context::D3D11AssetManager::removeMesh(asset::MeshHandle mesh)
+    void D3D11Context::D3D11AssetManager::removeMesh(asset::VioletMeshHandle mesh)
     {
-      removeMesh(mesh.id);
+      removeMesh(mesh.getHash());
     }
     
     ///////////////////////////////////////////////////////////////////////////
@@ -1905,5 +1911,16 @@ namespace lambda
 					removeShader(to_delete);
 			}
     }
+
+		///////////////////////////////////////////////////////////////////////////
+		void D3D11Context::D3D11AssetManager::deleteAllAssets()
+		{
+			while (!textures_.empty())
+				removeTexture(textures_.begin()->first);
+			while (!meshes_.empty())
+				removeMesh(meshes_.begin()->first);
+			while (!shaders_.empty())
+				removeShader(shaders_.begin()->first);
+		}
   }
 }

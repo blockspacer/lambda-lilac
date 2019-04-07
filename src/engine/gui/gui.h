@@ -59,8 +59,8 @@ namespace lambda
 			glm::ivec2 mouse_position_;
 			asset::VioletTextureHandle texture_;
 			world::IWorld* world_;
-			struct RW { ultralight::Ref<ultralight::Renderer> ptr; RW(ultralight::Ref<ultralight::Renderer> ptr) : ptr(ptr) {} }*renderer_;
-			struct VW { ultralight::Ref<ultralight::View> ptr; VW(ultralight::Ref<ultralight::View> ptr) : ptr(ptr) {} }* view_;
+			ultralight::RefPtr<ultralight::Renderer> renderer_;
+			ultralight::RefPtr<ultralight::View> view_;
 		};
 	}
 }

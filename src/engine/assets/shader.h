@@ -57,6 +57,7 @@ namespace lambda
 		public:
 			static ShaderManager* getInstance();
 			static void setRenderer(platform::IRenderer* renderer);
+			~ShaderManager();
 
 		protected:
 			VioletShaderManager& getManager();

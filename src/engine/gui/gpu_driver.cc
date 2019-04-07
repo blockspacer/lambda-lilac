@@ -1,6 +1,5 @@
 #include <gui/gpu_driver.h>
 #include <utils/utilities.h>
-#include <assets/asset_manager.h>
 #include <interfaces/irenderer.h>
 #include <interfaces/iworld.h>
 #include <platform/shader_variable.h>
@@ -290,9 +289,8 @@ namespace lambda
 			const ultralight::VertexBuffer& vertices,
 			const ultralight::IndexBuffer& indices)
 		{
-			asset::MeshHandle mesh = asset::AssetManager::getInstance().createAsset(
-				Name("GUI_GEO_" + toString(geometry_id)),
-				foundation::Memory::constructShared<asset::Mesh>()
+			asset::VioletMeshHandle mesh = asset::MeshManager::getInstance()->create(
+				Name("GUI_GEO_" + toString(geometry_id))
 			);
 			geometry_[geometry_id] = mesh;
 
@@ -329,7 +327,7 @@ namespace lambda
 			const ultralight::VertexBuffer& vertices,
 			const ultralight::IndexBuffer& indices)
 		{
-			asset::MeshHandle mesh = geometry_[geometry_id];
+			asset::VioletMeshHandle mesh = geometry_[geometry_id];
 
 			if (vertices.format == ultralight::kVertexBufferFormat_2f_4ub_2f)
 			{

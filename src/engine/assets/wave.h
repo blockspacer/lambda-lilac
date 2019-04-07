@@ -44,6 +44,7 @@ namespace lambda
 
     public:
       static WaveManager* getInstance();
+			~WaveManager();
 
     protected:
       VioletWaveManager& getManager();
@@ -51,6 +52,7 @@ namespace lambda
 
     private:
       VioletWaveManager manager_;
-    };
+			UnorderedMap<uint64_t, Wave*> wave_cache_;
+		};
   }
 }

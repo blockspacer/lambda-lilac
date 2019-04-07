@@ -280,7 +280,7 @@ namespace lambda
       {
         context->setMesh(mesh);
       }
-      asset::MeshHandle mesh;
+      asset::VioletMeshHandle mesh;
     };
 
     ///////////////////////////////////////////////////////////////////////////
@@ -549,7 +549,7 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::setMesh(asset::MeshHandle mesh)
+    void D3D11Renderer::setMesh(asset::VioletMeshHandle mesh)
     {
       RenderActionSetMesh* action = 
         foundation::GetFrameHeap()->construct<RenderActionSetMesh>();
@@ -663,14 +663,22 @@ namespace lambda
 		LMB_ASSERT(false, "D3D11RENDERER: destroyAsset");
     }
 
-	void D3D11Renderer::destroyTexture(const size_t & hash)
+		///////////////////////////////////////////////////////////////////////////
+		void D3D11Renderer::destroyTexture(const size_t & hash)
 	{
 		LMB_ASSERT(false, "D3D11RENDERER: destroyTexture");
 	}
 	
+	///////////////////////////////////////////////////////////////////////////
 	void D3D11Renderer::destroyShader(const size_t & hash)
 	{
 		LMB_ASSERT(false, "D3D11RENDERER: destroyShader");
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	void D3D11Renderer::destroyMesh(const size_t& hash)
+	{
+		LMB_ASSERT(false, "D3D11RENDERER: destroyMesh");
 	}
 #else
 
@@ -793,7 +801,7 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::setMesh(asset::MeshHandle mesh)
+    void D3D11Renderer::setMesh(asset::VioletMeshHandle mesh)
     {
       context_->setMesh(mesh);
     }
@@ -877,19 +885,21 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::destroyAsset(
-      foundation::SharedPointer<asset::IAsset> asset)
-    {
-      context_->destroyAsset(asset);
-    }
 	void D3D11Renderer::destroyTexture(const size_t& hash)
 	{
       context_->destroyTexture(hash);
 	}
 
+	///////////////////////////////////////////////////////////////////////////
 	void D3D11Renderer::destroyShader(const size_t& hash)
 	{
-      context_->destroyShader(hash);
+		context_->destroyShader(hash);
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	void D3D11Renderer::destroyMesh(const size_t& hash)
+	{
+		context_->destroyMesh(hash);
 	}
 #endif
 
