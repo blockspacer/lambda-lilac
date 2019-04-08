@@ -28,6 +28,7 @@ namespace lambda
         Microsoft::WRL::ComPtr<ID3D11Device> device, 
         Microsoft::WRL::ComPtr<ID3D11DeviceContext> context
       );
+	  void deinitialize();
       void bindRasterizerState(
         const platform::RasterizerState& rasterizer_state
       );

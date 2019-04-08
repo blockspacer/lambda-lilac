@@ -30,6 +30,9 @@ namespace lambda
 		typedef std::function<void(const Vector<JSVal>&, const void*)> JavaScriptCallback;
 		typedef std::function<JSVal(const Vector<JSVal>&, const void*)> JavaScriptCallbackWithRetval;
 
+		struct JSCW;
+		struct JSCWRW;
+
 		class GUI
 		{
 		public:
@@ -61,6 +64,8 @@ namespace lambda
 			world::IWorld* world_;
 			ultralight::RefPtr<ultralight::Renderer> renderer_;
 			ultralight::RefPtr<ultralight::View> view_;
+			Vector<JSCW*>   jscw_;
+			Vector<JSCWRW*> jscwrw_;
 		};
 	}
 }

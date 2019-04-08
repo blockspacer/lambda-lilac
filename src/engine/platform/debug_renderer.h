@@ -96,6 +96,7 @@ namespace lambda
       void DrawLine(const DebugLine& line);
       void DrawTri(const DebugTri& tri);
       void Render(world::IWorld* world);
+	  void Deinitialize();
 
     private:
 	  struct Data {

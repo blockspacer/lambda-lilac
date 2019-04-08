@@ -450,24 +450,36 @@ int main(int argc, char** argv)
 
       window->create(glm::uvec2(1280u, 720u), "Engine");
 
-      MyWorld world(window, renderer, scripting, imgui);
-      imgui->setFont("resources/fonts/DroidSans.ttf", 16.0f);
+	  {
+	    MyWorld world(window, renderer, scripting, imgui);
+		imgui->setFont("resources/fonts/DroidSans.ttf", 16.0f);
 
-      scripting::ScriptBinding(&world);
-      scripting->loadScripts({ script });
+		scripting::ScriptBinding(&world);
+		scripting->loadScripts({ script });
 
-      world.run();
+	    world.run();
 
-      scripting->terminate();
-      scripting::ScriptRelease();
-
-			foundation::Memory::destruct(asset::ShaderManager::getInstance());
-			foundation::Memory::destruct(asset::TextureManager::getInstance());
-			foundation::Memory::destruct(asset::WaveManager::getInstance());
-			foundation::Memory::destruct(asset::MeshManager::getInstance());
-			foundation::Memory::destruct(foundation::GetFrameHeap());
+		scripting->terminate();
 	  }
+
+	  scripting::ScriptRelease();
+
+	  foundation::Memory::destruct(asset::ShaderManager::getInstance());
+	  foundation::Memory::destruct(asset::TextureManager::getInstance());
+	  foundation::Memory::destruct(asset::WaveManager::getInstance());
+	  foundation::Memory::destruct(asset::MeshManager::getInstance());
+	  foundation::Memory::destruct(foundation::GetFrameHeap());
+
+      window->close();
+	  renderer->deinitialize();
+	}
   }
+
+  asset::VioletRefHandler<asset::Shader>::releaseAll();
+  asset::VioletRefHandler<asset::Texture>::releaseAll();
+  asset::VioletRefHandler<asset::Wave>::releaseAll();
+  asset::VioletRefHandler<asset::Mesh>::releaseAll();
+  lambda::FileSystem::SetBaseDir("");
 
   return 0;
 }

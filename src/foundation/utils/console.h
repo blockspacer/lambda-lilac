@@ -153,7 +153,9 @@ namespace lambda
 LMB_LOG_ERR("Assertion failure\n=============================\n", __VA_ARGS__);\
 LMB_LOG(__VA_ARGS__); \
 LMB_LOG("\n\nCallstack:\n"); \
-LMB_LOG(captureCallStack()); \
+const char* callstack = captureCallStack(); \
+LMB_LOG(callstack); \
+::free((void*)callstack); \
 LMB_LOG("\n\n"); \
 __debugbreak();\
 assert(true); } } while (0)

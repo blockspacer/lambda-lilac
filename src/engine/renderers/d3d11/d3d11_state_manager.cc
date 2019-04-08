@@ -93,6 +93,25 @@ namespace lambda
         D3D11_COMPARISON_FUNC::D3D11_COMPARISON_GREATER_EQUAL },
       };
     }
+
+	///////////////////////////////////////////////////////////////////////////
+	void D3D11StateManager::deinitialize()
+	{
+		rasterizer_states_.clear();
+		blend_states_.clear();
+		sampler_states_.clear();
+		depth_stencil_states_.clear();
+		blend_mode_to_d3d11_.clear();
+		blend_op_to_d3d11_.clear();
+		depth_compare_op_to_d3d11_.clear();
+
+		device_                    = nullptr;
+		context_                   = nullptr;
+		bound_rasterizer_state_    = nullptr;
+		bound_blend_state_         = nullptr;
+		bound_sampler_state_       = nullptr;
+		bound_depth_stencil_state_ = nullptr;
+	}
    
     ///////////////////////////////////////////////////////////////////////////
     void D3D11StateManager::bindRasterizerState(

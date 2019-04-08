@@ -1,5 +1,6 @@
 #pragma once
 #include "utils/name.h"
+#include <utils/console.h>
 
 namespace lambda
 {
@@ -10,11 +11,14 @@ namespace lambda
 			kGPUOnly = 1u,
 		};
 
+		template<typename T>
 		class VioletRefHandler
 		{
 		public:
 			static void incRef(const size_t& hash)
 			{
+				LMB_ASSERT(g_valid, "AssetHandle not valid anymore");
+
 				if (hash == 0u)
 					return;
 
@@ -22,6 +26,8 @@ namespace lambda
 			}
 			static bool decRef(const size_t& hash)
 			{
+				LMB_ASSERT(g_valid, "AssetHandle not valid anymore");
+
 				if (hash == 0u)
 					return true;
 
@@ -37,13 +43,30 @@ namespace lambda
 			}
 			static Name& getName(const size_t& hash)
 			{
+				LMB_ASSERT(g_valid, "AssetHandle not valid anymore");
 				return g_names[hash];
+			}
+			static void releaseAll()
+			{
+				g_refs  = UnorderedMap<size_t, int>();
+				g_names = UnorderedMap<size_t, Name>();
+				g_valid = false;
 			}
 
 		private:
 			static UnorderedMap<size_t, int> g_refs;
 			static UnorderedMap<size_t, Name> g_names;
+			static bool g_valid;
 		};
+
+
+		template<typename T>
+		UnorderedMap<size_t, int> VioletRefHandler<T>::g_refs;
+		template<typename T>
+		UnorderedMap<size_t, Name> VioletRefHandler<T>::g_names;
+		template<typename T>
+		bool VioletRefHandler<T>::g_valid = true;
+
 
 		template<typename T>
 		class VioletHandle
@@ -60,15 +83,15 @@ namespace lambda
 			{
 				if (hash_)
 				{
-					VioletRefHandler::getName(hash_) = name;
-					VioletRefHandler::incRef(hash_);
+					VioletRefHandler<T>::getName(hash_) = name;
+					VioletRefHandler<T>::incRef(hash_);
 				}
 			}
 			VioletHandle(const VioletHandle& other)
 				: data_(other.data_)
 				, hash_(other.hash_)
 			{
-				VioletRefHandler::incRef(hash_);
+				VioletRefHandler<T>::incRef(hash_);
 			}
 			~VioletHandle()
 			{
@@ -84,7 +107,7 @@ namespace lambda
 				data_ = other.data_;
 				hash_ = other.hash_;
 
-				VioletRefHandler::incRef(hash_);
+				VioletRefHandler<T>::incRef(hash_);
 			}
 			void operator=(const std::nullptr_t& /*null*/)
 			{
@@ -142,12 +165,12 @@ namespace lambda
 			}
 			Name getName() const
 			{
-				return hash_ ? VioletRefHandler::getName(hash_) : Name();
+				return hash_ ? VioletRefHandler<T>::getName(hash_) : Name();
 			}
 
 			void release()
 			{
-				if (!VioletRefHandler::decRef(hash_))
+				if (!VioletRefHandler<T>::decRef(hash_))
 				{
 					T::release(data_, hash_);
 					data_ = nullptr;

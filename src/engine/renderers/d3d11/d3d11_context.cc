@@ -542,6 +542,7 @@ namespace lambda
 		{
 			world_->getWindow().reset();
 
+			state_manager_.deinitialize();
 			asset_manager_.deleteAllAssets();
 			memset(&state_, 0, sizeof(state_));
 			context_.backbuffer = nullptr;
@@ -708,7 +709,6 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
-#pragma optimize ("", off)
     void D3D11Context::endFrame(bool display)
     {
       setMesh(full_screen_quad_.mesh);

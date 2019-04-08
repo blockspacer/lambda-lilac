@@ -96,5 +96,16 @@ namespace lambda
 			renderer->setMesh(tris_.mesh);
 			renderer->draw();
 		}
+
+		void DebugRenderer::Deinitialize()
+		{
+			tris_.colours.resize(0ull);
+			tris_.positions.resize(0ull);
+			tris_.mesh = asset::VioletMeshHandle();
+			lines_.colours.resize(0ull);
+			lines_.positions.resize(0ull);
+			lines_.mesh = asset::VioletMeshHandle();
+			shader_pass_ = platform::ShaderPass();
+		}
 	}
 }

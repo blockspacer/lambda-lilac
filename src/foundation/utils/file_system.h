@@ -7,7 +7,7 @@ namespace lambda
   {
   public:
     static void SetBaseDir(const String& base_dir);
-    static String GetBaseDir();
+	static String GetBaseDir();
     
     static String FullFilePath(const String& file);
     static String MakeRelative(const String& file);
@@ -34,6 +34,6 @@ namespace lambda
     static void RemoveFile(const String& file);
 
   private:
-    static String s_base_dir_;
+    static const char* s_base_dir_;
   };
 }

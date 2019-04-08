@@ -3,12 +3,6 @@
 
 namespace lambda
 {
-  namespace asset
-  {
-    UnorderedMap<size_t, int> VioletRefHandler::g_refs;
-	  UnorderedMap<size_t, Name> VioletRefHandler::g_names;
-  }
-
   namespace world
   {
     ///////////////////////////////////////////////////////////////////////////
@@ -157,9 +151,15 @@ namespace lambda
 				profiler_.startTimer("Renderer: EndFrame");
 				renderer_->endFrame();
 				profiler_.endTimer("Renderer: EndFrame");
+
+				static int kCount = 0;
+
+				if (kCount++ > 3)
+					window_->close();
       }
 
-      scripting_->executeFunction("Game::Terminate", {});
+	  debug_renderer_.Deinitialize();
+      scripting_->executeFunction("Game::Deinitialize", {});
       deinitialize();
     }
 

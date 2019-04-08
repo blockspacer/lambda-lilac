@@ -4,6 +4,7 @@
 #include <Windows.h>
 #include <windowsx.h>
 #include <iostream>
+#include <memory/memory.h>
 #ifdef HIGH_DPI
 #include <ShellScalingAPI.h>
 #endif
@@ -15,7 +16,8 @@ namespace lambda
   namespace window
   {
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    UnorderedMap<void*, Win32Window*> Win32Window::windows_;
+    Win32Window::WindowIndex* Win32Window::kWindows_ = nullptr;
+	uint8_t Win32Window::kNumWindows_ = 0u;
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     __int64 WndProc(void* h_wnd, unsigned int message, unsigned __int64 word_param, __int64 long_param)
@@ -131,7 +133,6 @@ namespace lambda
     {
       if (window_ != nullptr)
       {
-        windows_.erase(window_);
         close();
       }
     }
@@ -194,7 +195,10 @@ namespace lambda
       window_  = hwnd;
       focus_   = false;
       is_open_ = true;
-      windows_.insert(eastl::make_pair(window_, this));
+
+	  kWindows_ = (WindowIndex*)foundation::Memory::reallocate(kWindows_, ++kNumWindows_ * sizeof(WindowIndex));
+	  kWindows_[kNumWindows_ - 1].ptr    = window_;
+	  kWindows_[kNumWindows_ - 1].window = this;
       setSize(size);
     }
 
@@ -233,7 +237,17 @@ namespace lambda
       if (is_open_ == true)
       {
         is_open_ = false;
-        windows_.erase(window_);
+
+		for (uint8_t i = 0; i < kNumWindows_; ++i)
+		{
+			if (kWindows_[i].ptr == window_)
+			{
+				memcpy(&kWindows_[i], &kWindows_[--kNumWindows_], sizeof(WindowIndex));
+				kWindows_ = (WindowIndex*)foundation::Memory::reallocate(kWindows_, kNumWindows_ * sizeof(WindowIndex));
+				break;
+			}
+		}
+
         DestroyWindow((HWND)window_);
         window_ = nullptr;
       }
@@ -343,18 +357,14 @@ namespace lambda
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    Win32Window* Win32Window::getInstance(void* window)
-    {
-      auto it = windows_.find(window);
-      if (it != windows_.end())
-      {
-        return it->second;
-      }
-      else
-      {
-        return nullptr;
-      }
-    }
+	Win32Window* Win32Window::getInstance(void* window)
+	{
+		for (uint8_t i = 0; i < kNumWindows_; ++i)
+			if (kWindows_[i].ptr == window)
+				return kWindows_[i].window;
+
+		return nullptr;
+	}
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void Win32Window::pollMessage()

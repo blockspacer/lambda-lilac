@@ -47,7 +47,7 @@ namespace lambda
         WrenHandle* constructor;
         WrenHandle* instance;
         WrenHandle* initialize;
-        WrenHandle* terminate;
+        WrenHandle* deinitialize;
         WrenHandle* update;
         WrenHandle* fixed_update;
       } world_;

@@ -34,28 +34,26 @@ namespace lambda
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		void* IAllocator::Allocate(size_t size, size_t align)
-    {
+	void* IAllocator::Allocate(size_t size, size_t align)
+	{
 #ifdef VIOLET_BUFFER_OVERFLOW
-      // TODO (Hilze): Fix this. Very serious issue!
-      if (allocated_ + size > max_size_)
-      {
-        LMB_ASSERT(false, "Buffer overflow in allocator");
-        return nullptr;
-      }
+		// TODO (Hilze): Fix this. Very serious issue!
+		if (allocated_ + size > max_size_)
+		{
+			LMB_ASSERT(false, "Buffer overflow in allocator");
+			return nullptr;
+		}
 #endif
 
-	  if (allocated_ + size < allocated_)
-		  int xxxx = 0;
+		void* ptr = AllocateImpl(size, align);
 
-      allocated_ += size;
-      ++open_allocations_;
-
-			return AllocateImpl(size, align);
-		}
+		allocated_ += size;
+		++open_allocations_;
+		
+		return ptr;
+	}
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#pragma optimize ("", off)
     size_t IAllocator::Deallocate(void* ptr)
     {
       size_t deallocated = DeallocateImpl(ptr);

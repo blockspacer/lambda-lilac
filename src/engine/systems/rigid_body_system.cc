@@ -122,6 +122,8 @@ namespace lambda
       collider_system_ = nullptr;
       transform_system_.reset();
       physics_world_->deinitialize();
+	  foundation::Memory::destruct(physics_world_);
+	  physics_world_ = nullptr;
     }
     void RigidBodySystem::update(const double& delta_time)
     {

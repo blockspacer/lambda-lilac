@@ -20,7 +20,6 @@ namespace lambda
 		}
 
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#pragma optimize ("", off)
 		MallocAllocator::~MallocAllocator()
 		{
 #if VIOLET_DEBUG_MEMORY
@@ -38,14 +37,14 @@ namespace lambda
 		}
 
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		void* MallocAllocator::AllocateImpl(size_t size, size_t align)
+		void* MallocAllocator::AllocateImpl(size_t& size, size_t align)
 		{
 			static constexpr size_t kHeaderSize = sizeof(AllocationHeader);
 
-			size_t total_size = size + kHeaderSize;
-			void* base_addr = _aligned_malloc(total_size, align);
+			size += kHeaderSize;
+			void* base_addr = _aligned_malloc(size, align);
 
-			allocated_ += total_size;
+			allocated_ += size;
 
 			AllocationHeader header;
 			header.size = size;
@@ -82,7 +81,8 @@ namespace lambda
 			{
 				if (headers_[i].ptr == header)
 				{
-					free((void*)headers_[i].src);
+					if (strcmp(headers_[i].src, "") != 0)
+						free((void*)headers_[i].src);
 					Header* new_headers_ = (Header*)malloc(sizeof(Header) * (header_count_ - 1));
 					memcpy(new_headers_, headers_, sizeof(Header) * i);
 					memcpy(new_headers_ + i, headers_ + i + 1, sizeof(Header) * (header_count_ - i - 1));
@@ -94,7 +94,7 @@ namespace lambda
 			}
 #endif
 
-			return size;
+			return size + kHeaderSize;
 		}
 
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

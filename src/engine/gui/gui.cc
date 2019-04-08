@@ -137,6 +137,11 @@ namespace lambda
 			}
 
 			foundation::Memory::destruct(view_->view_listener());
+
+			for (auto it : jscw_)
+				foundation::Memory::destruct(it);
+			for (auto it : jscwrw_)
+				foundation::Memory::destruct(it);
 		}
 
 		///////////////////////////////////////////////////////////////////////////
@@ -471,6 +476,8 @@ namespace lambda
 			ud->callback  = callback;
 			ud->user_data = (void*)user_data;
 
+			jscw_.push_back(ud);
+
 			JSObjectRef native_function = JSObjectMake(
 				js_context,
 				NativeFunctionClass(),
@@ -502,6 +509,8 @@ namespace lambda
 			JSCWRW* ud = foundation::Memory::construct<JSCWRW>();
 			ud->callback = callback;
 			ud->user_data = (void*)user_data;
+
+			jscwrw_.push_back(ud);
 
 			JSObjectRef native_function = JSObjectMake(
 				js_context, 

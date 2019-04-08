@@ -109,7 +109,6 @@ namespace lambda
     }
 	
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#pragma optimize ("", off)
 		Memory::DefaultAllocator* Memory::new_allocator()
     {
       static Memory::DefaultAllocator* kNewAllocator = nullptr;

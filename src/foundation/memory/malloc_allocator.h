@@ -19,7 +19,7 @@ namespace lambda
 				size_t size; //!< The size of the allocation
 			};
 
-			virtual void* AllocateImpl(size_t size, size_t align) override;
+			virtual void* AllocateImpl(size_t& size, size_t align) override;
 			size_t DeallocateImpl(void* ptr) override;
 			size_t GetSize(void* ptr);
 

@@ -10,7 +10,7 @@
 namespace lambda
 {
   //////////////////////////////////////////////////////////////////////////////
-  String FileSystem::s_base_dir_;
+  const char* FileSystem::s_base_dir_ = nullptr;
 
   //////////////////////////////////////////////////////////////////////////////
   FILE* FileSystem::fopen(const String& file, const String& mode)
@@ -144,9 +144,21 @@ namespace lambda
   //////////////////////////////////////////////////////////////////////////////
   void FileSystem::SetBaseDir(const String& base_dir)
   {
-    s_base_dir_ = FixFilePath(base_dir);
-    if (s_base_dir_.back() != '/')
-      s_base_dir_ += '/';
+	  if (s_base_dir_)
+	  {
+		  foundation::Memory::deallocate((void*)s_base_dir_);
+		  s_base_dir_ = nullptr;
+	  }
+
+	  if (!base_dir.empty())
+	  {
+		  String str = FixFilePath(base_dir);
+		  if (str.back() != '/')
+			  str += '/';
+
+		  s_base_dir_ = (const char*)foundation::Memory::allocate(str.size() + 1);
+		  memcpy((void*)s_base_dir_, str.c_str(), str.size() + 1);
+	  }
   }
 
   //////////////////////////////////////////////////////////////////////////////

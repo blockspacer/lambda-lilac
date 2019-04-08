@@ -3570,6 +3570,8 @@ class GUI {
 				WrenHandle* function;
 			};
 
+			Vector<UserDataWrapper*>* g_userDataWrappers;
+
 			/////////////////////////////////////////////////////////////////////////
 			void callback(Vector<lambda::gui::JSVal> js_args, const void* user_data)
 			{
@@ -3617,6 +3619,11 @@ class GUI {
 						callback,
 						user_data
 					);
+
+					if (!g_userDataWrappers)
+						g_userDataWrappers = foundation::Memory::construct<Vector<UserDataWrapper*>>();
+
+					g_userDataWrappers->push_back(user_data);
 				};
 				return nullptr;
 			}
@@ -5034,6 +5041,14 @@ class Assert {
 			g_scriptingData = nullptr;
 
 #define SAFE_RELEASE(vm, handle) if (handle) { wrenReleaseHandle(vm, handle); handle = nullptr; }
+
+			for (GUI::UserDataWrapper* user_data_wrapper : *GUI::g_userDataWrappers)
+			{
+				SAFE_RELEASE(vm, user_data_wrapper->object);
+				SAFE_RELEASE(vm, user_data_wrapper->function);
+				foundation::Memory::destruct(user_data_wrapper);
+			}
+			foundation::Memory::destruct(GUI::g_userDataWrappers);
 
 			SAFE_RELEASE(vm, Vec2::handle);
 			SAFE_RELEASE(vm, Vec3::handle);

@@ -1,7 +1,7 @@
 #include "stack_trace.h"
 #include <StackWalker/StackWalker.h>
 #include <stdio.h>
-
+#include <memory/memory.h>
 
 inline const char* sprintfHelper(const char* format, ...)
 {
@@ -23,15 +23,16 @@ class MyStackWalker : public StackWalker
 {
 public:
 	MyStackWalker() 
-		: StackWalker()
+		: StackWalker(SymBuildPath)
 		, num_hits(0)
 		, hit_main(false)
 		, callstack(nullptr) 
 		, num_to_skip(2)
 	{
 	}
-	~MyStackWalker()
+	virtual ~MyStackWalker() override
 	{
+		StackWalker::~StackWalker();
 	}
 	void reset(int to_skip)
 	{
@@ -45,7 +46,7 @@ public:
 protected:
 	virtual void OnCallstackEntry(CallstackEntryType eType, CallstackEntry& entry) override
 	{
-		if (num_hits++ >= 2 && !hit_main)
+		//if (num_hits++ >= 2 && !hit_main)
 		{
 			if (callstack)
 				callstack = sprintfHelper("%s%s (%i): %s\n", callstack, entry.lineFileName, (int)entry.lineNumber, entry.name);
@@ -62,6 +63,8 @@ private:
 	bool hit_main;
 };
 
+static bool g_initialized = false;
+
 extern const char* captureCallStack(int to_skip)
 {
 	static bool kIsInCallstack = false;
@@ -70,10 +73,10 @@ extern const char* captureCallStack(int to_skip)
 		return "";
 
 	kIsInCallstack = true;
-	static MyStackWalker sw;
-	sw.reset(to_skip);
-	sw.ShowCallstack();
-
+	MyStackWalker stackWalker;
+	stackWalker.reset(to_skip);
+	stackWalker.ShowCallstack();
 	kIsInCallstack = false;
-	return sw.callstack;
+	
+	return stackWalker.callstack;
 }

@@ -82,7 +82,7 @@ namespace lambda
       world_.class_       = wrenGetSlotHandle(vm_, 0);
       world_.constructor  = wrenMakeCallHandle(vm_, "new()");
       world_.initialize   = wrenMakeCallHandle(vm_, "initialize()");
-      world_.terminate    = wrenMakeCallHandle(vm_, "terminate()");
+      world_.deinitialize = wrenMakeCallHandle(vm_, "deinitialize()");
       world_.update       = wrenMakeCallHandle(vm_, "update()");
       world_.fixed_update = wrenMakeCallHandle(vm_, "fixedUpdate()");
       
@@ -96,14 +96,17 @@ namespace lambda
     bool WrenContext::terminate()
     {
       wrenReleaseHandle(vm_, world_.instance);
-      wrenReleaseHandle(vm_, world_.initialize);
-      wrenReleaseHandle(vm_, world_.terminate);
+	  wrenReleaseHandle(vm_, world_.constructor);
+	  wrenReleaseHandle(vm_, world_.initialize);
+      wrenReleaseHandle(vm_, world_.deinitialize);
       wrenReleaseHandle(vm_, world_.update);
       wrenReleaseHandle(vm_, world_.fixed_update);
       wrenReleaseHandle(vm_, world_.class_);
 
-			WrenRelease(vm_);
-      wrenFreeVM(vm_);
+	  collectGarbage();
+
+	  WrenRelease(vm_);
+	  wrenFreeVM(vm_);
       vm_ = nullptr;
 
       return true;
@@ -124,9 +127,9 @@ namespace lambda
 
         if (declaration.find("Initialize") != String::npos)
           return executeFunction(world_.instance, world_.initialize, args);
-        else if (declaration.find("Terminate") != String::npos)
-          return executeFunction(world_.instance, world_.terminate, args);
-        else if (declaration.find("FixedUpdate") != String::npos)
+		else if (declaration.find("Deinitialize") != String::npos)
+			return executeFunction(world_.instance, world_.deinitialize, args);
+		else if (declaration.find("FixedUpdate") != String::npos)
           return executeFunction(world_.instance, world_.fixed_update, args);
         else if (declaration.find("Update") != String::npos)
           return executeFunction(world_.instance, world_.update, args);

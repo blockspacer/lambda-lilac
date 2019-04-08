@@ -39,7 +39,13 @@ namespace lambda
       void* window_ = nullptr;
       bool is_open_ = false;
       Queue<platform::WindowMessage> messages_;
-      static UnorderedMap<void*, Win32Window*> windows_;
+	  struct WindowIndex
+	  {
+		  void* ptr;
+		  Win32Window* window;
+	  };
+	  static uint8_t kNumWindows_;
+      static WindowIndex* kWindows_;
     };
   }
 }

@@ -711,6 +711,16 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     void BulletPhysicsWorld::deinitialize()
     {
+      for (BulletCollisionBody* collision_body : collision_bodies_)
+        foundation::Memory::destruct(collision_body);
+	  collision_bodies_.resize(0ull);
+
+      foundation::Memory::destruct(dynamics_world_);
+	  foundation::Memory::destruct(constraint_solver_);
+	  foundation::Memory::destruct(pair_cache_);
+	  foundation::Memory::destruct(dispatcher_);
+	  foundation::Memory::destruct(collision_configuration_);
+
       g_monoBehaviourSystem = nullptr;
     }
 
