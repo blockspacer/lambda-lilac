@@ -151,11 +151,6 @@ namespace lambda
 				profiler_.startTimer("Renderer: EndFrame");
 				renderer_->endFrame();
 				profiler_.endTimer("Renderer: EndFrame");
-
-				static int kCount = 0;
-
-				if (kCount++ > 3)
-					window_->close();
       }
 
 	  debug_renderer_.Deinitialize();
