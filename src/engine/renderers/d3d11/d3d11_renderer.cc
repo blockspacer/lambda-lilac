@@ -6,6 +6,7 @@ namespace lambda
 {
   namespace windows
   {
+#if FLUSH_METHOD
     ///////////////////////////////////////////////////////////////////////////
     D3D11Renderer::~D3D11Renderer()
     {
@@ -26,19 +27,6 @@ namespace lambda
       context_ = nullptr;
     }
 
-
-
-
-
-
-    
-
-
-
-
-
-
-#if FLUSH_METHOD
     ///////////////////////////////////////////////////////////////////////////
     struct RenderActionSetWindow : public IRenderAction
     {
@@ -49,7 +37,7 @@ namespace lambda
       {
         context->setWindow(window);
       }
-      foundation::SharedPointer<platform::IWindow> window;
+      platform::IWindow* window;
     };
 
     ///////////////////////////////////////////////////////////////////////////
@@ -361,21 +349,7 @@ namespace lambda
     };
 
     ///////////////////////////////////////////////////////////////////////////
-    struct RenderActionSetShaderVariable : public IRenderAction
-    {
-      RenderActionSetShaderVariable() :
-      variable() {};
-      ~RenderActionSetShaderVariable() {};
-      virtual void execute(D3D11Context* context) const override
-      {
-        context->setShaderVariable(variable);
-      }
-      platform::ShaderVariable variable;
-    };
-
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::setWindow(
-      foundation::SharedPointer<platform::IWindow> window)
+    void D3D11Renderer::setWindow(platform::IWindow* window)
     {
       RenderActionSetWindow* action = 
         foundation::GetFrameHeap()->construct<RenderActionSetWindow>();
@@ -641,16 +615,6 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::setShaderVariable(
-      const platform::ShaderVariable& variable)
-    {
-      RenderActionSetShaderVariable* action = 
-        foundation::GetFrameHeap()->construct<RenderActionSetShaderVariable>();
-      action->variable = variable;
-      queue_actions_.push_back(action);
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
     void D3D11Renderer::setRenderScale(const float & render_scale)
     {
 		LMB_ASSERT(false, "D3D11RENDERER: setRenderScale");
@@ -680,263 +644,6 @@ namespace lambda
 	{
 		LMB_ASSERT(false, "D3D11RENDERER: destroyMesh");
 	}
-#else
-
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::setWindow(
-      foundation::SharedPointer<platform::IWindow> window)
-    {
-      context_->setWindow(window);
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::resize()
-    {
-      context_->resize();
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::update(const double& delta_time)
-    {
-      context_->update(delta_time);
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::startFrame()
-    {
-      context_->startFrame();
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::endFrame(bool display)
-    {
-      foundation::GetFrameHeap()->update();
-      context_->endFrame(display);
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::draw()
-    {
-      context_->draw();
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::drawInstanced(const Vector<glm::mat4>& matrices)
-    {
-      context_->drawInstanced(matrices);
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::setRasterizerState(
-      const platform::RasterizerState& rasterizer_state)
-    {
-      context_->setRasterizerState(rasterizer_state);
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::setBlendState(const platform::BlendState& blend_state)
-    {
-      context_->setBlendState(blend_state);
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::setDepthStencilState(
-      const platform::DepthStencilState& depth_stencil_state)
-    {
-      context_->setDepthStencilState(depth_stencil_state);
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::setSamplerState(
-      const platform::SamplerState& sampler_state, 
-      unsigned char slot)
-    {
-      context_->setSamplerState(sampler_state, slot);
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::generateMipMaps(
-      const asset::VioletTextureHandle& texture)
-    {
-      context_->generateMipMaps(texture);
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::copyToScreen(const asset::VioletTextureHandle& texture)
-    {
-      context_->copyToScreen(texture);
-    }
-
-		///////////////////////////////////////////////////////////////////////////
-		void D3D11Renderer::copyToTexture(const asset::VioletTextureHandle& src,
-			const asset::VioletTextureHandle& dst)
-		{
-			context_->copyToTexture(src, dst);
-		}
-
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::bindShaderPass(const platform::ShaderPass& shader_pass)
-    {
-      context_->bindShaderPass(shader_pass);
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::clearRenderTarget(
-      asset::VioletTextureHandle texture, 
-      const glm::vec4& colour)
-    {
-      context_->clearRenderTarget(texture, colour);
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-	void D3D11Renderer::setScissorRects(const Vector<glm::vec4>& rects)
-    {
-      context_->setScissorRects(rects);
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::setViewports(const Vector<glm::vec4>& rects)
-    {
-      context_->setViewports(rects);
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::setMesh(asset::VioletMeshHandle mesh)
-    {
-      context_->setMesh(mesh);
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::setSubMesh(const uint32_t& sub_mesh_idx)
-    {
-      context_->setSubMesh(sub_mesh_idx);
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::setShader(asset::VioletShaderHandle shader)
-    {
-      context_->setShader(shader);
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::setTexture(
-      asset::VioletTextureHandle texture, 
-      uint8_t slot)
-    {
-      context_->setTexture(texture, slot);
-    }
-
-		///////////////////////////////////////////////////////////////////////////
-		void D3D11Renderer::setRenderTargets(
-			Vector<asset::VioletTextureHandle> render_targets,
-			asset::VioletTextureHandle depth_buffer)
-		{
-			context_->setRenderTargets(render_targets, depth_buffer);
-		}
-
-
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::pushMarker(const String& name)
-    {
-      context_->pushMarker(name);
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::setMarker(const String& name)
-    {
-      context_->setMarker(name);
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::popMarker()
-    {
-      context_->popMarker();
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::beginTimer(const String& name)
-    {
-      context_->beginTimer(name);
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::endTimer(const String& name)
-    {
-      context_->endTimer(name);
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    uint64_t D3D11Renderer::getTimerMicroSeconds(const String& name)
-    {
-      return context_->getTimerMicroSeconds(name);
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::setShaderVariable(
-      const platform::ShaderVariable & variable)
-    {
-      context_->setShaderVariable(variable);
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::setRenderScale(const float & render_scale)
-    {
-      context_->setRenderScale(render_scale);
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-	void D3D11Renderer::destroyTexture(const size_t& hash)
-	{
-      context_->destroyTexture(hash);
-	}
-
-	///////////////////////////////////////////////////////////////////////////
-	void D3D11Renderer::destroyShader(const size_t& hash)
-	{
-		context_->destroyShader(hash);
-	}
-
-	///////////////////////////////////////////////////////////////////////////
-	void D3D11Renderer::destroyMesh(const size_t& hash)
-	{
-		context_->destroyMesh(hash);
-	}
 #endif
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Renderer::setVSync(bool vsync)
-    {
-      context_->setVSync(vsync);
-    }
-   
-    ///////////////////////////////////////////////////////////////////////////
-    float D3D11Renderer::getRenderScale()
-    {
-      return context_->getRenderScale();
-    }
-    
-    ///////////////////////////////////////////////////////////////////////////
-    bool D3D11Renderer::getVSync() const
-    {
-      return context_->getVSync();
-    }
   }
 }

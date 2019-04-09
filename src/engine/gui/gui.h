@@ -20,9 +20,9 @@
 
 namespace lambda
 {
-	namespace world
+	namespace scene
 	{
-		class IWorld;
+		struct Scene;
 	}
 
 	namespace gui
@@ -39,11 +39,13 @@ namespace lambda
 			GUI();
 			~GUI();
 
-			void init(world::IWorld* world);
+			void init(scene::Scene& scene);
 
 			void loadURL(String url);
 
 			void update(double delta_time);
+
+			void render(scene::Scene& scene);
 
 			bool handleWindowMessage(const platform::WindowMessage& message);
 
@@ -61,7 +63,7 @@ namespace lambda
 			double switch_;
 			glm::ivec2 mouse_position_;
 			asset::VioletTextureHandle texture_;
-			world::IWorld* world_;
+			scene::Scene* scene_;
 			ultralight::RefPtr<ultralight::Renderer> renderer_;
 			ultralight::RefPtr<ultralight::View> view_;
 			Vector<JSCW*>   jscw_;

@@ -5,7 +5,6 @@
 #include "systems/rigid_body_system.h"
 #include "systems/entity_system.h"
 #include "systems/mono_behaviour_system.h"
-#include "interfaces/iworld.h"
 #include <containers/containers.h>
 
 #include <btBulletDynamicsCommon.h>
@@ -89,13 +88,13 @@ namespace lambda
 
 		///////////////////////////////////////////////////////////////////////////
 		BulletCollisionBody::BulletCollisionBody(
-			world::IWorld* world,
+			scene::Scene& scene,
 			btDiscreteDynamicsWorld* dynamics_world,
 			BulletPhysicsWorld* physics_world,
 			entity::Entity entity)
-			: physics_world_(physics_world)
+			: scene_(scene)
+			, physics_world_(physics_world)
 			, dynamics_world_(dynamics_world)
-			, world_(world)
 			, type_(BulletCollisionBodyType::kNone)
 			, entity_(entity)
 			, velocity_constraints_(0)
@@ -301,8 +300,7 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		void BulletCollisionBody::makeBoxCollider()
 		{
-			world::SceneData& scene = world_->getScene().getSceneData();
-			glm::vec3 scale = components::TransformSystem::getWorldScale(entity_, scene) * VIOLET_PHYSICS_SCALE;
+			glm::vec3 scale = components::TransformSystem::getWorldScale(entity_, scene_) * VIOLET_PHYSICS_SCALE;
 			btVector3 half_extends(scale.x * 0.5f, scale.y * 0.5f, scale.z * 0.5f);
 			btCollisionShape* shape = foundation::Memory::construct<btBoxShape>(half_extends);
 			makeShape(shape);
@@ -311,8 +309,7 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		void BulletCollisionBody::makeSphereCollider()
 		{
-			world::SceneData& scene = world_->getScene().getSceneData();
-			glm::vec3 scale = components::TransformSystem::getWorldScale(entity_, scene) * VIOLET_INV_PHYSICS_SCALE;
+			glm::vec3 scale = components::TransformSystem::getWorldScale(entity_, scene_) * VIOLET_INV_PHYSICS_SCALE;
 			btScalar radius = (scale.x + scale.z) / 4.0f;
 			btCollisionShape* shape = foundation::Memory::construct<btSphereShape>(radius);
 			makeShape(shape);
@@ -321,8 +318,7 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		void BulletCollisionBody::makeCapsuleCollider()
 		{
-			world::SceneData& scene = world_->getScene().getSceneData();
-			glm::vec3 scale = components::TransformSystem::getWorldScale(entity_, scene) * VIOLET_PHYSICS_SCALE;
+			glm::vec3 scale = components::TransformSystem::getWorldScale(entity_, scene_) * VIOLET_PHYSICS_SCALE;
 			btScalar radius = (scale.x * 0.5f + scale.z * 0.5f) * 0.5f;
 			btScalar height = scale.y * 0.5f;
 			btCollisionShape* shape = foundation::Memory::construct<btCapsuleShape>(radius, height);
@@ -352,8 +348,7 @@ namespace lambda
 		void BulletCollisionBody::makeMeshCollider(asset::VioletMeshHandle mesh, uint32_t sub_mesh_id)
 		{
 			// Get the indices.
-			world::SceneData& scene = world_->getScene().getSceneData();
-			glm::vec3 scale = components::TransformSystem::getWorldScale(entity_, scene);
+			glm::vec3 scale = components::TransformSystem::getWorldScale(entity_, scene_);
 			asset::SubMesh sub_mesh = mesh->getSubMeshes().at(sub_mesh_id);
 			auto index_offset = sub_mesh.offsets[asset::MeshElements::kIndices];
 			auto vertex_offset = sub_mesh.offsets[asset::MeshElements::kPositions];
@@ -505,9 +500,8 @@ namespace lambda
 		{
 			destroyBody();
 
-			world::SceneData& scene = world_->getScene().getSceneData();
-			glm::quat rotation = components::TransformSystem::getWorldRotation(entity_, scene);
-			glm::vec3 translation = components::TransformSystem::getWorldTranslation(entity_, scene) * VIOLET_PHYSICS_SCALE;
+			glm::quat rotation = components::TransformSystem::getWorldRotation(entity_, scene_);
+			glm::vec3 translation = components::TransformSystem::getWorldTranslation(entity_, scene_) * VIOLET_PHYSICS_SCALE;
 
 			motion_state_ = foundation::Memory::construct<btDefaultMotionState>(btTransform(toBt(rotation), toBt(translation)));
 			btRigidBody::btRigidBodyConstructionInfo rigid_body_ci(
@@ -560,7 +554,7 @@ namespace lambda
 			}
 		};
 
-		world::SceneData* g_scene = nullptr;
+		scene::Scene* g_scene = nullptr;
 
 		///////////////////////////////////////////////////////////////////////////
 		void ContactStarted(btPersistentManifold*const& manifold)
@@ -672,9 +666,7 @@ namespace lambda
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		void BulletPhysicsWorld::initialize(
-			platform::DebugRenderer* debug_renderer,
-			world::IWorld* world)
+		void BulletPhysicsWorld::initialize(scene::Scene& scene)
 		{
 			physics_visualizer_.setDebugMode(
 #if defined(_DEBUG) || defined(DEBUG)
@@ -684,9 +676,8 @@ namespace lambda
 #endif
 			);
 
-			world_ = world;
-			physics_visualizer_.initialize(debug_renderer);
-			g_scene = &world->getScene().getSceneData();
+			physics_visualizer_.setScene(scene);
+			scene_ = g_scene = &scene;
 
 			collision_configuration_ =
 				foundation::Memory::construct<btDefaultCollisionConfiguration>();
@@ -727,16 +718,15 @@ namespace lambda
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		void BulletPhysicsWorld::render()
+		void BulletPhysicsWorld::render(scene::Scene& scene)
 		{
+			physics_visualizer_.setScene(scene);
 			dynamics_world_->debugDrawWorld();
 		}
 
 		///////////////////////////////////////////////////////////////////////////
 		void BulletPhysicsWorld::update(const double& time_step)
 		{
-			world::SceneData& scene = world_->getScene().getSceneData();
-
 			for (int j = dynamics_world_->getNumCollisionObjects() - 1; j >= 0; --j)
 			{
 				btCollisionObject* object =
@@ -752,8 +742,8 @@ namespace lambda
 					bool activate = false;
 
 					{
-						glm::vec3 pos = components::TransformSystem::getWorldTranslation(entity, scene) * VIOLET_PHYSICS_SCALE;
-						glm::quat rot = components::TransformSystem::getWorldRotation(entity, scene);
+						glm::vec3 pos = components::TransformSystem::getWorldTranslation(entity, *scene_) * VIOLET_PHYSICS_SCALE;
+						glm::quat rot = components::TransformSystem::getWorldRotation(entity, *scene_);
 
 						transform = rigid_body->getWorldTransform();
 
@@ -811,12 +801,12 @@ namespace lambda
 					bool reset = false;
 					if (isValid(rot))
 					{
-						components::TransformSystem::setWorldRotation(entity, rot, scene);
+						components::TransformSystem::setWorldRotation(entity, rot, *scene_);
 					}
 					else
 					{
 						reset = true;
-						rot = components::TransformSystem::getWorldRotation(entity, scene);
+						rot = components::TransformSystem::getWorldRotation(entity, *scene_);
 						transform.setRotation(btQuaternion(rot.x, rot.y, rot.z, rot.w));
 					}
 
@@ -828,12 +818,12 @@ namespace lambda
 					);
 					if (isValid(pos))
 					{
-						components::TransformSystem::setWorldTranslation(entity, pos * VIOLET_INV_PHYSICS_SCALE, scene);
+						components::TransformSystem::setWorldTranslation(entity, pos * VIOLET_INV_PHYSICS_SCALE, *scene_);
 					}
 					else
 					{
 						reset = true;
-						pos = components::TransformSystem::getWorldTranslation(entity, scene) * VIOLET_PHYSICS_SCALE;
+						pos = components::TransformSystem::getWorldTranslation(entity, *scene_) * VIOLET_PHYSICS_SCALE;
 						transform.setOrigin(btVector3(pos.x, pos.y, pos.z));
 					}
 
@@ -885,7 +875,7 @@ namespace lambda
 		ICollisionBody* BulletPhysicsWorld::createCollisionBody(entity::Entity entity)
 		{
 			BulletCollisionBody* rb = foundation::Memory::construct<BulletCollisionBody>(
-				world_,
+				*scene_,
 				dynamics_world_,
 				this,
 				entity

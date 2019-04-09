@@ -25,9 +25,9 @@ namespace lambda
     {
     public:
       IWorld(
-        foundation::SharedPointer<platform::IWindow> window, 
-        foundation::SharedPointer<platform::IRenderer> renderer,
-        foundation::SharedPointer<scripting::IScriptContext> scripting,
+        platform::IWindow* window, 
+        platform::IRenderer* renderer,
+        scripting::IScriptContext* scripting,
         foundation::SharedPointer<platform::IImGUI> imgui
       );
       ~IWorld();
@@ -48,38 +48,27 @@ namespace lambda
 
     public:
       double getDeltaTime() const;
-      Scene& getScene();
-      foundation::SharedPointer<platform::IRenderer> getRenderer();
-      foundation::SharedPointer<platform::IWindow> getWindow();
-      foundation::SharedPointer<scripting::IScriptContext> getScripting();
+      scene::Scene& getScene();
+      scripting::IScriptContext* getScripting();
       foundation::SharedPointer<platform::IImGUI> getImGUI();
       void setImGUI(foundation::SharedPointer<platform::IImGUI> imgui);
-      void setWindow(foundation::SharedPointer<platform::IWindow> window);
+      void setWindow(platform::IWindow* window);
       const io::Input<io::Mouse::State>& getMouse();
       const io::Input<io::Keyboard::State>& getKeyboard();
       const io::ControllerManager& getControllerManager();
       io::InputManager& getInputManager();
-      platform::ShaderVariableManager& getShaderVariableManager();
-      platform::DebugRenderer& getDebugRenderer();
-      platform::PostProcessManager& getPostProcessManager();
 			gui::GUI& getGUI();
 			utilities::Profiler& getProfiler();
 
     private:
-			platform::ShaderVariableManager shader_variable_manager_;
-			platform::DebugRenderer debug_renderer_;
-			platform::PostProcessManager post_process_manager_;
-
-      double delta_time_;
-      foundation::SharedPointer<platform::IWindow> window_;
-      foundation::SharedPointer<platform::IRenderer> renderer_;
-      Scene scene_;
+			double delta_time_;
+      scene::Scene scene_;
       utilities::Timer timer_;
       io::Input<io::Mouse::State> mouse_;
       io::Input<io::Keyboard::State> keyboard_;
       io::ControllerManager controller_manager_;
       io::InputManager input_manager_;
-      foundation::SharedPointer<scripting::IScriptContext> scripting_;
+      scripting::IScriptContext* scripting_;
       foundation::SharedPointer<platform::IImGUI> imgui_;
 			gui::GUI gui_;
 			utilities::Profiler profiler_;

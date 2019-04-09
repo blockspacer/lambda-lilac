@@ -51,7 +51,9 @@ namespace lambda
 			asset::VioletShaderHandle shader;
 		};
 
+#if FLUSH_METHOD
 		struct IRenderAction;
+#endif
 
 		///////////////////////////////////////////////////////////////////////////
 		class D3D11RenderBuffer : public platform::IRenderBuffer
@@ -149,10 +151,9 @@ namespace lambda
 			ID3D11Device* getD3D11Device() const;
 
 			virtual ~D3D11Context();
-			virtual void setWindow(
-				foundation::SharedPointer<platform::IWindow> window
-			) override;
-			virtual void initialize(world::IWorld* world) override;
+			virtual void setWindow(platform::IWindow* window) override;
+			virtual void setOverrideScene(scene::Scene* scene) override;
+			virtual void initialize(scene::Scene& scene) override;
 			virtual void deinitialize() override;
 			virtual void resize() override;
 			virtual void update(const double& delta_time) override;
@@ -233,14 +234,13 @@ namespace lambda
 			virtual void setVSync(bool vsync) override;
 			virtual bool getVSync() const override;
 
-			void setShaderVariable(
-				const platform::ShaderVariable& variable
-			) override;
 			virtual void destroyTexture(const size_t& hash) override;
 			virtual void destroyShader(const size_t& hash) override;
 			virtual void destroyMesh(const size_t& hash) override;
 
+#if FLUSH_METHOD
 			void flush(Vector<IRenderAction*> actions);
+#endif
 			void present();
 
 		protected:
@@ -259,9 +259,15 @@ namespace lambda
 
 		protected:
 			void draw(ID3D11Buffer* buffer);
+			scene::Scene* getScene() const;
+			void resizeImpl();
 
 		private:
-			world::IWorld* world_;
+			bool queued_update_ = false;
+			float queued_delta_time_ = 0.0f;
+			bool queued_resize_ = false;
+			scene::Scene* scene_;
+			scene::Scene* override_scene_;
 			float render_scale_ = 1.0f;
 
 			D3D11FullScreenQuad full_screen_quad_;

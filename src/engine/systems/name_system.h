@@ -4,9 +4,9 @@
 
 namespace lambda
 {
-	namespace world
+	namespace scene
 	{
-		struct SceneData;
+		struct Scene;
 	}
 
 	namespace components
@@ -14,7 +14,7 @@ namespace lambda
 		class NameComponent : public IComponent
 		{
 		public:
-			NameComponent(const entity::Entity& entity, world::SceneData& scene);
+			NameComponent(const entity::Entity& entity, scene::Scene& scene);
 			NameComponent(const NameComponent& other);
 			NameComponent();
 
@@ -24,7 +24,7 @@ namespace lambda
 			Vector<String> getTags() const;
 
 		private:
-			world::SceneData* scene_;
+			scene::Scene* scene_;
 		};
 
 		namespace NameSystem
@@ -55,18 +55,18 @@ namespace lambda
 				bool  has(const entity::Entity& entity);
 			};
 
-			NameComponent addComponent(const entity::Entity& entity, world::SceneData& scene);
-			NameComponent getComponent(const entity::Entity& entity, world::SceneData& scene);
-			bool hasComponent(const entity::Entity& entity, world::SceneData& scene);
-			void removeComponent(const entity::Entity& entity, world::SceneData& scene);
+			NameComponent addComponent(const entity::Entity& entity, scene::Scene& scene);
+			NameComponent getComponent(const entity::Entity& entity, scene::Scene& scene);
+			bool hasComponent(const entity::Entity& entity, scene::Scene& scene);
+			void removeComponent(const entity::Entity& entity, scene::Scene& scene);
 
-			void collectGarbage(world::SceneData& scene);
-			void deinitialize(world::SceneData& scene);
+			void collectGarbage(scene::Scene& scene);
+			void deinitialize(scene::Scene& scene);
 
-			void setName(const entity::Entity& entity, const String& name, world::SceneData& scene);
-			String getName(const entity::Entity& entity, world::SceneData& scene);
-			void setTags(const entity::Entity& entity, const Vector<String>& tags, world::SceneData& scene);
-			Vector<String> getTags(const entity::Entity& entity, world::SceneData& scene);
+			void setName(const entity::Entity& entity, const String& name, scene::Scene& scene);
+			String getName(const entity::Entity& entity, scene::Scene& scene);
+			void setTags(const entity::Entity& entity, const Vector<String>& tags, scene::Scene& scene);
+			Vector<String> getTags(const entity::Entity& entity, scene::Scene& scene);
 		}
 	}
 }

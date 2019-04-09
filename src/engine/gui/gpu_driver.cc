@@ -6,6 +6,8 @@
 #include <platform/blend_state.h>
 #include <platform/sampler_state.h>
 #include <platform/render_target.h>
+#include <platform/scene.h>
+#include <platform/rasterizer_state.h>
 
 #include <Ultralight/platform/Platform.h>
 #include <Ultralight/platform/Config.h>
@@ -16,14 +18,20 @@ namespace lambda
 	namespace gui
 	{
 		///////////////////////////////////////////////////////////////////////////
-		MyGPUDriver::MyGPUDriver(world::IWorld* world)
-			: world_(world)
+		MyGPUDriver::MyGPUDriver(scene::Scene& scene)
+			: scene_(&scene)
 		{
 		}
 
 		///////////////////////////////////////////////////////////////////////////
 		MyGPUDriver::~MyGPUDriver()
 		{
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		void MyGPUDriver::setScene(scene::Scene& scene)
+		{
+			scene_ = &scene;
 		}
 
 		///////////////////////////////////////////////////////////////////////////
@@ -143,7 +151,7 @@ namespace lambda
 		{
 			uint8_t slot = texture_unit;
 			asset::VioletTextureHandle texture = textures_[texture_id];
-			world_->getRenderer()->setTexture(texture, slot);
+			scene_->renderer->setTexture(texture, slot);
 		}
 
 		///////////////////////////////////////////////////////////////////////////
@@ -181,7 +189,7 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		void MyGPUDriver::BindRenderBuffer(uint32_t render_buffer_id)
 		{
-			world_->getRenderer()->setRenderTargets(
+			scene_->renderer->setRenderTargets(
 			{ render_targets_[render_buffer_id] },
 				asset::VioletTextureHandle()
 			);
@@ -190,7 +198,7 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		void MyGPUDriver::ClearRenderBuffer(uint32_t render_buffer_id)
 		{
-			world_->getRenderer()->clearRenderTarget(
+			scene_->renderer->clearRenderTarget(
 				render_targets_[render_buffer_id],
 				glm::vec4(0.0f)
 			);
@@ -361,7 +369,7 @@ namespace lambda
 			uint32_t indices_offset,
 			const ultralight::GPUState& state)
 		{
-			foundation::SharedPtr<platform::IRenderer> renderer = world_->getRenderer();
+			platform::IRenderer* renderer = scene_->renderer;
 
 			renderer->setRenderTargets(
 			{ render_targets_[state.render_buffer_id] },
@@ -402,6 +410,7 @@ namespace lambda
 
 			renderer->setBlendState(state.enable_blend ? platform::BlendState::Alpha() : platform::BlendState::Default());
 			renderer->setSamplerState(platform::SamplerState::LinearClamp(), 0);
+			renderer->setRasterizerState(platform::RasterizerState::SolidNone());
 
 			renderer->draw();
 			batch_count_++;
@@ -489,18 +498,18 @@ namespace lambda
 
 			asset::VioletShaderHandle shader = (state.shader_type == ultralight::kShaderType_Fill) ? shader_fill_ : shader_fill_path_;
 
-			world_->getRenderer()->setShader(shader);
+			scene_->renderer->setShader(shader);
 
 			float scale = 1.0f; // TODO (Hilze): Re-evaluate.
-			world_->getShaderVariableManager().setVariable(platform::ShaderVariable(Name("State"),     glm::vec4(0.0, state.viewport_width, state.viewport_height, scale)));
-			world_->getShaderVariableManager().setVariable(platform::ShaderVariable(Name("Transform"), toMat4(state.transform)));
-			world_->getShaderVariableManager().setVariable(platform::ShaderVariable(Name("Scalar4_0"), glm::vec4(state.uniform_scalar[0], state.uniform_scalar[1], state.uniform_scalar[2], state.uniform_scalar[3])));
-			world_->getShaderVariableManager().setVariable(platform::ShaderVariable(Name("Scalar4_1"), glm::vec4(state.uniform_scalar[4], state.uniform_scalar[5], state.uniform_scalar[6], state.uniform_scalar[7])));
+			scene_->shader_variable_manager.setVariable(platform::ShaderVariable(Name("State"),     glm::vec4(0.0, state.viewport_width, state.viewport_height, scale)));
+			scene_->shader_variable_manager.setVariable(platform::ShaderVariable(Name("Transform"), toMat4(state.transform)));
+			scene_->shader_variable_manager.setVariable(platform::ShaderVariable(Name("Scalar4_0"), glm::vec4(state.uniform_scalar[0], state.uniform_scalar[1], state.uniform_scalar[2], state.uniform_scalar[3])));
+			scene_->shader_variable_manager.setVariable(platform::ShaderVariable(Name("Scalar4_1"), glm::vec4(state.uniform_scalar[4], state.uniform_scalar[5], state.uniform_scalar[6], state.uniform_scalar[7])));
 			for (size_t i = 0; i < 8; ++i)
-				world_->getShaderVariableManager().setVariable(platform::ShaderVariable(Name("Vector_" + toString(i)), toVec4(state.uniform_vector[i])));
-			world_->getShaderVariableManager().setVariable(platform::ShaderVariable(Name("ClipSize"),  (float)state.clip_size));
+				scene_->shader_variable_manager.setVariable(platform::ShaderVariable(Name("Vector_" + toString(i)), toVec4(state.uniform_vector[i])));
+			scene_->shader_variable_manager.setVariable(platform::ShaderVariable(Name("ClipSize"),  (float)state.clip_size));
 			for (size_t i = 0; i < state.clip_size; ++i)
-				world_->getShaderVariableManager().setVariable(platform::ShaderVariable(Name("Clip_" + toString(i)), toMat4(state.clip[i])));
+				scene_->shader_variable_manager.setVariable(platform::ShaderVariable(Name("Clip_" + toString(i)), toMat4(state.clip[i])));
 		}
 
 		///////////////////////////////////////////////////////////////////////////

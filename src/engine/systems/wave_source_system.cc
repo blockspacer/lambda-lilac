@@ -1,10 +1,10 @@
 #include "wave_source_system.h"
 #include "transform_system.h"
-#include "interfaces/iworld.h"
 #include <soloud.h>
 #include <soloud_thread.h>
 #include <soloud_audiosource.h>
 #include <soloud_wav.h>
+#include <platform/scene.h>
 
 namespace lambda
 {
@@ -13,7 +13,7 @@ namespace lambda
 		namespace WaveSourceSystem
 		{
 			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-			void updateState(Data& data, float delta_time, world::SceneData& scene)
+			void updateState(Data& data, float delta_time, scene::Scene& scene)
 			{
 				if (data.handle == 0u)
 				{
@@ -56,7 +56,7 @@ namespace lambda
 			}
 
 			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-			WaveSourceComponent addComponent(const entity::Entity& entity, world::SceneData& scene)
+			WaveSourceComponent addComponent(const entity::Entity& entity, scene::Scene& scene)
 			{
 				if (!TransformSystem::hasComponent(entity, scene))
 					TransformSystem::addComponent(entity, scene);
@@ -67,32 +67,32 @@ namespace lambda
 			}
 
 			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-			WaveSourceComponent getComponent(const entity::Entity& entity, world::SceneData& scene)
+			WaveSourceComponent getComponent(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return WaveSourceComponent(entity, scene);
 			}
 
 			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-			bool hasComponent(const entity::Entity& entity, world::SceneData& scene)
+			bool hasComponent(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.wave_source.has(entity);
 			}
 
 			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-			void removeComponent(const entity::Entity& entity, world::SceneData& scene)
+			void removeComponent(const entity::Entity& entity, scene::Scene& scene)
 			{
 				stop(entity, scene);
 				scene.wave_source.remove(entity);
 			}
 			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-			void initialize(world::SceneData& scene)
+			void initialize(scene::Scene& scene)
 			{
 				scene.wave_source.engine = foundation::Memory::construct<SoLoud::Soloud>();
 				scene.wave_source.engine->init();
 			}
 
 			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-			void deinitialize(world::SceneData& scene)
+			void deinitialize(scene::Scene& scene)
 			{
 				Vector<entity::Entity> entities;
 				for (const auto& it : scene.wave_source.entity_to_data)
@@ -117,7 +117,7 @@ namespace lambda
 			}
 
 			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-			void update(const float& delta_time, world::SceneData& scene)
+			void update(const float& delta_time, scene::Scene& scene)
 			{
 				// Listener.
 				glm::vec3 listener_position(0.0f);
@@ -149,7 +149,7 @@ namespace lambda
 				scene.wave_source.engine->update3dAudio();
 			}
 
-			void collectGarbage(world::SceneData& scene)
+			void collectGarbage(scene::Scene& scene)
 			{
 				if (!scene.wave_source.marked_for_delete.empty())
 				{
@@ -169,20 +169,20 @@ namespace lambda
 				}
 			}
 			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-			void setBuffer(const entity::Entity& entity, const asset::VioletWaveHandle& buffer, world::SceneData& scene)
+			void setBuffer(const entity::Entity& entity, const asset::VioletWaveHandle& buffer, scene::Scene& scene)
 			{
 				scene.wave_source.get(entity).buffer = buffer;
 				updateState(scene.wave_source.get(entity), 0.0f, scene);
 			}
 
 			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-			asset::VioletWaveHandle getBuffer(const entity::Entity& entity, world::SceneData& scene)
+			asset::VioletWaveHandle getBuffer(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.wave_source.get(entity).buffer;
 			}
 
 			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-			void play(const entity::Entity& entity, world::SceneData& scene)
+			void play(const entity::Entity& entity, scene::Scene& scene)
 			{
 				Data& data = scene.wave_source.get(entity);
 
@@ -200,13 +200,13 @@ namespace lambda
 			}
 
 			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-			void pause(const entity::Entity& entity, world::SceneData& scene)
+			void pause(const entity::Entity& entity, scene::Scene& scene)
 			{
 				scene.wave_source.engine->setPause(scene.wave_source.get(entity).handle, true);
 			}
 
 			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-			void stop(const entity::Entity& entity, world::SceneData& scene)
+			void stop(const entity::Entity& entity, scene::Scene& scene)
 			{
 				Data& data = scene.wave_source.get(entity);
 				scene.wave_source.engine->stop(data.handle);
@@ -214,97 +214,97 @@ namespace lambda
 			}
 
 			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-			WaveSourceState getState(const entity::Entity& entity, world::SceneData& scene)
+			WaveSourceState getState(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.wave_source.get(entity).state;
 			}
 
 			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-			void setRelativeToListener(const entity::Entity& entity, bool relative, world::SceneData& scene)
+			void setRelativeToListener(const entity::Entity& entity, bool relative, scene::Scene& scene)
 			{
 				scene.wave_source.get(entity).in_world = relative;
 				updateState(scene.wave_source.get(entity), 0.0f, scene);
 			}
 
 			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-			bool getRelativeToListener(const entity::Entity& entity, world::SceneData& scene)
+			bool getRelativeToListener(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.wave_source.get(entity).in_world;
 			}
 
 			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-			void setLoop(const entity::Entity& entity, bool loop, world::SceneData& scene)
+			void setLoop(const entity::Entity& entity, bool loop, scene::Scene& scene)
 			{
 				scene.wave_source.get(entity).loop = loop;
 				updateState(scene.wave_source.get(entity), 0.0f, scene);
 			}
 
 			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-			bool getLoop(const entity::Entity& entity, world::SceneData& scene)
+			bool getLoop(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.wave_source.get(entity).loop;
 			}
 
 			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-			void setOffset(const entity::Entity& entity, float seconds, world::SceneData& scene)
+			void setOffset(const entity::Entity& entity, float seconds, scene::Scene& scene)
 			{
 				LMB_ASSERT(false, "");
 			}
 
 			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-			void setVolume(const entity::Entity& entity, float volume, world::SceneData& scene)
+			void setVolume(const entity::Entity& entity, float volume, scene::Scene& scene)
 			{
 				setGain(entity, volume / 100.0f, scene);
 				updateState(scene.wave_source.get(entity), 0.0f, scene);
 			}
 
 			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-			float getVolume(const entity::Entity& entity, world::SceneData& scene)
+			float getVolume(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return getGain(entity, scene) * 100.0f;
 			}
 
 			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-			void setGain(const entity::Entity& entity, float gain, world::SceneData& scene)
+			void setGain(const entity::Entity& entity, float gain, scene::Scene& scene)
 			{
 				scene.wave_source.get(entity).gain = gain;
 				updateState(scene.wave_source.get(entity), 0.0f, scene);
 			}
 
 			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-			float getGain(const entity::Entity& entity, world::SceneData& scene)
+			float getGain(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.wave_source.get(entity).gain;
 			}
 
 			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-			void setPitch(const entity::Entity& entity, float pitch, world::SceneData& scene)
+			void setPitch(const entity::Entity& entity, float pitch, scene::Scene& scene)
 			{
 				scene.wave_source.get(entity).pitch = pitch;
 				updateState(scene.wave_source.get(entity), 0.0f, scene);
 			}
 
 			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-			float getPitch(const entity::Entity& entity, world::SceneData& scene)
+			float getPitch(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.wave_source.get(entity).pitch;
 			}
 
 			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-			void setRadius(const entity::Entity& entity, float radius, world::SceneData& scene)
+			void setRadius(const entity::Entity& entity, float radius, scene::Scene& scene)
 			{
 				scene.wave_source.get(entity).radius = radius;
 				updateState(scene.wave_source.get(entity), 0.0f, scene);
 			}
 
 			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-			float getRadius(const entity::Entity& entity, world::SceneData& scene)
+			float getRadius(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.wave_source.get(entity).radius;
 			}
 
 			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-			void setListener(entity::Entity listener, world::SceneData& scene)
+			void setListener(entity::Entity listener, scene::Scene& scene)
 			{
 				scene.wave_source.listener = listener;
 			}
@@ -401,7 +401,7 @@ namespace lambda
 
 
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		WaveSourceComponent::WaveSourceComponent(const entity::Entity& entity, world::SceneData& scene) :
+		WaveSourceComponent::WaveSourceComponent(const entity::Entity& entity, scene::Scene& scene) :
 			IComponent(entity), scene_(&scene)
 		{
 		}

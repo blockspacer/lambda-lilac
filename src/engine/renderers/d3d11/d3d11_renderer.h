@@ -4,6 +4,7 @@
 #include "d3d11_state_manager.h"
 #include "platform/debug_renderer.h"
 #include "platform/shader_variable_manager.h"
+#include <renderers/d3d11/d3d11_context.h>
 
 #define FLUSH_METHOD 0
 
@@ -21,8 +22,8 @@ namespace lambda
   {
     class D3D11Mesh;
     class D3D11Shader;
-    class D3D11Context;
 
+#if FLUSH_METHOD
     ///////////////////////////////////////////////////////////////////////////
     struct IRenderAction
     {
@@ -35,9 +36,7 @@ namespace lambda
     {
     public:
       virtual ~D3D11Renderer();
-      virtual void setWindow(
-        foundation::SharedPointer<platform::IWindow> window
-      ) override;
+      virtual void setWindow(platform::IWindow* window) override;
       virtual void initialize(world::IWorld* world) override;
       virtual void deinitialize() override;
       virtual void resize() override;
@@ -114,10 +113,6 @@ namespace lambda
       virtual void setVSync(bool vsync) override;
       virtual bool getVSync() const override;
 
-      void setShaderVariable(
-        const platform::ShaderVariable& variable
-      ) override;
-
     protected:
 	  virtual void destroyTexture(const size_t& hash) override;
 		virtual void destroyShader(const size_t& hash) override;
@@ -127,5 +122,8 @@ namespace lambda
       D3D11Context* context_;
       Vector<IRenderAction*> queue_actions_;
     };
+#else
+	typedef D3D11Context D3D11Renderer;
+#endif
   }
 }

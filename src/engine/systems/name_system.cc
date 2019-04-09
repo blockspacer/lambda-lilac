@@ -9,32 +9,32 @@ namespace lambda
 		namespace NameSystem
 		{
 			/////////////////////////////////////////////////////////////////////////////
-			NameComponent NameSystem::addComponent(const entity::Entity& entity, world::SceneData& scene)
+			NameComponent NameSystem::addComponent(const entity::Entity& entity, scene::Scene& scene)
 			{
 				scene.name.add(entity);
 				return NameComponent(entity, scene);
 			}
 
 			/////////////////////////////////////////////////////////////////////////////
-			NameComponent NameSystem::getComponent(const entity::Entity& entity, world::SceneData& scene)
+			NameComponent NameSystem::getComponent(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return NameComponent(entity, scene);
 			}
 
 			/////////////////////////////////////////////////////////////////////////////
-			bool NameSystem::hasComponent(const entity::Entity& entity, world::SceneData& scene)
+			bool NameSystem::hasComponent(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.name.has(entity);
 			}
 
 			/////////////////////////////////////////////////////////////////////////////
-			void NameSystem::removeComponent(const entity::Entity& entity, world::SceneData& scene)
+			void NameSystem::removeComponent(const entity::Entity& entity, scene::Scene& scene)
 			{
 				scene.name.remove(entity);
 			}
 
 			/////////////////////////////////////////////////////////////////////////////
-			void collectGarbage(world::SceneData& scene)
+			void collectGarbage(scene::Scene& scene)
 			{
 				if (!scene.name.marked_for_delete.empty())
 				{
@@ -55,7 +55,7 @@ namespace lambda
 			}
 
 			/////////////////////////////////////////////////////////////////////////////
-			void deinitialize(world::SceneData& scene)
+			void deinitialize(scene::Scene& scene)
 			{
 				Vector<entity::Entity> entities;
 				for (const auto& it : scene.name.entity_to_data)
@@ -67,25 +67,25 @@ namespace lambda
 			}
 
 			/////////////////////////////////////////////////////////////////////////////
-			void NameSystem::setName(const entity::Entity& entity, const String& name, world::SceneData& scene)
+			void NameSystem::setName(const entity::Entity& entity, const String& name, scene::Scene& scene)
 			{
 				scene.name.get(entity).name = name;
 			}
 
 			/////////////////////////////////////////////////////////////////////////////
-			String NameSystem::getName(const entity::Entity& entity, world::SceneData& scene)
+			String NameSystem::getName(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.name.get(entity).name;
 			}
 
 			/////////////////////////////////////////////////////////////////////////////
-			void NameSystem::setTags(const entity::Entity& entity, const Vector<String>& tags, world::SceneData& scene)
+			void NameSystem::setTags(const entity::Entity& entity, const Vector<String>& tags, scene::Scene& scene)
 			{
 				scene.name.get(entity).tags = tags;
 			}
 
 			/////////////////////////////////////////////////////////////////////////////
-			Vector<String> NameSystem::getTags(const entity::Entity& entity, world::SceneData& scene)
+			Vector<String> NameSystem::getTags(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.name.get(entity).tags;
 			}
@@ -160,7 +160,7 @@ namespace lambda
 		}
 
 		/////////////////////////////////////////////////////////////////////////////
-		NameComponent::NameComponent(const entity::Entity& entity, world::SceneData& scene)
+		NameComponent::NameComponent(const entity::Entity& entity, scene::Scene& scene)
 			: IComponent(entity)
 			, scene_(&scene)
 		{

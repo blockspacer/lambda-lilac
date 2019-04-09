@@ -10,8 +10,6 @@ namespace lambda
 {
 	namespace components
 	{
-		class LightSystem;
-
 		enum class ShadowType
 		{
 			kNone,
@@ -29,12 +27,12 @@ namespace lambda
 			kUnknown = 255
 		};
 
-		class BaseLightComponent : public IComponent
+		class LightComponent : public IComponent
 		{
 		public:
-			BaseLightComponent(const entity::Entity& entity, LightSystem* system);
-			BaseLightComponent(const BaseLightComponent& other);
-			BaseLightComponent();
+			LightComponent(const entity::Entity& entity, scene::Scene& scene);
+			LightComponent(const LightComponent& other);
+			LightComponent();
 
 			void setShadowType(const ShadowType& shadow_type);
 			ShadowType getShadowType() const;
@@ -67,88 +65,80 @@ namespace lambda
 
 
 		protected:
-			LightSystem* system_;
+			scene::Scene* scene_;
 		};
 
-		class DirectionalLightComponent : public BaseLightComponent
+		namespace LightSystem
 		{
-		public:
-			DirectionalLightComponent(const entity::Entity& entity, LightSystem* system);
-			DirectionalLightComponent(const DirectionalLightComponent& other);
-			DirectionalLightComponent();
-		};
+			struct Data
+			{
+				Data(const entity::Entity& entity) : entity(entity) {};
+				Data(const Data& other);
+				Data& operator=(const Data& other);
 
-		class PointLightComponent : public BaseLightComponent
-		{
-		public:
-			PointLightComponent(const entity::Entity& entity, LightSystem* system);
-			PointLightComponent(const PointLightComponent& other);
-			PointLightComponent();
-		};
+				LightType type = LightType::kUnknown;
+				ShadowType shadow_type = ShadowType::kNone;
+				glm::vec3 colour = glm::vec3(1.0f);
+				glm::vec3 ambient = glm::vec3(0.0f);
+				float intensity = 1.0f;
+				asset::VioletTextureHandle texture;
+				Vector<utilities::Culler> culler;
+				entity::Entity    entity;
+				utilities::Angle cut_off = utilities::Angle::fromDeg(80.0f);
+				utilities::Angle outer_cut_off = utilities::Angle::fromDeg(90.0f);
+				float size = 50.0f;
+				bool enabled = true;
+				bool rsm = false;
+				uint8_t dynamic_frequency = 3u;
+				uint8_t dynamic_index = 254u;
+				bool valid = true;
 
-		class SpotLightComponent : public BaseLightComponent
-		{
-		public:
-			SpotLightComponent(const entity::Entity& entity, LightSystem* system);
-			SpotLightComponent(const SpotLightComponent& other);
-			SpotLightComponent();
-		};
+				Vector<float>       depth;
+				Vector<glm::mat4x4> projection;
+				Vector<glm::mat4x4> view;
+				Vector<glm::vec3>   view_position;
 
-		struct LightData
-		{
-			LightData(const entity::Entity& entity) : entity(entity) {};
-			LightData(const LightData& other);
-			LightData& operator=(const LightData& other);
+				// Shadow maps.
+				uint32_t shadow_map_size_px = 1024u;
+				Vector<platform::RenderTarget> render_target;
+				Vector<platform::RenderTarget> depth_target;
+			};
 
-			LightType type = LightType::kUnknown;
-			ShadowType shadow_type = ShadowType::kNone;
-			glm::vec3 colour = glm::vec3(1.0f);
-			glm::vec3 ambient = glm::vec3(0.0f);
-			float intensity = 1.0f;
-			asset::VioletTextureHandle texture;
-			Vector<utilities::Culler> culler;
-			entity::Entity    entity;
-			utilities::Angle cut_off = utilities::Angle::fromDeg(80.0f);
-			utilities::Angle outer_cut_off = utilities::Angle::fromDeg(90.0f);
-			float size = 50.0f;
-			bool enabled = true;
-			bool rsm = false;
-			uint8_t dynamic_frequency = 3u;
-			uint8_t dynamic_index = 254u;
-			bool valid = true;
+			struct SystemData
+			{
+				Vector<Data>                  data;
+				Map<entity::Entity, uint32_t> entity_to_data;
+				Map<uint32_t, entity::Entity> data_to_entity;
+				Set<entity::Entity>           marked_for_delete;
+				Queue<uint32_t>               unused_data_entries;
 
-			Vector<float>       depth;
-			Vector<glm::mat4x4> projection;
-			Vector<glm::mat4x4> view;
-			Vector<glm::vec3>   view_position;
+				Data& add(const entity::Entity& entity);
+				Data& get(const entity::Entity& entity);
+				void  remove(const entity::Entity& entity);
+				bool  has(const entity::Entity& entity);
 
-			// Shadow maps.
-			uint32_t shadow_map_size_px = 1024u;
-			Vector<platform::RenderTarget> render_target;
-			Vector<platform::RenderTarget> depth_target;
-		};
+				asset::VioletMeshHandle full_screen_mesh;
 
-		class LightSystem : public ISystem
-		{
-		public:
-			~LightSystem();
+				String   shader_generate;
+				String   shader_modify;
+				uint32_t shader_modify_count;
+				String   shader_publish;
+				String   shader_shadow_type;
 
-			static size_t systemId() { return (size_t)SystemIds::kLightSystem; };
+				platform::RenderTarget     default_shadow_map;
+				asset::VioletTextureHandle default_texture;
+			};
 
-		public:
-			bool hasComponent(const entity::Entity& entity);
-			void removeComponent(const entity::Entity& entity);
+			bool hasComponent(const entity::Entity& entity, scene::Scene& scene);
+			void removeComponent(const entity::Entity& entity, scene::Scene& scene);
 
-			BaseLightComponent addComponent(const entity::Entity& entity);
-			DirectionalLightComponent addDirectionalLight(const entity::Entity& entity);
-			PointLightComponent addPointLight(const entity::Entity& entity);
-			SpotLightComponent addSpotLight(const entity::Entity& entity);
-			DirectionalLightComponent addCascadedLight(const entity::Entity& entity);
+			LightComponent addComponent(const entity::Entity& entity, scene::Scene& scene);
+			LightComponent addDirectionalLight(const entity::Entity& entity, scene::Scene& scene);
+			LightComponent addPointLight(const entity::Entity& entity, scene::Scene& scene);
+			LightComponent addSpotLight(const entity::Entity& entity, scene::Scene& scene);
+			LightComponent addCascadedLight(const entity::Entity& entity, scene::Scene& scene);
 
-			BaseLightComponent getComponent(const entity::Entity& entity);
-			DirectionalLightComponent getDirectionalLight(const entity::Entity& entity);
-			PointLightComponent getPointLight(const entity::Entity& entity);
-			SpotLightComponent getSpotLight(const entity::Entity& entity);
+			LightComponent getComponent(const entity::Entity& entity, scene::Scene& scene);
 
 			/*
 			* Generate: [Input] Nothing [Output] Shadow map.
@@ -157,72 +147,48 @@ namespace lambda
 			* Publish:  [Input] Shadow map | Position | Normal | Metallic_Roughness [Output] Light map.
 		* Shadow Type: The type of shadows that should be used.
 			*/
-			void setShaders(String generate, String modify, uint32_t modify_count, String publish, String shadow_type);
+			void setShaders(String generate, String modify, uint32_t modify_count, String publish, String shadow_type, scene::Scene& scene);
 
-			virtual void initialize(world::IWorld& world) override;
-			virtual void deinitialize() override;
-			virtual void onRender() override;
-			virtual void collectGarbage() override;
+			void initialize(scene::Scene& scene);
+			void deinitialize(scene::Scene& scene);
+			void onRender(scene::Scene& scene);
+			void collectGarbage(scene::Scene& scene);
 
-			void setColour(const entity::Entity& entity, const glm::vec3& colour);
-			glm::vec3 getColour(const entity::Entity& entity) const;
-			void setAmbient(const entity::Entity& entity, const glm::vec3& ambient);
-			glm::vec3 getAmbient(const entity::Entity& entity) const;
-			void setIntensity(const entity::Entity& entity, const float& intensity);
-			float getIntensity(const entity::Entity& entity) const;
-			void setShadowType(const entity::Entity& entity, const ShadowType& shadow_type);
-			ShadowType getShadowType(const entity::Entity& entity) const;
-			void setShadowMapSizePx(const entity::Entity& entity, uint32_t shadow_map_size_px);
-			uint32_t getShadowMapSizePx(const entity::Entity& entity) const;
-			void setCutOff(const entity::Entity& entity, const utilities::Angle& cut_off);
-			utilities::Angle getCutOff(const entity::Entity& entity) const;
-			void setOuterCutOff(const entity::Entity& entity, const utilities::Angle& outer_cut_off);
-			utilities::Angle getOuterCutOff(const entity::Entity& entity) const;
-			void setDepth(const entity::Entity& entity, const float& depth);
-			float getDepth(const entity::Entity& entity) const;
-			void setSize(const entity::Entity& entity, const float& size);
-			float getSize(const entity::Entity& entity) const;
-			void setTexture(const entity::Entity& entity, asset::VioletTextureHandle texture);
-			asset::VioletTextureHandle getTexture(const entity::Entity& entity) const;
-			void setEnabled(const entity::Entity& entity, const bool& enabled);
-			bool getEnabled(const entity::Entity& entity) const;
-			void setDynamicFrequency(const entity::Entity& entity, const uint8_t& frequency);
-			uint8_t getDynamicFrequency(const entity::Entity& entity) const;
-			void setRSM(const entity::Entity& entity, bool rsm);
-			bool getRSM(const entity::Entity& entity) const;
-			void setLightType(const entity::Entity& entity, LightType type);
-			LightType getLightType(const entity::Entity& entity) const;
+			void setColour(const entity::Entity& entity, const glm::vec3& colour, scene::Scene& scene);
+			glm::vec3 getColour(const entity::Entity& entity, scene::Scene& scene);
+			void setAmbient(const entity::Entity& entity, const glm::vec3& ambient, scene::Scene& scene);
+			glm::vec3 getAmbient(const entity::Entity& entity, scene::Scene& scene);
+			void setIntensity(const entity::Entity& entity, const float& intensity, scene::Scene& scene);
+			float getIntensity(const entity::Entity& entity, scene::Scene& scene);
+			void setShadowType(const entity::Entity& entity, const ShadowType& shadow_type, scene::Scene& scene);
+			ShadowType getShadowType(const entity::Entity& entity, scene::Scene& scene);
+			void setShadowMapSizePx(const entity::Entity& entity, uint32_t shadow_map_size_px, scene::Scene& scene);
+			uint32_t getShadowMapSizePx(const entity::Entity& entity, scene::Scene& scene);
+			void setCutOff(const entity::Entity& entity, const utilities::Angle& cut_off, scene::Scene& scene);
+			utilities::Angle getCutOff(const entity::Entity& entity, scene::Scene& scene);
+			void setOuterCutOff(const entity::Entity& entity, const utilities::Angle& outer_cut_off, scene::Scene& scene);
+			utilities::Angle getOuterCutOff(const entity::Entity& entity, scene::Scene& scene);
+			void setDepth(const entity::Entity& entity, const float& depth, scene::Scene& scene);
+			float getDepth(const entity::Entity& entity, scene::Scene& scene);
+			void setSize(const entity::Entity& entity, const float& size, scene::Scene& scene);
+			float getSize(const entity::Entity& entity, scene::Scene& scene);
+			void setTexture(const entity::Entity& entity, asset::VioletTextureHandle texture, scene::Scene& scene);
+			asset::VioletTextureHandle getTexture(const entity::Entity& entity, scene::Scene& scene);
+			void setEnabled(const entity::Entity& entity, const bool& enabled, scene::Scene& scene);
+			bool getEnabled(const entity::Entity& entity, scene::Scene& scene);
+			void setDynamicFrequency(const entity::Entity& entity, const uint8_t& frequency, scene::Scene& scene);
+			uint8_t getDynamicFrequency(const entity::Entity& entity, scene::Scene& scene);
+			void setRSM(const entity::Entity& entity, bool rsm, scene::Scene& scene);
+			bool getRSM(const entity::Entity& entity, scene::Scene& scene);
+			void setLightType(const entity::Entity& entity, LightType type, scene::Scene& scene);
+			LightType getLightType(const entity::Entity& entity, scene::Scene& scene);
 
-		private:
-			LightData& lookUpData(const entity::Entity& entity);
-			const LightData& lookUpData(const entity::Entity& entity) const;
-			void createShadowMaps(const entity::Entity& entity);
+			void createShadowMaps(const entity::Entity& entity, scene::Scene& scene);
 
-		private:
-			void renderDirectional(const entity::Entity& entity);
-			void renderSpot(const entity::Entity& entity);
-			void renderPoint(const entity::Entity& entity);
-			void renderCascade(const entity::Entity& entity);
-
-		private:
-			Vector<LightData> data_;
-			Map<entity::Entity, uint32_t> entity_to_data_;
-			Map<uint32_t, entity::Entity> data_to_entity_;
-			Set<entity::Entity> marked_for_delete_;
-			Queue<uint32_t> unused_data_entries_;
-
-			asset::VioletMeshHandle full_screen_mesh_;
-
-			String shader_generate_;
-			String shader_modify_;
-			uint32_t shader_modify_count_;
-			String shader_publish_;
-			String shader_shadow_type_;
-
-			platform::RenderTarget default_shadow_map_;
-			asset::VioletTextureHandle default_texture_;
-
-			world::IWorld* world_;
-		};
+			void renderDirectional(const entity::Entity& entity, scene::Scene& scene);
+			void renderSpot(const entity::Entity& entity, scene::Scene& scene);
+			void renderPoint(const entity::Entity& entity, scene::Scene& scene);
+			void renderCascade(const entity::Entity& entity, scene::Scene& scene);
+		}
 	}
 }

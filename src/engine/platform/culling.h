@@ -25,7 +25,7 @@ namespace lambda
       void setShouldCull(const bool& should_cull);
       void setCullShadowCasters(const bool& cull_shadow_casters);
       void setCullFrequency(const uint8_t& cull_frequency);
-      void cullDynamics(world::SceneData& scene, const Frustum& frustum);
+      void cullDynamics(scene::Scene& scene, const Frustum& frustum);
       void cullStatics(
         const ZoneManager& zone_manager, 
         const Frustum& frustum

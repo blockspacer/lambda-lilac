@@ -34,7 +34,7 @@ namespace lambda
 		{
 		public:
 			BulletCollisionBody(
-				world::IWorld* world,
+				scene::Scene& scene,
 				btDiscreteDynamicsWorld* dynamics_world,
 				BulletPhysicsWorld* physics_world,
 				entity::Entity entity
@@ -85,7 +85,7 @@ namespace lambda
 			btMotionState* motion_state_;
 			btCollisionShape* collision_shape_;
 			btTriangleMesh* triangle_mesh_;
-			world::IWorld* world_;
+			scene::Scene& scene_;
 			btDiscreteDynamicsWorld* dynamics_world_; // TODO (Hilze): Try btDynamicsWorld.
 			BulletPhysicsWorld* physics_world_;
 			BulletCollisionBodyType type_;
@@ -106,12 +106,9 @@ namespace lambda
 			BulletPhysicsWorld();
 			~BulletPhysicsWorld();
 
-			virtual void initialize(
-				platform::DebugRenderer* debug_renderer,
-				world::IWorld* world
-			);
+			virtual void initialize(scene::Scene& scene);
 			virtual void deinitialize() override;
-			virtual void render() override;
+			virtual void render(scene::Scene& scene) override;
 			virtual void update(const double& time_step) override;
 
 			virtual Vector<Manifold> raycast(
@@ -129,7 +126,7 @@ namespace lambda
 			virtual glm::vec3 getGravity() const override;
 
 		private:
-			world::IWorld* world_;
+			scene::Scene* scene_;
 			BulletPhysicVisualizer physics_visualizer_;
 			MyEventListener* event_listener_;
 

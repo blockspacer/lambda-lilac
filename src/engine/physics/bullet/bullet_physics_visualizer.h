@@ -5,6 +5,10 @@
 
 namespace lambda
 {
+	namespace scene
+	{
+		struct Scene;
+	}
   namespace platform
   {
     class DebugRenderer;
@@ -15,7 +19,7 @@ namespace lambda
     class BulletPhysicVisualizer : public btIDebugDraw
     {
     public:
-      void initialize(platform::DebugRenderer* debug_renderer);
+      void setScene(scene::Scene& scene);
       virtual void drawLine(
         const btVector3& from, 
         const btVector3& to, 

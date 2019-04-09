@@ -3,7 +3,7 @@
 #include "systems/collider_system.h"
 #include "systems/mono_behaviour_system.h"
 #include "systems/entity_system.h"
-#include "interfaces/iworld.h"
+#include <platform/scene.h>
 
 #include <glm/gtx/functions.hpp>
 
@@ -24,7 +24,7 @@ namespace lambda
   {
 	  namespace RigidBodySystem
 	  {
-		  RigidBodyComponent addComponent(const entity::Entity& entity, world::SceneData& scene)
+		  RigidBodyComponent addComponent(const entity::Entity& entity, scene::Scene& scene)
 		  {
 				if (!TransformSystem::hasComponent(entity, scene))
 				  TransformSystem::addComponent(entity, scene);
@@ -38,20 +38,20 @@ namespace lambda
 
 			  return RigidBodyComponent(entity, scene);
 		  }
-		  RigidBodyComponent getComponent(const entity::Entity& entity, world::SceneData& scene)
+		  RigidBodyComponent getComponent(const entity::Entity& entity, scene::Scene& scene)
 		  {
 			  return RigidBodyComponent(entity, scene);
 		  }
-		  bool hasComponent(const entity::Entity& entity, world::SceneData& scene)
+		  bool hasComponent(const entity::Entity& entity, scene::Scene& scene)
 		  {
 			  return scene.rigid_body.has(entity);
 		  }
-		  void RigidBodySystem::removeComponent(const entity::Entity& entity, world::SceneData& scene)
+		  void RigidBodySystem::removeComponent(const entity::Entity& entity, scene::Scene& scene)
 		  {
 			  scene.rigid_body.remove(entity);
 		  }
 
-		  void collectGarbage(world::SceneData & scene)
+		  void collectGarbage(scene::Scene & scene)
 		  {
 			  if (!scene.rigid_body.marked_for_delete.empty())
 			  {
@@ -74,7 +74,7 @@ namespace lambda
 			  }
 		  }
 
-		  void initialize(world::SceneData & scene)
+		  void initialize(scene::Scene & scene)
 		  {
 #if VIOLET_PHYSICS_BULLET
 			  scene.rigid_body.physics_world = foundation::Memory::construct<physics::BulletPhysicsWorld>();
@@ -86,13 +86,10 @@ namespace lambda
 			  scene.rigid_body.physics_world = foundation::Memory::construct<physics::NewtonPhysicsWorld>();
 #endif
 
-			  scene.rigid_body.physics_world->initialize(
-				  &scene.world->getDebugRenderer(),
-				  scene.world
-			  );
+			  scene.rigid_body.physics_world->initialize(scene);
 		  }
 
-		  void deinitialize(world::SceneData & scene)
+		  void deinitialize(scene::Scene & scene)
 		  {
 			  Vector<entity::Entity> entities;
 			  for (const auto& it : scene.rigid_body.entity_to_data)
@@ -107,65 +104,75 @@ namespace lambda
 			  scene.rigid_body.physics_world = nullptr;
 		  }
 
-		  physics::IPhysicsWorld* RigidBodySystem::getPhysicsWorld(world::SceneData& scene)
+			void fixedUpdate(const float& delta_time, scene::Scene& scene)
+			{
+				scene.rigid_body.physics_world->update(delta_time);
+			}
+
+			void onRender(scene::Scene& scene)
+			{
+				scene.rigid_body.physics_world->render(scene);
+			}
+
+		  physics::IPhysicsWorld* RigidBodySystem::getPhysicsWorld(scene::Scene& scene)
 		  {
 			  return scene.rigid_body.physics_world;
 		  }
-		  float RigidBodySystem::getMass(const entity::Entity& entity, world::SceneData& scene)
+		  float RigidBodySystem::getMass(const entity::Entity& entity, scene::Scene& scene)
 		  {
 			  return scene.rigid_body.get(entity).collision_body->getMass();
 		  }
-		  void RigidBodySystem::setMass(const entity::Entity& entity, const float& mass, world::SceneData& scene)
+		  void RigidBodySystem::setMass(const entity::Entity& entity, const float& mass, scene::Scene& scene)
 		  {
 			  scene.rigid_body.get(entity).collision_body->setMass(mass);
 		  }
-		  glm::vec3 RigidBodySystem::getVelocity(const entity::Entity& entity, world::SceneData& scene)
+		  glm::vec3 RigidBodySystem::getVelocity(const entity::Entity& entity, scene::Scene& scene)
 		  {
 			  return scene.rigid_body.get(entity).collision_body->getVelocity();
 		  }
-		  void RigidBodySystem::setVelocity(const entity::Entity& entity, const glm::vec3& velocity, world::SceneData& scene)
+		  void RigidBodySystem::setVelocity(const entity::Entity& entity, const glm::vec3& velocity, scene::Scene& scene)
 		  {
 			  if (std::isnan(velocity.x) || std::isnan(velocity.y) || std::isnan(velocity.z))
 				  return;
 
 			  scene.rigid_body.get(entity).collision_body->setVelocity(velocity);
 		  }
-		  glm::vec3 RigidBodySystem::getAngularVelocity(const entity::Entity& entity, world::SceneData& scene)
+		  glm::vec3 RigidBodySystem::getAngularVelocity(const entity::Entity& entity, scene::Scene& scene)
 		  {
 			  return scene.rigid_body.get(entity).collision_body->getAngularVelocity();
 		  }
-		  void RigidBodySystem::setAngularVelocity(const entity::Entity& entity, const glm::vec3& velocity, world::SceneData& scene)
+		  void RigidBodySystem::setAngularVelocity(const entity::Entity& entity, const glm::vec3& velocity, scene::Scene& scene)
 		  {
 			  if (std::isnan(velocity.x) || std::isnan(velocity.y) || std::isnan(velocity.z))
 				  return;
 
 			  scene.rigid_body.get(entity).collision_body->setAngularVelocity(velocity);
 		  }
-		  uint8_t RigidBodySystem::getAngularConstraints(const entity::Entity& entity, world::SceneData& scene)
+		  uint8_t RigidBodySystem::getAngularConstraints(const entity::Entity& entity, scene::Scene& scene)
 		  {
 			  return scene.rigid_body.get(entity).collision_body->getAngularConstraints();
 		  }
-		  void RigidBodySystem::setAngularConstraints(const entity::Entity& entity, const uint8_t& constraints, world::SceneData& scene)
+		  void RigidBodySystem::setAngularConstraints(const entity::Entity& entity, const uint8_t& constraints, scene::Scene& scene)
 		  {
 			  scene.rigid_body.get(entity).collision_body->setAngularConstraints(constraints);
 		  }
-		  uint8_t RigidBodySystem::getVelocityConstraints(const entity::Entity& entity, world::SceneData& scene)
+		  uint8_t RigidBodySystem::getVelocityConstraints(const entity::Entity& entity, scene::Scene& scene)
 		  {
 			  return scene.rigid_body.get(entity).collision_body->getVelocityConstraints();
 		  }
-		  void RigidBodySystem::setVelocityConstraints(const entity::Entity& entity, const uint8_t& constraints, world::SceneData& scene)
+		  void RigidBodySystem::setVelocityConstraints(const entity::Entity& entity, const uint8_t& constraints, scene::Scene& scene)
 		  {
 			  scene.rigid_body.get(entity).collision_body->setVelocityConstraints(constraints);
 		  }
-		  void RigidBodySystem::applyImpulse(const entity::Entity& entity, const glm::vec3& impulse, world::SceneData& scene)
+		  void RigidBodySystem::applyImpulse(const entity::Entity& entity, const glm::vec3& impulse, scene::Scene& scene)
 		  {
 			  scene.rigid_body.get(entity).collision_body->applyImpulse(impulse);
 		  }
-		  void RigidBodySystem::setFriction(const entity::Entity & entity, float friction, world::SceneData& scene)
+		  void RigidBodySystem::setFriction(const entity::Entity & entity, float friction, scene::Scene& scene)
 		  {
 			  scene.rigid_body.get(entity).collision_body->setFriction(friction);
 		  }
-		  float RigidBodySystem::getFriction(const entity::Entity & entity, world::SceneData& scene)
+		  float RigidBodySystem::getFriction(const entity::Entity & entity, scene::Scene& scene)
 		  {
 			  return scene.rigid_body.get(entity).collision_body->getFriction();
 		  }
@@ -249,7 +256,7 @@ namespace lambda
 
 
 
-	RigidBodyComponent::RigidBodyComponent(const entity::Entity& entity, world::SceneData& scene) :
+	RigidBodyComponent::RigidBodyComponent(const entity::Entity& entity, scene::Scene& scene) :
 		IComponent(entity), scene_(&scene)
 	{
 	}

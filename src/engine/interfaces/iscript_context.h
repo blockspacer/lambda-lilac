@@ -4,10 +4,10 @@
 
 namespace lambda
 {
-  namespace world
-  {
-    class IWorld;
-  }
+	namespace world
+	{
+		class IWorld;
+	}
   namespace scripting
   {
     ///////////////////////////////////////////////////////////////////////////

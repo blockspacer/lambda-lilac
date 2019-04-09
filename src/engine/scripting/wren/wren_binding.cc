@@ -41,8 +41,7 @@ namespace lambda
 
     ///////////////////////////////////////////////////////////////////////////
     world::IWorld* g_world;
-	world::SceneData* g_scene;
-    components::LightSystem* g_lightSystem;
+		scene::Scene* g_scene;
 
     ///////////////////////////////////////////////////////////////////////////
     template<typename T>
@@ -1534,11 +1533,11 @@ foreign class Mesh {
     }
     namespace Light
     {
-      using LightHandle = IWrenComponent<components::BaseLightComponent>;
+      using LightHandle = IWrenComponent<components::LightComponent>;
       WrenHandle* handle = nullptr;
       
       /////////////////////////////////////////////////////////////////////////
-      LightHandle* make(WrenVM* vm, components::BaseLightComponent val = {})
+      LightHandle* make(WrenVM* vm, components::LightComponent val = {})
       {
         if (handle == nullptr)
         {
@@ -1582,8 +1581,8 @@ foreign class Mesh {
 			if (components::ColliderSystem::hasComponent(e, *g_scene))      components::ColliderSystem::removeComponent(e, *g_scene);
 			if (components::MonoBehaviourSystem::hasComponent(e, *g_scene)) components::MonoBehaviourSystem::removeComponent(e, *g_scene);
 			if (components::WaveSourceSystem::hasComponent(e, *g_scene))    components::WaveSourceSystem::removeComponent(e, *g_scene);
+			if (components::LightSystem::hasComponent(e, *g_scene))					components::LightSystem::removeComponent(e, *g_scene);
 			// TODO (Hilze): Free used entities.
-			if (g_lightSystem->hasComponent(e))         g_lightSystem->removeComponent(e);
 			//g_entitySystem->destroyEntity(e);
 		}
 
@@ -2271,7 +2270,7 @@ foreign class Camera {
           {
             wrenGetListElement(vm, 3, i, 0);
             inputs[i] = 
-              g_world->getPostProcessManager().getTarget(
+              g_world->getScene().post_process_manager.getTarget(
                 Name(wrenGetSlotString(vm, 0))
               );
           }
@@ -2279,7 +2278,7 @@ foreign class Camera {
           {
             wrenGetListElement(vm, 4, i, 0);
             outputs[i] = 
-              g_world->getPostProcessManager().getTarget(
+              g_world->getScene().post_process_manager.getTarget(
                 Name(wrenGetSlotString(vm, 0))
               );
           }
@@ -3206,7 +3205,7 @@ class ShadowTypes {
         },
           [](void* data) {
           LightHandle& handle = *((LightHandle*)data);
-          handle.handle = components::BaseLightComponent();
+          handle.handle = components::LightComponent();
           handle.type   = WrenComponentTypes::kUnknown;
           handle.entity = entity::Entity();
         }
@@ -3220,7 +3219,7 @@ class ShadowTypes {
         if (strcmp(signature, "goAdd(_)") == 0) return [](WrenVM* vm) {
           LightHandle* handle = GetForeign<LightHandle>(vm);
           entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
-          handle->handle = g_lightSystem->addComponent(e);
+          handle->handle = components::LightSystem::addComponent(e, *g_scene);
           handle->entity = e;
           /*Handle*/ g_scriptingData->getData(handle->handle.entity()).light = wrenGetSlotHandle(vm, 0);
         };
@@ -3229,10 +3228,10 @@ class ShadowTypes {
         };
         if (strcmp(signature, "goRemove(_)") == 0) return [](WrenVM* vm) {
           LightHandle* handle = GetForeign<LightHandle>(vm);
-          g_lightSystem->removeComponent(handle->handle.entity());
+          components::LightSystem::removeComponent(handle->handle.entity(), *g_scene);
           /*Handle*/ wrenReleaseHandle(vm, g_scriptingData->getData(handle->handle.entity()).light);
           /*Handle*/ g_scriptingData->getData(handle->handle.entity()).light = nullptr;
-					handle->handle = components::BaseLightComponent();
+					handle->handle = components::LightComponent();
 					handle->entity = entity::Entity();
         };
         if (strcmp(signature, "type") == 0) return [](WrenVM* vm) {
@@ -3509,16 +3508,16 @@ class Graphics {
 			WrenForeignMethodFn Bind(const char* signature)
 			{
 				if (strcmp(signature, "vsync=(_)") == 0) return [](WrenVM* vm) {
-					g_world->getRenderer()->setVSync(wrenGetSlotBool(vm, 1));
+					g_scene->renderer->setVSync(wrenGetSlotBool(vm, 1));
 				};
 				if (strcmp(signature, "vsync") == 0) return [](WrenVM* vm) {
-					wrenSetSlotDouble(vm, 0, g_world->getRenderer()->getVSync() ? 1.0 : 0.0);
+					wrenSetSlotDouble(vm, 0, g_scene->renderer->getVSync() ? 1.0 : 0.0);
 				};
 				if (strcmp(signature, "renderScale=(_)") == 0) return [](WrenVM* vm) {
-					g_world->getRenderer()->setRenderScale((float)wrenGetSlotDouble(vm, 1));
+					g_scene->renderer->setRenderScale((float)wrenGetSlotDouble(vm, 1));
 				};
 				if (strcmp(signature, "renderScale") == 0) return [](WrenVM* vm) {
-					wrenSetSlotDouble(vm, 0, (float)g_world->getRenderer()->getRenderScale());
+					wrenSetSlotDouble(vm, 0, (float)g_scene->renderer->getRenderScale());
 				};
 				if (strcmp(signature, "setLightShaders(_,_,_,_,_)") == 0) return [](WrenVM* vm) {
 					String generate = wrenGetSlotString(vm, 1);
@@ -3526,7 +3525,7 @@ class Graphics {
 					double modify_count = wrenGetSlotDouble(vm, 3);
 					String publish = wrenGetSlotString(vm, 4);
 					String shadow_type = wrenGetSlotString(vm, 5);
-					g_lightSystem->setShaders(generate, modify, (uint32_t)modify_count, publish, shadow_type);
+					components::LightSystem::setShaders(generate, modify, (uint32_t)modify_count, publish, shadow_type, *g_scene);
 				};
 				return nullptr;
 			}
@@ -3648,12 +3647,12 @@ class PostProcess {
       WrenForeignMethodFn Bind(const char* signature)
       {
         if (strcmp(signature, "addRenderTarget(_,_,_)") == 0) return [](WrenVM* vm) {
-          g_world->getPostProcessManager().addTarget(
+          g_world->getScene().post_process_manager.addTarget(
             platform::RenderTarget(Name(wrenGetSlotString(vm, 1)), (float)wrenGetSlotDouble(vm, 2), (TextureFormat)(uint32_t)wrenGetSlotDouble(vm, 3))
           );
         };
         if (strcmp(signature, "addRenderTarget(_,_)") == 0) return [](WrenVM* vm) {
-          g_world->getPostProcessManager().addTarget(
+          g_world->getScene().post_process_manager.addTarget(
             platform::RenderTarget(Name(wrenGetSlotString(vm, 1)), 0.0f, *GetForeign<asset::VioletTextureHandle>(vm, 2), true)
           );
         };
@@ -3661,7 +3660,7 @@ class PostProcess {
           LMB_ASSERT(false, "NOT YET IMPLEMENTED");
         };
         if (strcmp(signature, "setFinalRenderTarget(_)") == 0) return [](WrenVM* vm) {
-          g_world->getPostProcessManager().setFinalTarget(Name(wrenGetSlotString(vm, 1)));
+          g_world->getScene().post_process_manager.setFinalTarget(Name(wrenGetSlotString(vm, 1)));
         };
         if (strcmp(signature, "addShaderPass(_,_,_,_)") == 0) return [](WrenVM* vm) {
           Name name(wrenGetSlotString(vm, 1));
@@ -3673,20 +3672,20 @@ class PostProcess {
             wrenGetListElement(vm, 3, i, 0);
             const char* target_cstr = wrenGetSlotString(vm, 0);
             Name target_name = Name(target_cstr);
-            const auto& target = g_world->getPostProcessManager().getTarget(target_name);
+            const auto& target = g_world->getScene().post_process_manager.getTarget(target_name);
             input.at(i) = target;
           }
           for (int i = 0; i < (int)output.size(); ++i)
           {
             wrenGetListElement(vm, 4, i, 0);
-            output.at(i) = g_world->getPostProcessManager().getTarget(Name(wrenGetSlotString(vm, 0)));
+            output.at(i) = g_world->getScene().post_process_manager.getTarget(Name(wrenGetSlotString(vm, 0)));
           }
 
-          g_world->getPostProcessManager().addPass(platform::ShaderPass(name, shader, input, output));
+          g_world->getScene().post_process_manager.addPass(platform::ShaderPass(name, shader, input, output));
         };
         if (strcmp(signature, "setShaderPassEnabled(_,_)") == 0) return [](WrenVM* vm) {
           Name name(wrenGetSlotString(vm, 1));
-          for (auto& pass : g_world->getPostProcessManager().getPasses())
+          for (auto& pass : g_world->getScene().post_process_manager.getPasses())
           {
             if (pass.getName() == name)
             {
@@ -3696,23 +3695,23 @@ class PostProcess {
           }
         };
         if (strcmp(signature, "setShaderVariableFloat1(_,_)") == 0) return [](WrenVM* vm) {
-          g_world->getShaderVariableManager().setVariable(platform::ShaderVariable(Name(wrenGetSlotString(vm, 1)), (float)wrenGetSlotDouble(vm, 2)));
+          g_world->getScene().shader_variable_manager.setVariable(platform::ShaderVariable(Name(wrenGetSlotString(vm, 1)), (float)wrenGetSlotDouble(vm, 2)));
         };
         if (strcmp(signature, "setShaderVariableFloat2(_,_)") == 0) return [](WrenVM* vm) {
-          g_world->getShaderVariableManager().setVariable(platform::ShaderVariable(Name(wrenGetSlotString(vm, 1)), *GetForeign<glm::vec2>(vm, 2)));
+          g_world->getScene().shader_variable_manager.setVariable(platform::ShaderVariable(Name(wrenGetSlotString(vm, 1)), *GetForeign<glm::vec2>(vm, 2)));
         };
         if (strcmp(signature, "setShaderVariableFloat3(_,_)") == 0) return [](WrenVM* vm) {
-          g_world->getShaderVariableManager().setVariable(platform::ShaderVariable(Name(wrenGetSlotString(vm, 1)), *GetForeign<glm::vec3>(vm, 2)));
+          g_world->getScene().shader_variable_manager.setVariable(platform::ShaderVariable(Name(wrenGetSlotString(vm, 1)), *GetForeign<glm::vec3>(vm, 2)));
         };
         if (strcmp(signature, "setShaderVariableFloat4(_,_)") == 0) return [](WrenVM* vm) {
-          g_world->getShaderVariableManager().setVariable(platform::ShaderVariable(Name(wrenGetSlotString(vm, 1)), *GetForeign<glm::vec4>(vm, 2)));
+          g_world->getScene().shader_variable_manager.setVariable(platform::ShaderVariable(Name(wrenGetSlotString(vm, 1)), *GetForeign<glm::vec4>(vm, 2)));
         };
         if (strcmp(signature, "irradianceConvolution(_,_)") == 0) return [](WrenVM* vm) {
           String input = wrenGetSlotString(vm, 1);
           String output = wrenGetSlotString(vm, 2);
 
-          platform::RenderTarget& rt_input = g_world->getPostProcessManager().getTarget(input);
-		  asset::VioletShaderHandle shader = asset::ShaderManager::getInstance()->get(Name("resources/shaders/irradiance_convolution.fx"));
+          platform::RenderTarget& rt_input = g_world->getScene().post_process_manager.getTarget(input);
+					asset::VioletShaderHandle shader = asset::ShaderManager::getInstance()->get(Name("resources/shaders/irradiance_convolution.fx"));
 
           float as = (float)rt_input.getTexture()->getLayer(0u).getHeight() / (float)rt_input.getTexture()->getLayer(0u).getWidth();
 
@@ -3727,8 +3726,8 @@ class PostProcess {
           asset::VioletTextureHandle texture = asset::TextureManager::getInstance()->create(output, violet_texture);
 
           auto mesh = asset::MeshManager::getInstance()->create(Name("__irradiance_convolution_mesh__"), asset::Mesh::createScreenQuad());
-          g_world->getRenderer()->setMesh(mesh);
-          g_world->getRenderer()->setSubMesh(0u);
+					//g_scene->renderer->setMesh(mesh);
+					//g_scene->renderer->setSubMesh(0u);
 
           platform::RenderTarget rt_out(Name("IrradianceConvolution_Out"), texture);
 
@@ -3739,16 +3738,16 @@ class PostProcess {
             { rt_out }
           );
 
-          g_world->getRenderer()->bindShaderPass(shader_pass);
-          g_world->getRenderer()->draw();
+					//g_scene->renderer->bindShaderPass(shader_pass);
+					//g_scene->renderer->draw();
 
-          g_world->getPostProcessManager().addTarget(platform::RenderTarget(Name(output), texture));
+          g_world->getScene().post_process_manager.addTarget(platform::RenderTarget(Name(output), texture));
         };
         if (strcmp(signature, "hammerhead(_,_)") == 0) return [](WrenVM* vm) {
           String input = wrenGetSlotString(vm, 1);
           String output = wrenGetSlotString(vm, 2);
 
-          platform::RenderTarget& rt_input = g_world->getPostProcessManager().getTarget(input);
+          platform::RenderTarget& rt_input = g_world->getScene().post_process_manager.getTarget(input);
 		  asset::VioletShaderHandle shader = asset::ShaderManager::getInstance()->get(Name("resources/shaders/hammerhead.fx"));
 
           float as = (float)rt_input.getTexture()->getLayer(0u).getHeight() / (float)rt_input.getTexture()->getLayer(0u).getWidth();
@@ -3763,13 +3762,13 @@ class PostProcess {
           asset::VioletTextureHandle texture = asset::TextureManager::getInstance()->create(output, violet_texture);
 
           auto mesh = asset::MeshManager::getInstance()->create(Name("__hammerhead_mesh__"), asset::Mesh::createScreenQuad());
-          g_world->getRenderer()->setMesh(mesh);
-          g_world->getRenderer()->setSubMesh(0u);
+					//g_scene->renderer->setMesh(mesh);
+					//g_scene->renderer->setSubMesh(0u);
 
           platform::RenderTarget rt_in(Name("Hammerhead_In"), texture);
           for (uint32_t i = 0u; i < violet_texture.mip_count; ++i)
           {
-            g_world->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("roughness"), ((float)i / (float)violet_texture.mip_count)));
+            g_scene->shader_variable_manager.setVariable(platform::ShaderVariable(Name("roughness"), ((float)i / (float)violet_texture.mip_count)));
             platform::RenderTarget rt_out(Name("Hammerhead_Out_" + toString(i)), texture);
             rt_out.setMipMap(i);
 
@@ -3781,11 +3780,11 @@ class PostProcess {
               { rt_out }
             );
 
-            g_world->getRenderer()->bindShaderPass(shader_pass);
-            g_world->getRenderer()->draw();
+						//g_scene->renderer->bindShaderPass(shader_pass);
+						//g_scene->renderer->draw();
           }
 
-          g_world->getPostProcessManager().addTarget(platform::RenderTarget(Name(output), texture));
+          g_world->getScene().post_process_manager.addTarget(platform::RenderTarget(Name(output), texture));
         };
         return nullptr;
       }
@@ -4291,14 +4290,14 @@ class Debug {
 			WrenForeignMethodFn Bind(const char* signature)
 			{
 				if (strcmp(signature, "drawLine(_,_,_)") == 0) return [](WrenVM* vm) {
-					g_world->getDebugRenderer().DrawLine(platform::DebugLine(
+					g_world->getScene().debug_renderer.DrawLine(platform::DebugLine(
 						*GetForeign<glm::vec3>(vm, 1),
 						*GetForeign<glm::vec3>(vm, 2),
 						*GetForeign<glm::vec4>(vm, 3)
 					));
 				};
 				if (strcmp(signature, "drawTri(_,_,_,_)") == 0) return [](WrenVM* vm) {
-					g_world->getDebugRenderer().DrawTri(platform::DebugTri(
+					g_world->getScene().debug_renderer.DrawTri(platform::DebugTri(
 						*GetForeign<glm::vec3>(vm, 1),
 						*GetForeign<glm::vec3>(vm, 2),
 						*GetForeign<glm::vec3>(vm, 3),
@@ -4952,9 +4951,7 @@ class Assert {
 		{
 			g_scriptingData = foundation::Memory::construct<ScriptingData>();
 			g_world = world;
-			g_scene = &world->getScene().getSceneData();
-			g_lightSystem =
-				world->getScene().getSystem<components::LightSystem>().get();
+			g_scene = &world->getScene();
 		}
 
 		///////////////////////////////////////////////////////////////////////////
@@ -5046,7 +5043,6 @@ class Assert {
 
 			g_scene = nullptr;
 			g_world = nullptr;
-			g_lightSystem         = nullptr;
 		}
   }
 }

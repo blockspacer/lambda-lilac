@@ -2,12 +2,20 @@
 #include "assets/shader_io.h"
 #include "post_process_manager.h"
 #include "interfaces/irenderer.h"
-#include "interfaces/iworld.h"
+#include "platform/scene.h"
 
 namespace lambda
 {
 	namespace platform
 	{
+		///////////////////////////////////////////////////////////////////////////
+		void DebugRenderer::operator=(const DebugRenderer& other)
+		{
+			lines_       = other.lines_;
+			tris_        = other.tris_;
+			shader_pass_ = other.shader_pass_;
+		}
+
 		///////////////////////////////////////////////////////////////////////////
 		void DebugRenderer::DrawLine(const DebugLine& line)
 		{
@@ -29,32 +37,10 @@ namespace lambda
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		void DebugRenderer::Render(world::IWorld* world)
+		void DebugRenderer::Render(scene::Scene& scene)
 		{
 			if (lines_.positions.empty() && tris_.positions.empty())
 				return;
-
-			static bool initialized = false;
-			{
-				if (!initialized)
-				{
-					initialized = true;
-					lambda::asset::VioletShaderHandle shader = asset::ShaderManager::getInstance()->get(Name("resources/shaders/debug.fx"));
-					// Lines.
-					lines_.mesh = asset::MeshManager::getInstance()->create(Name("debug_mesh_lines"));
-					lines_.mesh->setTopology(asset::Topology::kLines);
-
-					// Tris.
-					tris_.mesh = asset::MeshManager::getInstance()->create(Name("debug_mesh_tris"));
-					tris_.mesh->setTopology(asset::Topology::kTriangles);
-
-					shader_pass_ = ShaderPass(Name("debug"), shader, {}, {
-						world->getPostProcessManager().getTarget(
-							world->getPostProcessManager().getFinalTarget()
-						)
-					});
-				}
-			}
 
 			// Lines.
 			asset::SubMesh sub_mesh;
@@ -83,18 +69,34 @@ namespace lambda
 			tris_.positions.resize(0u);
 			tris_.colours.resize(0u);
 
-			auto renderer = world->getRenderer();
-
-			renderer->bindShaderPass(shader_pass_);
-			renderer->setSubMesh(0u);
+			scene.renderer->bindShaderPass(shader_pass_);
+			scene.renderer->setSubMesh(0u);
 
 			// Lines.
-			renderer->setMesh(lines_.mesh);
-			renderer->draw();
+			scene.renderer->setMesh(lines_.mesh);
+			scene.renderer->draw();
 
 			// Tris.
-			renderer->setMesh(tris_.mesh);
-			renderer->draw();
+			scene.renderer->setMesh(tris_.mesh);
+			scene.renderer->draw();
+		}
+
+		void DebugRenderer::Initialize(scene::Scene& scene)
+		{
+			lambda::asset::VioletShaderHandle shader = asset::ShaderManager::getInstance()->get(Name("resources/shaders/debug.fx"));
+			// Lines.
+			lines_.mesh = asset::MeshManager::getInstance()->create(Name("debug_mesh_lines"));
+			lines_.mesh->setTopology(asset::Topology::kLines);
+
+			// Tris.
+			tris_.mesh = asset::MeshManager::getInstance()->create(Name("debug_mesh_tris"));
+			tris_.mesh->setTopology(asset::Topology::kTriangles);
+
+			shader_pass_ = ShaderPass(Name("debug"), shader, {}, {
+				scene.post_process_manager.getTarget(
+					scene.post_process_manager.getFinalTarget()
+				)
+			});
 		}
 
 		void DebugRenderer::Deinitialize()
@@ -106,6 +108,14 @@ namespace lambda
 			lines_.positions.resize(0ull);
 			lines_.mesh = asset::VioletMeshHandle();
 			shader_pass_ = platform::ShaderPass();
+		}
+
+		void DebugRenderer::Clear()
+		{
+			tris_.positions.clear();
+			tris_.colours.clear();
+			lines_.positions.clear();
+			lines_.colours.clear();
 		}
 	}
 }

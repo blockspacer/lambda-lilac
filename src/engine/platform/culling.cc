@@ -42,7 +42,7 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    void Culler::cullDynamics(world::SceneData& scene, const Frustum& frustum)
+    void Culler::cullDynamics(scene::Scene& scene, const Frustum& frustum)
     {
       dynamic_.data = nullptr;
       dynamic_.next = nullptr;

@@ -24,7 +24,7 @@ namespace lambda
 	{
 		namespace MeshRenderSystem
 		{
-			MeshRenderComponent addComponent(const entity::Entity& entity, world::SceneData& scene)
+			MeshRenderComponent addComponent(const entity::Entity& entity, scene::Scene& scene)
 			{
 				if (!TransformSystem::hasComponent(entity, scene))
 					TransformSystem::addComponent(entity, scene);
@@ -35,20 +35,20 @@ namespace lambda
 
 				return MeshRenderComponent(entity, scene);
 			}
-			MeshRenderComponent MeshRenderSystem::getComponent(const entity::Entity& entity, world::SceneData& scene)
+			MeshRenderComponent getComponent(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return MeshRenderComponent(entity, scene);
 			}
-			bool MeshRenderSystem::hasComponent(const entity::Entity& entity, world::SceneData& scene)
+			bool hasComponent(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.mesh_render.has(entity);
 			}
-			void MeshRenderSystem::removeComponent(const entity::Entity& entity, world::SceneData& scene)
+			void removeComponent(const entity::Entity& entity, scene::Scene& scene)
 			{
 				scene.mesh_render.remove(entity);
 			}
 
-			void collectGarbage(world::SceneData& scene)
+			void collectGarbage(scene::Scene& scene)
 			{
 				if (!scene.mesh_render.marked_for_delete.empty())
 				{
@@ -80,7 +80,7 @@ namespace lambda
 				}
 			}
 
-			void initialize(world::SceneData& scene)
+			void initialize(scene::Scene& scene)
 			{
 				scene.mesh_render.default_albedo = asset::TextureManager::getInstance()->create(
 					Name("__default_albedo__"),
@@ -106,7 +106,7 @@ namespace lambda
 					Vector<unsigned char>{ 255u, 0u, 0u, 255u }
 				);
 			}
-			void deinitialize(world::SceneData& scene)
+			void deinitialize(scene::Scene& scene)
 			{
 				Vector<entity::Entity> entities;
 				for (const auto& it : scene.mesh_render.entity_to_data)
@@ -120,63 +120,63 @@ namespace lambda
 				scene.mesh_render.default_normal = nullptr;
 				scene.mesh_render.default_dmra = nullptr;
 			}
-			void setMesh(const entity::Entity& entity, asset::VioletMeshHandle mesh, world::SceneData& scene)
+			void setMesh(const entity::Entity& entity, asset::VioletMeshHandle mesh, scene::Scene& scene)
 			{
 				scene.mesh_render.get(entity).mesh = mesh;
 			}
-			void setSubMesh(const entity::Entity& entity, const uint32_t& sub_mesh, world::SceneData& scene)
+			void setSubMesh(const entity::Entity& entity, const uint32_t& sub_mesh, scene::Scene& scene)
 			{
 				scene.mesh_render.get(entity).sub_mesh = sub_mesh;
 			}
-			void setAlbedoTexture(const entity::Entity& entity, asset::VioletTextureHandle texture, world::SceneData& scene)
+			void setAlbedoTexture(const entity::Entity& entity, asset::VioletTextureHandle texture, scene::Scene& scene)
 			{
 				scene.mesh_render.get(entity).albedo_texture = texture ? texture : scene.mesh_render.default_albedo;
 			}
-			void setNormalTexture(const entity::Entity& entity, asset::VioletTextureHandle texture, world::SceneData& scene)
+			void setNormalTexture(const entity::Entity& entity, asset::VioletTextureHandle texture, scene::Scene& scene)
 			{
 				scene.mesh_render.get(entity).normal_texture = texture ? texture : scene.mesh_render.default_normal;
 			}
-			void setMetallicness(const entity::Entity& entity, const float& metallicness, world::SceneData& scene)
+			void setMetallicness(const entity::Entity& entity, const float& metallicness, scene::Scene& scene)
 			{
 				scene.mesh_render.get(entity).metallicness = metallicness;
 			}
-			void setRoughness(const entity::Entity& entity, const float& roughness, world::SceneData& scene)
+			void setRoughness(const entity::Entity& entity, const float& roughness, scene::Scene& scene)
 			{
 				scene.mesh_render.get(entity).roughness = roughness;
 			}
-			void setDMRATexture(const entity::Entity& entity, asset::VioletTextureHandle texture, world::SceneData& scene)
+			void setDMRATexture(const entity::Entity& entity, asset::VioletTextureHandle texture, scene::Scene& scene)
 			{
 				scene.mesh_render.get(entity).dmra_texture = texture ? texture : scene.mesh_render.default_dmra;
 			}
-			asset::VioletMeshHandle getMesh(const entity::Entity& entity, world::SceneData& scene)
+			asset::VioletMeshHandle getMesh(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.mesh_render.get(entity).mesh;
 			}
-			uint32_t getSubMesh(const entity::Entity& entity, world::SceneData& scene)
+			uint32_t getSubMesh(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.mesh_render.get(entity).sub_mesh;
 			}
-			asset::VioletTextureHandle getAlbedoTexture(const entity::Entity& entity, world::SceneData& scene)
+			asset::VioletTextureHandle getAlbedoTexture(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.mesh_render.get(entity).albedo_texture;
 			}
-			asset::VioletTextureHandle getNormalTexture(const entity::Entity& entity, world::SceneData& scene)
+			asset::VioletTextureHandle getNormalTexture(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.mesh_render.get(entity).normal_texture;
 			}
-			asset::VioletTextureHandle getDMRATexture(const entity::Entity& entity, world::SceneData& scene)
+			asset::VioletTextureHandle getDMRATexture(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.mesh_render.get(entity).dmra_texture;
 			}
-			float getMetallicness(const entity::Entity& entity, world::SceneData& scene)
+			float getMetallicness(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.mesh_render.get(entity).metallicness;
 			}
-			float getRoughness(const entity::Entity& entity, world::SceneData& scene)
+			float getRoughness(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.mesh_render.get(entity).roughness;
 			}
-			void attachMesh(const entity::Entity& entity, asset::VioletMeshHandle mesh, world::SceneData& scene)
+			void attachMesh(const entity::Entity& entity, asset::VioletMeshHandle mesh, scene::Scene& scene)
 			{
 				// Get all textures.
 				Vector<asset::VioletTextureHandle> textures = mesh->getAttachedTextures();
@@ -244,23 +244,23 @@ namespace lambda
 					}
 				}
 			}
-			bool getVisible(const entity::Entity& entity, world::SceneData& scene)
+			bool getVisible(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.mesh_render.get(entity).visible;
 			}
-			void setVisible(const entity::Entity& entity, const bool& visible, world::SceneData& scene)
+			void setVisible(const entity::Entity& entity, const bool& visible, scene::Scene& scene)
 			{
 				scene.mesh_render.get(entity).visible = visible;
 			}
-			bool getCastShadows(const entity::Entity& entity, world::SceneData& scene)
+			bool getCastShadows(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.mesh_render.get(entity).cast_shadows;
 			}
-			void setCastShadows(const entity::Entity& entity, const bool& cast_shadows, world::SceneData& scene)
+			void setCastShadows(const entity::Entity& entity, const bool& cast_shadows, scene::Scene& scene)
 			{
 				scene.mesh_render.get(entity).cast_shadows = cast_shadows;
 			}
-			void makeStatic(const entity::Entity& entity, world::SceneData& scene)
+			void makeStatic(const entity::Entity& entity, scene::Scene& scene)
 			{
 				for (const auto& data : scene.mesh_render.static_renderables)
 					if (data->entity == entity)
@@ -270,20 +270,20 @@ namespace lambda
 				if (it != scene.mesh_render.dynamic_renderables.end())
 					scene.mesh_render.dynamic_renderables.erase(it);
 
-				const MeshRenderSystem::Data& data = scene.mesh_render.get(entity);
+				const Data& data = scene.mesh_render.get(entity);
 				if (!data.mesh)
 					return;
 
 
 				utilities::Renderable* renderable = foundation::Memory::construct<utilities::Renderable>();
-				renderable->entity         = entity;
-				renderable->model_matrix   = TransformSystem::getWorld(entity, scene);
-				renderable->mesh           = data.mesh;
-				renderable->sub_mesh       = data.sub_mesh;
+				renderable->entity = entity;
+				renderable->model_matrix = TransformSystem::getWorld(entity, scene);
+				renderable->mesh = data.mesh;
+				renderable->sub_mesh = data.sub_mesh;
 				renderable->albedo_texture = data.albedo_texture;
 				renderable->normal_texture = data.normal_texture;
-				renderable->dmra_texture   = data.dmra_texture;
-				renderable->metallicness   = data.metallicness;
+				renderable->dmra_texture = data.dmra_texture;
+				renderable->metallicness = data.metallicness;
 
 				const asset::SubMesh& sub_mesh = renderable->mesh->getSubMeshes().at(renderable->sub_mesh);
 
@@ -309,7 +309,7 @@ namespace lambda
 				);
 				scene.mesh_render.static_renderables.push_back(renderable);
 			}
-			void makeDynamic(const entity::Entity& entity, world::SceneData& scene)
+			void makeDynamic(const entity::Entity& entity, scene::Scene& scene)
 			{
 				for (const auto& data : scene.mesh_render.dynamic_renderables)
 					if (data == entity)
@@ -330,13 +330,13 @@ namespace lambda
 				scene.mesh_render.dynamic_renderables.push_back(entity);
 			}
 
-			void createRenderList(utilities::Culler& culler, const utilities::Frustum& frustum, world::SceneData& scene)
+			void createRenderList(utilities::Culler& culler, const utilities::Frustum& frustum, scene::Scene& scene)
 			{
 				culler.cullStatics(scene.mesh_render.static_zone_manager, frustum);
 				culler.cullDynamics(scene, frustum);
 			}
 
-			void createSortedRenderList(utilities::LinkedNode* statics, utilities::LinkedNode* dynamics, Vector<utilities::Renderable*>& opaque, Vector<utilities::Renderable*>& alpha, world::SceneData& scene)
+			void createSortedRenderList(utilities::LinkedNode* statics, utilities::LinkedNode* dynamics, Vector<utilities::Renderable*>& opaque, Vector<utilities::Renderable*>& alpha, scene::Scene& scene)
 			{
 				for (utilities::LinkedNode* node = statics->next; node != nullptr; node = node->next)
 				{
@@ -367,7 +367,7 @@ namespace lambda
 			{
 				bool larger = false;
 				Map<size_t, float> entity_to_depth;
-				inline bool operator() (const MeshRenderSystem::Data* mesh1, const MeshRenderSystem::Data* mesh2)
+				inline bool operator() (const Data* mesh1, const Data* mesh2)
 				{
 					if (larger)
 						return entity_to_depth.at(mesh1->entity) > entity_to_depth.at(mesh2->entity);
@@ -376,7 +376,7 @@ namespace lambda
 				}
 			};
 
-			void renderAll(utilities::Culler& culler, const utilities::Frustum& frustum, world::SceneData& scene, bool is_rh)
+			void renderAll(utilities::Culler& culler, const utilities::Frustum& frustum, scene::Scene& scene, bool is_rh)
 			{
 				createRenderList(culler, frustum, scene);
 
@@ -385,14 +385,14 @@ namespace lambda
 
 				renderAll(&statics, &dynamics, scene, is_rh);
 			}
-			void renderAll(utilities::LinkedNode* statics, utilities::LinkedNode* dynamics, world::SceneData& scene, bool is_rh)
+			void renderAll(utilities::LinkedNode* statics, utilities::LinkedNode* dynamics, scene::Scene& scene, bool is_rh)
 			{
 				Vector<utilities::Renderable*> opaque;
 				Vector<utilities::Renderable*> alpha;
 				createSortedRenderList(statics, dynamics, opaque, alpha, scene);
 				renderAll(opaque, alpha, scene, is_rh);
 			}
-			void renderAll(const Vector<utilities::Renderable*>& opaque, const Vector<utilities::Renderable*>& alpha, world::SceneData& scene, bool is_rh)
+			void renderAll(const Vector<utilities::Renderable*>& opaque, const Vector<utilities::Renderable*>& alpha, scene::Scene& scene, bool is_rh)
 			{
 				// -------------------------RENDER-STATIC-OPAQUE-------------------------
 				scene.renderer->setBlendState(platform::BlendState::Default());
@@ -403,10 +403,10 @@ namespace lambda
 
 					scene.renderer->setTexture(renderable->albedo_texture, 0);
 					scene.renderer->setTexture(renderable->normal_texture, 1);
-					scene.renderer->setTexture(renderable->dmra_texture,   2);
+					scene.renderer->setTexture(renderable->dmra_texture, 2);
 
-					scene.renderer->setShaderVariable(platform::ShaderVariable(Name("metallic_roughness"), glm::vec2(renderable->metallicness, renderable->roughness)));
-					scene.renderer->setShaderVariable(platform::ShaderVariable(Name("model_matrix"), renderable->model_matrix));
+					scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("metallic_roughness"), glm::vec2(renderable->metallicness, renderable->roughness)));
+					scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("model_matrix"), renderable->model_matrix));
 
 					auto sub_mesh = renderable->mesh->getSubMeshes().at(renderable->sub_mesh);
 					// TODO (Hilze): Implement.
@@ -429,12 +429,12 @@ namespace lambda
 				for (const utilities::Renderable* renderable : alpha)
 				{
 					scene.renderer->setMesh(renderable->mesh);
-					scene.renderer->setShaderVariable(platform::ShaderVariable(Name("metallic_roughness"), glm::vec2(renderable->metallicness, renderable->roughness)));
+					scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("metallic_roughness"), glm::vec2(renderable->metallicness, renderable->roughness)));
 					scene.renderer->setSubMesh(renderable->sub_mesh);
 					scene.renderer->setTexture(renderable->albedo_texture, 0);
 					scene.renderer->setTexture(renderable->normal_texture, 1);
-					scene.renderer->setTexture(renderable->dmra_texture,   2);
-					scene.renderer->setShaderVariable(platform::ShaderVariable(Name("model_matrix"), renderable->model_matrix));
+					scene.renderer->setTexture(renderable->dmra_texture, 2);
+					scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("model_matrix"), renderable->model_matrix));
 
 					auto sub_mesh = renderable->mesh->getSubMeshes().at(renderable->sub_mesh);
 					// TODO (Hilze): Implement.
@@ -474,7 +474,7 @@ namespace lambda
 
 				d.albedo_texture = default_albedo;
 				d.normal_texture = default_normal;
-				d.dmra_texture   = default_dmra;
+				d.dmra_texture = default_dmra;
 
 				return d;
 			}
@@ -533,7 +533,7 @@ namespace lambda
 			}
 		}
 
-		MeshRenderComponent::MeshRenderComponent(const entity::Entity& entity, world::SceneData& scene) :
+		MeshRenderComponent::MeshRenderComponent(const entity::Entity& entity, scene::Scene& scene) :
 			IComponent(entity), scene_(&scene)
 		{
 		}

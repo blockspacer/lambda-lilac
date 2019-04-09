@@ -7,9 +7,9 @@
 
 namespace lambda
 {
-	namespace world
+	namespace scene
 	{
-		class IWorld;
+		struct Scene;
 	}
 
   namespace gui
@@ -21,8 +21,10 @@ namespace lambda
 			: public ultralight::GPUDriver
 		{
 		public:
-			MyGPUDriver(world::IWorld* world);
+			MyGPUDriver(scene::Scene& scene);
 			virtual ~MyGPUDriver();
+
+			void setScene(scene::Scene& scene);
 
 			virtual void BeginSynchronize() override;
 
@@ -77,7 +79,7 @@ namespace lambda
 			asset::VioletTextureHandle GetRenderBuffer(uint32_t render_target_id);
 
 		private:
-			world::IWorld* world_;
+			scene::Scene* scene_;
 
 			UnorderedMap<uint32_t, asset::VioletTextureHandle> textures_;
 			UnorderedMap<uint32_t, asset::VioletTextureHandle> render_targets_;

@@ -72,7 +72,7 @@ namespace lambda
 				return quaternion;
 			}
 
-			void cleanIfDirty(Data& data, world::SceneData& scene)
+			void cleanIfDirty(Data& data, scene::Scene& scene)
 			{
 				if (data.dirty)
 				{
@@ -95,7 +95,7 @@ namespace lambda
 				}
 			}
 
-			void makeDirtyRecursive(Data& data, world::SceneData& scene)
+			void makeDirtyRecursive(Data& data, scene::Scene& scene)
 			{
 				data.dirty = true;
 				for (const entity::Entity& child : data.children)
@@ -104,7 +104,7 @@ namespace lambda
 				}
 			}
 
-			bool isChildOf(const entity::Entity& parent, const entity::Entity& child, world::SceneData& scene)
+			bool isChildOf(const entity::Entity& parent, const entity::Entity& child, scene::Scene& scene)
 			{
 				for (const entity::Entity& ch : scene.transform.get(parent).children)
 					if (ch == child || isChildOf(ch, child, scene))
@@ -113,24 +113,24 @@ namespace lambda
 				return false;
 			}
 
-			TransformComponent addComponent(const entity::Entity& entity, world::SceneData& scene)
+			TransformComponent addComponent(const entity::Entity& entity, scene::Scene& scene)
 			{
 
 				scene.transform.add(entity);
 				return TransformComponent(entity, scene);
 			}
 
-			TransformComponent getComponent(const entity::Entity& entity, world::SceneData& scene)
+			TransformComponent getComponent(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return TransformComponent(entity, scene);
 			}
 
-			bool hasComponent(const entity::Entity& entity, world::SceneData& scene)
+			bool hasComponent(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.transform.has(entity);
 			}
 
-			void removeComponent(const entity::Entity& entity, world::SceneData& scene)
+			void removeComponent(const entity::Entity& entity, scene::Scene& scene)
 			{
 				/*for (entity::Entity child : getChildren(entity))
 					unsetParent(child);*/
@@ -138,7 +138,7 @@ namespace lambda
 				scene.transform.remove(entity);
 			}
 
-			void collectGarbage(world::SceneData & scene)
+			void collectGarbage(scene::Scene & scene)
 			{
 				if (!scene.transform.marked_for_delete.empty())
 				{
@@ -158,7 +158,7 @@ namespace lambda
 				}
 			}
 
-			void deinitialize(world::SceneData & scene)
+			void deinitialize(scene::Scene & scene)
 			{
 				Vector<entity::Entity> entities;
 				for (const auto& it : scene.transform.entity_to_data)
@@ -169,37 +169,37 @@ namespace lambda
 				collectGarbage(scene);
 			}
 
-			glm::mat4 getLocal(const entity::Entity& entity, world::SceneData& scene)
+			glm::mat4 getLocal(const entity::Entity& entity, scene::Scene& scene)
 			{
 				Data& data = scene.transform.get(entity);
 				cleanIfDirty(data, scene);
 				return data.local;
 			}
 
-			glm::mat4 getWorld(const entity::Entity& entity, world::SceneData& scene)
+			glm::mat4 getWorld(const entity::Entity& entity, scene::Scene& scene)
 			{
 				Data& data = scene.transform.get(entity);
 				cleanIfDirty(data, scene);
 				return data.world;
 			}
 
-			glm::mat4 getInvWorld(const entity::Entity& entity, world::SceneData& scene)
+			glm::mat4 getInvWorld(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return glm::inverse(getWorld(entity, scene));
 			}
 
-			bool hasParent(const entity::Entity& entity, world::SceneData& scene)
+			bool hasParent(const entity::Entity& entity, scene::Scene& scene)
 			{
 				const Data& data = scene.transform.get(entity);
 				return data.getParent() != 0u && data.getParent() != entity;
 			}
 
-			entity::Entity getParent(const entity::Entity& entity, world::SceneData& scene)
+			entity::Entity getParent(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.transform.get(entity).getParent();
 			}
 
-			void setParent(const entity::Entity& entity, const entity::Entity& parent, world::SceneData& scene)
+			void setParent(const entity::Entity& entity, const entity::Entity& parent, scene::Scene& scene)
 			{
 				// You cannot parent yourself to yourself
 				// You cannot parent yourself to something that is your child.
@@ -230,12 +230,12 @@ namespace lambda
 				}
 			}
 
-			void unsetParent(const entity::Entity& entity, world::SceneData& scene)
+			void unsetParent(const entity::Entity& entity, scene::Scene& scene)
 			{
 				setParent(entity, kRoot, scene);
 			}
 
-			Vector<entity::Entity> getChildren(const entity::Entity& entity, world::SceneData& scene)
+			Vector<entity::Entity> getChildren(const entity::Entity& entity, scene::Scene& scene)
 			{
 				Vector<entity::Entity> children;
 				for (const auto& child : scene.transform.get(entity).children)
@@ -243,69 +243,69 @@ namespace lambda
 				return children;
 			}
 
-			void setLocalTranslation(const entity::Entity& entity, const glm::vec3& translation, world::SceneData& scene)
+			void setLocalTranslation(const entity::Entity& entity, const glm::vec3& translation, scene::Scene& scene)
 			{
 				Data& data = scene.transform.get(entity);
 				data.translation = translation;
 				makeDirtyRecursive(data, scene);
 			}
 
-			void setLocalRotation(const entity::Entity& entity, const glm::quat& rotation, world::SceneData& scene)
+			void setLocalRotation(const entity::Entity& entity, const glm::quat& rotation, scene::Scene& scene)
 			{
 				Data& data = scene.transform.get(entity);
 				data.rotation = rotation;
 				makeDirtyRecursive(data, scene);
 			}
 
-			void setLocalRotation(const entity::Entity& entity, const glm::vec3& euler, world::SceneData& scene)
+			void setLocalRotation(const entity::Entity& entity, const glm::vec3& euler, scene::Scene& scene)
 			{
 				setLocalRotation(entity, glm::quat(euler), scene);
 			}
 
-			void setLocalScale(const entity::Entity& entity, const glm::vec3& scale, world::SceneData& scene)
+			void setLocalScale(const entity::Entity& entity, const glm::vec3& scale, scene::Scene& scene)
 			{
 				Data& data = scene.transform.get(entity);
 				data.scale = scale;
 				makeDirtyRecursive(data, scene);
 			}
 
-			glm::vec3 getLocalTranslation(const entity::Entity& entity, world::SceneData& scene)
+			glm::vec3 getLocalTranslation(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.transform.get(entity).translation;
 			}
 
-			glm::quat getLocalRotation(const entity::Entity& entity, world::SceneData& scene)
+			glm::quat getLocalRotation(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.transform.get(entity).rotation;
 			}
 
-			glm::vec3 getLocalScale(const entity::Entity& entity, world::SceneData& scene)
+			glm::vec3 getLocalScale(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.transform.get(entity).scale;
 			}
 
-			void moveLocal(const entity::Entity& entity, const glm::vec3& delta, world::SceneData& scene)
+			void moveLocal(const entity::Entity& entity, const glm::vec3& delta, scene::Scene& scene)
 			{
 				Data& data = scene.transform.get(entity);
 				data.translation += delta;
 				makeDirtyRecursive(data, scene);
 			}
 
-			void rotateLocal(const entity::Entity& entity, const glm::quat& delta, world::SceneData& scene)
+			void rotateLocal(const entity::Entity& entity, const glm::quat& delta, scene::Scene& scene)
 			{
 				Data& data = scene.transform.get(entity);
 				data.rotation += delta; // TODO (Hilze): Validate this.
 				makeDirtyRecursive(data, scene);
 			}
 
-			void scaleLocal(const entity::Entity& entity, const glm::vec3& delta, world::SceneData& scene)
+			void scaleLocal(const entity::Entity& entity, const glm::vec3& delta, scene::Scene& scene)
 			{
 				Data& data = scene.transform.get(entity);
 				data.scale *= delta;
 				makeDirtyRecursive(data, scene);
 			}
 
-			void setWorldTranslation(const entity::Entity& entity, const glm::vec3& translation, world::SceneData& scene)
+			void setWorldTranslation(const entity::Entity& entity, const glm::vec3& translation, scene::Scene& scene)
 			{
 				const Data& data = scene.transform.get(entity);
 				if (0u == data.getParent() || data.getParent() == entity)
@@ -320,7 +320,7 @@ namespace lambda
 				);
 			}
 
-			void setWorldRotation(const entity::Entity& entity, const glm::quat& rotation, world::SceneData& scene)
+			void setWorldRotation(const entity::Entity& entity, const glm::quat& rotation, scene::Scene& scene)
 			{
 				const Data& data = scene.transform.get(entity);
 				if (0u == data.getParent() || data.getParent() == entity)
@@ -336,12 +336,12 @@ namespace lambda
 				setLocalRotation(entity, glm::inverse(parent_rotation) * rotation, scene);
 			}
 
-			void setWorldRotation(const entity::Entity& entity, const glm::vec3& euler, world::SceneData& scene)
+			void setWorldRotation(const entity::Entity& entity, const glm::vec3& euler, scene::Scene& scene)
 			{
 				setWorldRotation(entity, glm::quat(euler), scene);
 			}
 
-			void setWorldScale(const entity::Entity& entity, const glm::vec3& scale, world::SceneData& scene)
+			void setWorldScale(const entity::Entity& entity, const glm::vec3& scale, scene::Scene& scene)
 			{
 				const Data& data = scene.transform.get(entity);
 				if (0u == data.getParent() || data.getParent() == entity)
@@ -356,7 +356,7 @@ namespace lambda
 				);
 			}
 
-			glm::vec3 getWorldTranslation(const entity::Entity& entity, world::SceneData& scene)
+			glm::vec3 getWorldTranslation(const entity::Entity& entity, scene::Scene& scene)
 			{
 				glm::vec3 scale;
 				glm::vec3 translation;
@@ -366,7 +366,7 @@ namespace lambda
 				return translation;
 			}
 
-			glm::quat getWorldRotation(const entity::Entity& entity, world::SceneData& scene)
+			glm::quat getWorldRotation(const entity::Entity& entity, scene::Scene& scene)
 			{
 				const Data& data = scene.transform.get(entity);
 				if (data.getParent() != 0u && entity != data.getParent())
@@ -375,7 +375,7 @@ namespace lambda
 					return data.rotation;
 			}
 
-			glm::vec3 getWorldScale(const entity::Entity& entity, world::SceneData& scene)
+			glm::vec3 getWorldScale(const entity::Entity& entity, scene::Scene& scene)
 			{
 				const Data& data = scene.transform.get(entity);
 				if (data.getParent() != 0u && entity != data.getParent())
@@ -384,98 +384,98 @@ namespace lambda
 					return data.scale;
 			}
 
-			void moveWorld(const entity::Entity& entity, const glm::vec3& delta, world::SceneData& scene)
+			void moveWorld(const entity::Entity& entity, const glm::vec3& delta, scene::Scene& scene)
 			{
 				setWorldTranslation(entity, getWorldTranslation(entity, scene) + delta, scene);
 			}
 
-			void rotateWorld(const entity::Entity& entity, const glm::quat& delta, world::SceneData& scene)
+			void rotateWorld(const entity::Entity& entity, const glm::quat& delta, scene::Scene& scene)
 			{
 				setWorldRotation(entity, getWorldRotation(entity, scene) * delta, scene);
 			}
 
-			void scaleWorld(const entity::Entity& entity, const glm::vec3& delta, world::SceneData& scene)
+			void scaleWorld(const entity::Entity& entity, const glm::vec3& delta, scene::Scene& scene)
 			{
 				setWorldScale(entity, getWorldScale(entity, scene) * delta, scene);
 			}
 
-			glm::vec3 transformPoint(const entity::Entity& entity, const glm::vec3& point, world::SceneData& scene)
+			glm::vec3 transformPoint(const entity::Entity& entity, const glm::vec3& point, scene::Scene& scene)
 			{
 				return getWorld(entity, scene) * glm::vec4(point, 1.0f);
 			}
 
-			glm::vec3 transformVector(const entity::Entity& entity, const glm::vec3& vector, world::SceneData& scene)
+			glm::vec3 transformVector(const entity::Entity& entity, const glm::vec3& vector, scene::Scene& scene)
 			{
 				return getWorld(entity, scene) * glm::vec4(vector, 0.0f);
 			}
 
-			glm::vec3 transformDirection(const entity::Entity& entity, const glm::vec3& vector, world::SceneData& scene)
+			glm::vec3 transformDirection(const entity::Entity& entity, const glm::vec3& vector, scene::Scene& scene)
 			{
 				return getWorldRotation(entity, scene) * vector;
 			}
 
-			glm::vec3 transformLocalPoint(const entity::Entity& entity, const glm::vec3& point, world::SceneData& scene)
+			glm::vec3 transformLocalPoint(const entity::Entity& entity, const glm::vec3& point, scene::Scene& scene)
 			{
 				return getLocal(entity, scene) * glm::vec4(point, 0.0f);
 			}
 
-			glm::vec3 transformLocalVector(const entity::Entity& entity, const glm::vec3& vector, world::SceneData& scene)
+			glm::vec3 transformLocalVector(const entity::Entity& entity, const glm::vec3& vector, scene::Scene& scene)
 			{
 				return getLocal(entity, scene) * glm::vec4(vector, 0.0f);
 			}
 
-			glm::vec3 transformLocalDirection(const entity::Entity& entity, const glm::vec3& vector, world::SceneData& scene)
+			glm::vec3 transformLocalDirection(const entity::Entity& entity, const glm::vec3& vector, scene::Scene& scene)
 			{
 				return getLocalRotation(entity, scene) * vector;
 			}
 
-			glm::vec3 inverseTransformPoint(const entity::Entity& entity, const glm::vec3& point, world::SceneData& scene)
+			glm::vec3 inverseTransformPoint(const entity::Entity& entity, const glm::vec3& point, scene::Scene& scene)
 			{
 				return getInvWorld(entity, scene) * glm::vec4(point, 1.0f);
 			}
 
-			glm::vec3 inverseTransformVector(const entity::Entity& entity, const glm::vec3& vector, world::SceneData& scene)
+			glm::vec3 inverseTransformVector(const entity::Entity& entity, const glm::vec3& vector, scene::Scene& scene)
 			{
 				return getInvWorld(entity, scene) * glm::vec4(vector, 0.0f);
 			}
 
-			glm::vec3 getWorldForward(const entity::Entity& entity, world::SceneData& scene)
+			glm::vec3 getWorldForward(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return ((glm::mat3x3)getWorld(entity, scene)) * glm::vec3(0.0f, 0.0f, -1.0f);
 			}
 
-			glm::vec3 getWorldUp(const entity::Entity& entity, world::SceneData& scene)
+			glm::vec3 getWorldUp(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return ((glm::mat3x3)getWorld(entity, scene)) * glm::vec3(0.0f, 1.0f, 0.0f);
 			}
 
-			glm::vec3 getWorldRight(const entity::Entity& entity, world::SceneData& scene)
+			glm::vec3 getWorldRight(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return ((glm::mat3x3)getWorld(entity, scene)) * glm::vec3(1.0f, 0.0f, 0.0f);
 			}
 
-			glm::vec3 getLocalForward(const entity::Entity& entity, world::SceneData& scene)
+			glm::vec3 getLocalForward(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return ((glm::mat3x3)getLocal(entity, scene)) * glm::vec3(0.0f, 0.0f, -1.0f);
 			}
 
-			glm::vec3 getLocalUp(const entity::Entity& entity, world::SceneData& scene)
+			glm::vec3 getLocalUp(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return ((glm::mat3x3)getLocal(entity, scene)) * glm::vec3(0.0f, 1.0f, 0.0f);
 			}
 
-			glm::vec3 getLocalRight(const entity::Entity& entity, world::SceneData& scene)
+			glm::vec3 getLocalRight(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return ((glm::mat3x3)getLocal(entity, scene)) * glm::vec3(0.0f, 0.0f, -1.0f);
 			}
 
-			void lookAt(const entity::Entity& entity, const glm::vec3& target, glm::vec3 up, world::SceneData& scene)
+			void lookAt(const entity::Entity& entity, const glm::vec3& target, glm::vec3 up, scene::Scene& scene)
 			{
 				const glm::vec3 direction = glm::normalize(target - getWorldTranslation(entity, scene));
 				setLocalRotation(entity, TransformSystem::lookRotation(direction, up), scene);
 			}
 
-			void lookAtLocal(const entity::Entity& entity, const glm::vec3& target, glm::vec3 up, world::SceneData& scene)
+			void lookAtLocal(const entity::Entity& entity, const glm::vec3& target, glm::vec3 up, scene::Scene& scene)
 			{
 				setLocalRotation(entity, glm::quat_cast(glm::lookAt(target, getLocalTranslation(entity, scene), up)), scene);
 			}
@@ -574,7 +574,7 @@ namespace lambda
 
 
 
-		TransformComponent::TransformComponent(const entity::Entity& entity, world::SceneData& scene) :
+		TransformComponent::TransformComponent(const entity::Entity& entity, scene::Scene& scene) :
 			IComponent(entity), scene_(&scene)
 		{
 		}

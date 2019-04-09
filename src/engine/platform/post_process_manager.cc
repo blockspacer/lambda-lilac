@@ -5,37 +5,14 @@ namespace lambda
 {
   namespace platform
   {
-    ///////////////////////////////////////////////////////////////////////////
-    void RenderPassManager::initialize(world::IWorld* world)
-    {
-      world_ = world;
-    }
-    
-    ///////////////////////////////////////////////////////////////////////////
-    void RenderPassManager::executePre()
-    {
-      for (const PriorityShader& pre_pass : pre_passes_)
-      {
-        if (!pre_pass.enabled)
-          continue;
-
-        world_->getRenderer()->setShader(pre_pass.shader);
-      }
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    void RenderPassManager::executePost()
-    {
-    }
-
-
-
-
-
-
-
-
-
+		////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		void PostProcessManager::operator=(const PostProcessManager& other)
+		{
+			last_size_    = other.last_size_;
+			final_target_ = other.final_target_;
+			targets_      = other.targets_;
+			passes_       = other.passes_;
+		}
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void PostProcessManager::addTarget(const RenderTarget& target)

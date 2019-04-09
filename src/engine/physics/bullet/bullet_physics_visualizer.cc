@@ -2,18 +2,19 @@
 #include "platform/debug_renderer.h"
 #include <utils/console.h>
 #include <interfaces/iphysics.h>
+#include <platform/scene.h>
 
 namespace lambda
 {
   namespace physics
   {
-    ///////////////////////////////////////////////////////////////////////////
-    void BulletPhysicVisualizer::initialize(platform::DebugRenderer* debug_renderer)
-    {
-      debug_renderer_ = debug_renderer;
-    }
+		///////////////////////////////////////////////////////////////////////////
+		void BulletPhysicVisualizer::setScene(scene::Scene& scene)
+		{
+			debug_renderer_ = &scene.debug_renderer;
+		}
 
-    ///////////////////////////////////////////////////////////////////////////
+		///////////////////////////////////////////////////////////////////////////
     void BulletPhysicVisualizer::drawLine(
       const btVector3& from, 
       const btVector3& to, 

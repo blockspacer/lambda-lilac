@@ -1,5 +1,4 @@
 #include <systems/lod_system.h>
-#include <interfaces/iworld.h>
 #include <platform/scene.h>
 
 #include <algorithm>
@@ -27,7 +26,7 @@ namespace lambda
 
 		namespace LODSystem
 		{
-			LODComponent LODSystem::addComponent(const entity::Entity& entity, world::SceneData& scene)
+			LODComponent LODSystem::addComponent(const entity::Entity& entity, scene::Scene& scene)
 			{
 				if (!TransformSystem::hasComponent(entity, scene))
 					TransformSystem::addComponent(entity, scene);
@@ -43,19 +42,19 @@ namespace lambda
 
 				return LODComponent(entity, scene);
 			}
-			LODComponent getComponent(const entity::Entity& entity, world::SceneData& scene)
+			LODComponent getComponent(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return LODComponent(entity, scene);
 			}
-			bool hasComponent(const entity::Entity& entity, world::SceneData& scene)
+			bool hasComponent(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.lod.has(entity);
 			}
-			void removeComponent(const entity::Entity& entity, world::SceneData& scene)
+			void removeComponent(const entity::Entity& entity, scene::Scene& scene)
 			{
 				scene.lod.remove(entity);
 			}
-			void collectGarbage(world::SceneData& scene)
+			void collectGarbage(scene::Scene& scene)
 			{
 				if (!scene.lod.marked_for_delete.empty())
 				{
@@ -74,7 +73,7 @@ namespace lambda
 					scene.lod.marked_for_delete.clear();
 				}
 			}
-			void deinitialize(world::SceneData& scene)
+			void deinitialize(scene::Scene& scene)
 			{
 				Vector<entity::Entity> entities;
 				for (const auto& it : scene.lod.entity_to_data)
@@ -84,22 +83,51 @@ namespace lambda
 					scene.lod.remove(entity);
 				collectGarbage(scene);
 			}
-			void setBaseLOD(const entity::Entity& entity, const LOD& lod, world::SceneData& scene)
+			void update(const float& delta_time, scene::Scene& scene)
+			{
+				// Do not update the LODs every frame. Just not worth it.
+				scene.lod.time += delta_time;
+				if (scene.lod.time < scene.lod.update_frequency)
+					return;
+
+				scene.lod.time -= scene.lod.update_frequency;
+
+				// Update LODs.
+				glm::vec3 camera_position = components::TransformSystem::getWorldTranslation(scene.camera.main_camera, scene);
+
+				for (auto& data : scene.lod.data)
+				{
+					auto* chosen_lod = &data.base_lod;
+					float distance = glm::length(components::TransformSystem::getWorldTranslation(data.entity, scene) - camera_position);
+
+					for (auto& lod : data.lods)
+					{
+						if (distance > lod.getDistance())
+						{
+							chosen_lod = &lod;
+							break;
+						}
+					}
+
+					components::MeshRenderSystem::setMesh(data.entity, chosen_lod->getMesh(), scene);
+				}
+			}
+			void setBaseLOD(const entity::Entity& entity, const LOD& lod, scene::Scene& scene)
 			{
 				scene.lod.get(entity).base_lod = lod;
 			}
-			void addLOD(const entity::Entity& entity, const LOD& lod, world::SceneData& scene)
+			void addLOD(const entity::Entity& entity, const LOD& lod, scene::Scene& scene)
 			{
 				auto& data = scene.lod.get(entity);
 				data.lods.push_back(lod);
 
 				std::sort(data.lods.begin(), data.lods.end(), std::greater<LOD>());
 			}
-			LOD getBaseLOD(const entity::Entity& entity, world::SceneData& scene)
+			LOD getBaseLOD(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.lod.get(entity).base_lod;
 			}
-			Vector<LOD> getLODs(const entity::Entity& entity, world::SceneData& scene)
+			Vector<LOD> getLODs(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.lod.get(entity).lods;
 			}
@@ -169,7 +197,7 @@ namespace lambda
 			}
 		}
 
-		LODComponent::LODComponent(const entity::Entity& entity, world::SceneData& scene) :
+		LODComponent::LODComponent(const entity::Entity& entity, scene::Scene& scene) :
 			IComponent(entity), scene_(&scene)
 		{
 		}

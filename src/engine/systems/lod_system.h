@@ -35,7 +35,7 @@ namespace lambda
 		class LODComponent : public IComponent
 		{
 		public:
-			LODComponent(const entity::Entity& entity, world::SceneData& scene);
+			LODComponent(const entity::Entity& entity, scene::Scene& scene);
 			LODComponent(const LODComponent& other);
 			LODComponent();
 
@@ -45,7 +45,7 @@ namespace lambda
 			Vector<LOD> getLODs() const;
 
 		private:
-			world::SceneData* scene_;
+			scene::Scene* scene_;
 		};
 
 		namespace LODSystem
@@ -79,18 +79,19 @@ namespace lambda
 				float update_frequency = 1.0f / 30.0f;
 			};
 
-			LODComponent addComponent(const entity::Entity& entity, world::SceneData& scene);
-			LODComponent getComponent(const entity::Entity& entity, world::SceneData& scene);
-			bool hasComponent(const entity::Entity& entity, world::SceneData& scene);
-			void removeComponent(const entity::Entity& entity, world::SceneData& scene);
+			LODComponent addComponent(const entity::Entity& entity, scene::Scene& scene);
+			LODComponent getComponent(const entity::Entity& entity, scene::Scene& scene);
+			bool hasComponent(const entity::Entity& entity, scene::Scene& scene);
+			void removeComponent(const entity::Entity& entity, scene::Scene& scene);
 			
-			void  collectGarbage(world::SceneData& scene);
-			void  deinitialize(world::SceneData& scene);
+			void collectGarbage(scene::Scene& scene);
+			void deinitialize(scene::Scene& scene);
+			void update(const float& delta_time, scene::Scene& scene);
 
-			void setBaseLOD(const entity::Entity& entity, const LOD& lod, world::SceneData& scene);
-			void addLOD(const entity::Entity& entity, const LOD& lod, world::SceneData& scene);
-			LOD getBaseLOD(const entity::Entity& entity, world::SceneData& scene);
-			Vector<LOD> getLODs(const entity::Entity& entity, world::SceneData& scene);
+			void setBaseLOD(const entity::Entity& entity, const LOD& lod, scene::Scene& scene);
+			void addLOD(const entity::Entity& entity, const LOD& lod, scene::Scene& scene);
+			LOD getBaseLOD(const entity::Entity& entity, scene::Scene& scene);
+			Vector<LOD> getLODs(const entity::Entity& entity, scene::Scene& scene);
 
 		}
 	}

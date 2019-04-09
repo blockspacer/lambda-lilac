@@ -16,7 +16,7 @@ namespace lambda
 		class CameraComponent : public IComponent
 		{
 		public:
-			CameraComponent(const entity::Entity& entity, world::SceneData& scene);
+			CameraComponent(const entity::Entity& entity, scene::Scene& scene);
 			CameraComponent(const CameraComponent& other);
 			CameraComponent();
 
@@ -32,7 +32,7 @@ namespace lambda
 			Vector<platform::ShaderPass> getShaderPasses() const;
 
 		private:
-			world::SceneData* scene_;
+			scene::Scene* scene_;
 		};
 
 		namespace CameraSystem
@@ -70,29 +70,30 @@ namespace lambda
 				utilities::Culler main_camera_culler;
 			};
 
-			CameraComponent addComponent(const entity::Entity& entity, world::SceneData& scene);
-			CameraComponent getComponent(const entity::Entity& entity, world::SceneData& scene);
-			bool hasComponent(const entity::Entity& entity, world::SceneData& scene);
-			void removeComponent(const entity::Entity& entity, world::SceneData& scene);
+			CameraComponent addComponent(const entity::Entity& entity, scene::Scene& scene);
+			CameraComponent getComponent(const entity::Entity& entity, scene::Scene& scene);
+			bool hasComponent(const entity::Entity& entity, scene::Scene& scene);
+			void removeComponent(const entity::Entity& entity, scene::Scene& scene);
 
-			void collectGarbage(world::SceneData& scene);
-			void initialize(world::SceneData& scene);
-			void deinitialize(world::SceneData& scene);
+			void collectGarbage(scene::Scene& scene);
+			void initialize(scene::Scene& scene);
+			void deinitialize(scene::Scene& scene);
+			void onRender(scene::Scene& scene);
 
-			void setFov(const entity::Entity& entity, const utilities::Angle& fov, world::SceneData& scene);
-			utilities::Angle getFov(const entity::Entity& entity, world::SceneData& scene);
-			void setNearPlane(const entity::Entity& entity, const utilities::Distance& near_plane, world::SceneData& scene);
-			utilities::Distance getNearPlane(const entity::Entity& entity, world::SceneData& scene);
-			void setFarPlane(const entity::Entity& entity, const utilities::Distance& far_plane, world::SceneData& scene);
-			utilities::Distance getFarPlane(const entity::Entity& entity, world::SceneData& scene);
-			void addShaderPass(const entity::Entity& entity, const platform::ShaderPass& shader_pass, world::SceneData& scene);
-			void setShaderPasses(const entity::Entity& entity, const Vector<platform::ShaderPass>& shader_pass, world::SceneData& scene);
-			platform::ShaderPass getShaderPass(const entity::Entity& entity, uint32_t id, world::SceneData& scene);
-			Vector<platform::ShaderPass> getShaderPasses(const entity::Entity& entity, world::SceneData& scene);
+			void setFov(const entity::Entity& entity, const utilities::Angle& fov, scene::Scene& scene);
+			utilities::Angle getFov(const entity::Entity& entity, scene::Scene& scene);
+			void setNearPlane(const entity::Entity& entity, const utilities::Distance& near_plane, scene::Scene& scene);
+			utilities::Distance getNearPlane(const entity::Entity& entity, scene::Scene& scene);
+			void setFarPlane(const entity::Entity& entity, const utilities::Distance& far_plane, scene::Scene& scene);
+			utilities::Distance getFarPlane(const entity::Entity& entity, scene::Scene& scene);
+			void addShaderPass(const entity::Entity& entity, const platform::ShaderPass& shader_pass, scene::Scene& scene);
+			void setShaderPasses(const entity::Entity& entity, const Vector<platform::ShaderPass>& shader_pass, scene::Scene& scene);
+			platform::ShaderPass getShaderPass(const entity::Entity& entity, uint32_t id, scene::Scene& scene);
+			Vector<platform::ShaderPass> getShaderPasses(const entity::Entity& entity, scene::Scene& scene);
 
-			void bindCamera(const entity::Entity& entity, world::SceneData& scene);
-			entity::Entity getMainCamera(world::SceneData& scene);
-			void setMainCamera(const entity::Entity& main_camera, world::SceneData& scene);
+			void bindCamera(const entity::Entity& entity, scene::Scene& scene);
+			entity::Entity getMainCamera(scene::Scene& scene);
+			void setMainCamera(const entity::Entity& main_camera, scene::Scene& scene);
 		}
 	}
 }

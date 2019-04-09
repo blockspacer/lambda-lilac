@@ -1,7 +1,4 @@
 #pragma once
-#include "interfaces/isystem.h"
-#include <containers/containers.h>
-#include <memory/memory.h>
 #include <systems/entity_system.h>
 #include <systems/name_system.h>
 #include <systems/lod_system.h>
@@ -9,15 +6,26 @@
 #include <systems/collider_system.h>
 #include <systems/mono_behaviour_system.h>
 #include <systems/wave_source_system.h>
+#include <systems/light_system.h>
 #include <systems/camera_system.h>
 #include <systems/transform_system.h>
 #include <systems/mesh_render_system.h>
+#include <platform/shader_variable_manager.h>
+#include <platform/post_process_manager.h>
+#include <platform/debug_renderer.h>
+#include <interfaces/iscript_context.h>
 
 namespace lambda
 {
-	namespace world
+	namespace gui
 	{
-		struct SceneData
+		class GUI;
+	}
+
+	namespace scene
+	{
+		///////////////////////////////////////////////////////////////////////////
+		struct Scene
 		{
 			components::EntitySystem::SystemData        entity;
 			components::NameSystem::SystemData          name;
@@ -27,51 +35,24 @@ namespace lambda
 			components::ColliderSystem::SystemData      collider;
 			components::MonoBehaviourSystem::SystemData mono_behaviour;
 			components::WaveSourceSystem::SystemData    wave_source;
+			components::LightSystem::SystemData         light;
 			components::TransformSystem::SystemData     transform;
 			components::MeshRenderSystem::SystemData    mesh_render;
-			platform::IRenderer* renderer;
-			platform::IWindow*   window;
-			world::IWorld* world;
+			platform::ShaderVariableManager shader_variable_manager;
+			platform::DebugRenderer         debug_renderer;
+			platform::PostProcessManager    post_process_manager;
+			scripting::IScriptContext* scripting = nullptr;
+			platform::IRenderer*       renderer  = nullptr;
+			platform::IWindow*         window    = nullptr;
+			gui::GUI*                  gui       = nullptr;
 		};
 
 		///////////////////////////////////////////////////////////////////////////
-		class Scene
-		{
-		public:
-			Scene();
-			~Scene();
-
-			void initialize(IWorld* world);
-
-			template<typename T>
-			foundation::SharedPointer<T> getSystem()
-			{
-				return eastl::static_shared_pointer_cast<T>(
-					systems_.at(T::systemId())
-					);
-			}
-
-			const Vector<foundation::SharedPointer<components::ISystem>>&
-				getAllSystems() const;
-
-			Vector<foundation::SharedPointer<components::ISystem>>& getAllSystems();
-
-			SceneData& getSceneData();
-
-
-		private:
-			SceneData* scene_data_;
-			Vector<foundation::SharedPointer<components::ISystem>> systems_;
-		};
-	}
-
-	namespace scene
-	{
-		void initialize(world::SceneData& scene);
-		void update(const float& delta_time, world::SceneData& scene);
-		void fixedUpdate(const float& delta_time, world::SceneData& scene);
-		void onRender(world::SceneData& scene);
-		void collectGarbage(world::SceneData& scene);
-		void deinitialize(world::SceneData& scene);
+		void sceneInitialize(scene::Scene& scene);
+		void sceneUpdate(const float& delta_time, scene::Scene& scene);
+		void sceneFixedUpdate(const float& delta_time, scene::Scene& scene);
+		void sceneOnRender(scene::Scene& scene);
+		void sceneCollectGarbage(scene::Scene& scene);
+		void sceneDeinitialize(scene::Scene& scene);
 	}
 }

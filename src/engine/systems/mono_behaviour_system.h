@@ -7,9 +7,9 @@
 
 namespace lambda
 {
-	namespace world
+	namespace scene
 	{
-		struct SceneData;
+		struct Scene;
 	}
 
 	namespace components
@@ -17,12 +17,12 @@ namespace lambda
 		class MonoBehaviourComponent : public IComponent
 		{
 		public:
-			MonoBehaviourComponent(const entity::Entity& entity, world::SceneData& scene);
+			MonoBehaviourComponent(const entity::Entity& entity, scene::Scene& scene);
 			MonoBehaviourComponent(const MonoBehaviourComponent& other);
 			MonoBehaviourComponent();
 
 		private:
-			world::SceneData* scene_;
+			scene::Scene* scene_;
 		};
 
 		namespace MonoBehaviourSystem
@@ -65,42 +65,42 @@ namespace lambda
 				bool  has(const entity::Entity& entity);
 			};
 
-			MonoBehaviourComponent addComponent(const entity::Entity& entity, world::SceneData& scene);
-			MonoBehaviourComponent getComponent(const entity::Entity& entity, world::SceneData& scene);
-			bool hasComponent(const entity::Entity& entity, world::SceneData& scene);
-			void removeComponent(const entity::Entity& entity, world::SceneData& scene);
+			MonoBehaviourComponent addComponent(const entity::Entity& entity, scene::Scene& scene);
+			MonoBehaviourComponent getComponent(const entity::Entity& entity, scene::Scene& scene);
+			bool hasComponent(const entity::Entity& entity, scene::Scene& scene);
+			void removeComponent(const entity::Entity& entity, scene::Scene& scene);
 
-			void deinitialize(world::SceneData& scene);
-			void collectGarbage(world::SceneData& scene);
-			void update(const float& delta_time, world::SceneData& scene);
-			void fixedUpdate(const float& delta_time, world::SceneData& scene);
+			void deinitialize(scene::Scene& scene);
+			void collectGarbage(scene::Scene& scene);
+			void update(const float& delta_time, scene::Scene& scene);
+			void fixedUpdate(const float& delta_time, scene::Scene& scene);
 
-			void setObject(const entity::Entity& entity, void* ptr, world::SceneData& scene);
-			void setInitialize(const entity::Entity& entity, void* ptr, world::SceneData& scene);
-			void setDeinitialize(const entity::Entity& entity, void* ptr, world::SceneData& scene);
-			void setUpdate(const entity::Entity& entity, void* ptr, world::SceneData& scene);
-			void setFixedUpdate(const entity::Entity& entity, void* ptr, world::SceneData& scene);
-			void setOnCollisionEnter(const entity::Entity& entity, void* ptr, world::SceneData& scene);
-			void setOnCollisionExit(const entity::Entity& entity, void* ptr, world::SceneData& scene);
-			void setOnTriggerEnter(const entity::Entity& entity, void* ptr, world::SceneData& scene);
-			void setOnTriggerExit(const entity::Entity& entity, void* ptr, world::SceneData& scene);
+			void setObject(const entity::Entity& entity, void* ptr, scene::Scene& scene);
+			void setInitialize(const entity::Entity& entity, void* ptr, scene::Scene& scene);
+			void setDeinitialize(const entity::Entity& entity, void* ptr, scene::Scene& scene);
+			void setUpdate(const entity::Entity& entity, void* ptr, scene::Scene& scene);
+			void setFixedUpdate(const entity::Entity& entity, void* ptr, scene::Scene& scene);
+			void setOnCollisionEnter(const entity::Entity& entity, void* ptr, scene::Scene& scene);
+			void setOnCollisionExit(const entity::Entity& entity, void* ptr, scene::Scene& scene);
+			void setOnTriggerEnter(const entity::Entity& entity, void* ptr, scene::Scene& scene);
+			void setOnTriggerExit(const entity::Entity& entity, void* ptr, scene::Scene& scene);
 
-			void* getObject(const entity::Entity& entity, world::SceneData& scene);
-			void* getInitialize(const entity::Entity& entity, world::SceneData& scene);
-			void* getDeinitialize(const entity::Entity& entity, world::SceneData& scene);
-			void* getUpdate(const entity::Entity& entity, world::SceneData& scene);
-			void* getFixedUpdate(const entity::Entity& entity, world::SceneData& scene);
-			void* getOnCollisionEnter(const entity::Entity& entity, world::SceneData& scene);
-			void* getOnCollisionExit(const entity::Entity& entity, world::SceneData& scene);
-			void* getOnTriggerEnter(const entity::Entity& entity, world::SceneData& scene);
-			void* getOnTriggerExit(const entity::Entity& entity, world::SceneData& scene);
+			void* getObject(const entity::Entity& entity, scene::Scene& scene);
+			void* getInitialize(const entity::Entity& entity, scene::Scene& scene);
+			void* getDeinitialize(const entity::Entity& entity, scene::Scene& scene);
+			void* getUpdate(const entity::Entity& entity, scene::Scene& scene);
+			void* getFixedUpdate(const entity::Entity& entity, scene::Scene& scene);
+			void* getOnCollisionEnter(const entity::Entity& entity, scene::Scene& scene);
+			void* getOnCollisionExit(const entity::Entity& entity, scene::Scene& scene);
+			void* getOnTriggerEnter(const entity::Entity& entity, scene::Scene& scene);
+			void* getOnTriggerExit(const entity::Entity& entity, scene::Scene& scene);
 
-			void onCollisionEnter(const entity::Entity& lhs, const entity::Entity& rhs, glm::vec3 normal, world::SceneData& scene);
-			void onCollisionExit(const entity::Entity& lhs, const entity::Entity& rhs, glm::vec3 normal, world::SceneData& scene);
-			void onTriggerEnter(const entity::Entity& lhs, const entity::Entity& rhs, glm::vec3 normal, world::SceneData& scene);
-			void onTriggerExit(const entity::Entity& lhs, const entity::Entity& rhs, glm::vec3 normal, world::SceneData& scene);
+			void onCollisionEnter(const entity::Entity& lhs, const entity::Entity& rhs, glm::vec3 normal, scene::Scene& scene);
+			void onCollisionExit(const entity::Entity& lhs, const entity::Entity& rhs, glm::vec3 normal, scene::Scene& scene);
+			void onTriggerEnter(const entity::Entity& lhs, const entity::Entity& rhs, glm::vec3 normal, scene::Scene& scene);
+			void onTriggerExit(const entity::Entity& lhs, const entity::Entity& rhs, glm::vec3 normal, scene::Scene& scene);
 
-			const MonoBehaviourSystem::Data* getClosest(entity::Entity entity, world::SceneData& scene);
+			const MonoBehaviourSystem::Data* getClosest(entity::Entity entity, scene::Scene& scene);
 		}
 	}
 }

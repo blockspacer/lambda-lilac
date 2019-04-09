@@ -221,9 +221,9 @@ class MyWorld : public world::IWorld
 {
 public:
   MyWorld(
-    foundation::SharedPointer<platform::IWindow> window,
-    foundation::SharedPointer<platform::IRenderer> renderer,
-    foundation::SharedPointer<scripting::IScriptContext> scripting,
+    platform::IWindow* window,
+    platform::IRenderer* renderer,
+    scripting::IScriptContext* scripting,
     foundation::SharedPointer<platform::IImGUI> imgui
   ) : IWorld(window, renderer, scripting, imgui) {}
 
@@ -328,11 +328,11 @@ public:
 
       static float dynamic_resolution_scale = 1.0f;
       if (imgui->imFloat1("DRS", dynamic_resolution_scale))
-        getRenderer()->setShaderVariable(platform::ShaderVariable(Name("dynamic_resolution_scale"), dynamic_resolution_scale));
+				getScene().shader_variable_manager.setVariable(platform::ShaderVariable(Name("dynamic_resolution_scale"), dynamic_resolution_scale));
 
       static float ambient_intensity = 1.0f;
       if (imgui->imFloat1("AI", ambient_intensity))
-        getRenderer()->setShaderVariable(platform::ShaderVariable(Name("ambient_intensity"), ambient_intensity));
+				getScene().shader_variable_manager.setVariable(platform::ShaderVariable(Name("ambient_intensity"), ambient_intensity));
     }
 
     imgui->imEnd();
@@ -346,7 +346,7 @@ public:
 	  getGUI().executeJavaScript("updateAllocatedMemory(" + toString(round(mem_def, 3)) + ")");
 
 	  float dynamic_resolution_scale =
-		  getShaderVariableManager().getShaderVariable(
+			getScene().shader_variable_manager.getShaderVariable(
 			  Name("dynamic_resolution_scale")
 		  ).data.at(0);
 
@@ -376,7 +376,10 @@ public:
 	  if (scale_up)
 		  dynamic_resolution_scale = min(dynamic_resolution_scale + 0.01f, 1.0f);
 
-	  getShaderVariableManager().setVariable(platform::ShaderVariable(Name("dynamic_resolution_scale"), dynamic_resolution_scale));
+		// TODO (Hilze): Get rid of this ASAP!
+		dynamic_resolution_scale = 1.0f;
+
+	  getScene().shader_variable_manager.setVariable(platform::ShaderVariable(Name("dynamic_resolution_scale"), dynamic_resolution_scale));
   }
 
   virtual void fixedUpdate() override
@@ -388,7 +391,7 @@ public:
     switch (message.type)
     {
     case platform::WindowMessageType::kClose:
-      getWindow()->close();
+			getScene().window->close();
       break;
     default:
       break;
@@ -403,85 +406,89 @@ int main(int argc, char** argv)
 {
 	LMB_ASSERT(argc != 1, "No project folder was speficied!");
 
-  lambda::FileSystem::SetBaseDir(argv[1]);
+	lambda::FileSystem::SetBaseDir(argv[1]);
 
-  {
+	{
 #if defined VIOLET_RENDERER_D3D11
-    foundation::SharedPointer<platform::IRenderer> renderer = foundation::Memory::constructShared<windows::D3D11Renderer>();
+		platform::IRenderer* renderer = foundation::Memory::construct<windows::D3D11Renderer>();
 #elif defined VIOLET_RENDERER_METAL
-	  foundation::SharedPointer<platform::IRenderer> renderer = foundation::Memory::constructShared<osx::MetalRenderer>();
+		platform::IRenderer* renderer = foundation::Memory::construct<osx::MetalRenderer>();
 #elif defined VIOLET_RENDERER_VULKAN
-	  foundation::SharedPointer<platform::IRenderer> renderer = foundation::Memory::constructShared<linux::VulkanRenderer>();
+		platform::IRenderer* renderer = foundation::Memory::construct<linux::VulkanRenderer>();
 #elif defined VIOLET_RENDERER_NO
-    foundation::SharedPointer<platform::IRenderer> renderer = foundation::Memory::constructShared<windows::NoRenderer>();
+		platform::IRenderer* renderer = foundation::Memory::construct<windows::NoRenderer>();
 #else
 #error No valid renderer found!
 #endif
 
-    {
+		{
 #if defined VIOLET_WINDOW_WIN32
-      foundation::SharedPointer<platform::IWindow> window = foundation::Memory::constructShared<window::Win32Window>();
+			platform::IWindow* window = foundation::Memory::construct<window::Win32Window>();
 #elif defined VIOLET_WINDOW_GLFW
-      foundation::SharedPointer<platform::IWindow> window = foundation::Memory::constructShared<window::GLFWWindow>();
+			platform::IWindow* window = foundation::Memory::construct<window::GLFWWindow>();
 #elif defined VIOLET_WINDOW_SDL2
-      foundation::SharedPointer<platform::IWindow> window = foundation::Memory::constructShared<window::SDL2Window>();
+			platform::IWindow* window = foundation::Memory::construct<window::SDL2Window>();
 #else
 #error No valid window found!
 #endif
 
 #if defined VIOLET_SCRIPTING_WREN
-      foundation::SharedPointer<scripting::IScriptContext> scripting = foundation::Memory::constructShared<scripting::WrenContext>();
-	  String script = "resources/scripts/wren/main.wren";
+			scripting::IScriptContext* scripting = foundation::Memory::construct<scripting::WrenContext>();
+			String script = "resources/scripts/wren/main.wren";
 #elif defined VIOLET_SCRIPTING_ANGEL
-      foundation::SharedPointer<scripting::IScriptContext> scripting = foundation::Memory::constructShared<scripting::AngelScriptContext>();
-	  String script = "resources/scripts/angelscript/main.as";
+			scripting::IScriptContext* scripting = foundation::Memory::construct<scripting::AngelScriptContext>();
+			String script = "resources/scripts/angelscript/main.as";
 #else
 #error No valid scripting engine found!
 #endif
 
 #if defined VIOLET_IMGUI_NUKLEAR
-      foundation::SharedPointer<platform::IImGUI> imgui = foundation::Memory::constructShared<imgui::NuklearImGUI>();
+			foundation::SharedPointer<platform::IImGUI> imgui = foundation::Memory::constructShared<imgui::NuklearImGUI>();
 #elif defined VIOLET_IMGUI_DEAR
-      foundation::SharedPointer<platform::IImGUI> imgui = foundation::Memory::constructShared<imgui::DearImGUI>();
+			foundation::SharedPointer<platform::IImGUI> imgui = foundation::Memory::constructShared<imgui::DearImGUI>();
 #elif defined VIOLET_IMGUI_NO
-      foundation::SharedPointer<platform::IImGUI> imgui = foundation::Memory::constructShared<imgui::NoImGUI>();
+			foundation::SharedPointer<platform::IImGUI> imgui = foundation::Memory::constructShared<imgui::NoImGUI>();
 #else
 #error No valid imgui found!
 #endif
 
-      window->create(glm::uvec2(1280u, 720u), "Engine");
+			window->create(glm::uvec2(1280u, 720u), "Engine");
 
-	  {
-	    MyWorld world(window, renderer, scripting, imgui);
-		imgui->setFont("resources/fonts/DroidSans.ttf", 16.0f);
+			{
+				MyWorld world(window, renderer, scripting, imgui);
+				imgui->setFont("resources/fonts/DroidSans.ttf", 16.0f);
 
-		//scripting::ScriptBinding(&world);
-		scripting->initialize({});
-		scripting->loadScripts({ script });
+				//scripting::ScriptBinding(&world);
+				scripting->initialize({});
+				scripting->loadScripts({ script });
 
-	    world.run();
+				world.run();
 
-		scripting->terminate();
-	  }
+				scripting->terminate();
+			}
 
-	  //scripting::ScriptRelease();
+			//scripting::ScriptRelease();
 
-	  foundation::Memory::destruct(asset::ShaderManager::getInstance());
-	  foundation::Memory::destruct(asset::TextureManager::getInstance());
-	  foundation::Memory::destruct(asset::WaveManager::getInstance());
-	  foundation::Memory::destruct(asset::MeshManager::getInstance());
-	  foundation::Memory::destruct(foundation::GetFrameHeap());
+			foundation::Memory::destruct(asset::ShaderManager::getInstance());
+			foundation::Memory::destruct(asset::TextureManager::getInstance());
+			foundation::Memory::destruct(asset::WaveManager::getInstance());
+			foundation::Memory::destruct(asset::MeshManager::getInstance());
+			foundation::Memory::destruct(foundation::GetFrameHeap());
 
-      window->close();
-	  renderer->deinitialize();
+			window->close();
+			renderer->deinitialize();
+
+			foundation::Memory::destruct(scripting);
+			foundation::Memory::destruct(renderer);
+			foundation::Memory::destruct(window);
+		}
 	}
-  }
 
-  asset::VioletRefHandler<asset::Shader>::releaseAll();
-  asset::VioletRefHandler<asset::Texture>::releaseAll();
-  asset::VioletRefHandler<asset::Wave>::releaseAll();
-  asset::VioletRefHandler<asset::Mesh>::releaseAll();
-  lambda::FileSystem::SetBaseDir("");
+	asset::VioletRefHandler<asset::Shader>::releaseAll();
+	asset::VioletRefHandler<asset::Texture>::releaseAll();
+	asset::VioletRefHandler<asset::Wave>::releaseAll();
+	asset::VioletRefHandler<asset::Mesh>::releaseAll();
+	lambda::FileSystem::SetBaseDir("");
 
-  return 0;
+	return 0;
 }

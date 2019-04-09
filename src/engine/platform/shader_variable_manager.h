@@ -43,6 +43,7 @@ namespace lambda
     class ShaderVariableManager
     {
     public:
+			void operator=(const ShaderVariableManager& other);
       void setVariable(const ShaderVariable& variable);
       ShaderVariable getShaderVariable(const Name& name) const;
       bool hasShaderVariable(const Name& name) const;

@@ -4,7 +4,16 @@ namespace lambda
 {
   namespace platform
   {
-    ///////////////////////////////////////////////////////////////////////////
+		///////////////////////////////////////////////////////////////////////////
+		void ShaderVariableManager::operator=(const ShaderVariableManager& other)
+		{
+			last_name_   = other.last_name_;
+			last_idx_    = other.last_idx_;
+			name_to_idx_ = other.name_to_idx_;
+			variables_   = other.variables_;
+			counters_    = other.counters_;
+		}
+		///////////////////////////////////////////////////////////////////////////
     void ShaderVariableManager::setVariable(const ShaderVariable& variable)
     {
       size_t idx = getIdx(variable.name);
@@ -58,8 +67,8 @@ namespace lambda
       for (BufferVariable& variable : buffer.getVariables())
       {
         size_t idx = getIdx(variable.name);
-		auto count = getCount(idx);
-        if (idx != UINT64_MAX && variable.count < count)
+				auto count = getCount(idx);
+        //if (idx != UINT64_MAX && variable.count != count)
         {
           variable.count = getCount(idx);
           memcpy(
@@ -75,7 +84,7 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     const size_t& ShaderVariableManager::getIdx(const Name& name)
     {
-      if (last_name_ != name.getHash())
+      //if (last_name_ != name.getHash())
       {
         last_name_ = name.getHash();
         auto it = name_to_idx_.find(name.getHash());

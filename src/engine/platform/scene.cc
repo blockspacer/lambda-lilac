@@ -3,165 +3,120 @@
 #include "systems/wave_source_system.h"
 
 #include "platform/depth_stencil_state.h"
+#include <gui/gui.h>
 
 namespace lambda
 {
-	namespace world
-	{
-		///////////////////////////////////////////////////////////////////////////
-		Scene::Scene()
-		{
-		}
-
-		///////////////////////////////////////////////////////////////////////////
-		Scene::~Scene()
-		{
-			foundation::Memory::destruct(scene_data_);
-
-			for (foundation::SharedPointer<components::ISystem>& system : systems_)
-				system->deinitialize();
-
-			systems_.resize(0u);
-		}
-
-		///////////////////////////////////////////////////////////////////////////
-		void Scene::initialize(IWorld* world)
-		{
-			systems_.resize((size_t)components::SystemIds::kCount);
-			systems_.at((size_t)components::SystemIds::kLightSystem) =
-				foundation::Memory::constructShared<components::LightSystem>();
-
-			for (foundation::SharedPointer<components::ISystem> system : systems_)
-				system->initialize(*world);
-
-			scene_data_ = foundation::Memory::construct<SceneData>();
-		}
-
-		///////////////////////////////////////////////////////////////////////////
-		const Vector<foundation::SharedPointer<components::ISystem>>&
-			Scene::getAllSystems() const
-		{
-			return systems_;
-		}
-
-		///////////////////////////////////////////////////////////////////////////
-		Vector<foundation::SharedPointer<components::ISystem>>&
-			Scene::getAllSystems()
-		{
-			return systems_;
-		}
-		SceneData& Scene::getSceneData()
-		{
-			return *scene_data_;
-		}
-	}
-
 	namespace scene
 	{
-		void initialize(world::SceneData& scene)
+		void sceneInitialize(scene::Scene& scene)
 		{
 			components::CameraSystem::initialize(scene);
 			components::MeshRenderSystem::initialize(scene);
 			components::RigidBodySystem::initialize(scene);
 			components::WaveSourceSystem::initialize(scene);
+			components::LightSystem::initialize(scene);
 		}
-		void update(const float& delta_time, world::SceneData& scene)
+		void sceneUpdate(const float& delta_time, scene::Scene& scene)
 		{
-			// LOD.
-			do
-			{
-				// Do not update the LODs every frame. Just not worth it.
-				scene.lod.time += delta_time;
-				if (scene.lod.time < scene.lod.update_frequency)
-					break;
-				scene.lod.time -= scene.lod.update_frequency;
-
-
-				// Update LODs.
-				glm::vec3 camera_position = components::TransformSystem::getWorldTranslation(scene.camera.main_camera, scene);
-
-				for (auto& data : scene.lod.data)
-				{
-					auto* chosen_lod = &data.base_lod;
-					float distance = glm::length(components::TransformSystem::getWorldTranslation(data.entity, scene) - camera_position);
-
-					for (auto& lod : data.lods)
-					{
-						if (distance > lod.getDistance())
-						{
-							chosen_lod = &lod;
-							break;
-						}
-					}
-
-					components::MeshRenderSystem::setMesh(data.entity, chosen_lod->getMesh(), scene);
-				}
-			} while (0);
-
-			// Rigid body system.
-			do
-			{
-				scene.rigid_body.physics_world->render();
-			} while (0);
-
+			components::LODSystem::update(delta_time, scene);
 			components::MonoBehaviourSystem::update(delta_time, scene);
 			components::WaveSourceSystem::update(delta_time, scene);
 		}
 
-		void fixedUpdate(const float& delta_time, world::SceneData& scene)
+		void sceneFixedUpdate(const float& delta_time, scene::Scene& scene)
 		{
-			// Rigid body system.
-			do
-			{
-				scene.rigid_body.physics_world->update(delta_time);
-			} while (0);
-
+			components::RigidBodySystem::fixedUpdate(delta_time, scene);
 			components::MonoBehaviourSystem::fixedUpdate(delta_time, scene);
 		}
 
-		void onRender(world::SceneData& scene)
+#define USE_MT 0
+
+#if USE_MT
+		std::atomic<int> k_can_read;
+		std::atomic<int> k_can_write;
+		scene::Scene k_scene;
+
+		///////////////////////////////////////////////////////////////////////////
+		void flush()
 		{
-			// Camera system.
-			do
+			while (true)
 			{
-				// Check if there is no camera. If so, the program should exit.
-				if (scene.camera.main_camera == 0u)
-				{
-					LMB_ASSERT(false, "There was no camera set");
-					return;
+				while (k_can_read.load() == 0) {
+					std::this_thread::sleep_for(std::chrono::microseconds(1u));
 				}
 
-				components::CameraSystem::bindCamera(scene.camera.main_camera, scene);
-				const auto& data = scene.camera.get(scene.camera.main_camera);
+				k_can_read = 0;
+				k_scene.renderer->setOverrideScene(&k_scene);
+				k_scene.renderer->startFrame();
 
-				// Create render list.
-				Vector<utilities::Renderable*> opaque;
-				Vector<utilities::Renderable*> alpha;
-				components::MeshRenderSystem::createRenderList(scene.camera.main_camera_culler, scene.camera.main_camera_frustum, scene);
-				auto statics = scene.camera.main_camera_culler.getStatics();
-				auto dynamics = scene.camera.main_camera_culler.getDynamics();
-				components::MeshRenderSystem::createSortedRenderList(&statics, &dynamics, opaque, alpha, scene);
+				k_scene.gui->render(k_scene);
 
-				// Draw all passes.
-				scene.renderer->beginTimer("Main Camera");
-				for (uint32_t i = 0u; i < data.shader_passes.size(); ++i)
-				{
-					//if (i == 0u)
-					scene.renderer->setDepthStencilState(platform::DepthStencilState::Default());
-					//else
-					//  scene.renderer->setDepthStencilState(platform::DepthStencilState::Equal());
-					scene.renderer->pushMarker("Main Camera");
-					scene.renderer->bindShaderPass(data.shader_passes[i]);
-					components::MeshRenderSystem::renderAll(opaque, alpha, scene);
-					scene.renderer->popMarker();
-				}
-				scene.renderer->endTimer("Main Camera");
+				components::CameraSystem::onRender(k_scene);
+				components::LightSystem::onRender(k_scene);
 
-				// Reset the depth stencil state. // TODO (Hilze): Find out how to handle depth stencil state.
-				scene.renderer->setDepthStencilState(platform::DepthStencilState::Default());
-			} while (0);
+				k_scene.renderer->endFrame();
+				k_scene.renderer->setOverrideScene(nullptr);
+				k_scene = {};
+				k_can_write = 1;
+			}
 		}
-		void collectGarbage(world::SceneData& scene)
+#endif
+
+
+
+
+		void sceneOnRender(scene::Scene& scene)
+		{
+			components::RigidBodySystem::onRender(scene);
+
+#if USE_MT
+			static std::thread thead;
+			if (!thead.joinable())
+			{
+				k_can_read = 0;
+				k_can_write = 1;
+				thead = std::thread(flush);
+			}
+
+			while (k_can_write.load() == 0) {
+				std::this_thread::sleep_for(std::chrono::microseconds(1u));
+			}
+
+			k_can_write = 0;
+
+			// Required by other things..
+			k_scene.camera                  = scene.camera;
+			k_scene.light                   = scene.light;
+			k_scene.transform               = scene.transform;
+			k_scene.mesh_render             = scene.mesh_render;
+			k_scene.debug_renderer          = scene.debug_renderer;
+			
+			// Required by flush.
+			k_scene.renderer                = scene.renderer;
+			// Required by the renderer.
+			k_scene.post_process_manager    = scene.post_process_manager;
+			k_scene.shader_variable_manager = scene.shader_variable_manager;
+			k_scene.window                  = scene.window;
+			k_scene.gui                     = scene.gui;
+
+			scene.debug_renderer.Clear();
+
+			k_can_read = 1;
+#else
+			scene.renderer->setOverrideScene(&scene);
+			scene.renderer->startFrame();
+
+			scene.gui->render(scene);
+
+			components::CameraSystem::onRender(scene);
+			components::LightSystem::onRender(scene);
+
+			scene.renderer->endFrame();
+			scene.renderer->setOverrideScene(nullptr);
+#endif
+		}
+		void sceneCollectGarbage(scene::Scene& scene)
 		{
 			components::NameSystem::collectGarbage(scene);
 			components::LODSystem::collectGarbage(scene);
@@ -172,8 +127,9 @@ namespace lambda
 			components::ColliderSystem::collectGarbage(scene);
 			components::MonoBehaviourSystem::collectGarbage(scene);
 			components::WaveSourceSystem::collectGarbage(scene);
+			components::LightSystem::collectGarbage(scene);
 		}
-		void deinitialize(world::SceneData& scene)
+		void sceneDeinitialize(scene::Scene& scene)
 		{
 			components::RigidBodySystem::deinitialize(scene);
 			components::ColliderSystem::deinitialize(scene);
@@ -184,6 +140,7 @@ namespace lambda
 			components::TransformSystem::deinitialize(scene);
 			components::MonoBehaviourSystem::deinitialize(scene);
 			components::WaveSourceSystem::deinitialize(scene);
+			components::LightSystem::deinitialize(scene);
 		}
 	}
 }

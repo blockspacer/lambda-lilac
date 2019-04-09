@@ -1,11 +1,11 @@
 #include "camera_system.h"
-#include "interfaces/iworld.h"
 #include "transform_system.h"
 #include "mesh_render_system.h"
 #include "platform/depth_stencil_state.h"
 #include <glm/gtc/matrix_inverse.hpp>
 #include <utils/utilities.h>
 #include "platform/debug_renderer.h"
+#include <platform/scene.h>
 
 namespace lambda
 {
@@ -13,7 +13,7 @@ namespace lambda
 	{
 		namespace CameraSystem
 		{
-			void collectGarbage(world::SceneData& scene)
+			void collectGarbage(scene::Scene& scene)
 			{
 				if (!scene.camera.marked_for_delete.empty())
 				{
@@ -33,14 +33,14 @@ namespace lambda
 				}
 			}
 
-			void initialize(world::SceneData& scene)
+			void initialize(scene::Scene& scene)
 			{
 				scene.camera.main_camera_culler.setCullFrequency(10u);
 				scene.camera.main_camera_culler.setShouldCull(true);
 				scene.camera.main_camera_culler.setCullShadowCasters(false);
 			}
 
-			void deinitialize(world::SceneData& scene)
+			void deinitialize(scene::Scene& scene)
 			{
 				Vector<entity::Entity> entities;
 				for (const auto& it : scene.camera.entity_to_data)
@@ -51,7 +51,46 @@ namespace lambda
 				collectGarbage(scene);
 			}
 
-			CameraComponent CameraSystem::addComponent(const entity::Entity& entity, world::SceneData& scene)
+			void onRender(scene::Scene& scene)
+			{
+				// Check if there is no camera. If so, the program should exit.
+				if (scene.camera.main_camera == 0u)
+				{
+					LMB_ASSERT(false, "There was no camera set");
+					return;
+				}
+
+				bindCamera(scene.camera.main_camera, scene);
+				const auto& data = scene.camera.get(scene.camera.main_camera);
+
+				// Create render list.
+				Vector<utilities::Renderable*> opaque;
+				Vector<utilities::Renderable*> alpha;
+				components::MeshRenderSystem::createRenderList(scene.camera.main_camera_culler, scene.camera.main_camera_frustum, scene);
+				auto statics = scene.camera.main_camera_culler.getStatics();
+				auto dynamics = scene.camera.main_camera_culler.getDynamics();
+				components::MeshRenderSystem::createSortedRenderList(&statics, &dynamics, opaque, alpha, scene);
+
+				// Draw all passes.
+				scene.renderer->beginTimer("Main Camera");
+				for (uint32_t i = 0u; i < data.shader_passes.size(); ++i)
+				{
+					//if (i == 0u)
+					scene.renderer->setDepthStencilState(platform::DepthStencilState::Default());
+					//else
+					//  scene.renderer->setDepthStencilState(platform::DepthStencilState::Equal());
+					scene.renderer->pushMarker("Main Camera");
+					scene.renderer->bindShaderPass(data.shader_passes[i]);
+					components::MeshRenderSystem::renderAll(opaque, alpha, scene);
+					scene.renderer->popMarker();
+				}
+				scene.renderer->endTimer("Main Camera");
+
+				// Reset the depth stencil state. // TODO (Hilze): Find out how to handle depth stencil state.
+				scene.renderer->setDepthStencilState(platform::DepthStencilState::Default());
+			}
+
+			CameraComponent CameraSystem::addComponent(const entity::Entity& entity, scene::Scene& scene)
 			{
 				if (!TransformSystem::hasComponent(entity, scene))
 					TransformSystem::addComponent(entity, scene);
@@ -63,59 +102,59 @@ namespace lambda
 
 				return CameraComponent(entity, scene);
 			}
-			CameraComponent CameraSystem::getComponent(const entity::Entity& entity, world::SceneData& scene)
+			CameraComponent CameraSystem::getComponent(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return CameraComponent(entity, scene);
 			}
-			bool CameraSystem::hasComponent(const entity::Entity& entity, world::SceneData& scene)
+			bool CameraSystem::hasComponent(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.camera.has(entity);
 			}
-			void CameraSystem::removeComponent(const entity::Entity& entity, world::SceneData& scene)
+			void CameraSystem::removeComponent(const entity::Entity& entity, scene::Scene& scene)
 			{
 				scene.camera.remove(entity);
 			}
-			void CameraSystem::setFov(const entity::Entity& entity, const utilities::Angle& fov, world::SceneData& scene)
+			void CameraSystem::setFov(const entity::Entity& entity, const utilities::Angle& fov, scene::Scene& scene)
 			{
 				scene.camera.get(entity).fov = fov;
 			}
-			utilities::Angle CameraSystem::getFov(const entity::Entity& entity, world::SceneData& scene)
+			utilities::Angle CameraSystem::getFov(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.camera.get(entity).fov;
 			}
-			void CameraSystem::setNearPlane(const entity::Entity& entity, const utilities::Distance& near_plane, world::SceneData& scene)
+			void CameraSystem::setNearPlane(const entity::Entity& entity, const utilities::Distance& near_plane, scene::Scene& scene)
 			{
 				scene.camera.get(entity).near_plane = near_plane;
 			}
-			utilities::Distance CameraSystem::getNearPlane(const entity::Entity& entity, world::SceneData& scene)
+			utilities::Distance CameraSystem::getNearPlane(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.camera.get(entity).near_plane;
 			}
-			void CameraSystem::setFarPlane(const entity::Entity& entity, const utilities::Distance& far_plane, world::SceneData& scene)
+			void CameraSystem::setFarPlane(const entity::Entity& entity, const utilities::Distance& far_plane, scene::Scene& scene)
 			{
 				scene.camera.get(entity).far_plane = far_plane;
 			}
-			utilities::Distance CameraSystem::getFarPlane(const entity::Entity& entity, world::SceneData& scene)
+			utilities::Distance CameraSystem::getFarPlane(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.camera.get(entity).far_plane;
 			}
-			void CameraSystem::addShaderPass(const entity::Entity & entity, const platform::ShaderPass & shader_pass, world::SceneData& scene)
+			void CameraSystem::addShaderPass(const entity::Entity & entity, const platform::ShaderPass & shader_pass, scene::Scene& scene)
 			{
 				scene.camera.get(entity).shader_passes.push_back(shader_pass);
 			}
-			void CameraSystem::setShaderPasses(const entity::Entity & entity, const Vector<platform::ShaderPass>& shader_pass, world::SceneData& scene)
+			void CameraSystem::setShaderPasses(const entity::Entity & entity, const Vector<platform::ShaderPass>& shader_pass, scene::Scene& scene)
 			{
 				scene.camera.get(entity).shader_passes = shader_pass;
 			}
-			platform::ShaderPass CameraSystem::getShaderPass(const entity::Entity & entity, uint32_t id, world::SceneData& scene)
+			platform::ShaderPass CameraSystem::getShaderPass(const entity::Entity & entity, uint32_t id, scene::Scene& scene)
 			{
 				return scene.camera.get(entity).shader_passes[id];
 			}
-			Vector<platform::ShaderPass> CameraSystem::getShaderPasses(const entity::Entity & entity, world::SceneData& scene)
+			Vector<platform::ShaderPass> CameraSystem::getShaderPasses(const entity::Entity & entity, scene::Scene& scene)
 			{
 				return scene.camera.get(entity).shader_passes;
 			}
-			void CameraSystem::bindCamera(const entity::Entity& entity, world::SceneData& scene)
+			void CameraSystem::bindCamera(const entity::Entity& entity, scene::Scene& scene)
 			{
 				Data& data = scene.camera.get(entity);
 
@@ -134,24 +173,24 @@ namespace lambda
 					view
 				);
 
-				scene.renderer->setShaderVariable(platform::ShaderVariable(Name("view_matrix"), view));
-				scene.renderer->setShaderVariable(platform::ShaderVariable(Name("inverse_view_matrix"), glm::inverse(view)));
+				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("view_matrix"), view));
+				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("inverse_view_matrix"), glm::inverse(view)));
 
-				scene.renderer->setShaderVariable(platform::ShaderVariable(Name("projection_matrix"), projection));
-				scene.renderer->setShaderVariable(platform::ShaderVariable(Name("inverse_projection_matrix"), glm::inverse(projection)));
+				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("projection_matrix"), projection));
+				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("inverse_projection_matrix"), glm::inverse(projection)));
 
-				scene.renderer->setShaderVariable(platform::ShaderVariable(Name("view_projection_matrix"), projection * view));
-				scene.renderer->setShaderVariable(platform::ShaderVariable(Name("inverse_view_projection_matrix"), glm::inverse(projection * view)));
-				scene.renderer->setShaderVariable(platform::ShaderVariable(Name("camera_position"), transform.getWorldTranslation()));
+				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("view_projection_matrix"), projection * view));
+				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("inverse_view_projection_matrix"), glm::inverse(projection * view)));
+				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("camera_position"), transform.getWorldTranslation()));
 
-				scene.renderer->setShaderVariable(platform::ShaderVariable(Name("camera_near"), data.near_plane.asMeter()));
-				scene.renderer->setShaderVariable(platform::ShaderVariable(Name("camera_far"), data.far_plane.asMeter()));
+				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("camera_near"), data.near_plane.asMeter()));
+				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("camera_far"), data.far_plane.asMeter()));
 			}
-			entity::Entity CameraSystem::getMainCamera(world::SceneData& scene)
+			entity::Entity CameraSystem::getMainCamera(scene::Scene& scene)
 			{
 				return scene.camera.main_camera;
 			}
-			void CameraSystem::setMainCamera(const entity::Entity& main_camera, world::SceneData& scene)
+			void CameraSystem::setMainCamera(const entity::Entity& main_camera, scene::Scene& scene)
 			{
 				scene.camera.main_camera = main_camera;
 			}
@@ -227,7 +266,7 @@ namespace lambda
 
 
 
-		CameraComponent::CameraComponent(const entity::Entity& entity, world::SceneData& scene) :
+		CameraComponent::CameraComponent(const entity::Entity& entity, scene::Scene& scene) :
 			IComponent(entity), scene_(&scene)
 		{
 		}

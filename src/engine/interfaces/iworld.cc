@@ -7,34 +7,32 @@ namespace lambda
 	{
 		///////////////////////////////////////////////////////////////////////////
 		IWorld::IWorld(
-			foundation::SharedPointer<platform::IWindow> window,
-			foundation::SharedPointer<platform::IRenderer> renderer,
-			foundation::SharedPointer<scripting::IScriptContext> scripting,
+			platform::IWindow* window,
+			platform::IRenderer* renderer,
+			scripting::IScriptContext* scripting,
 			foundation::SharedPointer<platform::IImGUI> imgui
 		)
-			: window_(nullptr)
-			, renderer_(renderer)
-			, input_manager_(keyboard_, mouse_, controller_manager_)
+			: input_manager_(keyboard_, mouse_, controller_manager_)
 			, scripting_(scripting)
 			, imgui_(nullptr)
 		{
-			shader_variable_manager_.setVariable(platform::ShaderVariable(Name("dynamic_resolution_scale"), 0.5f));
-			shader_variable_manager_.setVariable(platform::ShaderVariable(Name("ambient_intensity"), 1.0f));
+			scene_.scripting = scripting;
+			scene_.renderer  = renderer;
+			scene_.gui       = &gui_;
+			scene_.shader_variable_manager.setVariable(platform::ShaderVariable(Name("dynamic_resolution_scale"), 1.0f));
+			scene_.shader_variable_manager.setVariable(platform::ShaderVariable(Name("ambient_intensity"), 1.0f));
 
-			asset::TextureManager::setRenderer(renderer_.get());
-			asset::ShaderManager::setRenderer(renderer_.get());
-			asset::MeshManager::setRenderer(renderer_.get());
+			asset::TextureManager::setRenderer(scene_.renderer);
+			asset::ShaderManager::setRenderer(scene_.renderer);
+			asset::MeshManager::setRenderer(scene_.renderer);
 
-			renderer_->initialize(this);
+			scene_.renderer->initialize(scene_);
 			setWindow(window);
 			setImGUI(imgui);
-			gui_.init(this);
+			gui_.init(scene_);
 
-			scene_.initialize(this);
-			scene_.getSceneData().renderer = renderer.get();
-			scene_.getSceneData().window = window.get();
-			scene_.getSceneData().world = this;
-			scene::initialize(scene_.getSceneData());
+			scene::sceneInitialize(scene_);
+			
 			scripting_->setWorld(this);
 		}
 
@@ -48,15 +46,17 @@ namespace lambda
 		{
 			initialize();
 			scripting_->executeFunction("Game::Initialize", {});
-			renderer_->resize();
+			scene_.renderer->resize();
 
+			scene_.debug_renderer.Initialize(scene_);
+			
 			const double time_step = 1.0 / 60.0;
 			double time_step_remainer = 0.0;
 
-			while (window_->isOpen())
+			while (scene_.window->isOpen())
 			{
 				handleWindowMessages();
-				if (window_->isOpen() == false)
+				if (scene_.window->isOpen() == false)
 					return;
 
 				controller_manager_.update();
@@ -64,7 +64,7 @@ namespace lambda
 				delta_time_ = timer_.elapsed().seconds();
 				timer_.reset();
 
-				if (window_->getSize().x == 0.0f || window_->getSize().y == 0.0f)
+				if (scene_.window->getSize().x == 0.0f || scene_.window->getSize().y == 0.0f)
 					continue;
 
 				scripting_->executeFunction("Input::InputHelper::UpdateAxes", {});
@@ -88,15 +88,11 @@ namespace lambda
 					profiler_.endTimer("Scripting: FixedUpdate");
 
 					profiler_.startTimer("Systems: FixedUpdate");
-					for (auto& system : getScene().getAllSystems())
-						system->fixedUpdate(time_step);
-					scene::fixedUpdate((float)time_step, scene_.getSceneData());
+					scene::sceneFixedUpdate((float)time_step, scene_);
 					profiler_.endTimer("Systems: FixedUpdate");
 
 					profiler_.startTimer("Systems: FixedCollectGarbage");
-					for (auto& system : getScene().getAllSystems())
-						system->collectGarbage();
-					scene::collectGarbage(scene_.getSceneData());
+					scene::sceneCollectGarbage(scene_);
 					profiler_.endTimer("Systems: FixedCollectGarbage");
 				}
 				if (time_step_remainer >= time_step)
@@ -121,9 +117,7 @@ namespace lambda
 				profiler_.endTimer("Scripting: Update");
 
 				profiler_.startTimer("Systems: Update");
-				for (auto& system : getScene().getAllSystems())
-					system->update(delta_time_);
-				scene::update((float)delta_time_, scene_.getSceneData());
+				scene::sceneUpdate((float)delta_time_, scene_);
 				profiler_.endTimer("Systems: Update");
 
 				//profiler_.startTimer("ImGUI: Update");
@@ -131,7 +125,7 @@ namespace lambda
 				//profiler_.endTimer("ImGUI: Update");
 
 				profiler_.startTimer("Renderer: Update");
-				renderer_->update(delta_time_);
+				scene_.renderer->update(delta_time_);
 				profiler_.endTimer("Renderer: Update");
 
 				profiler_.startTimer("Scripting: CollectGarbage");
@@ -139,34 +133,18 @@ namespace lambda
 				profiler_.endTimer("Scripting: CollectGarbage");
 
 				profiler_.startTimer("Systems: CollectGarbage");
-				for (auto& system : getScene().getAllSystems())
-					system->collectGarbage();
-				scene::collectGarbage(scene_.getSceneData());
+				scene::sceneCollectGarbage(scene_);
 				profiler_.endTimer("Systems: CollectGarbage");
 
-				profiler_.startTimer("Renderer: StartFrame");
-				renderer_->startFrame();
-				profiler_.endTimer("Renderer: StartFrame");
-
 				profiler_.startTimer("Systems: OnRender");
-				scene::onRender(scene_.getSceneData());
-				for (auto& system : getScene().getAllSystems())
-					system->onRender();
+				scene::sceneOnRender(scene_);
 				profiler_.endTimer("Systems: OnRender");
-
-				//profiler_.startTimer("ImGUI: GenerateCommandList");
-				//imgui_->generateCommandList();
-				//profiler_.endTimer("ImGUI: GenerateCommandList");
-
-				profiler_.startTimer("Renderer: EndFrame");
-				renderer_->endFrame();
-				profiler_.endTimer("Renderer: EndFrame");
 			}
 
-			debug_renderer_.Deinitialize();
 			scripting_->executeFunction("Game::Deinitialize", {});
 			deinitialize();
-			scene::deinitialize(scene_.getSceneData());
+			scene_.debug_renderer.Deinitialize();
+			scene::sceneDeinitialize(scene_);
 		}
 
 		///////////////////////////////////////////////////////////////////////////
@@ -182,7 +160,7 @@ namespace lambda
 			mouse_state.setButton(io::MouseButtons::kRMBD, false);
 
 			platform::WindowMessage message;
-			while (getWindow()->pollMessage(message))
+			while (scene_.window->pollMessage(message))
 			{
 				bool was_handled = false;
 				if (!was_handled && gui_.handleWindowMessage(message))
@@ -193,7 +171,7 @@ namespace lambda
 				switch (message.type)
 				{
 				case platform::WindowMessageType::kResize:
-					getRenderer()->resize();
+					scene_.renderer->resize();
 					break;
 				case platform::WindowMessageType::kMouseMove:
 					mouse_state.setAxis(io::MouseAxes::kMouseX, (float)message.data[0]);
@@ -237,25 +215,13 @@ namespace lambda
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		Scene& IWorld::getScene()
+		scene::Scene& IWorld::getScene()
 		{
 			return scene_;
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		foundation::SharedPointer<platform::IRenderer> IWorld::getRenderer()
-		{
-			return renderer_;
-		}
-
-		///////////////////////////////////////////////////////////////////////////
-		foundation::SharedPointer<platform::IWindow> IWorld::getWindow()
-		{
-			return window_;
-		}
-
-		///////////////////////////////////////////////////////////////////////////
-		foundation::SharedPointer<scripting::IScriptContext> IWorld::getScripting()
+		scripting::IScriptContext* IWorld::getScripting()
 		{
 			return scripting_;
 		}
@@ -276,12 +242,12 @@ namespace lambda
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		void IWorld::setWindow(foundation::SharedPointer<platform::IWindow> window)
+		void IWorld::setWindow(platform::IWindow* window)
 		{
-			if (window_)
-				window_->close();
-			window_ = window;
-			renderer_->setWindow(window_);
+			if (scene_.window)
+				scene_.window->close();
+			scene_.window = window;
+			scene_.renderer->setWindow(scene_.window);
 		}
 
 		///////////////////////////////////////////////////////////////////////////
@@ -306,24 +272,6 @@ namespace lambda
 		io::InputManager& IWorld::getInputManager()
 		{
 			return input_manager_;
-		}
-
-		///////////////////////////////////////////////////////////////////////////
-		platform::ShaderVariableManager& IWorld::getShaderVariableManager()
-		{
-			return shader_variable_manager_;
-		}
-
-		///////////////////////////////////////////////////////////////////////////
-		platform::DebugRenderer& IWorld::getDebugRenderer()
-		{
-			return debug_renderer_;
-		}
-
-		///////////////////////////////////////////////////////////////////////////
-		platform::PostProcessManager& IWorld::getPostProcessManager()
-		{
-			return post_process_manager_;
 		}
 
 		///////////////////////////////////////////////////////////////////////////

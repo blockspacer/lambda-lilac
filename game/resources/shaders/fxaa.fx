@@ -3,11 +3,11 @@
 Make_CBuffer(cbPostProcess, 0)
 {
   float2 screen_size;
-
-  float iFxaaSpanMax = 8.0f;
-  float iFxaaReduceMin = 1.0f / 128.0f;
-  float iFxaaReduceMul = 1.0f / 8.0f;
 };
+
+static const float iFxaaSpanMax = 8.0f;
+static const float iFxaaReduceMin = 1.0f / 128.0f;
+static const float iFxaaReduceMul = 1.0f / 8.0f;
 
 struct VSOutput
 {

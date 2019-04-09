@@ -3,8 +3,8 @@
 #include <gui/file_system.h>
 #include <gui/font_handler.h>
 
-#include <interfaces/iworld.h>
 #include <interfaces/irenderer.h>
+#include <platform/scene.h>
 
 #include <Ultralight/platform/Platform.h>
 #include <Ultralight/platform/Config.h>
@@ -108,7 +108,7 @@ namespace lambda
 		GUI::GUI()
 			: switch_time_(1.0 / 60.0)
 			, switch_(0.0)
-			, world_(nullptr)
+			, scene_(nullptr)
 			, renderer_(nullptr)
 			, view_(nullptr)
 			, enabled_(true)
@@ -145,9 +145,9 @@ namespace lambda
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		void GUI::init(world::IWorld* world)
+		void GUI::init(scene::Scene& scene)
 		{
-			world_ = world;
+			scene_ = &scene;
 
 			ultralight::Platform& platform = ultralight::Platform::instance();
 
@@ -158,7 +158,7 @@ namespace lambda
 
 			{
 				MyGPUDriver* gpu_driver =
-					foundation::Memory::construct<MyGPUDriver>(world);
+					foundation::Memory::construct<MyGPUDriver>(scene);
 				MyFileSystem* file_system =
 					foundation::Memory::construct<MyFileSystem>();
 				MyFontLoader* font_loader =
@@ -186,7 +186,7 @@ namespace lambda
 			texture.mip_count = 1u;
 			texture_->addLayer(asset::TextureLayer(texture));
 
-			world_->getPostProcessManager().addTarget(
+			scene_->post_process_manager.addTarget(
 				platform::RenderTarget(Name("gui"), texture_)
 			);
 		}
@@ -222,9 +222,13 @@ namespace lambda
 			switch_ -= switch_time_;
 
 			renderer_->Update();
+		}
 
-			gui::MyGPUDriver* driver =
-				(gui::MyGPUDriver*)ultralight::Platform::instance().gpu_driver();
+		///////////////////////////////////////////////////////////////////////////
+		void GUI::render(scene::Scene& scene)
+		{
+			gui::MyGPUDriver* driver = (gui::MyGPUDriver*)ultralight::Platform::instance().gpu_driver();
+			driver->setScene(scene);
 
 			if (driver)
 			{
@@ -241,7 +245,7 @@ namespace lambda
 				{
 					driver->DrawCommandList();
 
-					world_->getRenderer()->copyToTexture(
+					scene.renderer->copyToTexture(
 						driver->GetRenderBuffer(
 							view_->render_target().render_buffer_id
 						),

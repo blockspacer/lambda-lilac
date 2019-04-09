@@ -1,8 +1,8 @@
 #include "collider_system.h"
 #include "rigid_body_system.h"
 #include "transform_system.h"
-#include "interfaces/iworld.h"
 #include "utils/mesh_decimator.h"
+#include <platform/scene.h>
 
 namespace lambda
 {
@@ -10,7 +10,7 @@ namespace lambda
 	{
 		namespace ColliderSystem
 		{
-			ColliderComponent addComponent(const entity::Entity& entity, world::SceneData& scene)
+			ColliderComponent addComponent(const entity::Entity& entity, scene::Scene& scene)
 			{
 				if (!TransformSystem::hasComponent(entity, scene))
 					TransformSystem::addComponent(entity, scene);
@@ -24,22 +24,22 @@ namespace lambda
 
 				return ColliderComponent(entity, scene);
 			}
-			ColliderComponent getComponent(const entity::Entity& entity, world::SceneData& scene)
+			ColliderComponent getComponent(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return ColliderComponent(entity, scene);
 			}
-			bool hasComponent(const entity::Entity& entity, world::SceneData& scene)
+			bool hasComponent(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.collider.has(entity);
 			}
-			void removeComponent(const entity::Entity& entity, world::SceneData& scene)
+			void removeComponent(const entity::Entity& entity, scene::Scene& scene)
 			{
 				if (RigidBodySystem::hasComponent(entity, scene))
 					RigidBodySystem::removeComponent(entity, scene);
 				scene.collider.remove(entity);
 			}
 
-			void collectGarbage(world::SceneData& scene)
+			void collectGarbage(scene::Scene& scene)
 			{
 				if (!scene.collider.marked_for_delete.empty())
 				{
@@ -64,7 +64,7 @@ namespace lambda
 					scene.collider.marked_for_delete.clear();
 				}
 			}
-			void deinitialize(world::SceneData& scene)
+			void deinitialize(scene::Scene& scene)
 			{
 				Vector<entity::Entity> entities;
 				for (const auto& it : scene.collider.entity_to_data)
@@ -75,30 +75,30 @@ namespace lambda
 				collectGarbage(scene);
 			}
 
-			void makeBox(const entity::Entity& entity, world::SceneData& scene)
+			void makeBox(const entity::Entity& entity, scene::Scene& scene)
 			{
 				scene.collider.get(entity).collision_body->makeBoxCollider();
 			}
-			void makeSphere(const entity::Entity& entity, world::SceneData& scene)
+			void makeSphere(const entity::Entity& entity, scene::Scene& scene)
 			{
 				scene.collider.get(entity).collision_body->makeSphereCollider();
 			}
-			void makeCapsule(const entity::Entity& entity, world::SceneData& scene)
+			void makeCapsule(const entity::Entity& entity, scene::Scene& scene)
 			{
 				scene.collider.get(entity).collision_body->makeCapsuleCollider();
 			}
 
-			void makeMeshCollider(const entity::Entity& entity, asset::VioletMeshHandle mesh, const uint32_t& sub_mesh_id, world::SceneData& scene)
+			void makeMeshCollider(const entity::Entity& entity, asset::VioletMeshHandle mesh, const uint32_t& sub_mesh_id, scene::Scene& scene)
 			{
 				scene.collider.get(entity).collision_body->makeMeshCollider(mesh, sub_mesh_id);
 			}
 
-			uint16_t getLayers(const entity::Entity& entity, world::SceneData& scene)
+			uint16_t getLayers(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.collider.get(entity).collision_body->getLayers();
 			}
 
-			void setLayers(const entity::Entity& entity, const uint16_t& layers, world::SceneData& scene)
+			void setLayers(const entity::Entity& entity, const uint16_t& layers, scene::Scene& scene)
 			{
 				scene.collider.get(entity).collision_body->setLayers(layers);
 			}
@@ -179,7 +179,7 @@ namespace lambda
 
 
 
-		ColliderComponent::ColliderComponent(const entity::Entity& entity, world::SceneData& scene) :
+		ColliderComponent::ColliderComponent(const entity::Entity& entity, scene::Scene& scene) :
 			IComponent(entity), scene_(&scene)
 		{
 		}

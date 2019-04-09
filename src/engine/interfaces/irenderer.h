@@ -8,9 +8,9 @@
 
 namespace lambda
 {
-	namespace world
+	namespace scene
 	{
-		class IWorld;
+		struct Scene;
 	}
 	namespace platform
 	{
@@ -61,10 +61,9 @@ namespace lambda
 		{
 		public:
 			virtual ~IRenderer() = default;
-			virtual void setWindow(
-				foundation::SharedPointer<platform::IWindow> window
-			) = 0;
-			virtual void initialize(world::IWorld* world) = 0;
+			virtual void setWindow(platform::IWindow* window) = 0;
+			virtual void setOverrideScene(scene::Scene* scene) = 0;
+			virtual void initialize(scene::Scene& scene) = 0;
 			virtual void deinitialize() = 0;
 			virtual void resize() = 0;
 			virtual void update(const double& delta_time) = 0;
@@ -126,8 +125,6 @@ namespace lambda
 			virtual float getRenderScale() = 0;
 			virtual void setVSync(bool vsync) = 0;
 			virtual bool getVSync() const = 0;
-
-			virtual void setShaderVariable(const ShaderVariable& variable) = 0;
 
 			virtual void destroyTexture(const size_t& hash) = 0;
 			virtual void destroyShader(const size_t& hash) = 0;

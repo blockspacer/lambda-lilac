@@ -10,9 +10,9 @@
 
 namespace lambda
 {
-	namespace world
+	namespace scene
 	{
-		struct SceneData;
+		struct Scene;
 	}
 
 	namespace components
@@ -28,7 +28,7 @@ namespace lambda
 		class RigidBodyComponent : public IComponent
 		{
 		public:
-			RigidBodyComponent(const entity::Entity& entity, world::SceneData& scene);
+			RigidBodyComponent(const entity::Entity& entity, scene::Scene& scene);
 			RigidBodyComponent(const RigidBodyComponent& other);
 			RigidBodyComponent();
 
@@ -47,7 +47,7 @@ namespace lambda
 			float getFriction() const;
 
 		private:
-			world::SceneData* scene_;
+			scene::Scene* scene_;
 		};
 
 		namespace RigidBodySystem
@@ -79,29 +79,31 @@ namespace lambda
 				physics::IPhysicsWorld* physics_world;
 			};
 
-			RigidBodyComponent addComponent(const entity::Entity& entity, world::SceneData& scene);
-			RigidBodyComponent getComponent(const entity::Entity& entity, world::SceneData& scene);
-			bool hasComponent(const entity::Entity& entity, world::SceneData& scene);
-			void removeComponent(const entity::Entity& entity, world::SceneData& scene);
-			physics::IPhysicsWorld* getPhysicsWorld(world::SceneData& scene);
+			RigidBodyComponent addComponent(const entity::Entity& entity, scene::Scene& scene);
+			RigidBodyComponent getComponent(const entity::Entity& entity, scene::Scene& scene);
+			bool hasComponent(const entity::Entity& entity, scene::Scene& scene);
+			void removeComponent(const entity::Entity& entity, scene::Scene& scene);
+			physics::IPhysicsWorld* getPhysicsWorld(scene::Scene& scene);
 
-			void collectGarbage(world::SceneData& scene);
-			void initialize(world::SceneData& scene);
-			void deinitialize(world::SceneData& scene);
+			void collectGarbage(scene::Scene& scene);
+			void initialize(scene::Scene& scene);
+			void deinitialize(scene::Scene& scene);
+			void fixedUpdate(const float& delta_time, scene::Scene& scene);
+			void onRender(scene::Scene& scene);
 
-			float getMass(const entity::Entity& entity, world::SceneData& scene);
-			void setMass(const entity::Entity& entity, const float& mass, world::SceneData& scene);
-			glm::vec3 getVelocity(const entity::Entity& entity, world::SceneData& scene);
-			void setVelocity(const entity::Entity& entity, const glm::vec3& velocity, world::SceneData& scene);
-			glm::vec3 getAngularVelocity(const entity::Entity& entity, world::SceneData& scene);
-			void setAngularVelocity(const entity::Entity& entity, const glm::vec3& velocity, world::SceneData& scene);
-			uint8_t getAngularConstraints(const entity::Entity& entity, world::SceneData& scene);
-			void setAngularConstraints(const entity::Entity& entity, const uint8_t& constraints, world::SceneData& scene);
-			uint8_t getVelocityConstraints(const entity::Entity& entity, world::SceneData& scene);
-			void setVelocityConstraints(const entity::Entity& entity, const uint8_t& constraints, world::SceneData& scene);
-			void applyImpulse(const entity::Entity& entity, const glm::vec3& impulse, world::SceneData& scene);
-			void setFriction(const entity::Entity& entity, float friction, world::SceneData& scene);
-			float getFriction(const entity::Entity& entity, world::SceneData& scene);
+			float getMass(const entity::Entity& entity, scene::Scene& scene);
+			void setMass(const entity::Entity& entity, const float& mass, scene::Scene& scene);
+			glm::vec3 getVelocity(const entity::Entity& entity, scene::Scene& scene);
+			void setVelocity(const entity::Entity& entity, const glm::vec3& velocity, scene::Scene& scene);
+			glm::vec3 getAngularVelocity(const entity::Entity& entity, scene::Scene& scene);
+			void setAngularVelocity(const entity::Entity& entity, const glm::vec3& velocity, scene::Scene& scene);
+			uint8_t getAngularConstraints(const entity::Entity& entity, scene::Scene& scene);
+			void setAngularConstraints(const entity::Entity& entity, const uint8_t& constraints, scene::Scene& scene);
+			uint8_t getVelocityConstraints(const entity::Entity& entity, scene::Scene& scene);
+			void setVelocityConstraints(const entity::Entity& entity, const uint8_t& constraints, scene::Scene& scene);
+			void applyImpulse(const entity::Entity& entity, const glm::vec3& impulse, scene::Scene& scene);
+			void setFriction(const entity::Entity& entity, float friction, scene::Scene& scene);
+			float getFriction(const entity::Entity& entity, scene::Scene& scene);
 		}
 	}
 }

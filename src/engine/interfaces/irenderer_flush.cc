@@ -128,17 +128,17 @@
 //        view
 //      );
 //
-//      world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("view_matrix"), view));
-//      world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("inverse_view_matrix"), glm::inverse(view)));
+//      world_->getScene().renderer->setShaderVariable(platform::ShaderVariable(Name("view_matrix"), view));
+//      world_->getScene().renderer->setShaderVariable(platform::ShaderVariable(Name("inverse_view_matrix"), glm::inverse(view)));
 //
-//      world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("projection_matrix"), projection));
-//      world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("inverse_projection_matrix"), glm::inverse(projection)));
+//      world_->getScene().renderer->setShaderVariable(platform::ShaderVariable(Name("projection_matrix"), projection));
+//      world_->getScene().renderer->setShaderVariable(platform::ShaderVariable(Name("inverse_projection_matrix"), glm::inverse(projection)));
 //
-//      world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("view_projection_matrix"), projection * view));
-//      world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("camera_position"), transform.getWorldTranslation()));
+//      world_->getScene().renderer->setShaderVariable(platform::ShaderVariable(Name("view_projection_matrix"), projection * view));
+//      world_->getScene().renderer->setShaderVariable(platform::ShaderVariable(Name("camera_position"), transform.getWorldTranslation()));
 //
-//      world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("camera_near"), data.near_plane.asMeter()));
-//      world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("camera_far"), data.far_plane.asMeter()));
+//      world_->getScene().renderer->setShaderVariable(platform::ShaderVariable(Name("camera_near"), data.near_plane.asMeter()));
+//      world_->getScene().renderer->setShaderVariable(platform::ShaderVariable(Name("camera_far"), data.far_plane.asMeter()));
 //    }
 //  }
 //}

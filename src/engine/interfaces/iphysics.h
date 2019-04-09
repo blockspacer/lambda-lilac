@@ -9,10 +9,10 @@ namespace lambda
 #define VIOLET_PHYSICS_SCALE (1000.0f)
 #define VIOLET_INV_PHYSICS_SCALE (1.0f / 1000.0f)
 
-  namespace world
-  {
-    class IWorld;
-  }
+	namespace scene
+	{
+		struct Scene;
+	}
   namespace platform
   {
     class DebugRenderer;
@@ -84,12 +84,9 @@ namespace lambda
 	  class IPhysicsWorld
 	  {
 	  public:
-		  virtual void initialize(
-			  platform::DebugRenderer* debug_renderer,
-			  world::IWorld* world
-		  ) = 0;
+		  virtual void initialize(scene::Scene& scene) = 0;
 		  virtual void deinitialize() = 0;
-		  virtual void render() = 0;
+		  virtual void render(scene::Scene& scene) = 0;
 		  virtual void update(const double& time_step) = 0;
 
 		  virtual ICollisionBody* createCollisionBody(entity::Entity entity) = 0;
