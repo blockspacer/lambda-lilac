@@ -11,99 +11,88 @@
 
 namespace lambda
 {
-  namespace components
-  {
-    class CameraSystem;
-    class TransformSystem;
-    class MeshRenderSystem;
+	namespace components
+	{
+		class CameraComponent : public IComponent
+		{
+		public:
+			CameraComponent(const entity::Entity& entity, world::SceneData& scene);
+			CameraComponent(const CameraComponent& other);
+			CameraComponent();
 
-    class CameraComponent : public IComponent
-    {
-    public:
-      CameraComponent(const entity::Entity& entity, CameraSystem* system);
-      CameraComponent(const CameraComponent& other);
-      CameraComponent();
+			void setFov(const utilities::Angle& fov);
+			utilities::Angle getFov() const;
+			void setNearPlane(const utilities::Distance& near_plane);
+			utilities::Distance getNearPlane() const;
+			void setFarPlane(const utilities::Distance& far_plane);
+			utilities::Distance getFarPlane() const;
+			void addShaderPass(const platform::ShaderPass& shader_pass);
+			void setShaderPasses(const Vector<platform::ShaderPass>& shader_pass);
+			platform::ShaderPass getShaderPass(uint32_t id) const;
+			Vector<platform::ShaderPass> getShaderPasses() const;
 
-      void setFov(const utilities::Angle& fov);
-      utilities::Angle getFov() const;
-      void setNearPlane(const utilities::Distance& near_plane);
-      utilities::Distance getNearPlane() const;
-      void setFarPlane(const utilities::Distance& far_plane);
-      utilities::Distance getFarPlane() const;
-      void addShaderPass(const platform::ShaderPass& shader_pass);
-      void setShaderPasses(const Vector<platform::ShaderPass>& shader_pass);
-      platform::ShaderPass getShaderPass(uint32_t id) const;
-      Vector<platform::ShaderPass> getShaderPasses() const;
+		private:
+			world::SceneData* scene_;
+		};
 
-      CameraSystem* getSystem() const { return system_; }
-    private:
-      CameraSystem* system_;
-    };
+		namespace CameraSystem
+		{
+			struct Data
+			{
+				Data(const entity::Entity& entity) : entity(entity) {};
+				Data(const Data& other);
+				Data& operator=(const Data& other);
 
-    struct CameraData
-    {
-      CameraData(const entity::Entity& entity) : entity(entity) {};
-      CameraData(const CameraData& other);
-      CameraData& operator=(const CameraData& other);
+				utilities::Angle    fov = utilities::Angle::fromDeg(90.0f);
+				utilities::Distance near_plane = utilities::Distance::fromMeter(0.1f);
+				utilities::Distance far_plane = utilities::Distance::fromMeter(1000.0f);
+				Vector<platform::ShaderPass> shader_passes;
 
-      utilities::Angle    fov        = utilities::Angle::fromDeg(90.0f);
-      utilities::Distance near_plane = utilities::Distance::fromMeter(0.1f);
-      utilities::Distance far_plane  = utilities::Distance::fromMeter(1000.0f);
-      Vector<platform::ShaderPass> shader_passes;
+				entity::Entity entity;
+				bool valid = true;
+			};
 
-      entity::Entity entity;
-			bool valid = true;
-    };
+			struct SystemData
+			{
+				Vector<Data>                  data;
+				Map<entity::Entity, uint32_t> entity_to_data;
+				Map<uint32_t, entity::Entity> data_to_entity;
+				Set<entity::Entity>           marked_for_delete;
+				Queue<uint32_t>               unused_data_entries;
 
-    class CameraSystem : public ISystem
-    {
-    public:
-      ~CameraSystem();
- 
-      virtual void initialize(world::IWorld& world) override;
-      virtual void deinitialize() override;
-      virtual void onRender() override;
-			virtual void collectGarbage() override;
+				Data& add(const entity::Entity& entity);
+				Data& get(const entity::Entity& entity);
+				void  remove(const entity::Entity& entity);
+				bool  has(const entity::Entity& entity);
 
-      static size_t systemId() { return (size_t)SystemIds::kCameraSystem; };
-      CameraComponent addComponent(const entity::Entity& entity);
-      CameraComponent getComponent(const entity::Entity& entity);
-      bool hasComponent(const entity::Entity& entity);
-      void removeComponent(const entity::Entity& entity);
+				entity::Entity main_camera = entity::InvalidEntity;
+				utilities::Frustum main_camera_frustum;
+				utilities::Culler main_camera_culler;
+			};
 
-      void setFov(const entity::Entity& entity, const utilities::Angle& fov);
-      utilities::Angle getFov(const entity::Entity& entity) const;
-      void setNearPlane(const entity::Entity& entity, const utilities::Distance& near_plane);
-      utilities::Distance getNearPlane(const entity::Entity& entity) const;
-      void setFarPlane(const entity::Entity& entity, const utilities::Distance& far_plane);
-      utilities::Distance getFarPlane(const entity::Entity& entity) const;
-      void addShaderPass(const entity::Entity& entity, const platform::ShaderPass& shader_pass);
-      void setShaderPasses(const entity::Entity& entity, const Vector<platform::ShaderPass>& shader_pass);
-      platform::ShaderPass getShaderPass(const entity::Entity& entity, uint32_t id) const;
-      Vector<platform::ShaderPass> getShaderPasses(const entity::Entity& entity) const;
+			CameraComponent addComponent(const entity::Entity& entity, world::SceneData& scene);
+			CameraComponent getComponent(const entity::Entity& entity, world::SceneData& scene);
+			bool hasComponent(const entity::Entity& entity, world::SceneData& scene);
+			void removeComponent(const entity::Entity& entity, world::SceneData& scene);
 
-      void bindCamera(const entity::Entity& entity);
-      entity::Entity getMainCamera();
-      void setMainCamera(const entity::Entity& main_camera);
+			void collectGarbage(world::SceneData& scene);
+			void initialize(world::SceneData& scene);
+			void deinitialize(world::SceneData& scene);
 
-    private:
-      Vector<CameraData> data_;
-			Map<entity::Entity, uint32_t> entity_to_data_;
-			Map<uint32_t, entity::Entity> data_to_entity_;
-			Set<entity::Entity> marked_for_delete_;
-			Queue<uint32_t> unused_data_entries_;
+			void setFov(const entity::Entity& entity, const utilities::Angle& fov, world::SceneData& scene);
+			utilities::Angle getFov(const entity::Entity& entity, world::SceneData& scene);
+			void setNearPlane(const entity::Entity& entity, const utilities::Distance& near_plane, world::SceneData& scene);
+			utilities::Distance getNearPlane(const entity::Entity& entity, world::SceneData& scene);
+			void setFarPlane(const entity::Entity& entity, const utilities::Distance& far_plane, world::SceneData& scene);
+			utilities::Distance getFarPlane(const entity::Entity& entity, world::SceneData& scene);
+			void addShaderPass(const entity::Entity& entity, const platform::ShaderPass& shader_pass, world::SceneData& scene);
+			void setShaderPasses(const entity::Entity& entity, const Vector<platform::ShaderPass>& shader_pass, world::SceneData& scene);
+			platform::ShaderPass getShaderPass(const entity::Entity& entity, uint32_t id, world::SceneData& scene);
+			Vector<platform::ShaderPass> getShaderPasses(const entity::Entity& entity, world::SceneData& scene);
 
-      CameraData& lookUpData(const entity::Entity& entity);
-      const CameraData& lookUpData(const entity::Entity& entity) const;
-
-    private:
-      foundation::SharedPointer<TransformSystem> transform_system_;
-      foundation::SharedPointer<MeshRenderSystem> mesh_render_system_;
-      world::IWorld* world_;
-
-      entity::Entity main_camera_ = entity::InvalidEntity;
-      utilities::Frustum main_camera_frustum_;
-      utilities::Culler main_camera_culler_;
-    };
-  }
+			void bindCamera(const entity::Entity& entity, world::SceneData& scene);
+			entity::Entity getMainCamera(world::SceneData& scene);
+			void setMainCamera(const entity::Entity& main_camera, world::SceneData& scene);
+		}
+	}
 }

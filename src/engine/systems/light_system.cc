@@ -26,8 +26,9 @@ namespace lambda
     }
     BaseLightComponent LightSystem::addComponent(const entity::Entity& entity)
     {
-      if (false == transform_system_->hasComponent(entity))
-        transform_system_->addComponent(entity);
+		world::SceneData& scene = world_->getScene().getSceneData();
+		if (!TransformSystem::hasComponent(entity, scene))
+			TransformSystem::addComponent(entity, scene);
 
 			if (!unused_data_entries_.empty())
 			{
@@ -141,9 +142,6 @@ namespace lambda
 	}
 	void LightSystem::initialize(world::IWorld& world)
     {
-      transform_system_ = world.getScene().getSystem<TransformSystem>();
-      mesh_render_system_ = world.getScene().getSystem<MeshRenderSystem>();
-      camera_system_ = world.getScene().getSystem<CameraSystem>();
       world_ = &world;
 	  
       world_->getPostProcessManager().addTarget(platform::RenderTarget(Name("light_map"),
@@ -179,14 +177,12 @@ namespace lambda
 			for (const auto& entity : entities)
 				removeComponent(entity);
 			collectGarbage();
-
-      camera_system_.reset();
-      mesh_render_system_.reset();
-      transform_system_.reset();
     }
 
     void LightSystem::onRender()
     {
+		world::SceneData& scene = world_->getScene().getSceneData();
+
       foundation::SharedPointer<platform::IRenderer> renderer = world_->getRenderer();
       renderer->beginTimer("Lighting");
       
@@ -199,14 +195,14 @@ namespace lambda
       world_->getRenderer()->popMarker();
 
 
-			auto main_camera = camera_system_->getMainCamera();
-			TransformComponent transform = transform_system_->getComponent(main_camera);
+			auto main_camera = CameraSystem::getMainCamera(scene);
+			TransformComponent transform = TransformSystem::getComponent(main_camera, scene);
 			const glm::mat4x4 view = glm::inverse(transform.getWorld());
 			const glm::mat4x4 projection = glm::perspective(
-				camera_system_->getFov(main_camera).asRad(),
+				CameraSystem::getFov(main_camera, scene).asRad(),
 				(float)world_->getWindow()->getSize().x / (float)world_->getWindow()->getSize().y,
-				camera_system_->getNearPlane(main_camera).asMeter(),
-				camera_system_->getFarPlane(main_camera).asMeter()
+				CameraSystem::getNearPlane(main_camera, scene).asMeter(),
+				CameraSystem::getFarPlane(main_camera, scene).asMeter()
 			);
 
 			utilities::Frustum frustum;
@@ -222,7 +218,7 @@ namespace lambda
 					{
 					case LightType::kPoint:
 					{
-						glm::vec3 position = transform_system_->getWorldTranslation(data.entity);
+						glm::vec3 position = TransformSystem::getWorldTranslation(data.entity, scene);
 						float radius = data.depth.back();
 						if (!frustum.ContainsSphere(position, radius))
 							enabled = false;
@@ -282,7 +278,7 @@ namespace lambda
 
       // Reset states.
       renderer->setRasterizerState(platform::RasterizerState::SolidFront());
-      camera_system_->bindCamera(camera_system_->getMainCamera());
+	  CameraSystem::bindCamera(CameraSystem::getMainCamera(scene), scene);
 
 			renderer->endTimer("Lighting");
     }
@@ -461,10 +457,12 @@ namespace lambda
     }
     void LightSystem::renderDirectional(const entity::Entity& entity)
     {
+		world::SceneData& scene = world_->getScene().getSceneData();
+
       foundation::SharedPointer<platform::IRenderer> renderer = world_->getRenderer();
       LightData& data = lookUpData(entity);
 
-      const TransformComponent transform = transform_system_->getComponent(entity);
+      const TransformComponent transform = TransformSystem::getComponent(entity, scene);
       const glm::vec3 forward = glm::normalize(transform.getWorldForward());
 
       const bool update = (data.shadow_type == ShadowType::kDynamic) ? (++data.dynamic_index >= data.dynamic_frequency) : (data.shadow_type != ShadowType::kGenerated);
@@ -559,7 +557,7 @@ namespace lambda
         frustum.construct(data.projection.back(), data.view.back());
 
         // Render to the shadow map.
-        mesh_render_system_->renderAll(data.culler.back(), frustum);
+        MeshRenderSystem::renderAll(data.culler.back(), frustum, scene);
 
         // Set up the post processing passes.
         renderer->setMesh(full_screen_mesh_);
@@ -634,10 +632,12 @@ namespace lambda
 
     void LightSystem::renderSpot(const entity::Entity& entity)
     {
+		world::SceneData& scene = world_->getScene().getSceneData();
+
       foundation::SharedPointer<platform::IRenderer> renderer = world_->getRenderer();
       LightData& data = lookUpData(entity);
 
-      const TransformComponent transform = transform_system_->getComponent(entity);
+      const TransformComponent transform = TransformSystem::getComponent(entity, scene);
       const glm::vec3 forward = glm::normalize(transform.getWorldForward());
 
       Vector<platform::RenderTarget> shadow_maps(data.render_target.begin(), data.render_target.end());
@@ -734,7 +734,7 @@ namespace lambda
         frustum.construct(data.projection.back(), data.view.back());
 
         // Render to the shadow map.
-        mesh_render_system_->renderAll(data.culler.back(), frustum);
+		MeshRenderSystem::renderAll(data.culler.back(), frustum, scene);
 
         // Set up the post processing passes.
         renderer->setMesh(full_screen_mesh_);
@@ -807,10 +807,12 @@ namespace lambda
 
 		void LightSystem::renderPoint(const entity::Entity& entity)
 		{
+			world::SceneData& scene = world_->getScene().getSceneData();
+
 			foundation::SharedPointer<platform::IRenderer> renderer = world_->getRenderer();
 			LightData& data = lookUpData(entity);
       
-			const TransformComponent transform = transform_system_->getComponent(entity);
+			const TransformComponent transform = TransformSystem::getComponent(entity, scene);
 
 			static const glm::vec3 g_forwards[6u] = {
 				glm::vec3( 1.0f, 0.0f, 0.0f),
@@ -906,13 +908,13 @@ namespace lambda
 					// Render to the shadow map.
 					if (statics_only)
 					{
-						mesh_render_system_->createRenderList(data.culler.back(), frustum);
+						MeshRenderSystem::createRenderList(data.culler.back(), frustum, scene);
 						utilities::LinkedNode statics = data.culler.back().getStatics();
 						utilities::LinkedNode dynamics;
-						mesh_render_system_->renderAll(&statics, &dynamics, false);
+						MeshRenderSystem::renderAll(&statics, &dynamics, scene, false);
 					}
 					else
-						mesh_render_system_->renderAll(data.culler.back(), frustum, false);
+						MeshRenderSystem::renderAll(data.culler.back(), frustum, scene, false);
 
 
 					// Set up the post processing passes.
@@ -1003,10 +1005,12 @@ namespace lambda
 		}
     void LightSystem::renderCascade(const entity::Entity& entity)
     {
+		world::SceneData& scene = world_->getScene().getSceneData();
+
       foundation::SharedPointer<platform::IRenderer> renderer = world_->getRenderer();
       LightData& data = lookUpData(entity);
       
-      const TransformComponent transform = transform_system_->getComponent(entity);
+      const TransformComponent transform = TransformSystem::getComponent(entity, scene);
       const glm::vec3 forward = glm::normalize(transform.getWorldForward());
 
       const bool update = (data.shadow_type == ShadowType::kDynamic) ? (++data.dynamic_index >= data.dynamic_frequency) : (data.shadow_type != ShadowType::kGenerated);
@@ -1027,9 +1031,9 @@ namespace lambda
           data.shadow_type = ShadowType::kGenerated;
         }
 
-        entity::Entity main_camera = camera_system_->getMainCamera();
-        const float camera_near = camera_system_->getNearPlane(main_camera).asMeter();
-        const float camera_far = camera_system_->getFarPlane(main_camera).asMeter();
+        entity::Entity main_camera = CameraSystem::getMainCamera(scene);
+        const float camera_near = CameraSystem::getNearPlane(main_camera, scene).asMeter();
+        const float camera_far = CameraSystem::getFarPlane(main_camera, scene).asMeter();
         const float camera_diff = camera_far - camera_near;
 
         const uint8_t cascade_count = 3u;
@@ -1051,12 +1055,12 @@ namespace lambda
         {
           // Get the camera matrices for this cascade.
           glm::mat4x4 camera_projection = glm::perspective(
-            camera_system_->getFov(main_camera).asRad(),
+            CameraSystem::getFov(main_camera, scene).asRad(),
             (float)world_->getWindow()->getSize().x / (float)world_->getWindow()->getSize().y,
             cascade_near[i],
             cascade_far[i]
           );
-          glm::mat4x4 camera_view = glm::inverse(transform_system_->getWorld(main_camera));
+          glm::mat4x4 camera_view = glm::inverse(TransformSystem::getWorld(main_camera, scene));
 
           // Get the camera frustum for this cascade.
           utilities::Frustum main_camera_frustum;
@@ -1122,7 +1126,7 @@ namespace lambda
           frustum.construct(data.projection.at(i), data.view.at(i));
 
           // Render to the shadow map.
-          mesh_render_system_->renderAll(data.culler.at(i), frustum);
+		  MeshRenderSystem::renderAll(data.culler.at(i), frustum, scene);
 
           // Set up the post processing passes.
           renderer->setMesh(full_screen_mesh_);

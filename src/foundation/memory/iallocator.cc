@@ -49,7 +49,16 @@ namespace lambda
 
 		allocated_ += size;
 		++open_allocations_;
-		
+
+#if VIOLET_DEBUG_MEMORY
+		Header* new_headers_ = (Header*)malloc(sizeof(Header) * (header_count_ + 1));
+		memcpy(new_headers_, headers_, sizeof(Header) * header_count_);
+		free(headers_);
+		headers_ = new_headers_;
+		headers_[header_count_] = Header{ captureCallStack(2), ptr, size, align };
+		header_count_++;
+#endif
+
 		return ptr;
 	}
 
@@ -64,8 +73,30 @@ namespace lambda
         return 0;
       }
 
-      allocated_ -= deallocated;
+	  if (deallocated <= allocated_)
+		  allocated_ -= deallocated;
+	  else
+		  allocated_ = 0u;
+
       --open_allocations_;
+
+#if VIOLET_DEBUG_MEMORY
+	  for (uint32_t i = 0; i < header_count_; ++i)
+	  {
+		  if (headers_[i].ptr == ptr)
+		  {
+			  if (strcmp(headers_[i].src, "") != 0)
+				  free((void*)headers_[i].src);
+			  Header* new_headers_ = (Header*)malloc(sizeof(Header) * (header_count_ - 1));
+			  memcpy(new_headers_, headers_, sizeof(Header) * i);
+			  memcpy(new_headers_ + i, headers_ + i + 1, sizeof(Header) * (header_count_ - i - 1));
+			  free(headers_);
+			  headers_ = new_headers_;
+			  header_count_--;
+			  break;
+		  }
+	  }
+#endif
 
       return deallocated;
     }

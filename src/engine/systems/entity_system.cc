@@ -2,32 +2,35 @@
 
 namespace lambda
 {
-  namespace entity
-  {
-    Entity EntitySystem::createEntity()
-    {
-      if (free_ids_.empty() == true)
-      {
-        for (uint32_t i = 0; i < kFreeIdIncrement; ++i)
-          free_ids_.push(free_id_count_ + i);
-        
-				free_id_count_ += kFreeIdIncrement;
-      }
+	namespace components
+	{
+		namespace EntitySystem
+		{
+			entity::Entity SystemData::create()
+			{
+				if (free_ids.empty() == true)
+				{
+					for (entity::Entity i = 0ull; i < kFreeIdIncrement; ++i)
+						free_ids.push(free_id_count + i);
 
-			uint32_t id = free_ids_.front();
-      free_ids_.pop();
+					free_id_count += kFreeIdIncrement;
+				}
 
-      return id;
-    }
+				entity::Entity id = free_ids.front();
+				free_ids.pop();
 
-    void EntitySystem::destroyEntity(const Entity& entity)
-    {
-      free_ids_.push(entity);
-    }
+				return id;
+			}
 
-    bool EntitySystem::isAlive(const Entity& entity)
-    {
-      return entity > 0;
-    }
-  }
+			void SystemData::destroy(entity::Entity entity)
+			{
+				free_ids.push(entity);
+			}
+
+			bool SystemData::valid(entity::Entity entity)
+			{
+				return entity > 0ull;
+			}
+		}
+	}
 }

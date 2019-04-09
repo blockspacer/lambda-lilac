@@ -4,66 +4,69 @@
 
 namespace lambda
 {
-  namespace components
-  {
-		class NameSystem;
+	namespace world
+	{
+		struct SceneData;
+	}
 
-    class NameComponent : public IComponent
-    {
-    public:
-			NameComponent(const entity::Entity& entity, NameSystem* system);
+	namespace components
+	{
+		class NameComponent : public IComponent
+		{
+		public:
+			NameComponent(const entity::Entity& entity, world::SceneData& scene);
 			NameComponent(const NameComponent& other);
 			NameComponent();
 
-      void setName(const String& name);
-      String getName() const;
+			void setName(const String& name);
+			String getName() const;
 			void setTags(const Vector<String>& tags);
 			Vector<String> getTags() const;
 
-    private:
-      NameSystem* system_;
-    };
+		private:
+			world::SceneData* scene_;
+		};
 
-    struct NameData
-    {
-			NameData(const entity::Entity& entity) : entity(entity) {};
-			NameData(const NameData& other);
-			NameData& operator=(const NameData& other);
+		namespace NameSystem
+		{
+			struct Data
+			{
+				Data(const entity::Entity& entity) : entity(entity) {};
+				Data(const Data& other);
+				Data& operator=(const Data& other);
 
-			String name;
-			Vector<String> tags;
-      entity::Entity entity;
-			bool valid = true;
-    };
+				String name;
+				Vector<String> tags;
+				entity::Entity entity;
+				bool valid = true;
+			};
 
-    class NameSystem : public ISystem
-    {
-    public:
-      static size_t systemId() { return (size_t)SystemIds::kNameSystem; };
-      NameComponent addComponent(const entity::Entity& entity);
-      NameComponent getComponent(const entity::Entity& entity);
-      bool hasComponent(const entity::Entity& entity);
-      void removeComponent(const entity::Entity& entity);
-      virtual void initialize(world::IWorld& world) override;
-      virtual void deinitialize() override;
-      virtual void collectGarbage() override;
-			virtual ~NameSystem() override {};
+			struct SystemData
+			{
+				Vector<Data>                  data;
+				Map<entity::Entity, uint32_t> entity_to_data;
+				Map<uint32_t, entity::Entity> data_to_entity;
+				Set<entity::Entity>           marked_for_delete;
+				Queue<uint32_t>               unused_data_entries;
 
-			void setName(const entity::Entity& entity, const String& name);
-			String getName(const entity::Entity& entity) const;
-			void setTags(const entity::Entity& entity, const Vector<String>& tags);
-			Vector<String> getTags(const entity::Entity& entity) const;
+				Data& add(const entity::Entity& entity);
+				Data& get(const entity::Entity& entity);
+				void  remove(const entity::Entity& entity);
+				bool  has(const entity::Entity& entity);
+			};
 
-    protected:
-      NameData& lookUpData(const entity::Entity& entity);
-      const NameData& lookUpData(const entity::Entity& entity) const;
+			NameComponent addComponent(const entity::Entity& entity, world::SceneData& scene);
+			NameComponent getComponent(const entity::Entity& entity, world::SceneData& scene);
+			bool hasComponent(const entity::Entity& entity, world::SceneData& scene);
+			void removeComponent(const entity::Entity& entity, world::SceneData& scene);
 
-    private:
-      Vector<NameData> data_;
-			Map<entity::Entity, uint32_t> entity_to_data_;
-			Map<uint32_t, entity::Entity> data_to_entity_;
-			Set<entity::Entity> marked_for_delete_;
-			Queue<uint32_t> unused_data_entries_;
-    };
-  }
+			void collectGarbage(world::SceneData& scene);
+			void deinitialize(world::SceneData& scene);
+
+			void setName(const entity::Entity& entity, const String& name, world::SceneData& scene);
+			String getName(const entity::Entity& entity, world::SceneData& scene);
+			void setTags(const entity::Entity& entity, const Vector<String>& tags, world::SceneData& scene);
+			Vector<String> getTags(const entity::Entity& entity, world::SceneData& scene);
+		}
+	}
 }

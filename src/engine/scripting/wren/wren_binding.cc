@@ -41,17 +41,8 @@ namespace lambda
 
     ///////////////////////////////////////////////////////////////////////////
     world::IWorld* g_world;
-    entity::EntitySystem* g_entitySystem;
-		components::NameSystem* g_nameSystem;
-		components::TransformSystem* g_transformSystem;
-    components::CameraSystem* g_cameraSystem;
+	world::SceneData* g_scene;
     components::LightSystem* g_lightSystem;
-    components::MeshRenderSystem* g_meshRenderSystem;
-    components::LODSystem* g_lodSystem;
-    components::RigidBodySystem* g_rigidBodySystem;
-    components::WaveSourceSystem* g_waveSourceSystem;
-    components::ColliderSystem* g_colliderSystem;
-    components::MonoBehaviourSystem* g_monoBehaviourSystem;
 
     ///////////////////////////////////////////////////////////////////////////
     template<typename T>
@@ -1582,16 +1573,17 @@ foreign class Mesh {
 
 		void release(entity::Entity e)
 		{
-			if (g_nameSystem->hasComponent(e))          g_nameSystem->removeComponent(e);
-			if (g_transformSystem->hasComponent(e))     g_transformSystem->removeComponent(e);
-			if (g_cameraSystem->hasComponent(e))        g_cameraSystem->removeComponent(e);
+			if (components::TransformSystem::hasComponent(e, *g_scene))     components::TransformSystem::removeComponent(e, *g_scene);
+			if (components::MeshRenderSystem::hasComponent(e, *g_scene))    components::MeshRenderSystem::removeComponent(e, *g_scene);
+			if (components::NameSystem::hasComponent(e, *g_scene))          components::NameSystem::removeComponent(e, *g_scene);
+			if (components::CameraSystem::hasComponent(e, *g_scene))        components::CameraSystem::removeComponent(e, *g_scene);
+			if (components::LODSystem::hasComponent(e, *g_scene))           components::LODSystem::removeComponent(e, *g_scene);
+			if (components::RigidBodySystem::hasComponent(e, *g_scene))     components::RigidBodySystem::removeComponent(e, *g_scene);
+			if (components::ColliderSystem::hasComponent(e, *g_scene))      components::ColliderSystem::removeComponent(e, *g_scene);
+			if (components::MonoBehaviourSystem::hasComponent(e, *g_scene)) components::MonoBehaviourSystem::removeComponent(e, *g_scene);
+			if (components::WaveSourceSystem::hasComponent(e, *g_scene))    components::WaveSourceSystem::removeComponent(e, *g_scene);
+			// TODO (Hilze): Free used entities.
 			if (g_lightSystem->hasComponent(e))         g_lightSystem->removeComponent(e);
-			if (g_meshRenderSystem->hasComponent(e))    g_meshRenderSystem->removeComponent(e);
-			if (g_lodSystem->hasComponent(e))           g_lodSystem->removeComponent(e);
-			if (g_rigidBodySystem->hasComponent(e))     g_rigidBodySystem->removeComponent(e);
-			if (g_waveSourceSystem->hasComponent(e))    g_waveSourceSystem->removeComponent(e);
-			if (g_colliderSystem->hasComponent(e))      g_colliderSystem->removeComponent(e);
-			if (g_monoBehaviourSystem->hasComponent(e)) g_monoBehaviourSystem->removeComponent(e);
 			//g_entitySystem->destroyEntity(e);
 		}
 
@@ -1628,7 +1620,7 @@ foreign class Mesh {
 			void getAll(Vector<entity::Entity>& vec, entity::Entity e)
 			{
 				vec.push_back(e);
-				for (auto child : g_transformSystem->getChildren(e))
+				for (auto child : components::TransformSystem::getChildren(e, *g_scene))
 					getAll(vec, child);
 			}
 
@@ -1763,8 +1755,8 @@ foreign class GameObject {
         return WrenForeignClassMethods{
           [](WrenVM* vm) {
           entity::Entity& handle = *make(vm);
-          handle = g_entitySystem->createEntity();
-					g_nameSystem->addComponent(handle);
+          handle = g_scene->entity.create();
+		  components::NameSystem::addComponent(handle, *g_scene);
         },
           [](void* data) {
           entity::Entity& handle = *((entity::Entity*)data);
@@ -1786,10 +1778,11 @@ foreign class GameObject {
 				if (strcmp(signature, "name") == 0) return [](WrenVM* vm) {
 					entity::Entity e = *GetForeign<entity::Entity>(vm);
 
-					if (!g_nameSystem->hasComponent(e))
-						g_nameSystem->addComponent(e);
 
-					String name = g_nameSystem->getName(e);
+					if (!components::NameSystem::hasComponent(e, *g_scene))
+						components::NameSystem::addComponent(e, *g_scene);
+
+					String name = components::NameSystem::getName(e, *g_scene);
 					const size_t len = name.size() + 1;
 					char* c_str = (char*)WREN_ALLOC(len);
 					memcpy(c_str, name.c_str(), len);
@@ -1798,19 +1791,19 @@ foreign class GameObject {
 				if (strcmp(signature, "name=(_)") == 0) return [](WrenVM* vm) {
 					entity::Entity e = *GetForeign<entity::Entity>(vm);
 
-					if (!g_nameSystem->hasComponent(e))
-						g_nameSystem->addComponent(e);
+					if (!components::NameSystem::hasComponent(e, *g_scene))
+						components::NameSystem::addComponent(e, *g_scene);
 
 					String name = wrenGetSlotString(vm, 1);
-					g_nameSystem->setName(e, name);
+					components::NameSystem::setName(e, name, *g_scene);
 				};
 				if (strcmp(signature, "tags") == 0) return [](WrenVM* vm) {
 					entity::Entity e = *GetForeign<entity::Entity>(vm);
 
-					if (!g_nameSystem->hasComponent(e))
-						g_nameSystem->addComponent(e);
+					if (!components::NameSystem::hasComponent(e, *g_scene))
+						components::NameSystem::addComponent(e, *g_scene);
 
-					Vector<String> tags = g_nameSystem->getTags(e);
+					Vector<String> tags = components::NameSystem::getTags(e, *g_scene);
 
 					wrenSetSlotNewList(vm, 0);
 
@@ -1826,8 +1819,8 @@ foreign class GameObject {
 				if (strcmp(signature, "tags=(_)") == 0) return [](WrenVM* vm) {
 					entity::Entity e = *GetForeign<entity::Entity>(vm);
 
-					if (!g_nameSystem->hasComponent(e))
-						g_nameSystem->addComponent(e);
+					if (!components::NameSystem::hasComponent(e, *g_scene))
+						components::NameSystem::addComponent(e, *g_scene);
 
 					Vector<String> tags((size_t)wrenGetListCount(vm, 1));
 
@@ -1837,11 +1830,12 @@ foreign class GameObject {
 						tags[i] = wrenGetSlotString(vm, 2);
 					}
 
-					g_nameSystem->setTags(e, tags);
+					components::NameSystem::setTags(e, tags, *g_scene);
 				};
 				if (strcmp(signature, "destroy()") == 0) return [](WrenVM* vm) {
 					entity::Entity e = *GetForeign<entity::Entity>(vm);
-					g_nameSystem->removeComponent(e);
+
+					components::NameSystem::removeComponent(e, *g_scene);
 					g_scriptingData->free(vm, e);
 				};
         return nullptr;
@@ -1939,7 +1933,7 @@ foreign class Transform {
           TransformHandle* handle = GetForeign<TransformHandle>(vm);
           entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
 					g_scriptingData->getData(e).transform = wrenGetSlotHandle(vm, 0);
-          handle->handle = g_transformSystem->addComponent(e);
+          handle->handle = components::TransformSystem::addComponent(e, *g_scene);
           handle->entity = e;
         };
         if (strcmp(signature, "goGet(_)") == 0) return [](WrenVM* vm) {
@@ -1953,7 +1947,7 @@ foreign class Transform {
         };
         if (strcmp(signature, "goRemove(_)") == 0) return [](WrenVM* vm) {
           TransformHandle* handle = GetForeign<TransformHandle>(vm);
-          g_transformSystem->removeComponent(handle->handle.entity());
+          components::TransformSystem::removeComponent(handle->handle.entity(), *g_scene);
           wrenReleaseHandle(
             vm, 
             g_scriptingData->getData(handle->handle.entity()).transform
@@ -1970,7 +1964,7 @@ foreign class Transform {
         };
         if (strcmp(signature, "parent=(_)") == 0) return [](WrenVM* vm) {
           GetForeign<TransformHandle>(vm)->handle.setParent(
-            g_transformSystem->getComponent(*GetForeign<entity::Entity>(vm, 1))
+            components::TransformSystem::getComponent(*GetForeign<entity::Entity>(vm, 1), *g_scene)
           );
         };
         if (strcmp(signature, "children") == 0) return [](WrenVM* vm) {
@@ -2184,7 +2178,7 @@ foreign class Camera {
         if (strcmp(signature, "goAdd(_)") == 0) return [](WrenVM* vm) {
           CameraHandle* handle = GetForeign<CameraHandle>(vm);
           entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
-          handle->handle = g_cameraSystem->addComponent(e);
+          handle->handle = components::CameraSystem::addComponent(e, *g_scene);
           handle->entity = e;
           
           g_scriptingData->getData(handle->handle.entity()).camera = 
@@ -2206,7 +2200,7 @@ foreign class Camera {
             g_scriptingData->getData(handle->handle.entity()).camera
           );
           g_scriptingData->getData(handle->handle.entity()).camera = nullptr;
-          g_cameraSystem->removeComponent(handle->handle.entity());
+		  components::CameraSystem::removeComponent(handle->handle.entity(), *g_scene);
           handle->handle = components::CameraComponent();
           handle->entity = entity::Entity();
         };
@@ -2332,8 +2326,8 @@ foreign class MeshRender {
     foreign albedo=(albedo)
     foreign normal
     foreign normal=(normal)
-    foreign metallicRoughness
-    foreign metallicRoughness=(mr)
+    foreign DMRA
+    foreign DMRA=(dmra)
 }
 )";
         char* data = (char*)WREN_ALLOC(str.size() + 1u);
@@ -2362,11 +2356,11 @@ foreign class MeshRender {
       void MakeStaticRecursive(const entity::Entity& id)
       {
         const entity::Entity e = id;
-        if (g_meshRenderSystem->hasComponent(e))
-          g_meshRenderSystem->makeStatic(e);
+        if (components::MeshRenderSystem::hasComponent(e, *g_scene))
+          components::MeshRenderSystem::makeStatic(e, *g_scene);
 
-        if (g_transformSystem->hasComponent(e))
-          for (const auto& child : g_transformSystem->getChildren(e))
+        if (components::TransformSystem::hasComponent(e, *g_scene))
+          for (const auto& child : components::TransformSystem::getChildren(e, *g_scene))
             MakeStaticRecursive(child);
       }
     
@@ -2374,11 +2368,11 @@ foreign class MeshRender {
       void MakeDynamicRecursive(const entity::Entity& id)
       {
         const entity::Entity e = id;
-        if (g_meshRenderSystem->hasComponent(e))
-          g_meshRenderSystem->makeDynamic(e);
+        if (components::MeshRenderSystem::hasComponent(e, *g_scene))
+          components::MeshRenderSystem::makeDynamic(e, *g_scene);
 
-        if (g_transformSystem->hasComponent(e))
-          for (const auto& child : g_transformSystem->getChildren(e))
+        if (components::TransformSystem::hasComponent(e, *g_scene))
+          for (const auto& child : components::TransformSystem::getChildren(e, *g_scene))
             MakeDynamicRecursive(child);
       }
      
@@ -2394,7 +2388,7 @@ foreign class MeshRender {
         if (strcmp(signature, "goAdd(_)") == 0) return [](WrenVM* vm) {
           MeshRenderHandle* handle = GetForeign<MeshRenderHandle>(vm);
           entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
-          handle->handle = g_meshRenderSystem->addComponent(e);
+          handle->handle = components::MeshRenderSystem::addComponent(e, *g_scene);
           handle->entity = e;
           g_scriptingData->getData(handle->handle.entity()).mesh_render = 
             wrenGetSlotHandle(vm, 0);
@@ -2410,7 +2404,7 @@ foreign class MeshRender {
         };
         if (strcmp(signature, "goRemove(_)") == 0) return [](WrenVM* vm) {
           MeshRenderHandle* handle = GetForeign<MeshRenderHandle>(vm);
-          g_meshRenderSystem->removeComponent(handle->handle.entity());
+          components::MeshRenderSystem::removeComponent(handle->handle.entity(), *g_scene);
           wrenReleaseHandle(
             vm, 
             g_scriptingData->getData(handle->handle.entity()).mesh_render
@@ -2467,37 +2461,33 @@ foreign class MeshRender {
             GetForeign<MeshRenderHandle>(vm)->handle.getNormalTexture()
           );
         };
-        if (strcmp(signature, "metallicRoughness=(_)") == 0) 
+        if (strcmp(signature, "DMRA=(_)") == 0) 
           return [](WrenVM* vm) {
-          GetForeign<MeshRenderHandle>(vm)->handle.setMetallicRoughnessTexture(
+          GetForeign<MeshRenderHandle>(vm)->handle.setDMRATexture(
             *GetForeign<asset::VioletTextureHandle>(vm, 1)
           );
         };
-        if (strcmp(signature, "metallicRoughness") == 0) 
+        if (strcmp(signature, "DMRA") == 0) 
           return [](WrenVM* vm) {
           Texture::make(
             vm, 
             GetForeign<MeshRenderHandle>(
               vm
-              )->handle.getMetallicRoughnessTexture()
+              )->handle.getDMRATexture()
           );
         };
         if (strcmp(signature, "makeStatic()") == 0) return [](WrenVM* vm) {
-          g_meshRenderSystem->makeStatic(
-            GetForeign<MeshRenderHandle>(vm)->handle.entity()
-          );
+          components::MeshRenderSystem::makeStatic(GetForeign<MeshRenderHandle>(vm)->handle.entity(), *g_scene);
         };
         if (strcmp(signature, "makeDynamic()") == 0) return [](WrenVM* vm) {
-          g_meshRenderSystem->makeDynamic(
-            GetForeign<MeshRenderHandle>(vm)->handle.entity()
-          );
+          components::MeshRenderSystem::makeDynamic(GetForeign<MeshRenderHandle>(vm)->handle.entity(), *g_scene);
         };
         if (strcmp(signature, "makeStaticRecursive()") == 0) 
           return [](WrenVM* vm) {
 					entity::Entity uptop = 
 						GetForeign<MeshRenderHandle>(vm)->handle.entity();
-					while (g_transformSystem->getParent(uptop) != entity::Entity())
-						uptop = g_transformSystem->getParent(uptop);
+					while (components::TransformSystem::getParent(uptop, *g_scene) != entity::Entity())
+						uptop = components::TransformSystem::getParent(uptop, *g_scene);
 					
 					MakeStaticRecursive(uptop);
         };
@@ -2565,7 +2555,7 @@ foreign class Lod {
         if (strcmp(signature, "goAdd(_)") == 0) return [](WrenVM* vm) {
           LODHandle* handle = GetForeign<LODHandle>(vm);
           entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
-          handle->handle = g_lodSystem->addComponent(e);
+          handle->handle = components::LODSystem::addComponent(e, *g_scene);
           handle->entity = e;
           g_scriptingData->getData(handle->handle.entity()).lod = 
             wrenGetSlotHandle(vm, 0);
@@ -2581,7 +2571,7 @@ foreign class Lod {
         };
         if (strcmp(signature, "goRemove(_)") == 0) return [](WrenVM* vm) {
           LODHandle* handle = GetForeign<LODHandle>(vm);
-          g_lodSystem->removeComponent(handle->handle.entity());
+		  components::LODSystem::removeComponent(handle->handle.entity(), *g_scene);
           wrenReleaseHandle(
             vm, 
             g_scriptingData->getData(handle->handle.entity()).lod
@@ -2606,16 +2596,16 @@ foreign class Lod {
           std::function<void(entity::Entity, const lambda::components::LOD&)> 
             addLOD =  [lod, &addLOD]
             (entity::Entity entity, const lambda::components::LOD& lod)->void {
-            if (g_meshRenderSystem->hasComponent(entity) &&
-              g_meshRenderSystem->getMesh(entity) != nullptr)
+            if (components::MeshRenderSystem::hasComponent(entity, *g_scene) &&
+              components::MeshRenderSystem::getMesh(entity, *g_scene) != nullptr)
             {
-              if (false == g_lodSystem->hasComponent(entity))
-                g_lodSystem->addComponent(entity);
+              if (!components::LODSystem::hasComponent(entity, *g_scene))
+				  components::LODSystem::addComponent(entity, *g_scene);
 
-              g_lodSystem->addLOD(entity, lod);
+			  components::LODSystem::addLOD(entity, lod, *g_scene);
             }
 
-            for (const auto& child : g_transformSystem->getChildren(entity))
+            for (const auto& child : components::TransformSystem::getChildren(entity, *g_scene))
               addLOD(child, lod);
           };
         };
@@ -2719,71 +2709,71 @@ class RigidBody {
         };
         if (strcmp(signature, "goAddForeign(_)") == 0) return [](WrenVM* vm) {
 					entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
-          g_rigidBodySystem->addComponent(e);
+          components::RigidBodySystem::addComponent(e, *g_scene);
         };
         if (strcmp(signature, "priv_applyImpulse(_,_)") == 0) return [](WrenVM* vm) {
 					entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
 					glm::vec3 v = *GetForeign<glm::vec3>(vm, 2);
-					g_rigidBodySystem->applyImpulse(e, v);
+					components::RigidBodySystem::applyImpulse(e, v, *g_scene);
 				};
         if (strcmp(signature, "priv_velocity(_,_)") == 0) return [](WrenVM* vm) {
 					entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
 					glm::vec3 v = *GetForeign<glm::vec3>(vm, 2);
-					g_rigidBodySystem->setVelocity(e, v);
+					components::RigidBodySystem::setVelocity(e, v, *g_scene);
 				};
         if (strcmp(signature, "priv_velocity(_)") == 0) return [](WrenVM* vm) {
 					entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
-					glm::vec3 v = g_rigidBodySystem->getVelocity(e);
+					glm::vec3 v = components::RigidBodySystem::getVelocity(e, *g_scene);
 					Vec3::make(vm, v);
 				};
         if (strcmp(signature, "priv_angularVelocity(_,_)") == 0) return [](WrenVM* vm) {
 					entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
 					glm::vec3 v = *GetForeign<glm::vec3>(vm, 2);
-					g_rigidBodySystem->setAngularVelocity(e, v);
+					components::RigidBodySystem::setAngularVelocity(e, v, *g_scene);
 				};
         if (strcmp(signature, "priv_angularVelocity(_)") == 0) return [](WrenVM* vm) {
 					entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
-					glm::vec3 v = g_rigidBodySystem->getAngularVelocity(e);
+					glm::vec3 v = components::RigidBodySystem::getAngularVelocity(e, *g_scene);
 					Vec3::make(vm, v);
         };
         if (strcmp(signature, "priv_velocityConstraints(_,_)") == 0) return [](WrenVM* vm) {
 					entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
 					double v = wrenGetSlotDouble(vm, 2);
-					g_rigidBodySystem->setVelocityConstraints(e, (uint8_t)v);
+					components::RigidBodySystem::setVelocityConstraints(e, (uint8_t)v, *g_scene);
         };
         if (strcmp(signature, "priv_velocityConstraints(_)") == 0) return [](WrenVM* vm) {
 					entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
-					uint8_t v = g_rigidBodySystem->getVelocityConstraints(e);
+					uint8_t v = components::RigidBodySystem::getVelocityConstraints(e, *g_scene);
 					wrenSetSlotDouble(vm, 0, (double)v);
 				};
 		if (strcmp(signature, "priv_angularConstraints(_,_)") == 0) return [](WrenVM* vm) {
 			entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
 			double v = wrenGetSlotDouble(vm, 2);
-			g_rigidBodySystem->setAngularConstraints(e, (uint8_t)v);
+			components::RigidBodySystem::setAngularConstraints(e, (uint8_t)v, *g_scene);
 		};
 		if (strcmp(signature, "priv_angularConstraints(_)") == 0) return [](WrenVM* vm) {
 			entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
-			uint8_t v = g_rigidBodySystem->getAngularConstraints(e);
+			uint8_t v = components::RigidBodySystem::getAngularConstraints(e, *g_scene);
 			wrenSetSlotDouble(vm, 0, (double)v);
 		};
 		if (strcmp(signature, "priv_friction(_,_)") == 0) return [](WrenVM* vm) {
 			entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
 			float v = (float)wrenGetSlotDouble(vm, 2);
-			g_rigidBodySystem->setFriction(e, v);
+			components::RigidBodySystem::setFriction(e, v, *g_scene);
 		};
 		if (strcmp(signature, "priv_friction(_)") == 0) return [](WrenVM* vm) {
 			entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
-			float v = g_rigidBodySystem->getFriction(e);
+			float v = components::RigidBodySystem::getFriction(e, *g_scene);
 			wrenSetSlotDouble(vm, 0, (double)v);
 		};
 		if (strcmp(signature, "priv_mass(_,_)") == 0) return [](WrenVM* vm) {
 			entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
 			float v = (float)wrenGetSlotDouble(vm, 2);
-			g_rigidBodySystem->setMass(e, v);
+			components::RigidBodySystem::setMass(e, v, *g_scene);
 		};
 		if (strcmp(signature, "priv_mass(_)") == 0) return [](WrenVM* vm) {
 			entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
-			float v = g_rigidBodySystem->getMass(e);
+			float v = components::RigidBodySystem::getMass(e, *g_scene);
 			wrenSetSlotDouble(vm, 0, (double)v);
 		};
         return nullptr;
@@ -2866,7 +2856,7 @@ foreign class WaveSource {
         if (strcmp(signature, "goAdd(_)") == 0) return [](WrenVM* vm) {
           WaveSourceHandle* handle = GetForeign<WaveSourceHandle>(vm);
           entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
-          handle->handle = g_waveSourceSystem->addComponent(e);
+          handle->handle = components::WaveSourceSystem::addComponent(e, *g_scene);
           handle->entity = e;
           g_scriptingData->getData(
             handle->handle.entity()
@@ -2883,7 +2873,7 @@ foreign class WaveSource {
         };
         if (strcmp(signature, "goRemove(_)") == 0) return [](WrenVM* vm) {
           WaveSourceHandle* handle = GetForeign<WaveSourceHandle>(vm);
-          g_waveSourceSystem->removeComponent(handle->handle.entity());
+          components::WaveSourceSystem::removeComponent(handle->handle.entity(), *g_scene);
           wrenReleaseHandle(
             vm, 
             g_scriptingData->getData(handle->handle.entity()).wave_source
@@ -2998,8 +2988,8 @@ foreign class WaveSource {
         };
         if (strcmp(signature, "makeMainListener()") == 0)
           return [](WrenVM* vm) {
-          g_waveSourceSystem->setListener(
-            GetForeign<WaveSourceHandle>(vm)->handle.entity()
+          components::WaveSourceSystem::setListener(
+            GetForeign<WaveSourceHandle>(vm)->handle.entity(), *g_scene
           );
         };
         return nullptr;
@@ -3063,32 +3053,32 @@ foreign class Collider {
         bool add_mesh_collider = false;
 
         if (mesh &&
-          (true == g_meshRenderSystem->hasComponent(entity) &&
-          mesh == g_meshRenderSystem->getMesh(entity) &&
-          mesh->getSubMeshes().at(g_meshRenderSystem->getSubMesh(entity)).offsets[asset::MeshElements::kPositions].count > 0u) &&
-          (false == (g_meshRenderSystem->getAlbedoTexture(entity) != nullptr &&
-            g_meshRenderSystem->getAlbedoTexture(entity)->getLayer(0u).containsAlpha())))
+          (true == components::MeshRenderSystem::hasComponent(entity, *g_scene) &&
+          mesh == components::MeshRenderSystem::getMesh(entity, *g_scene) &&
+          mesh->getSubMeshes().at(components::MeshRenderSystem::getSubMesh(entity, *g_scene)).offsets[asset::MeshElements::kPositions].count > 0u) &&
+          (false == (components::MeshRenderSystem::getAlbedoTexture(entity, *g_scene) != nullptr &&
+            components::MeshRenderSystem::getAlbedoTexture(entity, *g_scene)->getLayer(0u).containsAlpha())))
           add_mesh_collider = true;
 
         if (add_mesh_collider)
         {
-          if (false == g_colliderSystem->hasComponent(entity))
-            g_colliderSystem->addComponent(entity);
+          if (false == components::ColliderSystem::hasComponent(entity, *g_scene))
+            components::ColliderSystem::addComponent(entity, *g_scene);
 
-          g_colliderSystem->makeMeshCollider(entity, mesh, g_meshRenderSystem->getSubMesh(entity));
+          components::ColliderSystem::makeMeshCollider(entity, mesh, components::MeshRenderSystem::getSubMesh(entity, *g_scene), *g_scene);
         }
-        else if (true == g_colliderSystem->hasComponent(entity))
-          g_colliderSystem->removeComponent(entity);
+        else if (true == components::ColliderSystem::hasComponent(entity, *g_scene))
+          components::ColliderSystem::removeComponent(entity, *g_scene);
 
-        for (const auto& child : g_transformSystem->getChildren(entity))
+        for (const auto& child : components::TransformSystem::getChildren(entity, *g_scene))
           addMeshCollider(child, mesh);
       }
       void setLayersRecursive(entity::Entity entity, uint16_t layers)
       {
-        if (g_colliderSystem->hasComponent(entity))
-			g_colliderSystem->setLayers(entity, layers);
+        if (components::ColliderSystem::hasComponent(entity, *g_scene))
+			components::ColliderSystem::setLayers(entity, layers, *g_scene);
         
-		for (const auto& child : g_transformSystem->getChildren(entity))
+		for (const auto& child : components::TransformSystem::getChildren(entity, *g_scene))
 			setLayersRecursive(child, layers);
       }
       WrenForeignMethodFn Bind(const char* signature)
@@ -3099,7 +3089,7 @@ foreign class Collider {
         if (strcmp(signature, "goAdd(_)") == 0) return [](WrenVM* vm) {
           ColliderHandle* handle = GetForeign<ColliderHandle>(vm);
           entity::Entity e = *GetForeign<entity::Entity>(vm, 1);
-          handle->handle = g_colliderSystem->addComponent(e);
+          handle->handle = components::ColliderSystem::addComponent(e, *g_scene);
           handle->entity = e;
           /*Handle*/ g_scriptingData->getData(handle->handle.entity()).collider = wrenGetSlotHandle(vm, 0);
         };
@@ -3108,7 +3098,7 @@ foreign class Collider {
         };
         if (strcmp(signature, "goRemove(_)") == 0) return [](WrenVM* vm) {
 					ColliderHandle* handle = GetForeign<ColliderHandle>(vm);
-					g_colliderSystem->removeComponent(handle->entity);
+					components::ColliderSystem::removeComponent(handle->entity, *g_scene);
 					/*Handle*/ wrenReleaseHandle(vm, g_scriptingData->getData(handle->handle.entity()).collider);
 					/*Handle*/ g_scriptingData->getData(handle->handle.entity()).collider = nullptr;
 					handle->handle = components::ColliderComponent();
@@ -3239,7 +3229,7 @@ class ShadowTypes {
         };
         if (strcmp(signature, "goRemove(_)") == 0) return [](WrenVM* vm) {
           LightHandle* handle = GetForeign<LightHandle>(vm);
-          g_colliderSystem->removeComponent(handle->handle.entity());
+          g_lightSystem->removeComponent(handle->handle.entity());
           /*Handle*/ wrenReleaseHandle(vm, g_scriptingData->getData(handle->handle.entity()).light);
           /*Handle*/ g_scriptingData->getData(handle->handle.entity()).light = nullptr;
 					handle->handle = components::BaseLightComponent();
@@ -3455,28 +3445,28 @@ class MonoBehaviour {
       {
         if (strcmp(signature, "goAddPrivate(_)") == 0) return [](WrenVM* vm) {
           entity::Entity entity = *GetForeign<entity::Entity>(vm, 1);
-          g_monoBehaviourSystem->addComponent(entity);
+          components::MonoBehaviourSystem::addComponent(entity, *g_scene);
           /*Handle*/ g_scriptingData->getData(entity).mono_behaviour = wrenGetSlotHandle(vm, 0);
 
 
-          g_monoBehaviourSystem->setObject          (entity, wrenGetSlotHandle (vm, 0));
-          g_monoBehaviourSystem->setInitialize      (entity, wrenMakeCallHandle(vm, "initialize()"));
-          g_monoBehaviourSystem->setDeinitialize    (entity, wrenMakeCallHandle(vm, "deinitialize()"));
-          g_monoBehaviourSystem->setUpdate          (entity, wrenMakeCallHandle(vm, "update()"));
-          g_monoBehaviourSystem->setFixedUpdate     (entity, wrenMakeCallHandle(vm, "fixedUpdate()"));
-          g_monoBehaviourSystem->setOnCollisionEnter(entity, wrenMakeCallHandle(vm, "onCollisionEnter(_,_)"));
-					//g_monoBehaviourSystem->setOnCollisionStay (entity, wrenMakeCallHandle(vm, "onCollisionStay(_,_)"));
-          g_monoBehaviourSystem->setOnCollisionExit (entity, wrenMakeCallHandle(vm, "onCollisionExit(_,_)"));
-          g_monoBehaviourSystem->setOnTriggerEnter  (entity, wrenMakeCallHandle(vm, "onTriggerEnter(_,_)"));
-          //g_monoBehaviourSystem->setOnTriggerStay   (entity, wrenMakeCallHandle(vm, "onTriggerStay(_,_)"));
-          g_monoBehaviourSystem->setOnTriggerExit   (entity, wrenMakeCallHandle(vm, "onTriggerExit(_,_)"));
+          components::MonoBehaviourSystem::setObject          (entity, wrenGetSlotHandle (vm, 0), *g_scene);
+          components::MonoBehaviourSystem::setInitialize      (entity, wrenMakeCallHandle(vm, "initialize()"), *g_scene);
+          components::MonoBehaviourSystem::setDeinitialize    (entity, wrenMakeCallHandle(vm, "deinitialize()"), *g_scene);
+          components::MonoBehaviourSystem::setUpdate          (entity, wrenMakeCallHandle(vm, "update()"), *g_scene);
+          components::MonoBehaviourSystem::setFixedUpdate     (entity, wrenMakeCallHandle(vm, "fixedUpdate()"), *g_scene);
+          components::MonoBehaviourSystem::setOnCollisionEnter(entity, wrenMakeCallHandle(vm, "onCollisionEnter(_,_)"), *g_scene);
+		  //components::MonoBehaviourSystem::setOnCollisionStay (entity, wrenMakeCallHandle(vm, "onCollisionStay(_,_)"), *g_scene);
+          components::MonoBehaviourSystem::setOnCollisionExit (entity, wrenMakeCallHandle(vm, "onCollisionExit(_,_)"), *g_scene);
+          components::MonoBehaviourSystem::setOnTriggerEnter  (entity, wrenMakeCallHandle(vm, "onTriggerEnter(_,_)"), *g_scene);
+          //components::MonoBehaviourSystem::setOnTriggerStay   (entity, wrenMakeCallHandle(vm, "onTriggerStay(_,_)"), *g_scene);
+          components::MonoBehaviourSystem::setOnTriggerExit   (entity, wrenMakeCallHandle(vm, "onTriggerExit(_,_)"), *g_scene);
         };
         if (strcmp(signature, "goGet(_)") == 0) return [](WrenVM* vm) {
           /*Handle*/ wrenSetSlotHandle(vm, 0, g_scriptingData->getData(*GetForeign<entity::Entity>(vm, 1)).mono_behaviour);
         };
         if (strcmp(signature, "goRemovePrivate(_)") == 0) return [](WrenVM* vm) {
           entity::Entity entity = *GetForeign<entity::Entity>(vm, 1);
-#define FREE(x) wrenReleaseHandle(vm, (WrenHandle*)g_monoBehaviourSystem->get##x(entity)); g_monoBehaviourSystem->set##x(entity, nullptr);
+#define FREE(x) wrenReleaseHandle(vm, (WrenHandle*)components::MonoBehaviourSystem::get##x(entity, *g_scene)); components::MonoBehaviourSystem::set##x(entity, nullptr, *g_scene);
 
           FREE(Object);
           FREE(Initialize);
@@ -4415,16 +4405,16 @@ class Physics {
 			WrenForeignMethodFn Bind(const char* signature)
 			{
 				if (strcmp(signature, "gravity") == 0) return [](WrenVM* vm) {
-					Vec3::make(vm, g_rigidBodySystem->getPhysicsWorld()->getGravity());
+					Vec3::make(vm, components::RigidBodySystem::getPhysicsWorld(*g_scene)->getGravity());
 				};
 				if (strcmp(signature, "gravity=(_)") == 0) return [](WrenVM* vm) {
-					g_rigidBodySystem->getPhysicsWorld()->setGravity(*GetForeign<glm::vec3>(vm, 1));
+					components::RigidBodySystem::getPhysicsWorld(*g_scene)->setGravity(*GetForeign<glm::vec3>(vm, 1));
 				};
 				if (strcmp(signature, "castRay(_,_)") == 0) return [](WrenVM* vm) {
 					glm::vec3 from = *GetForeign<glm::vec3>(vm, 1);
 					glm::vec3 to = *GetForeign<glm::vec3>(vm, 2);
 
-					Vector<physics::Manifold> result = g_rigidBodySystem->getPhysicsWorld()->raycast(from, to);
+					Vector<physics::Manifold> result = components::RigidBodySystem::getPhysicsWorld(*g_scene)->raycast(from, to);
 					wrenSetSlotNewList(vm, 0);
 
 					for (physics::Manifold res : result)
@@ -4434,10 +4424,10 @@ class Physics {
 					}
 				};
 				if (strcmp(signature, "debugDrawEnabled") == 0) return [](WrenVM* vm) {
-					wrenSetSlotBool(vm, 0, g_rigidBodySystem->getPhysicsWorld()->getDebugDrawEnabled());
+					wrenSetSlotBool(vm, 0, components::RigidBodySystem::getPhysicsWorld(*g_scene)->getDebugDrawEnabled());
 				};
 				if (strcmp(signature, "debugDrawEnabled=(_)") == 0) return [](WrenVM* vm) {
-					g_rigidBodySystem->getPhysicsWorld()->setDebugDrawEnabled(wrenGetSlotBool(vm, 1));
+					components::RigidBodySystem::getPhysicsWorld(*g_scene)->setDebugDrawEnabled(wrenGetSlotBool(vm, 1));
 				};
 				return nullptr;
 			}
@@ -4962,28 +4952,9 @@ class Assert {
 		{
 			g_scriptingData = foundation::Memory::construct<ScriptingData>();
 			g_world = world;
-			g_entitySystem =
-				world->getScene().getSystem<entity::EntitySystem>().get();
-			g_nameSystem =
-				world->getScene().getSystem<components::NameSystem>().get();
-			g_transformSystem =
-				world->getScene().getSystem<components::TransformSystem>().get();
-			g_cameraSystem =
-				world->getScene().getSystem<components::CameraSystem>().get();
-			g_lodSystem =
-				world->getScene().getSystem<components::LODSystem>().get();
+			g_scene = &world->getScene().getSceneData();
 			g_lightSystem =
 				world->getScene().getSystem<components::LightSystem>().get();
-			g_meshRenderSystem =
-				world->getScene().getSystem<components::MeshRenderSystem>().get();
-			g_rigidBodySystem =
-				world->getScene().getSystem<components::RigidBodySystem>().get();
-			g_waveSourceSystem =
-				world->getScene().getSystem<components::WaveSourceSystem>().get();
-			g_colliderSystem =
-				world->getScene().getSystem<components::ColliderSystem>().get();
-			g_monoBehaviourSystem =
-				world->getScene().getSystem<components::MonoBehaviourSystem>().get();
 		}
 
 		///////////////////////////////////////////////////////////////////////////
@@ -5071,20 +5042,11 @@ class Assert {
 			SAFE_RELEASE(vm, File::handle);
 			SAFE_RELEASE(vm, Noise::handle);
 
-			g_monoBehaviourSystem->deinitialize();
+			components::MonoBehaviourSystem::deinitialize(*g_scene);
 
-			g_world               = nullptr;
-			g_entitySystem        = nullptr;
-			g_nameSystem          = nullptr;
-			g_transformSystem     = nullptr;
-			g_cameraSystem        = nullptr;
-			g_lodSystem           = nullptr;
+			g_scene = nullptr;
+			g_world = nullptr;
 			g_lightSystem         = nullptr;
-			g_meshRenderSystem    = nullptr;
-			g_rigidBodySystem     = nullptr;
-			g_waveSourceSystem    = nullptr;
-			g_colliderSystem      = nullptr;
-			g_monoBehaviourSystem = nullptr;
 		}
   }
 }

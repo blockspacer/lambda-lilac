@@ -61,11 +61,11 @@ class ItemManager is MonoBehaviour {
     c.transform.worldScale    = scale
     c.transform.worldPosition = position
 
-    c.addComponent(MeshRender).mesh              = _meshes[0]
-    c.getComponent(MeshRender).subMesh           = 0
-    c.getComponent(MeshRender).albedo            = Texture.load("resources/textures/wood/FloorMahogany_alb.jpg")
-    c.getComponent(MeshRender).normal            = Texture.load("resources/textures/wood/FloorMahogany_nrm.jpg")
-    c.getComponent(MeshRender).metallicRoughness = Texture.load("resources/textures/wood/FloorMahogany_dmra.png")
+    c.addComponent(MeshRender).mesh    = _meshes[0]
+    c.getComponent(MeshRender).subMesh = 0
+    c.getComponent(MeshRender).albedo  = Texture.load("resources/textures/wood/FloorMahogany_alb.jpg")
+    c.getComponent(MeshRender).normal  = Texture.load("resources/textures/wood/FloorMahogany_nrm.jpg")
+    c.getComponent(MeshRender).DMRA    = Texture.load("resources/textures/wood/FloorMahogany_dmra.png")
     
     var collider  = c.addComponent(Collider)
     var rigidBody = c.addComponent(RigidBody)
@@ -117,11 +117,11 @@ class ItemManager is MonoBehaviour {
     c.transform.worldScale    = Vec3.new(0.25, 0.25, 4.0)
     c.transform.worldPosition = position
 
-    c.addComponent(MeshRender).mesh              = _meshes[0]
-    c.getComponent(MeshRender).subMesh           = 0
-    c.getComponent(MeshRender).albedo            = Texture.load("resources/textures/FloorMahogany_alb.jpg")
-    c.getComponent(MeshRender).normal            = Texture.load("resources/textures/FloorMahogany_nrm.jpg")
-    c.getComponent(MeshRender).metallicRoughness = Texture.load("resources/textures/FloorMahogany_dmra.png")
+    c.addComponent(MeshRender).mesh    = _meshes[0]
+    c.getComponent(MeshRender).subMesh = 0
+    c.getComponent(MeshRender).albedo  = Texture.load("resources/textures/FloorMahogany_alb.jpg")
+    c.getComponent(MeshRender).normal  = Texture.load("resources/textures/FloorMahogany_nrm.jpg")
+    c.getComponent(MeshRender).DMRA    = Texture.load("resources/textures/FloorMahogany_dmra.png")
     
     var collider  = c.addComponent(Collider)
     var rigidBody = c.addComponent(RigidBody)

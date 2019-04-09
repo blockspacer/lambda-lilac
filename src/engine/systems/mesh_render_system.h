@@ -1,7 +1,6 @@
 #pragma once
 #include "interfaces/isystem.h"
 #include "assets/mesh.h"
-#include "interfaces/iworld.h"
 #include "interfaces/iwindow.h"
 #include "assets/mesh_io.h"
 #include "utils/zone_manager.h"
@@ -16,15 +15,17 @@ namespace lambda
 		struct LinkedNode;
 	}
 
+	namespace world
+	{
+		struct SceneData;
+	}
+
 	namespace components
 	{
-		class MeshRenderSystem;
-		class TransformSystem;
-
 		class MeshRenderComponent : public IComponent
 		{
 		public:
-			MeshRenderComponent(const entity::Entity& entity, MeshRenderSystem* system);
+			MeshRenderComponent(const entity::Entity& entity, world::SceneData& scene);
 			MeshRenderComponent(const MeshRenderComponent& other);
 			MeshRenderComponent();
 
@@ -40,8 +41,8 @@ namespace lambda
 			asset::VioletTextureHandle getAlbedoTexture() const;
 			void setNormalTexture(asset::VioletTextureHandle texture);
 			asset::VioletTextureHandle getNormalTexture() const;
-			void setMetallicRoughnessTexture(asset::VioletTextureHandle texture);
-			asset::VioletTextureHandle getMetallicRoughnessTexture() const;
+			void setDMRATexture(asset::VioletTextureHandle texture);
+			asset::VioletTextureHandle getDMRATexture() const;
 			void attachMesh(asset::VioletMeshHandle mesh);
 			bool getVisible() const;
 			void setVisible(const bool& visible);
@@ -49,94 +50,89 @@ namespace lambda
 			void setCastShadows(const bool& cast_shadows);
 
 		private:
-			MeshRenderSystem* system_;
+			world::SceneData* scene_;
 		};
 
-		struct MeshRenderData
+		namespace MeshRenderSystem
 		{
-			MeshRenderData(const entity::Entity& entity) : entity(entity) {};
-			MeshRenderData(const MeshRenderData& other);
-			MeshRenderData& operator=(const MeshRenderData& other);
+			struct Data
+			{
+				Data(const entity::Entity& entity) : entity(entity) {};
+				Data(const Data& other);
+				Data& operator=(const Data& other);
 
-			asset::VioletMeshHandle mesh;
-			uint32_t sub_mesh = 0u;
-			asset::VioletTextureHandle albedo_texture;
-			asset::VioletTextureHandle normal_texture;
-			asset::VioletTextureHandle metallic_roughness_texture;
-			float metallicness = 1.0f;
-			float roughness = 1.0f;
-			bool visible = true;
-			bool cast_shadows = true;
-			bool valid = true;
+				asset::VioletMeshHandle mesh;
+				uint32_t sub_mesh = 0u;
+				asset::VioletTextureHandle albedo_texture;
+				asset::VioletTextureHandle normal_texture;
+				asset::VioletTextureHandle dmra_texture;
+				float metallicness = 1.0f;
+				float roughness = 1.0f;
+				bool visible = true;
+				bool cast_shadows = true;
+				bool valid = true;
 
-			entity::Entity entity;
-		};
+				entity::Entity entity;
+			};
 
-		class MeshRenderSystem : public ISystem
-		{
-		public:
-			~MeshRenderSystem();
-			void setMesh(const entity::Entity& entity, asset::VioletMeshHandle mesh);
-			void setSubMesh(const entity::Entity& entity, const uint32_t& sub_mesh);
-			void setAlbedoTexture(const entity::Entity& entity, asset::VioletTextureHandle texture);
-			void setNormalTexture(const entity::Entity& entity, asset::VioletTextureHandle texture);
-			void setMetallicRoughnessTexture(const entity::Entity& entity, asset::VioletTextureHandle texture);
-			void setMetallicness(const entity::Entity& entity, const float& metallicness);
-			void setRoughness(const entity::Entity& entity, const float& roughness);
-			asset::VioletMeshHandle getMesh(const entity::Entity& entity);
-			uint32_t getSubMesh(const entity::Entity& entity);
-			asset::VioletTextureHandle getAlbedoTexture(const entity::Entity& entity);
-			asset::VioletTextureHandle getNormalTexture(const entity::Entity& entity);
-			asset::VioletTextureHandle getMetallicRoughnessTexture(const entity::Entity& entity);
-			float getMetallicness(const entity::Entity& entity);
-			float getRoughness(const entity::Entity& entity);
-			void attachMesh(const entity::Entity& entity, asset::VioletMeshHandle mesh);
-			bool getVisible(const entity::Entity& entity) const;
-			void setVisible(const entity::Entity& entity, const bool& visible);
-			bool getCastShadows(const entity::Entity& entity) const;
-			void setCastShadows(const entity::Entity& entity, const bool& cast_shadows);
-			void makeStatic(const entity::Entity& entity);
-			void makeDynamic(const entity::Entity& entity);
+			struct SystemData
+			{
+				Vector<Data>                  data;
+				Map<entity::Entity, uint32_t> entity_to_data;
+				Map<uint32_t, entity::Entity> data_to_entity;
+				Set<entity::Entity>           marked_for_delete;
+				Queue<uint32_t>               unused_data_entries;
 
-			virtual void initialize(world::IWorld& world) override;
-			virtual void deinitialize() override;
-			virtual void onRender() override;
-			virtual void collectGarbage() override;
-			void createRenderList(utilities::Culler& culler, const utilities::Frustum& frustum);
-			void createSortedRenderList(utilities::LinkedNode* statics, utilities::LinkedNode* dynamics, Vector<utilities::Renderable*>& opaque, Vector<utilities::Renderable*>& alpha);
-			void renderAll(utilities::Culler& culler, const utilities::Frustum& frustum, bool is_rh = true);
-			void renderAll(utilities::LinkedNode* statics, utilities::LinkedNode* dynamics, bool is_rh = true);
-			void renderAll(const Vector<utilities::Renderable*>& opaque, const Vector<utilities::Renderable*>& alpha, bool is_rh = true);
+				Data& add(const entity::Entity& entity);
+				Data& get(const entity::Entity& entity);
+				void  remove(const entity::Entity& entity);
+				bool  has(const entity::Entity& entity);
 
-			static size_t systemId() { return (size_t)SystemIds::kMeshRenderSystem; };
-			MeshRenderComponent addComponent(const entity::Entity& entity);
-			MeshRenderComponent getComponent(const entity::Entity& entity);
-			bool hasComponent(const entity::Entity& entity);
-			void removeComponent(const entity::Entity& entity);
-			virtual String profilerInfo() const override;
+				Vector<entity::Entity>         dynamic_renderables;
+				Vector<utilities::Renderable*> static_renderables;
+				utilities::ZoneManager         static_zone_manager;
 
-		private:
-			MeshRenderData& lookUpData(const entity::Entity& entity);
-			const MeshRenderData& lookUpData(const entity::Entity& entity) const;
+				asset::VioletTextureHandle default_albedo;
+				asset::VioletTextureHandle default_normal;
+				asset::VioletTextureHandle default_dmra;
+			};
 
-			Vector<MeshRenderData> data_;
-			Map<entity::Entity, uint32_t> entity_to_data_;
-			Map<uint32_t, entity::Entity> data_to_entity_;
-			Set<entity::Entity> marked_for_delete_;
-			Queue<uint32_t> unused_data_entries_;
+			MeshRenderComponent addComponent(const entity::Entity& entity, world::SceneData& scene);
+			MeshRenderComponent getComponent(const entity::Entity& entity, world::SceneData& scene);
+			bool hasComponent(const entity::Entity& entity, world::SceneData& scene);
+			void removeComponent(const entity::Entity& entity, world::SceneData& scene);
 
-		private:
-			foundation::SharedPointer<entity::EntitySystem> entity_system_;
-			foundation::SharedPointer<TransformSystem> transform_system_;
-			world::IWorld* world_;
+			void  collectGarbage(world::SceneData& scene);
+			void  initialize(world::SceneData& scene);
+			void  deinitialize(world::SceneData& scene);
 
-			Vector<entity::Entity>         dynamic_renderables_;
-			Vector<utilities::Renderable*> static_renderables_;
-			utilities::ZoneManager         static_zone_manager_;
+			void setMesh(const entity::Entity& entity, asset::VioletMeshHandle mesh, world::SceneData& scene);
+			void setSubMesh(const entity::Entity& entity, const uint32_t& sub_mesh, world::SceneData& scene);
+			void setAlbedoTexture(const entity::Entity& entity, asset::VioletTextureHandle texture, world::SceneData& scene);
+			void setNormalTexture(const entity::Entity& entity, asset::VioletTextureHandle texture, world::SceneData& scene);
+			void setDMRATexture(const entity::Entity& entity, asset::VioletTextureHandle texture, world::SceneData& scene);
+			void setMetallicness(const entity::Entity& entity, const float& metallicness, world::SceneData& scene);
+			void setRoughness(const entity::Entity& entity, const float& roughness, world::SceneData& scene);
+			asset::VioletMeshHandle getMesh(const entity::Entity& entity, world::SceneData& scene);
+			uint32_t getSubMesh(const entity::Entity& entity, world::SceneData& scene);
+			asset::VioletTextureHandle getAlbedoTexture(const entity::Entity& entity, world::SceneData& scene);
+			asset::VioletTextureHandle getNormalTexture(const entity::Entity& entity, world::SceneData& scene);
+			asset::VioletTextureHandle getDMRATexture(const entity::Entity& entity, world::SceneData& scene);
+			float getMetallicness(const entity::Entity& entity, world::SceneData& scene);
+			float getRoughness(const entity::Entity& entity, world::SceneData& scene);
+			void attachMesh(const entity::Entity& entity, asset::VioletMeshHandle mesh, world::SceneData& scene);
+			bool getVisible(const entity::Entity& entity, world::SceneData& scene);
+			void setVisible(const entity::Entity& entity, const bool& visible, world::SceneData& scene);
+			bool getCastShadows(const entity::Entity& entity, world::SceneData& scene);
+			void setCastShadows(const entity::Entity& entity, const bool& cast_shadows, world::SceneData& scene);
+			void makeStatic(const entity::Entity& entity, world::SceneData& scene);
+			void makeDynamic(const entity::Entity& entity, world::SceneData& scene);
 
-			asset::VioletTextureHandle default_albedo_;
-			asset::VioletTextureHandle default_normal_;
-			asset::VioletTextureHandle default_metallic_roughness_;
-		};
+			void createRenderList(utilities::Culler& culler, const utilities::Frustum& frustum, world::SceneData& scene);
+			void createSortedRenderList(utilities::LinkedNode* statics, utilities::LinkedNode* dynamics, Vector<utilities::Renderable*>& opaque, Vector<utilities::Renderable*>& alpha, world::SceneData& scene);
+			void renderAll(utilities::Culler& culler, const utilities::Frustum& frustum, world::SceneData& scene, bool is_rh = true);
+			void renderAll(utilities::LinkedNode* statics, utilities::LinkedNode* dynamics, world::SceneData& scene, bool is_rh = true);
+			void renderAll(const Vector<utilities::Renderable*>& opaque, const Vector<utilities::Renderable*>& alpha, world::SceneData& scene, bool is_rh = true);
+		}
 	}
 }

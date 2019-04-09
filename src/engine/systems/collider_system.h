@@ -7,12 +7,12 @@
 #include "assets/mesh.h"
 namespace lambda
 {
+	namespace world
+	{
+		struct SceneData;
+	}
 	namespace components
 	{
-		class ColliderSystem;
-		class RigidBodySystem;
-		class TransformSystem;
-
 		enum class ColliderType : uint8_t
 		{
 			kBox = 0,
@@ -24,7 +24,7 @@ namespace lambda
 		class ColliderComponent : public IComponent
 		{
 		public:
-			ColliderComponent(const entity::Entity& entity, ColliderSystem* system);
+			ColliderComponent(const entity::Entity& entity, world::SceneData& scene);
 			ColliderComponent(const ColliderComponent& other);
 			ColliderComponent();
 
@@ -36,56 +36,53 @@ namespace lambda
 			void setLayers(const uint16_t& layers);
 
 		private:
-			ColliderSystem* system_;
+			world::SceneData* scene_;
 		};
 
-		struct ColliderData
+		namespace ColliderSystem
 		{
-			ColliderData(const entity::Entity& entity) : entity(entity) {};
-			ColliderData(const ColliderData& other);
-			ColliderData& operator=(const ColliderData& other);
+			struct Data
+			{
+				Data(const entity::Entity& entity) : entity(entity) {};
+				Data(const Data& other);
+				Data& operator=(const Data& other);
 
-			ColliderType          type = ColliderType::kCapsule; // TODO (Hilze): Remove this
-			physics::ICollisionBody* collision_body = nullptr;
-			bool                  is_trigger = false;
-			bool                  valid = true;
+				ColliderType             type = ColliderType::kCapsule; // TODO (Hilze): Remove this
+				physics::ICollisionBody* collision_body = nullptr;
+				bool                     is_trigger = false;
+				bool                     valid = true;
 
-			entity::Entity entity;
-		};
+				entity::Entity entity;
+			};
 
-		class ColliderSystem : public ISystem
-		{
-		public:
-			friend class RigidBodySystem;
-		public:
-			static size_t systemId() { return (size_t)SystemIds::kColliderSystem; };
-			ColliderComponent addComponent(const entity::Entity& entity);
-			ColliderComponent getComponent(const entity::Entity& entity);
-			bool hasComponent(const entity::Entity& entity);
-			void removeComponent(const entity::Entity& entity);
-			virtual void initialize(world::IWorld& world) override;
-			virtual void deinitialize() override;
-			virtual void collectGarbage() override;
-			virtual ~ColliderSystem() override {};
-			void makeBox(const entity::Entity& entity);
-			void makeSphere(const entity::Entity& entity);
-			void makeCapsule(const entity::Entity& entity);
-			void makeMeshCollider(const entity::Entity& entity, asset::VioletMeshHandle mesh, const uint32_t& sub_mesh_id);
-			uint16_t getLayers(const entity::Entity& entity) const;
-			void setLayers(const entity::Entity& entity, const uint16_t& layers);
+			struct SystemData
+			{
+				Vector<Data>                  data;
+				Map<entity::Entity, uint32_t> entity_to_data;
+				Map<uint32_t, entity::Entity> data_to_entity;
+				Set<entity::Entity>           marked_for_delete;
+				Queue<uint32_t>               unused_data_entries;
 
-		protected:
-			ColliderData& lookUpData(const entity::Entity& entity);
-			const ColliderData& lookUpData(const entity::Entity& entity) const;
+				Data& add(const entity::Entity& entity);
+				Data& get(const entity::Entity& entity);
+				void  remove(const entity::Entity& entity);
+				bool  has(const entity::Entity& entity);
+			};
 
-		private:
-			Vector<ColliderData> data_;
-			Map<entity::Entity, uint32_t> entity_to_data_;
-			Map<uint32_t, entity::Entity> data_to_entity_;
-			Set<entity::Entity> marked_for_delete_;
-			Queue<uint32_t> unused_data_entries_;
-			foundation::SharedPointer<TransformSystem> transform_system_;
-			foundation::SharedPointer<RigidBodySystem> rigid_body_system_;
-		};
+			ColliderComponent addComponent(const entity::Entity& entity, world::SceneData& data);
+			ColliderComponent getComponent(const entity::Entity& entity, world::SceneData& data);
+			bool hasComponent(const entity::Entity& entity, world::SceneData& data);
+			void removeComponent(const entity::Entity& entity, world::SceneData& data);
+
+			void deinitialize(world::SceneData& data);
+			void collectGarbage(world::SceneData& data);
+
+			void makeBox(const entity::Entity& entity, world::SceneData& data);
+			void makeSphere(const entity::Entity& entity, world::SceneData& data);
+			void makeCapsule(const entity::Entity& entity, world::SceneData& data);
+			void makeMeshCollider(const entity::Entity& entity, asset::VioletMeshHandle mesh, const uint32_t& sub_mesh_id, world::SceneData& data);
+			uint16_t getLayers(const entity::Entity& entity, world::SceneData& data);
+			void setLayers(const entity::Entity& entity, const uint16_t& layers, world::SceneData& data);
+		}
 	}
 }

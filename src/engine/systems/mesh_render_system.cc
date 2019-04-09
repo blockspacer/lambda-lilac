@@ -15,673 +15,611 @@
 #include "platform/culling.h"
 #include "utils/renderable.h"
 #include "platform/shader_variable_manager.h"
+#include <platform/scene.h>
+#include <interfaces/irenderer.h>
 
 namespace lambda
 {
-  namespace components
-  {
-    // To find orientation of ordered triplet (p, q, r). 
-    // The function returns following values 
-    // 0 --> p, q and r are colinear 
-    // 1 --> Clockwise 
-    // 2 --> Counterclockwise 
-    int orientation(glm::vec2 p, glm::vec2 q, glm::vec2 r)
-    {
-      int val = (int)((q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y));
+	namespace components
+	{
+		namespace MeshRenderSystem
+		{
+			MeshRenderComponent addComponent(const entity::Entity& entity, world::SceneData& scene)
+			{
+				if (!TransformSystem::hasComponent(entity, scene))
+					TransformSystem::addComponent(entity, scene);
 
-      if (val == 0)
-      {
-        return 0;  // colinear 
-      }
-      return (val > 0) ? 1 : 2; // clock or counterclock wise 
-    }
+				scene.mesh_render.add(entity);
 
-    Vector<glm::vec2> convexHull(Vector<glm::vec2> points)
-    { 
-      // There must be at least 3 points 
-      if (points.size() < 3)
-      {
-        return points;
-      }
+				scene.mesh_render.dynamic_renderables.push_back(entity);
 
-      // Initialize Result 
-      Vector<glm::vec2> hull;
-  
-      // Find the leftmost point 
-      int l = 0; 
-      for (int i = 1; i < (int)points.size(); i++)
-      {
-        if (points[i].x < points[l].x)
-        {
-          l = i;
-        }
-      }
+				return MeshRenderComponent(entity, scene);
+			}
+			MeshRenderComponent MeshRenderSystem::getComponent(const entity::Entity& entity, world::SceneData& scene)
+			{
+				return MeshRenderComponent(entity, scene);
+			}
+			bool MeshRenderSystem::hasComponent(const entity::Entity& entity, world::SceneData& scene)
+			{
+				return scene.mesh_render.has(entity);
+			}
+			void MeshRenderSystem::removeComponent(const entity::Entity& entity, world::SceneData& scene)
+			{
+				scene.mesh_render.remove(entity);
+			}
 
-      // Start from leftmost point, keep moving counterclockwise 
-      // until reach the start point again.  This loop runs O(h) 
-      // times where h is number of points in result or output. 
-      int p = l, q; 
-      do
-      { 
-        // Add current point to result 
-        hull.push_back(points[p]); 
-  
-        // Search for a point 'q' such that orientation(p, x, 
-        // q) is counterclockwise for all points 'x'. The idea 
-        // is to keep track of last visited most counterclock- 
-        // wise point in q. If any point 'i' is more counterclock- 
-        // wise than q, then update q. 
-        q = (p + 1) % points.size();
-        for (int i = 0; i < (int)points.size(); i++)
-        { 
-          // If i is more counterclockwise than current q, then 
-          // update q 
-          if (orientation(points[p], points[i], points[q]) == 2)
-          {
-            q = i;
-          }
-        } 
-  
-        // Now q is the most counterclockwise with respect to p 
-        // Set p as q for next iteration, so that q is added to 
-        // result 'hull' 
-        p = q; 
-  
-      } while (p != l);  // While we don't come to first point 
-  
-      return hull;
-    } 
+			void collectGarbage(world::SceneData& scene)
+			{
+				if (!scene.mesh_render.marked_for_delete.empty())
+				{
+					for (entity::Entity entity : scene.mesh_render.marked_for_delete)
+					{
+						const auto& it = scene.mesh_render.entity_to_data.find(entity);
+						if (it != scene.mesh_render.entity_to_data.end())
+						{
+							auto dit = eastl::find(scene.mesh_render.dynamic_renderables.begin(), scene.mesh_render.dynamic_renderables.end(), entity);
+							if (dit != scene.mesh_render.dynamic_renderables.end())
+								scene.mesh_render.dynamic_renderables.erase(dit);
+							auto sit = eastl::find_if(
+								scene.mesh_render.static_renderables.begin(), scene.mesh_render.static_renderables.end(),
+								[&entity](const utilities::Renderable* x) { return x->entity == entity; });
+							if (sit != scene.mesh_render.static_renderables.end())
+							{
+								foundation::Memory::destruct(*sit);
+								scene.mesh_render.static_renderables.erase(sit);
+							}
 
-    MeshRenderSystem::~MeshRenderSystem()
-    {
-      for (auto& it : data_)
-      {
-        it.mesh = nullptr;
-        it.sub_mesh = 0u;
-        // TODO (Hilze): Implement.
-        //it.albedo_texture.reset();
-      }
+							uint32_t idx = it->second;
+							scene.mesh_render.unused_data_entries.push(idx);
+							scene.mesh_render.data_to_entity.erase(idx);
+							scene.mesh_render.entity_to_data.erase(entity);
+							scene.mesh_render.data[idx].valid = false;
+						}
+					}
+					scene.mesh_render.marked_for_delete.clear();
+				}
+			}
 
-      transform_system_.reset();
-      entity_system_.reset();
-    }
-    void MeshRenderSystem::setMesh(const entity::Entity& entity, asset::VioletMeshHandle mesh)
-    {
-      lookUpData(entity).mesh = mesh;
-    }
-    void MeshRenderSystem::setSubMesh(const entity::Entity& entity, const uint32_t& sub_mesh)
-    {
-      lookUpData(entity).sub_mesh = sub_mesh;
-    }
-    void MeshRenderSystem::setAlbedoTexture(const entity::Entity& entity, asset::VioletTextureHandle texture)
-    {
-      lookUpData(entity).albedo_texture = texture;
-    }
-    void MeshRenderSystem::setNormalTexture(const entity::Entity& entity, asset::VioletTextureHandle texture)
-    {
-      lookUpData(entity).normal_texture = texture;
-    }
-    void MeshRenderSystem::setMetallicness(const entity::Entity& entity, const float& metallicness)
-    {
-      lookUpData(entity).metallicness = metallicness;
-    }
-    void MeshRenderSystem::setRoughness(const entity::Entity& entity, const float& roughness)
-    {
-      lookUpData(entity).roughness = roughness;
-    }
-    void MeshRenderSystem::setMetallicRoughnessTexture(const entity::Entity& entity, asset::VioletTextureHandle texture)
-    {
-      lookUpData(entity).metallic_roughness_texture = texture;
-    }
-    asset::VioletMeshHandle MeshRenderSystem::getMesh(const entity::Entity& entity)
-    {
-      return lookUpData(entity).mesh;
-    }
-    uint32_t MeshRenderSystem::getSubMesh(const entity::Entity& entity)
-    {
-      return lookUpData(entity).sub_mesh;
-    }
-    asset::VioletTextureHandle MeshRenderSystem::getAlbedoTexture(const entity::Entity& entity)
-    {
-      return lookUpData(entity).albedo_texture;
-    }
-    asset::VioletTextureHandle MeshRenderSystem::getNormalTexture(const entity::Entity& entity)
-    {
-      return lookUpData(entity).normal_texture;
-    }
-    asset::VioletTextureHandle MeshRenderSystem::getMetallicRoughnessTexture(const entity::Entity& entity)
-    {
-      return lookUpData(entity).metallic_roughness_texture;
-    }
-    float MeshRenderSystem::getMetallicness(const entity::Entity& entity)
-    {
-      return lookUpData(entity).metallicness;
-    }
-    float MeshRenderSystem::getRoughness(const entity::Entity& entity)
-    {
-      return lookUpData(entity).roughness;
-    }
-    void MeshRenderSystem::attachMesh(const entity::Entity& entity, asset::VioletMeshHandle mesh)
-    {
-      // Get all textures.
-      Vector<asset::VioletTextureHandle> textures = mesh->getAttachedTextures();
-      const glm::uvec3 texture_count = mesh->getAttachedTextureCount();
-      size_t alb_offset = 0u;
-      size_t nor_offset = texture_count.x;
-      size_t mrt_offset = nor_offset + texture_count.y;
+			void initialize(world::SceneData& scene)
+			{
+				scene.mesh_render.default_albedo = asset::TextureManager::getInstance()->create(
+					Name("__default_albedo__"),
+					1u, 1u, 1u,
+					TextureFormat::kR8G8B8A8,
+					0u,
+					Vector<unsigned char>{ 255u, 255u, 255u, 255u }
+				);
 
-      // Prepare all of the entities.
-      Vector<entity::Entity> entities(mesh->getSubMeshes().size());
-      Vector<TransformComponent> transforms(mesh->getSubMeshes().size());
-      for (size_t i = 0; i < mesh->getSubMeshes().size(); ++i)
-      {
-        // Create an entity.
-        entity::Entity& e = entities.at(i);
-        e = entity_system_->createEntity();
+				scene.mesh_render.default_normal = asset::TextureManager::getInstance()->create(
+					Name("__default_normal__"),
+					1u, 1u, 1u,
+					TextureFormat::kR8G8B8A8,
+					0u,
+					Vector<unsigned char>{ 128u, 128u, 255u, 255u }
+				);
 
-        // Create a transform.
-        TransformComponent& transform = transforms.at(i);
-        transform = transform_system_->addComponent(e);
-        // Set default parent to the mesh renderer component.
-        transform.setParent(transform_system_->getComponent(entity));
-      }
+				scene.mesh_render.default_dmra = asset::TextureManager::getInstance()->create(
+					Name("__default_dmra__"),
+					1u, 1u, 1u,
+					TextureFormat::kR8G8B8A8,
+					0u,
+					Vector<unsigned char>{ 255u, 0u, 0u, 255u }
+				);
+			}
+			void deinitialize(world::SceneData& scene)
+			{
+				Vector<entity::Entity> entities;
+				for (const auto& it : scene.mesh_render.entity_to_data)
+					entities.push_back(it.first);
 
-      // Attach all of the mesh renderers.
-      for (size_t i = 0; i < mesh->getSubMeshes().size(); ++i)
-      {
-        asset::SubMesh& sub_mesh = mesh->getSubMeshes().at(i);
-        TransformComponent transform = transforms.at(i);
-        
-        transform.setLocalTranslation(sub_mesh.io.translation);
-        transform.setLocalRotation(sub_mesh.io.rotation);
-        transform.setLocalScale(sub_mesh.io.scale);
+				for (const auto& entity : entities)
+					scene.mesh_render.remove(entity);
+				collectGarbage(scene);
 
-        if ((int)i != sub_mesh.io.parent)
-        {
-          transform.setParent(transforms.at(sub_mesh.io.parent));
-        }
+				scene.mesh_render.default_albedo = nullptr;
+				scene.mesh_render.default_normal = nullptr;
+				scene.mesh_render.default_dmra = nullptr;
+			}
+			void setMesh(const entity::Entity& entity, asset::VioletMeshHandle mesh, world::SceneData& scene)
+			{
+				scene.mesh_render.get(entity).mesh = mesh;
+			}
+			void setSubMesh(const entity::Entity& entity, const uint32_t& sub_mesh, world::SceneData& scene)
+			{
+				scene.mesh_render.get(entity).sub_mesh = sub_mesh;
+			}
+			void setAlbedoTexture(const entity::Entity& entity, asset::VioletTextureHandle texture, world::SceneData& scene)
+			{
+				scene.mesh_render.get(entity).albedo_texture = texture ? texture : scene.mesh_render.default_albedo;
+			}
+			void setNormalTexture(const entity::Entity& entity, asset::VioletTextureHandle texture, world::SceneData& scene)
+			{
+				scene.mesh_render.get(entity).normal_texture = texture ? texture : scene.mesh_render.default_normal;
+			}
+			void setMetallicness(const entity::Entity& entity, const float& metallicness, world::SceneData& scene)
+			{
+				scene.mesh_render.get(entity).metallicness = metallicness;
+			}
+			void setRoughness(const entity::Entity& entity, const float& roughness, world::SceneData& scene)
+			{
+				scene.mesh_render.get(entity).roughness = roughness;
+			}
+			void setDMRATexture(const entity::Entity& entity, asset::VioletTextureHandle texture, world::SceneData& scene)
+			{
+				scene.mesh_render.get(entity).dmra_texture = texture ? texture : scene.mesh_render.default_dmra;
+			}
+			asset::VioletMeshHandle getMesh(const entity::Entity& entity, world::SceneData& scene)
+			{
+				return scene.mesh_render.get(entity).mesh;
+			}
+			uint32_t getSubMesh(const entity::Entity& entity, world::SceneData& scene)
+			{
+				return scene.mesh_render.get(entity).sub_mesh;
+			}
+			asset::VioletTextureHandle getAlbedoTexture(const entity::Entity& entity, world::SceneData& scene)
+			{
+				return scene.mesh_render.get(entity).albedo_texture;
+			}
+			asset::VioletTextureHandle getNormalTexture(const entity::Entity& entity, world::SceneData& scene)
+			{
+				return scene.mesh_render.get(entity).normal_texture;
+			}
+			asset::VioletTextureHandle getDMRATexture(const entity::Entity& entity, world::SceneData& scene)
+			{
+				return scene.mesh_render.get(entity).dmra_texture;
+			}
+			float getMetallicness(const entity::Entity& entity, world::SceneData& scene)
+			{
+				return scene.mesh_render.get(entity).metallicness;
+			}
+			float getRoughness(const entity::Entity& entity, world::SceneData& scene)
+			{
+				return scene.mesh_render.get(entity).roughness;
+			}
+			void attachMesh(const entity::Entity& entity, asset::VioletMeshHandle mesh, world::SceneData& scene)
+			{
+				// Get all textures.
+				Vector<asset::VioletTextureHandle> textures = mesh->getAttachedTextures();
+				const glm::uvec3 texture_count = mesh->getAttachedTextureCount();
+				size_t alb_offset = 0u;
+				size_t nor_offset = texture_count.x;
+				size_t mrt_offset = nor_offset + texture_count.y;
 
-        // Mesh
-        if (sub_mesh.offsets[asset::MeshElements::kPositions].count > 0u)
-        {
-          MeshRenderComponent mesh_render = addComponent(entities.at(i));
-          mesh_render.setMesh(mesh);
-          mesh_render.setSubMesh((uint32_t)i);
-          mesh_render.setMetallicness(sub_mesh.io.metallic);
-          mesh_render.setRoughness(sub_mesh.io.roughness);
+				// Prepare all of the entities.
+				Vector<entity::Entity> entities(mesh->getSubMeshes().size());
+				Vector<TransformComponent> transforms(mesh->getSubMeshes().size());
+				for (size_t i = 0; i < mesh->getSubMeshes().size(); ++i)
+				{
+					// Create an entity.
+					entity::Entity& e = entities.at(i);
+					e = scene.entity.create();
 
-          // Textures
-          if (sub_mesh.io.tex_alb != -1)
-          {
-            assert(sub_mesh.offsets[asset::MeshElements::kPositions].count > 0);
-            mesh_render.setAlbedoTexture(textures.at(alb_offset + sub_mesh.io.tex_alb));
-          }
-          if (sub_mesh.io.tex_nor != -1)
-          {
-            assert(sub_mesh.offsets[asset::MeshElements::kPositions].count > 0);
-            mesh_render.setNormalTexture(textures.at(nor_offset + sub_mesh.io.tex_nor));
-          }
-          if (sub_mesh.io.tex_mrt != -1)
-          {
-            assert(sub_mesh.offsets[asset::MeshElements::kPositions].count > 0);
-            mesh_render.setMetallicRoughnessTexture(textures.at(mrt_offset + sub_mesh.io.tex_mrt));
-          }
-        }
-      }
-    }
-    bool MeshRenderSystem::getVisible(const entity::Entity& entity) const
-    {
-      return lookUpData(entity).visible;
-    }
-    void MeshRenderSystem::setVisible(const entity::Entity& entity, const bool& visible)
-    {
-      lookUpData(entity).visible = visible;
-    }
-    bool MeshRenderSystem::getCastShadows(const entity::Entity& entity) const
-    {
-      return lookUpData(entity).cast_shadows;
-    }
-    void MeshRenderSystem::setCastShadows(const entity::Entity& entity, const bool& cast_shadows)
-    {
-      lookUpData(entity).cast_shadows = cast_shadows;
-    }
-    void MeshRenderSystem::makeStatic(const entity::Entity& entity)
-    {
-			for (const auto& data : static_renderables_)
-				if (data->entity == entity)
-					return;
-
-      auto it = eastl::find(dynamic_renderables_.begin(), dynamic_renderables_.end(), entity);
-      if (it != dynamic_renderables_.end())
-        dynamic_renderables_.erase(it);
-
-      const MeshRenderData& data = lookUpData(entity);
-      if (!data.mesh)
-        return;
-
-
-      utilities::Renderable* renderable = foundation::Memory::construct<utilities::Renderable>();
-      renderable->entity                     = entity;
-      renderable->model_matrix               = transform_system_->getWorld(entity);
-      renderable->mesh                       = data.mesh;
-      renderable->sub_mesh                   = data.sub_mesh;
-      renderable->albedo_texture             = data.albedo_texture;
-      renderable->normal_texture             = data.normal_texture;
-      renderable->metallic_roughness_texture = data.metallic_roughness_texture;
-      renderable->metallicness               = data.metallicness;
-
-      const asset::SubMesh& sub_mesh = renderable->mesh->getSubMeshes().at(renderable->sub_mesh);
-
-      const glm::vec3 min = renderable->model_matrix * glm::vec4(sub_mesh.min, 1.0f);
-      const glm::vec3 max = renderable->model_matrix * glm::vec4(sub_mesh.max, 1.0f);
-      renderable->min = glm::vec3(
-        std::fminf(min.x, max.x),
-        std::fminf(min.y, max.y),
-        std::fminf(min.z, max.z)
-      );
-      renderable->max = glm::vec3(
-        std::fmaxf(min.x, max.x),
-        std::fmaxf(min.y, max.y),
-        std::fmaxf(min.z, max.z)
-      );
-      renderable->center = (renderable->min + renderable->max) * 0.5f;
-      renderable->radius = glm::length(renderable->center - renderable->max);
-
-      static_zone_manager_.addToken(
-        glm::vec2(renderable->min.x, renderable->min.z), 
-        glm::vec2(renderable->max.x, renderable->max.z), 
-        utilities::Token(entity, renderable)
-      );
-      static_renderables_.push_back(renderable);
-    }
-    void MeshRenderSystem::makeDynamic(const entity::Entity& entity)
-    {
-			for (const auto& data : dynamic_renderables_)
-				if (data == entity)
-					return;
-
-      for (uint32_t i = 0u; i < static_renderables_.size(); ++i)
-      {
-        if (static_renderables_.at(i)->entity == entity)
-        {
-          foundation::Memory::destruct(static_renderables_.at(i));
-          static_renderables_.erase(static_renderables_.begin() + i);
-          break;
-        }
-      }
-
-      static_zone_manager_.removeToken(utilities::Token(entity, nullptr));
-
-      dynamic_renderables_.push_back(entity);
-    }
-    void MeshRenderSystem::initialize(world::IWorld& world)
-    {
-      transform_system_ = world.getScene().getSystem<TransformSystem>();
-      entity_system_    = world.getScene().getSystem<entity::EntitySystem>();
-      world_ =&world;
-      
-      default_albedo_ = asset::TextureManager::getInstance()->create(
-        Name("__default_albedo__"),
-        1u, 1u, 1u, 
-        TextureFormat::kR8G8B8A8,
-        0u,
-        Vector<unsigned char>{ 255u, 255u, 255u, 255u }
-      );
-      default_normal_ = asset::TextureManager::getInstance()->create(
-        Name("__default_normal__"),
-        1u, 1u, 1u,
-        TextureFormat::kR8G8B8A8,
-        0u,
-        Vector<unsigned char>{ 128u, 128u, 255u, 255u }
-      );
-      default_metallic_roughness_ = asset::TextureManager::getInstance()->create(
-        Name("__default_dmra__"),
-        1u, 1u, 1u,
-        TextureFormat::kR8G8B8A8,
-        0u,
-        Vector<unsigned char>{ 255u, 0u, 0u, 255u }
-      );
-    }
-    void MeshRenderSystem::deinitialize()
-    {
-			Vector<entity::Entity> entities;
-			for (const auto& it : entity_to_data_)
-				entities.push_back(it.first);
-
-			for (const auto& entity : entities)
-				removeComponent(entity);
-			collectGarbage();
-
-      entity_system_.reset();
-      transform_system_.reset();
-
-      default_albedo_ = nullptr;
-      default_normal_ = nullptr;
-      default_metallic_roughness_ = nullptr;
-    }
-    void MeshRenderSystem::onRender()
-    {
-    }
-
-    void MeshRenderSystem::createRenderList(utilities::Culler& culler, const utilities::Frustum & frustum)
-    {
-      culler.cullStatics(static_zone_manager_, frustum);
-      culler.cullDynamics(dynamic_renderables_, entity_to_data_, data_, transform_system_, frustum);
-    }
-
-    void MeshRenderSystem::createSortedRenderList(utilities::LinkedNode* statics, utilities::LinkedNode* dynamics, Vector<utilities::Renderable*>& opaque, Vector<utilities::Renderable*>& alpha)
-    {
-      for (utilities::LinkedNode* node = statics->next; node != nullptr; node = node->next)
-      {
-        utilities::Renderable* renderable = (utilities::Renderable*)node->data;
-        // TODO (Hilze): Implement.
-        if (renderable->albedo_texture && renderable->albedo_texture->getLayer(0u).containsAlpha())
-          alpha.push_back(renderable);
-        else
-          opaque.push_back(renderable);
-      }
-
-      for (utilities::LinkedNode* node = dynamics->next; node != nullptr; node = node->next)
-      {
-        utilities::Renderable* renderable = (utilities::Renderable*)node->data;
-        // TODO (Hilze): Implement.
-        if (renderable->albedo_texture && renderable->albedo_texture->getLayer(0u).containsAlpha())
-        {
-          alpha.push_back(renderable);
-        }
-        else
-        {
-          opaque.push_back(renderable);
-        }
-      }
-    }
-    
-    struct DepthSort
-    {
-      bool larger = false;
-      Map<size_t, float> entity_to_depth;
-      inline bool operator() (const MeshRenderData* mesh1, const MeshRenderData* mesh2)
-      {
-        if (larger)
-          return entity_to_depth.at(mesh1->entity) > entity_to_depth.at(mesh2->entity);
-        else
-          return entity_to_depth.at(mesh1->entity) < entity_to_depth.at(mesh2->entity);
-      }
-    };
-
-    void MeshRenderSystem::renderAll(utilities::Culler& culler, const utilities::Frustum& frustum, bool is_rh)
-    {
-      createRenderList(culler, frustum);
-
-      utilities::LinkedNode statics = culler.getStatics();
-      utilities::LinkedNode dynamics = culler.getDynamics();
-
-      renderAll(&statics, &dynamics, is_rh);
-    }
-    void MeshRenderSystem::renderAll(utilities::LinkedNode* statics, utilities::LinkedNode* dynamics, bool is_rh)
-    {
-      Vector<utilities::Renderable*> opaque;
-      Vector<utilities::Renderable*> alpha;
-      createSortedRenderList(statics, dynamics, opaque, alpha);
-      renderAll(opaque, alpha, is_rh);
-    }
-    void MeshRenderSystem::renderAll(const Vector<utilities::Renderable*>& opaque, const Vector<utilities::Renderable*>& alpha, bool is_rh)
-    {
-      foundation::SharedPointer<platform::IRenderer> renderer = world_->getRenderer();
-
-      // -------------------------RENDER-STATIC-OPAQUE-------------------------
-      renderer->setBlendState(platform::BlendState::Default());
-      for (const utilities::Renderable* renderable : opaque)
-      {
-        renderer->setMesh(renderable->mesh);
-        renderer->setSubMesh(renderable->sub_mesh);
-
-        renderer->setTexture((renderable->albedo_texture) ? renderable->albedo_texture : default_albedo_, 0u);
-        renderer->setTexture((renderable->normal_texture) ? renderable->normal_texture : default_normal_, 1u);
-        renderer->setTexture((renderable->metallic_roughness_texture) ? renderable->metallic_roughness_texture : default_metallic_roughness_, 2u);
-
-        world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("metallic_roughness"), glm::vec2(renderable->metallicness, renderable->roughness)));
-        world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("model_matrix"), renderable->model_matrix));
-
-        auto sub_mesh = renderable->mesh->getSubMeshes().at(renderable->sub_mesh);
-        // TODO (Hilze): Implement.
-        if (sub_mesh.io.double_sided == true || (sub_mesh.io.tex_alb >= 0 && renderable->mesh->getAttachedTextures().at(sub_mesh.io.tex_alb)->getLayer(0u).containsAlpha()))
-        {
-          renderer->setRasterizerState(platform::RasterizerState::SolidNone());
-        }
-        else
-        {
-					if (is_rh)
-						renderer->setRasterizerState(platform::RasterizerState::SolidFront());
-					else
-						renderer->setRasterizerState(platform::RasterizerState::SolidBack());
+					// Create a transform.
+					TransformComponent& transform = transforms.at(i);
+					transform = TransformSystem::addComponent(e, scene);
+					// Set default parent to the mesh renderer component.
+					transform.setParent(TransformSystem::getComponent(entity, scene));
 				}
 
-        renderer->draw();
-      }
-      // -------------------------RENDER-STATIC-ALPHA-------------------------
-      renderer->setBlendState(platform::BlendState::Alpha());
-      for (const utilities::Renderable* renderable : alpha)
-      {
-        renderer->setMesh(renderable->mesh);
-        world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("metallic_roughness"), glm::vec2(renderable->metallicness, renderable->roughness)));
-        renderer->setSubMesh(renderable->sub_mesh);
-        renderer->setTexture((renderable->albedo_texture) ? renderable->albedo_texture : default_albedo_, 0u);
-        renderer->setTexture((renderable->normal_texture) ? renderable->normal_texture : default_normal_, 1u);
-        renderer->setTexture((renderable->metallic_roughness_texture) ? renderable->metallic_roughness_texture : default_metallic_roughness_, 2u);
-        world_->getRenderer()->setShaderVariable(platform::ShaderVariable(Name("model_matrix"), renderable->model_matrix));
-
-        auto sub_mesh = renderable->mesh->getSubMeshes().at(renderable->sub_mesh);
-        // TODO (Hilze): Implement.
-        if (sub_mesh.io.double_sided == true || (sub_mesh.io.tex_alb >= 0 && renderable->mesh->getAttachedTextures().at(sub_mesh.io.tex_alb)->getLayer(0u).containsAlpha()))
-          renderer->setRasterizerState(platform::RasterizerState::SolidNone());
-        else
-          renderer->setRasterizerState(platform::RasterizerState::SolidFront());
-
-        renderer->draw();
-      }
-    }
-    MeshRenderComponent MeshRenderSystem::addComponent(const entity::Entity& entity)
-    {
-			require(transform_system_.get(), entity);
-
-			if (!unused_data_entries_.empty())
-			{
-				uint32_t idx = unused_data_entries_.front();
-				unused_data_entries_.pop();
-
-				data_[idx] = MeshRenderData(entity);
-				data_to_entity_[idx] = entity;
-				entity_to_data_[entity] = idx;
-			}
-			else
-			{
-				data_.push_back(MeshRenderData(entity));
-				uint32_t idx = (uint32_t)data_.size() - 1u;
-				data_to_entity_[idx] = entity;
-				entity_to_data_[entity] = idx;
-			}
-      
-      dynamic_renderables_.push_back(entity);
-
-      return MeshRenderComponent(entity, this);
-    }
-    MeshRenderComponent MeshRenderSystem::getComponent(const entity::Entity& entity)
-    {
-      return MeshRenderComponent(entity, this);
-    }
-    bool MeshRenderSystem::hasComponent(const entity::Entity& entity)
-    {
-      return entity_to_data_.find(entity) != entity_to_data_.end();
-    }
-    void MeshRenderSystem::removeComponent(const entity::Entity& entity)
-    {
-			marked_for_delete_.insert(entity);
-    }
-		void MeshRenderSystem::collectGarbage()
-		{
-			if (!marked_for_delete_.empty())
-			{
-				for (entity::Entity entity : marked_for_delete_)
+				// Attach all of the mesh renderers.
+				for (size_t i = 0; i < mesh->getSubMeshes().size(); ++i)
 				{
-					const auto& it = entity_to_data_.find(entity);
-					if (it != entity_to_data_.end())
-					{
-						auto dit = eastl::find(dynamic_renderables_.begin(), dynamic_renderables_.end(), entity);
-						if (dit != dynamic_renderables_.end())
-							dynamic_renderables_.erase(dit);
-						auto sit = eastl::find_if(
-							static_renderables_.begin(), static_renderables_.end(),
-							[&entity](const utilities::Renderable* x) { return x->entity == entity; });
-						if (sit != static_renderables_.end())
-						{
-							foundation::Memory::destruct(*sit);
-							static_renderables_.erase(sit);
-						}
+					asset::SubMesh& sub_mesh = mesh->getSubMeshes().at(i);
+					TransformComponent transform = transforms.at(i);
 
-						uint32_t idx = it->second;
-						unused_data_entries_.push(idx);
-						data_to_entity_.erase(idx);
-						entity_to_data_.erase(entity);
-						data_[idx].valid = false;
+					transform.setLocalTranslation(sub_mesh.io.translation);
+					transform.setLocalRotation(sub_mesh.io.rotation);
+					transform.setLocalScale(sub_mesh.io.scale);
+
+					if ((int)i != sub_mesh.io.parent)
+					{
+						transform.setParent(transforms.at(sub_mesh.io.parent));
+					}
+
+					// Mesh
+					if (sub_mesh.offsets[asset::MeshElements::kPositions].count > 0u)
+					{
+						MeshRenderComponent mesh_render = addComponent(entities.at(i), scene);
+						mesh_render.setMesh(mesh);
+						mesh_render.setSubMesh((uint32_t)i);
+						mesh_render.setMetallicness(sub_mesh.io.metallic);
+						mesh_render.setRoughness(sub_mesh.io.roughness);
+
+						// Textures
+						if (sub_mesh.io.tex_alb != -1)
+						{
+							assert(sub_mesh.offsets[asset::MeshElements::kPositions].count > 0);
+							mesh_render.setAlbedoTexture(textures.at(alb_offset + sub_mesh.io.tex_alb));
+						}
+						if (sub_mesh.io.tex_nor != -1)
+						{
+							assert(sub_mesh.offsets[asset::MeshElements::kPositions].count > 0);
+							mesh_render.setNormalTexture(textures.at(nor_offset + sub_mesh.io.tex_nor));
+						}
+						if (sub_mesh.io.tex_mrt != -1)
+						{
+							assert(sub_mesh.offsets[asset::MeshElements::kPositions].count > 0);
+							mesh_render.setDMRATexture(textures.at(mrt_offset + sub_mesh.io.tex_mrt));
+						}
 					}
 				}
-				marked_for_delete_.clear();
+			}
+			bool getVisible(const entity::Entity& entity, world::SceneData& scene)
+			{
+				return scene.mesh_render.get(entity).visible;
+			}
+			void setVisible(const entity::Entity& entity, const bool& visible, world::SceneData& scene)
+			{
+				scene.mesh_render.get(entity).visible = visible;
+			}
+			bool getCastShadows(const entity::Entity& entity, world::SceneData& scene)
+			{
+				return scene.mesh_render.get(entity).cast_shadows;
+			}
+			void setCastShadows(const entity::Entity& entity, const bool& cast_shadows, world::SceneData& scene)
+			{
+				scene.mesh_render.get(entity).cast_shadows = cast_shadows;
+			}
+			void makeStatic(const entity::Entity& entity, world::SceneData& scene)
+			{
+				for (const auto& data : scene.mesh_render.static_renderables)
+					if (data->entity == entity)
+						return;
+
+				auto it = eastl::find(scene.mesh_render.dynamic_renderables.begin(), scene.mesh_render.dynamic_renderables.end(), entity);
+				if (it != scene.mesh_render.dynamic_renderables.end())
+					scene.mesh_render.dynamic_renderables.erase(it);
+
+				const MeshRenderSystem::Data& data = scene.mesh_render.get(entity);
+				if (!data.mesh)
+					return;
+
+
+				utilities::Renderable* renderable = foundation::Memory::construct<utilities::Renderable>();
+				renderable->entity         = entity;
+				renderable->model_matrix   = TransformSystem::getWorld(entity, scene);
+				renderable->mesh           = data.mesh;
+				renderable->sub_mesh       = data.sub_mesh;
+				renderable->albedo_texture = data.albedo_texture;
+				renderable->normal_texture = data.normal_texture;
+				renderable->dmra_texture   = data.dmra_texture;
+				renderable->metallicness   = data.metallicness;
+
+				const asset::SubMesh& sub_mesh = renderable->mesh->getSubMeshes().at(renderable->sub_mesh);
+
+				const glm::vec3 min = renderable->model_matrix * glm::vec4(sub_mesh.min, 1.0f);
+				const glm::vec3 max = renderable->model_matrix * glm::vec4(sub_mesh.max, 1.0f);
+				renderable->min = glm::vec3(
+					std::fminf(min.x, max.x),
+					std::fminf(min.y, max.y),
+					std::fminf(min.z, max.z)
+				);
+				renderable->max = glm::vec3(
+					std::fmaxf(min.x, max.x),
+					std::fmaxf(min.y, max.y),
+					std::fmaxf(min.z, max.z)
+				);
+				renderable->center = (renderable->min + renderable->max) * 0.5f;
+				renderable->radius = glm::length(renderable->center - renderable->max);
+
+				scene.mesh_render.static_zone_manager.addToken(
+					glm::vec2(renderable->min.x, renderable->min.z),
+					glm::vec2(renderable->max.x, renderable->max.z),
+					utilities::Token(entity, renderable)
+				);
+				scene.mesh_render.static_renderables.push_back(renderable);
+			}
+			void makeDynamic(const entity::Entity& entity, world::SceneData& scene)
+			{
+				for (const auto& data : scene.mesh_render.dynamic_renderables)
+					if (data == entity)
+						return;
+
+				for (uint32_t i = 0u; i < scene.mesh_render.static_renderables.size(); ++i)
+				{
+					if (scene.mesh_render.static_renderables.at(i)->entity == entity)
+					{
+						foundation::Memory::destruct(scene.mesh_render.static_renderables.at(i));
+						scene.mesh_render.static_renderables.erase(scene.mesh_render.static_renderables.begin() + i);
+						break;
+					}
+				}
+
+				scene.mesh_render.static_zone_manager.removeToken(utilities::Token(entity, nullptr));
+
+				scene.mesh_render.dynamic_renderables.push_back(entity);
+			}
+
+			void createRenderList(utilities::Culler& culler, const utilities::Frustum& frustum, world::SceneData& scene)
+			{
+				culler.cullStatics(scene.mesh_render.static_zone_manager, frustum);
+				culler.cullDynamics(scene, frustum);
+			}
+
+			void createSortedRenderList(utilities::LinkedNode* statics, utilities::LinkedNode* dynamics, Vector<utilities::Renderable*>& opaque, Vector<utilities::Renderable*>& alpha, world::SceneData& scene)
+			{
+				for (utilities::LinkedNode* node = statics->next; node != nullptr; node = node->next)
+				{
+					utilities::Renderable* renderable = (utilities::Renderable*)node->data;
+					// TODO (Hilze): Implement.
+					if (renderable->albedo_texture && renderable->albedo_texture->getLayer(0u).containsAlpha())
+						alpha.push_back(renderable);
+					else
+						opaque.push_back(renderable);
+				}
+
+				for (utilities::LinkedNode* node = dynamics->next; node != nullptr; node = node->next)
+				{
+					utilities::Renderable* renderable = (utilities::Renderable*)node->data;
+					// TODO (Hilze): Implement.
+					if (renderable->albedo_texture && renderable->albedo_texture->getLayer(0u).containsAlpha())
+					{
+						alpha.push_back(renderable);
+					}
+					else
+					{
+						opaque.push_back(renderable);
+					}
+				}
+			}
+
+			struct DepthSort
+			{
+				bool larger = false;
+				Map<size_t, float> entity_to_depth;
+				inline bool operator() (const MeshRenderSystem::Data* mesh1, const MeshRenderSystem::Data* mesh2)
+				{
+					if (larger)
+						return entity_to_depth.at(mesh1->entity) > entity_to_depth.at(mesh2->entity);
+					else
+						return entity_to_depth.at(mesh1->entity) < entity_to_depth.at(mesh2->entity);
+				}
+			};
+
+			void renderAll(utilities::Culler& culler, const utilities::Frustum& frustum, world::SceneData& scene, bool is_rh)
+			{
+				createRenderList(culler, frustum, scene);
+
+				utilities::LinkedNode statics = culler.getStatics();
+				utilities::LinkedNode dynamics = culler.getDynamics();
+
+				renderAll(&statics, &dynamics, scene, is_rh);
+			}
+			void renderAll(utilities::LinkedNode* statics, utilities::LinkedNode* dynamics, world::SceneData& scene, bool is_rh)
+			{
+				Vector<utilities::Renderable*> opaque;
+				Vector<utilities::Renderable*> alpha;
+				createSortedRenderList(statics, dynamics, opaque, alpha, scene);
+				renderAll(opaque, alpha, scene, is_rh);
+			}
+			void renderAll(const Vector<utilities::Renderable*>& opaque, const Vector<utilities::Renderable*>& alpha, world::SceneData& scene, bool is_rh)
+			{
+				// -------------------------RENDER-STATIC-OPAQUE-------------------------
+				scene.renderer->setBlendState(platform::BlendState::Default());
+				for (const utilities::Renderable* renderable : opaque)
+				{
+					scene.renderer->setMesh(renderable->mesh);
+					scene.renderer->setSubMesh(renderable->sub_mesh);
+
+					scene.renderer->setTexture(renderable->albedo_texture, 0);
+					scene.renderer->setTexture(renderable->normal_texture, 1);
+					scene.renderer->setTexture(renderable->dmra_texture,   2);
+
+					scene.renderer->setShaderVariable(platform::ShaderVariable(Name("metallic_roughness"), glm::vec2(renderable->metallicness, renderable->roughness)));
+					scene.renderer->setShaderVariable(platform::ShaderVariable(Name("model_matrix"), renderable->model_matrix));
+
+					auto sub_mesh = renderable->mesh->getSubMeshes().at(renderable->sub_mesh);
+					// TODO (Hilze): Implement.
+					if (sub_mesh.io.double_sided == true || (sub_mesh.io.tex_alb >= 0 && renderable->mesh->getAttachedTextures().at(sub_mesh.io.tex_alb)->getLayer(0u).containsAlpha()))
+					{
+						scene.renderer->setRasterizerState(platform::RasterizerState::SolidNone());
+					}
+					else
+					{
+						if (is_rh)
+							scene.renderer->setRasterizerState(platform::RasterizerState::SolidFront());
+						else
+							scene.renderer->setRasterizerState(platform::RasterizerState::SolidBack());
+					}
+
+					scene.renderer->draw();
+				}
+				// -------------------------RENDER-STATIC-ALPHA-------------------------
+				scene.renderer->setBlendState(platform::BlendState::Alpha());
+				for (const utilities::Renderable* renderable : alpha)
+				{
+					scene.renderer->setMesh(renderable->mesh);
+					scene.renderer->setShaderVariable(platform::ShaderVariable(Name("metallic_roughness"), glm::vec2(renderable->metallicness, renderable->roughness)));
+					scene.renderer->setSubMesh(renderable->sub_mesh);
+					scene.renderer->setTexture(renderable->albedo_texture, 0);
+					scene.renderer->setTexture(renderable->normal_texture, 1);
+					scene.renderer->setTexture(renderable->dmra_texture,   2);
+					scene.renderer->setShaderVariable(platform::ShaderVariable(Name("model_matrix"), renderable->model_matrix));
+
+					auto sub_mesh = renderable->mesh->getSubMeshes().at(renderable->sub_mesh);
+					// TODO (Hilze): Implement.
+					if (sub_mesh.io.double_sided == true || (sub_mesh.io.tex_alb >= 0 && renderable->mesh->getAttachedTextures().at(sub_mesh.io.tex_alb)->getLayer(0u).containsAlpha()))
+						scene.renderer->setRasterizerState(platform::RasterizerState::SolidNone());
+					else
+						scene.renderer->setRasterizerState(platform::RasterizerState::SolidFront());
+
+					scene.renderer->draw();
+				}
 			}
 		}
-		String MeshRenderSystem::profilerInfo() const
-		{
-			return "Dynamics: " + toString(dynamic_renderables_.size()) + "\nStatics: " + toString(static_renderables_.size());
-		}
-    MeshRenderData& MeshRenderSystem::lookUpData(const entity::Entity& entity)
-    {
-      assert(entity_to_data_.find(entity) != entity_to_data_.end());
-			assert(data_.at(entity_to_data_.at(entity)).valid);
-			return data_.at(entity_to_data_.at(entity));
-    }
-    const MeshRenderData& MeshRenderSystem::lookUpData(const entity::Entity& entity) const
-    {
-      assert(entity_to_data_.find(entity) != entity_to_data_.end());
-			assert(data_.at(entity_to_data_.at(entity)).valid);
-			return data_.at(entity_to_data_.at(entity));
-    }
-    MeshRenderComponent::MeshRenderComponent(const entity::Entity& entity, MeshRenderSystem* system) :
-      IComponent(entity), system_(system)
-    {
-    }
-    MeshRenderComponent::MeshRenderComponent(const MeshRenderComponent& other) :
-      IComponent(other.entity_), system_(other.system_)
-    {
-    }
-    MeshRenderComponent::MeshRenderComponent() :
-      IComponent(entity::Entity()), system_(nullptr)
-    {
-    }
-    void MeshRenderComponent::setMesh(asset::VioletMeshHandle mesh)
-    {
-      system_->setMesh(entity_, mesh);
-    }
-    asset::VioletMeshHandle MeshRenderComponent::getMesh() const
-    {
-      return system_->getMesh(entity_);
-    }
-    void MeshRenderComponent::setSubMesh(const uint32_t& sub_mesh)
-    {
-      system_->setSubMesh(entity_, sub_mesh);
-    }
-    uint32_t MeshRenderComponent::getSubMesh() const
-    {
-      return system_->getSubMesh(entity_);
-    }
-    void MeshRenderComponent::setMetallicness(const float& metallicness)
-    {
-      system_->setMetallicness(entity_, metallicness);
-    }
-    float MeshRenderComponent::getMetallicness() const
-    {
-      return system_->getMetallicness(entity_);
-    }
-    void MeshRenderComponent::setRoughness(const float& roughness)
-    {
-      system_->setRoughness(entity_, roughness);
-    }
-    float MeshRenderComponent::getRoughness() const
-    {
-      return system_->getRoughness(entity_);
-    }
-    asset::VioletTextureHandle MeshRenderComponent::getAlbedoTexture() const
-    {
-      return system_->getAlbedoTexture(entity_);
-    }
-    void MeshRenderComponent::setNormalTexture(asset::VioletTextureHandle texture)
-    {
-      system_->setNormalTexture(entity_, texture);
-    }
-    asset::VioletTextureHandle MeshRenderComponent::getNormalTexture() const
-    {
-      return system_->getNormalTexture(entity_);
-    }
-    void MeshRenderComponent::setMetallicRoughnessTexture(asset::VioletTextureHandle texture)
-    {
-      system_->setMetallicRoughnessTexture(entity_, texture);
-    }
-    asset::VioletTextureHandle MeshRenderComponent::getMetallicRoughnessTexture() const
-    {
-      return system_->getMetallicRoughnessTexture(entity_);
-    }
-    void MeshRenderComponent::setAlbedoTexture(asset::VioletTextureHandle texture)
-    {
-      system_->setAlbedoTexture(entity_, texture);
-    }
-    void MeshRenderComponent::attachMesh(asset::VioletMeshHandle mesh)
-    {
-      system_->attachMesh(entity_, mesh);
-    }
-    bool MeshRenderComponent::getVisible() const
-    {
-      return system_->getVisible(entity_);
-    }
-    void MeshRenderComponent::setVisible(const bool& visible)
-    {
-      system_->setVisible(entity_, visible);
-    }
-    bool MeshRenderComponent::getCastShadows() const
-    {
-      return system_->getCastShadows(entity_);
-    }
-    void MeshRenderComponent::setCastShadows(const bool& cast_shadows)
-    {
-      system_->setCastShadows(entity_, cast_shadows);
-    }
-    MeshRenderData::MeshRenderData(const MeshRenderData & other)
-    {
-      mesh                       = other.mesh;
-      sub_mesh                   = other.sub_mesh;
-      albedo_texture             = other.albedo_texture;
-      normal_texture             = other.normal_texture;
-      metallic_roughness_texture = other.metallic_roughness_texture;
-      metallicness               = other.metallicness;
-      roughness                  = other.roughness;
-      visible                    = other.visible;
-      cast_shadows               = other.cast_shadows;
-      entity                     = other.entity;
-			valid                      = other.valid;
-    }
-    MeshRenderData & MeshRenderData::operator=(const MeshRenderData & other)
-    {
-      mesh                       = other.mesh;
-      sub_mesh                   = other.sub_mesh;
-      albedo_texture             = other.albedo_texture;
-      normal_texture             = other.normal_texture;
-      metallic_roughness_texture = other.metallic_roughness_texture;
-      metallicness               = other.metallicness;
-      roughness                  = other.roughness;
-      visible                    = other.visible;
-      cast_shadows               = other.cast_shadows;
-      entity                     = other.entity;
-			valid                      = other.valid;
 
-      return *this;
-    }
-  }
+		// The system data.
+		namespace MeshRenderSystem
+		{
+			Data& SystemData::add(const entity::Entity& entity)
+			{
+				uint32_t idx = 0ul;
+				if (!unused_data_entries.empty())
+				{
+					idx = unused_data_entries.front();
+					unused_data_entries.pop();
+					data[idx] = Data(entity);
+				}
+				else
+				{
+					idx = (uint32_t)data.size();
+					data.push_back(Data(entity));
+					data_to_entity[idx] = entity;
+				}
+
+				data_to_entity[idx] = entity;
+				entity_to_data[entity] = idx;
+
+				Data& d = data[idx];
+
+				d.albedo_texture = default_albedo;
+				d.normal_texture = default_normal;
+				d.dmra_texture   = default_dmra;
+
+				return d;
+			}
+
+			Data& SystemData::get(const entity::Entity& entity)
+			{
+				auto it = entity_to_data.find(entity);
+				LMB_ASSERT(it != entity_to_data.end(), "MESHRENDER: %llu does not have a component", entity);
+				LMB_ASSERT(data[it->second].valid, "MESHRENDER: %llu's data was not valid", entity);
+				return data[it->second];
+			}
+
+			void SystemData::remove(const entity::Entity& entity)
+			{
+				marked_for_delete.insert(entity);
+			}
+
+			bool SystemData::has(const entity::Entity& entity)
+			{
+				return entity_to_data.find(entity) != entity_to_data.end();
+			}
+		}
+
+		// The mesh render data.
+		namespace MeshRenderSystem
+		{
+			Data::Data(const Data& other)
+			{
+				mesh = other.mesh;
+				sub_mesh = other.sub_mesh;
+				albedo_texture = other.albedo_texture;
+				normal_texture = other.normal_texture;
+				dmra_texture = other.dmra_texture;
+				metallicness = other.metallicness;
+				roughness = other.roughness;
+				visible = other.visible;
+				cast_shadows = other.cast_shadows;
+				entity = other.entity;
+				valid = other.valid;
+			}
+			Data& Data::operator=(const Data& other)
+			{
+				mesh = other.mesh;
+				sub_mesh = other.sub_mesh;
+				albedo_texture = other.albedo_texture;
+				normal_texture = other.normal_texture;
+				dmra_texture = other.dmra_texture;
+				metallicness = other.metallicness;
+				roughness = other.roughness;
+				visible = other.visible;
+				cast_shadows = other.cast_shadows;
+				entity = other.entity;
+				valid = other.valid;
+
+				return *this;
+			}
+		}
+
+		MeshRenderComponent::MeshRenderComponent(const entity::Entity& entity, world::SceneData& scene) :
+			IComponent(entity), scene_(&scene)
+		{
+		}
+		MeshRenderComponent::MeshRenderComponent(const MeshRenderComponent& other) :
+			IComponent(other.entity_), scene_(other.scene_)
+		{
+		}
+		MeshRenderComponent::MeshRenderComponent() :
+			IComponent(entity::Entity()), scene_(nullptr)
+		{
+		}
+		void MeshRenderComponent::setMesh(asset::VioletMeshHandle mesh)
+		{
+			MeshRenderSystem::setMesh(entity_, mesh, *scene_);
+		}
+		asset::VioletMeshHandle MeshRenderComponent::getMesh() const
+		{
+			return MeshRenderSystem::getMesh(entity_, *scene_);
+		}
+		void MeshRenderComponent::setSubMesh(const uint32_t& sub_mesh)
+		{
+			MeshRenderSystem::setSubMesh(entity_, sub_mesh, *scene_);
+		}
+		uint32_t MeshRenderComponent::getSubMesh() const
+		{
+			return MeshRenderSystem::getSubMesh(entity_, *scene_);
+		}
+		void MeshRenderComponent::setMetallicness(const float& metallicness)
+		{
+			MeshRenderSystem::setMetallicness(entity_, metallicness, *scene_);
+		}
+		float MeshRenderComponent::getMetallicness() const
+		{
+			return MeshRenderSystem::getMetallicness(entity_, *scene_);
+		}
+		void MeshRenderComponent::setRoughness(const float& roughness)
+		{
+			MeshRenderSystem::setRoughness(entity_, roughness, *scene_);
+		}
+		float MeshRenderComponent::getRoughness() const
+		{
+			return MeshRenderSystem::getRoughness(entity_, *scene_);
+		}
+		asset::VioletTextureHandle MeshRenderComponent::getAlbedoTexture() const
+		{
+			return MeshRenderSystem::getAlbedoTexture(entity_, *scene_);
+		}
+		void MeshRenderComponent::setNormalTexture(asset::VioletTextureHandle texture)
+		{
+			MeshRenderSystem::setNormalTexture(entity_, texture, *scene_);
+		}
+		asset::VioletTextureHandle MeshRenderComponent::getNormalTexture() const
+		{
+			return MeshRenderSystem::getNormalTexture(entity_, *scene_);
+		}
+		void MeshRenderComponent::setDMRATexture(asset::VioletTextureHandle texture)
+		{
+			MeshRenderSystem::setDMRATexture(entity_, texture, *scene_);
+		}
+		asset::VioletTextureHandle MeshRenderComponent::getDMRATexture() const
+		{
+			return MeshRenderSystem::getDMRATexture(entity_, *scene_);
+		}
+		void MeshRenderComponent::setAlbedoTexture(asset::VioletTextureHandle texture)
+		{
+			MeshRenderSystem::setAlbedoTexture(entity_, texture, *scene_);
+		}
+		void MeshRenderComponent::attachMesh(asset::VioletMeshHandle mesh)
+		{
+			MeshRenderSystem::attachMesh(entity_, mesh, *scene_);
+		}
+		bool MeshRenderComponent::getVisible() const
+		{
+			return MeshRenderSystem::getVisible(entity_, *scene_);
+		}
+		void MeshRenderComponent::setVisible(const bool& visible)
+		{
+			MeshRenderSystem::setVisible(entity_, visible, *scene_);
+		}
+		bool MeshRenderComponent::getCastShadows() const
+		{
+			return MeshRenderSystem::getCastShadows(entity_, *scene_);
+		}
+		void MeshRenderComponent::setCastShadows(const bool& cast_shadows)
+		{
+			MeshRenderSystem::setCastShadows(entity_, cast_shadows, *scene_);
+		}
+	}
 }

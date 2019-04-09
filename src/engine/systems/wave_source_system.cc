@@ -8,345 +8,391 @@
 
 namespace lambda
 {
-  namespace components
-  {
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void WaveSourceSystem::initialize(world::IWorld& world)
-    {
-      transform_system_ = world.getScene().getSystem<TransformSystem>();
-      
-      engine_ = foundation::Memory::construct<SoLoud::Soloud>();
-      engine_->init();
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void WaveSourceSystem::deinitialize()
-    {
-			Vector<entity::Entity> entities;
-			for (const auto& it : entity_to_data_)
-				entities.push_back(it.first);
-
-			for (const auto& entity : entities)
-				removeComponent(entity);
-			collectGarbage();
-
-      for (const auto& data : data_)
-        if (engine_->isValidVoiceHandle(data.handle))
-          engine_->stop(data.handle);
-      data_.clear();
-
-      engine_->stopAll();
-
-      while (engine_->getActiveVoiceCount() > 0)
-        SoLoud::Thread::sleep(100);
-
-      engine_->deinit();
-      foundation::Memory::destruct(engine_);
-
-      transform_system_.reset();
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void WaveSourceSystem::update(const double& delta_time)
-    {
-      // Listener.
-      glm::vec3 listener_position(0.0f);
-      glm::vec3 listener_up(0.0f, 1.0f, 0.0f);
-      glm::vec3 listener_forward(1.0f, 0.0f, 0.0f);
-      glm::vec3 listener_velocity(0.0f);
-      if (listener_ != 0u)
-      {
-        listener_position = transform_system_->getComponent(listener_).getWorldTranslation();
-        listener_forward  = transform_system_->getComponent(listener_).getWorldForward();
-        listener_up       = transform_system_->getComponent(listener_).getWorldUp();
-        listener_velocity = (last_listener_position_ - listener_position) / (float)delta_time;
-        last_listener_position_ = listener_position;
-      }
-      engine_->set3dListenerPosition(listener_position.x, listener_position.y, listener_position.z);
-      engine_->set3dListenerAt(listener_forward.x, listener_forward.y, listener_forward.z);
-      engine_->set3dListenerUp(listener_up.x, listener_up.y, listener_up.z);
-      engine_->set3dListenerVelocity(listener_velocity.x, listener_velocity.y, listener_velocity.z);
-
-      // Audio sources
-      for (WaveSourceData& data : data_)
-      {
-        if (data.entity == listener_)
-          continue;
-
-        updateState(data, (float)delta_time);
-      }
-
-      engine_->update3dAudio();
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    WaveSourceSystem::~WaveSourceSystem()
-    {
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    WaveSourceComponent WaveSourceSystem::addComponent(const entity::Entity& entity)
-    {
-      if (false == transform_system_->hasComponent(entity))
-        transform_system_->addComponent(entity);
-
-			if (!unused_data_entries_.empty())
-			{
-				uint32_t idx = unused_data_entries_.front();
-				unused_data_entries_.pop();
-
-				data_[idx] = WaveSourceData(entity);
-				data_to_entity_[idx] = entity;
-				entity_to_data_[entity] = idx;
-			}
-			else
-			{
-				data_.push_back(WaveSourceData(entity));
-				uint32_t idx = (uint32_t)data_.size() - 1u;
-				data_to_entity_[idx] = entity;
-				entity_to_data_[entity] = idx;
-			}
-
-      return WaveSourceComponent(entity, this);
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    WaveSourceComponent WaveSourceSystem::getComponent(const entity::Entity& entity)
-    {
-      return WaveSourceComponent(entity, this);
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    bool WaveSourceSystem::hasComponent(const entity::Entity& entity)
-    {
-      return entity_to_data_.find(entity) != entity_to_data_.end();
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void WaveSourceSystem::removeComponent(const entity::Entity& entity)
-    {
-			getComponent(entity).stop();
-			marked_for_delete_.insert(entity);
-    }
-
-		void WaveSourceSystem::collectGarbage()
+	namespace components
+	{
+		namespace WaveSourceSystem
 		{
-			if (!marked_for_delete_.empty())
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			void updateState(Data& data, float delta_time, world::SceneData& scene)
 			{
-				for (entity::Entity entity : marked_for_delete_)
+				if (data.handle == 0u)
 				{
-					const auto& it = entity_to_data_.find(entity);
-					if (it != entity_to_data_.end())
-					{
-						uint32_t idx = it->second;
-						unused_data_entries_.push(idx);
-						data_to_entity_.erase(idx);
-						entity_to_data_.erase(entity);
-						data_[idx].valid = false;
-					}
+					data.state = WaveSourceState::kStopped;
+					return;
 				}
-				marked_for_delete_.clear();
+
+				glm::vec3 position = data.in_world ? TransformSystem::getWorldTranslation(data.entity, scene) : scene.wave_source.last_listener_position;
+				glm::vec3 velocity = data.in_world ? ((data.last_position - position) / delta_time) : glm::vec3(0.0f);
+				data.last_position = position;
+
+				scene.wave_source.engine->setLooping(data.handle, data.loop);
+				scene.wave_source.engine->setVolume(data.handle, data.gain);
+				scene.wave_source.engine->setRelativePlaySpeed(data.handle, data.pitch);
+				scene.wave_source.engine->set3dSourceParameters(
+					data.handle,
+					position.x,
+					position.y,
+					position.z,
+					velocity.x,
+					velocity.y,
+					velocity.z
+				);
+				scene.wave_source.engine->set3dSourceMinMaxDistance(data.handle, 1.0f, data.radius);
+				scene.wave_source.engine->set3dSourceAttenuation(data.handle, SoLoud::AudioSource::LINEAR_DISTANCE, 1.0f);
+
+				data.state = WaveSourceState::kInitial;
+				if (scene.wave_source.engine->isValidVoiceHandle(data.handle))
+				{
+					if (scene.wave_source.engine->getPause(data.handle))
+						data.state = WaveSourceState::kPaused;
+					else
+						data.state = WaveSourceState::kPlaying;
+				}
+				else
+				{
+					data.handle = 0u;
+					data.state = WaveSourceState::kStopped;
+				}
+			}
+
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			WaveSourceComponent addComponent(const entity::Entity& entity, world::SceneData& scene)
+			{
+				if (!TransformSystem::hasComponent(entity, scene))
+					TransformSystem::addComponent(entity, scene);
+				
+				scene.wave_source.add(entity);
+
+				return WaveSourceComponent(entity, scene);
+			}
+
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			WaveSourceComponent getComponent(const entity::Entity& entity, world::SceneData& scene)
+			{
+				return WaveSourceComponent(entity, scene);
+			}
+
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			bool hasComponent(const entity::Entity& entity, world::SceneData& scene)
+			{
+				return scene.wave_source.has(entity);
+			}
+
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			void removeComponent(const entity::Entity& entity, world::SceneData& scene)
+			{
+				stop(entity, scene);
+				scene.wave_source.remove(entity);
+			}
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			void initialize(world::SceneData& scene)
+			{
+				scene.wave_source.engine = foundation::Memory::construct<SoLoud::Soloud>();
+				scene.wave_source.engine->init();
+			}
+
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			void deinitialize(world::SceneData& scene)
+			{
+				Vector<entity::Entity> entities;
+				for (const auto& it : scene.wave_source.entity_to_data)
+					entities.push_back(it.first);
+
+				for (const auto& entity : entities)
+					removeComponent(entity, scene);
+				collectGarbage(scene);
+
+				for (const auto& data : scene.wave_source.data)
+					if (scene.wave_source.engine->isValidVoiceHandle(data.handle))
+						scene.wave_source.engine->stop(data.handle);
+				scene.wave_source.data.clear();
+
+				scene.wave_source.engine->stopAll();
+
+				while (scene.wave_source.engine->getActiveVoiceCount() > 0)
+					SoLoud::Thread::sleep(100);
+
+				scene.wave_source.engine->deinit();
+				foundation::Memory::destruct(scene.wave_source.engine);
+			}
+
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			void update(const float& delta_time, world::SceneData& scene)
+			{
+				// Listener.
+				glm::vec3 listener_position(0.0f);
+				glm::vec3 listener_up(0.0f, 1.0f, 0.0f);
+				glm::vec3 listener_forward(1.0f, 0.0f, 0.0f);
+				glm::vec3 listener_velocity(0.0f);
+				if (scene.wave_source.listener != 0u)
+				{
+					listener_position = TransformSystem::getWorldTranslation(scene.wave_source.listener, scene);
+					listener_forward = TransformSystem::getWorldForward(scene.wave_source.listener, scene);
+					listener_up = TransformSystem::getWorldUp(scene.wave_source.listener, scene);
+					listener_velocity = (scene.wave_source.last_listener_position - listener_position) / (float)delta_time;
+					scene.wave_source.last_listener_position = listener_position;
+				}
+				scene.wave_source.engine->set3dListenerPosition(listener_position.x, listener_position.y, listener_position.z);
+				scene.wave_source.engine->set3dListenerAt(listener_forward.x, listener_forward.y, listener_forward.z);
+				scene.wave_source.engine->set3dListenerUp(listener_up.x, listener_up.y, listener_up.z);
+				scene.wave_source.engine->set3dListenerVelocity(listener_velocity.x, listener_velocity.y, listener_velocity.z);
+
+				// Audio sources
+				for (Data& data : scene.wave_source.data)
+				{
+					if (data.entity == scene.wave_source.listener)
+						continue;
+
+					updateState(data, (float)delta_time, scene);
+				}
+
+				scene.wave_source.engine->update3dAudio();
+			}
+
+			void collectGarbage(world::SceneData& scene)
+			{
+				if (!scene.wave_source.marked_for_delete.empty())
+				{
+					for (entity::Entity entity : scene.wave_source.marked_for_delete)
+					{
+						const auto& it = scene.wave_source.entity_to_data.find(entity);
+						if (it != scene.wave_source.entity_to_data.end())
+						{
+							uint32_t idx = it->second;
+							scene.wave_source.unused_data_entries.push(idx);
+							scene.wave_source.data_to_entity.erase(idx);
+							scene.wave_source.entity_to_data.erase(entity);
+							scene.wave_source.data[idx].valid = false;
+						}
+					}
+					scene.wave_source.marked_for_delete.clear();
+				}
+			}
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			void setBuffer(const entity::Entity& entity, const asset::VioletWaveHandle& buffer, world::SceneData& scene)
+			{
+				scene.wave_source.get(entity).buffer = buffer;
+				updateState(scene.wave_source.get(entity), 0.0f, scene);
+			}
+
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			asset::VioletWaveHandle getBuffer(const entity::Entity& entity, world::SceneData& scene)
+			{
+				return scene.wave_source.get(entity).buffer;
+			}
+
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			void play(const entity::Entity& entity, world::SceneData& scene)
+			{
+				Data& data = scene.wave_source.get(entity);
+
+				if (data.handle != 0u)
+					scene.wave_source.engine->setPause(scene.wave_source.get(entity).handle, false);
+				else
+				{
+					if (data.in_world)
+						data.handle = scene.wave_source.engine->play3d(*data.buffer->getBuffer(), 0.0f, 0.0f, 0.0f);
+					else
+						data.handle = scene.wave_source.engine->play(*data.buffer->getBuffer());
+				}
+
+				updateState(data, 0.0f, scene);
+			}
+
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			void pause(const entity::Entity& entity, world::SceneData& scene)
+			{
+				scene.wave_source.engine->setPause(scene.wave_source.get(entity).handle, true);
+			}
+
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			void stop(const entity::Entity& entity, world::SceneData& scene)
+			{
+				Data& data = scene.wave_source.get(entity);
+				scene.wave_source.engine->stop(data.handle);
+				data.handle = 0u;
+			}
+
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			WaveSourceState getState(const entity::Entity& entity, world::SceneData& scene)
+			{
+				return scene.wave_source.get(entity).state;
+			}
+
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			void setRelativeToListener(const entity::Entity& entity, bool relative, world::SceneData& scene)
+			{
+				scene.wave_source.get(entity).in_world = relative;
+				updateState(scene.wave_source.get(entity), 0.0f, scene);
+			}
+
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			bool getRelativeToListener(const entity::Entity& entity, world::SceneData& scene)
+			{
+				return scene.wave_source.get(entity).in_world;
+			}
+
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			void setLoop(const entity::Entity& entity, bool loop, world::SceneData& scene)
+			{
+				scene.wave_source.get(entity).loop = loop;
+				updateState(scene.wave_source.get(entity), 0.0f, scene);
+			}
+
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			bool getLoop(const entity::Entity& entity, world::SceneData& scene)
+			{
+				return scene.wave_source.get(entity).loop;
+			}
+
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			void setOffset(const entity::Entity& entity, float seconds, world::SceneData& scene)
+			{
+				LMB_ASSERT(false, "");
+			}
+
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			void setVolume(const entity::Entity& entity, float volume, world::SceneData& scene)
+			{
+				setGain(entity, volume / 100.0f, scene);
+				updateState(scene.wave_source.get(entity), 0.0f, scene);
+			}
+
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			float getVolume(const entity::Entity& entity, world::SceneData& scene)
+			{
+				return getGain(entity, scene) * 100.0f;
+			}
+
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			void setGain(const entity::Entity& entity, float gain, world::SceneData& scene)
+			{
+				scene.wave_source.get(entity).gain = gain;
+				updateState(scene.wave_source.get(entity), 0.0f, scene);
+			}
+
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			float getGain(const entity::Entity& entity, world::SceneData& scene)
+			{
+				return scene.wave_source.get(entity).gain;
+			}
+
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			void setPitch(const entity::Entity& entity, float pitch, world::SceneData& scene)
+			{
+				scene.wave_source.get(entity).pitch = pitch;
+				updateState(scene.wave_source.get(entity), 0.0f, scene);
+			}
+
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			float getPitch(const entity::Entity& entity, world::SceneData& scene)
+			{
+				return scene.wave_source.get(entity).pitch;
+			}
+
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			void setRadius(const entity::Entity& entity, float radius, world::SceneData& scene)
+			{
+				scene.wave_source.get(entity).radius = radius;
+				updateState(scene.wave_source.get(entity), 0.0f, scene);
+			}
+
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			float getRadius(const entity::Entity& entity, world::SceneData& scene)
+			{
+				return scene.wave_source.get(entity).radius;
+			}
+
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			void setListener(entity::Entity listener, world::SceneData& scene)
+			{
+				scene.wave_source.listener = listener;
 			}
 		}
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void WaveSourceSystem::setBuffer(const entity::Entity& entity, const asset::VioletWaveHandle& buffer)
-    {
-      lookUpData(entity).buffer = buffer;
-      updateState(lookUpData(entity), 0.0f);
-    }
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    asset::VioletWaveHandle WaveSourceSystem::getBuffer(const entity::Entity& entity) const
-    {
-      return lookUpData(entity).buffer;
-    }
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void WaveSourceSystem::play(const entity::Entity& entity)
-    {
-      WaveSourceData& data = lookUpData(entity);
 
-      if (data.handle != 0u)
-        engine_->setPause(lookUpData(entity).handle, false);
-      else
-      {
-        if (data.in_world)
-          data.handle = engine_->play3d(*data.buffer->getBuffer(), 0.0f, 0.0f, 0.0f);
-        else
-          data.handle = engine_->play(*data.buffer->getBuffer());
-      }
 
-      updateState(data, 0.0f);
-    }
+		// The system data.
+		namespace WaveSourceSystem
+		{
+			Data& SystemData::add(const entity::Entity& entity)
+			{
+				uint32_t idx = 0ul;
+				if (!unused_data_entries.empty())
+				{
+					idx = unused_data_entries.front();
+					unused_data_entries.pop();
+					data[idx] = Data(entity);
+				}
+				else
+				{
+					idx = (uint32_t)data.size();
+					data.push_back(Data(entity));
+					data_to_entity[idx] = entity;
+				}
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void WaveSourceSystem::pause(const entity::Entity& entity)
-    {
-      engine_->setPause(lookUpData(entity).handle, true);
-    }
+				data_to_entity[idx] = entity;
+				entity_to_data[entity] = idx;
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void WaveSourceSystem::stop(const entity::Entity& entity)
-    {
-      WaveSourceData& data = lookUpData(entity);
-      engine_->stop(data.handle);
-      data.handle = 0u;
-    }
+				return data[idx];
+			}
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    WaveSourceState WaveSourceSystem::getState(const entity::Entity& entity) const
-    {
-      return lookUpData(entity).state;
-    }
+			Data& SystemData::get(const entity::Entity& entity)
+			{
+				auto it = entity_to_data.find(entity);
+				LMB_ASSERT(it != entity_to_data.end(), "NAME: %llu does not have a component", entity);
+				LMB_ASSERT(data[it->second].valid, "NAME: %llu's data was not valid", entity);
+				return data[it->second];
+			}
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void WaveSourceSystem::setRelativeToListener(const entity::Entity& entity, bool relative)
-    {
-      lookUpData(entity).in_world = relative;
-      updateState(lookUpData(entity), 0.0f);
-    }
+			void SystemData::remove(const entity::Entity& entity)
+			{
+				marked_for_delete.insert(entity);
+			}
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    bool WaveSourceSystem::getRelativeToListener(const entity::Entity& entity) const
-    {
-      return lookUpData(entity).in_world;
-    }
+			bool SystemData::has(const entity::Entity& entity)
+			{
+				return entity_to_data.find(entity) != entity_to_data.end();
+			}
+		}
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void WaveSourceSystem::setLoop(const entity::Entity& entity, bool loop)
-    {
-      lookUpData(entity).loop = loop;
-      updateState(lookUpData(entity), 0.0f);
-    }
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    bool WaveSourceSystem::getLoop(const entity::Entity& entity) const
-    {
-      return lookUpData(entity).loop;
-    }
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void WaveSourceSystem::setOffset(const entity::Entity& entity, float seconds)
-    {
-      LMB_ASSERT(false, "");
-    }
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void WaveSourceSystem::setVolume(const entity::Entity& entity, float volume)
-    {
-      setGain(entity, volume / 100.0f);
-      updateState(lookUpData(entity), 0.0f);
-    }
+		namespace WaveSourceSystem
+		{
+			Data::Data(const Data & other)
+			{
+				entity = other.entity;
+				state = other.state;
+				buffer = other.buffer;
+				handle = other.handle;
+				in_world = other.in_world;
+				loop = other.loop;
+				gain = other.gain;
+				pitch = other.pitch;
+				radius = other.radius;
+				last_position = other.last_position;
+				valid = other.valid;
+			}
+			Data & Data::operator=(const Data & other)
+			{
+				entity = other.entity;
+				state = other.state;
+				buffer = other.buffer;
+				handle = other.handle;
+				in_world = other.in_world;
+				loop = other.loop;
+				gain = other.gain;
+				pitch = other.pitch;
+				radius = other.radius;
+				last_position = other.last_position;
+				valid = other.valid;
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    float WaveSourceSystem::getVolume(const entity::Entity& entity) const
-    {
-      return getGain(entity) * 100.0f;
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void WaveSourceSystem::setGain(const entity::Entity& entity, float gain)
-    {
-      lookUpData(entity).gain = gain;
-      updateState(lookUpData(entity), 0.0f);
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    float WaveSourceSystem::getGain(const entity::Entity& entity) const
-    {
-      return lookUpData(entity).gain;
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void WaveSourceSystem::setPitch(const entity::Entity& entity, float pitch)
-    {
-      lookUpData(entity).pitch = pitch;
-      updateState(lookUpData(entity), 0.0f);
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    float WaveSourceSystem::getPitch(const entity::Entity& entity) const
-    {
-      return lookUpData(entity).pitch;
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void WaveSourceSystem::setRadius(const entity::Entity& entity, float radius)
-    {
-      lookUpData(entity).radius = radius;
-      updateState(lookUpData(entity), 0.0f);
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    float WaveSourceSystem::getRadius(const entity::Entity& entity) const
-    {
-      return lookUpData(entity).radius;
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void WaveSourceSystem::setListener(entity::Entity listener)
-    {
-      listener_ = listener;
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    WaveSourceData& WaveSourceSystem::lookUpData(const entity::Entity& entity)
-    {
-      assert(entity_to_data_.find(entity) != entity_to_data_.end());
-			assert(data_.at(entity_to_data_.at(entity)).valid);
-			return data_.at(entity_to_data_.at(entity));
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    const WaveSourceData& WaveSourceSystem::lookUpData(const entity::Entity& entity) const
-    {
-      assert(entity_to_data_.find(entity) != entity_to_data_.end());
-			assert(data_.at(entity_to_data_.at(entity)).valid);
-			return data_.at(entity_to_data_.at(entity));
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void WaveSourceSystem::updateState(WaveSourceData& data, float delta_time)
-    {
-      if (data.handle == 0u)
-      {
-        data.state = WaveSourceState::kStopped;
-        return;
-      }
-
-      glm::vec3 position = data.in_world ? transform_system_->getComponent(data.entity).getWorldTranslation() : last_listener_position_;
-      glm::vec3 velocity = data.in_world ? ((data.last_position - position) / delta_time) : glm::vec3(0.0f);
-      data.last_position = position;
-
-      engine_->setLooping(data.handle, data.loop);
-      engine_->setVolume(data.handle, data.gain);
-      engine_->setRelativePlaySpeed(data.handle, data.pitch);
-      engine_->set3dSourceParameters(
-        data.handle,
-        position.x,
-        position.y,
-        position.z,
-        velocity.x,
-        velocity.y,
-        velocity.z
-      );
-      engine_->set3dSourceMinMaxDistance(data.handle, 1.0f, data.radius);
-      engine_->set3dSourceAttenuation(data.handle, SoLoud::AudioSource::LINEAR_DISTANCE, 1.0f);
-
-      data.state = WaveSourceState::kInitial;
-      if (engine_->isValidVoiceHandle(data.handle))
-      {
-        if (engine_->getPause(data.handle))
-          data.state = WaveSourceState::kPaused;
-        else
-          data.state = WaveSourceState::kPlaying;
-      }
-      else
-      {
-        data.handle = 0u;
-        data.state = WaveSourceState::kStopped;
-      }
-    }
+				return *this;
+			}
+		}
 
 
 
@@ -354,169 +400,137 @@ namespace lambda
 
 
 
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		WaveSourceComponent::WaveSourceComponent(const entity::Entity& entity, world::SceneData& scene) :
+			IComponent(entity), scene_(&scene)
+		{
+		}
 
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		WaveSourceComponent::WaveSourceComponent(const WaveSourceComponent& other) :
+			IComponent(other.entity_), scene_(other.scene_)
+		{
+		}
 
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		WaveSourceComponent::WaveSourceComponent() :
+			IComponent(entity::Entity()), scene_(nullptr)
+		{
+		}
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    WaveSourceComponent::WaveSourceComponent(const entity::Entity& entity, WaveSourceSystem* system) :
-      IComponent(entity), system_(system)
-    {
-    }
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		void WaveSourceComponent::setBuffer(const asset::VioletWaveHandle& buffer)
+		{
+			WaveSourceSystem::setBuffer(entity_, buffer, *scene_);
+		}
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    WaveSourceComponent::WaveSourceComponent(const WaveSourceComponent& other) :
-      IComponent(other.entity_), system_(other.system_)
-    {
-    }
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		asset::VioletWaveHandle WaveSourceComponent::getBuffer() const
+		{
+			return WaveSourceSystem::getBuffer(entity_, *scene_);
+		}
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    WaveSourceComponent::WaveSourceComponent() :
-      IComponent(entity::Entity()), system_(nullptr)
-    {
-    }
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		void WaveSourceComponent::play()
+		{
+			WaveSourceSystem::play(entity_, *scene_);
+		}
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void WaveSourceComponent::setBuffer(const asset::VioletWaveHandle& buffer)
-    {
-      system_->setBuffer(entity_, buffer);
-    }
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		void WaveSourceComponent::pause()
+		{
+			WaveSourceSystem::pause(entity_, *scene_);
+		}
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    asset::VioletWaveHandle WaveSourceComponent::getBuffer() const
-    {
-      return system_->getBuffer(entity_);
-    }
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		void WaveSourceComponent::stop()
+		{
+			WaveSourceSystem::stop(entity_, *scene_);
+		}
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void WaveSourceComponent::play()
-    {
-      system_->play(entity_);
-    }
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		WaveSourceState WaveSourceComponent::getState() const
+		{
+			return WaveSourceSystem::getState(entity_, *scene_);
+		}
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void WaveSourceComponent::pause()
-    {
-      system_->pause(entity_);
-    }
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		void WaveSourceComponent::setRelativeToListener(bool relative)
+		{
+			WaveSourceSystem::setRelativeToListener(entity_, relative, *scene_);
+		}
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void WaveSourceComponent::stop()
-    {
-      system_->stop(entity_);
-    }
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		bool WaveSourceComponent::getRelativeToListener() const
+		{
+			return WaveSourceSystem::getRelativeToListener(entity_, *scene_);
+		}
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    WaveSourceState WaveSourceComponent::getState() const
-    {
-      return system_->getState(entity_);
-    }
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		void WaveSourceComponent::setLoop(bool loop)
+		{
+			WaveSourceSystem::setLoop(entity_, loop, *scene_);
+		}
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void WaveSourceComponent::setRelativeToListener(bool relative)
-    {
-      system_->setRelativeToListener(entity_, relative);
-    }
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		bool WaveSourceComponent::getLoop() const
+		{
+			return WaveSourceSystem::getLoop(entity_, *scene_);
+		}
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    bool WaveSourceComponent::getRelativeToListener() const
-    {
-      return system_->getRelativeToListener(entity_);
-    }
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		void WaveSourceComponent::setOffset(float seconds)
+		{
+			WaveSourceSystem::setOffset(entity_, seconds, *scene_);
+		}
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void WaveSourceComponent::setLoop(bool loop)
-    {
-      system_->setLoop(entity_, loop);
-    }
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		void WaveSourceComponent::setVolume(float volume)
+		{
+			WaveSourceSystem::setVolume(entity_, volume, *scene_);
+		}
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    bool WaveSourceComponent::getLoop() const
-    {
-      return system_->getLoop(entity_);
-    }
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		float WaveSourceComponent::getVolume() const
+		{
+			return WaveSourceSystem::getVolume(entity_, *scene_);
+		}
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void WaveSourceComponent::setOffset(float seconds)
-    {
-      system_->setOffset(entity_, seconds);
-    }
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		void WaveSourceComponent::setGain(float gain)
+		{
+			WaveSourceSystem::setGain(entity_, gain, *scene_);
+		}
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void WaveSourceComponent::setVolume(float volume)
-    {
-      system_->setVolume(entity_, volume);
-    }
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		float WaveSourceComponent::getGain() const
+		{
+			return WaveSourceSystem::getGain(entity_, *scene_);
+		}
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    float WaveSourceComponent::getVolume() const
-    {
-      return system_->getVolume(entity_);
-    }
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		void WaveSourceComponent::setPitch(float pitch)
+		{
+			WaveSourceSystem::setPitch(entity_, pitch, *scene_);
+		}
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void WaveSourceComponent::setGain(float gain)
-    {
-      system_->setGain(entity_, gain);
-    }
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		float WaveSourceComponent::getPitch() const
+		{
+			return WaveSourceSystem::getPitch(entity_, *scene_);
+		}
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    float WaveSourceComponent::getGain() const
-    {
-      return system_->getGain(entity_);
-    }
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		void WaveSourceComponent::setRadius(float radius)
+		{
+			WaveSourceSystem::setRadius(entity_, radius, *scene_);
+		}
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void WaveSourceComponent::setPitch(float pitch)
-    {
-      system_->setPitch(entity_, pitch);
-    }
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		float WaveSourceComponent::getRadius() const
+		{
+			return WaveSourceSystem::getRadius(entity_, *scene_);
+		}
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    float WaveSourceComponent::getPitch() const
-    {
-      return system_->getPitch(entity_);
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void WaveSourceComponent::setRadius(float radius)
-    {
-      system_->setRadius(entity_, radius);
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    float WaveSourceComponent::getRadius() const
-    {
-      return system_->getRadius(entity_);
-    }
-    WaveSourceData::WaveSourceData(const WaveSourceData & other)
-    {
-      entity        = other.entity;
-      state         = other.state;
-      buffer        = other.buffer;
-      handle        = other.handle;
-      in_world      = other.in_world;
-      loop          = other.loop;
-      gain          = other.gain;
-      pitch         = other.pitch;
-      radius        = other.radius;
-      last_position = other.last_position;
-			valid         = other.valid;
-    }
-    WaveSourceData & WaveSourceData::operator=(const WaveSourceData & other)
-    {
-      entity        = other.entity;
-      state         = other.state;
-      buffer        = other.buffer;
-      handle        = other.handle;
-      in_world      = other.in_world;
-      loop          = other.loop;
-      gain          = other.gain;
-      pitch         = other.pitch;
-      radius        = other.radius;
-      last_position = other.last_position;
-			valid         = other.valid;
-      
-      return *this;
-    }
-}
+	}
 }

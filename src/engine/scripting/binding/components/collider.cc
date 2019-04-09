@@ -15,9 +15,7 @@ namespace lambda
     {
       namespace collider
       {
-        lambda::components::TransformSystem* g_transform_system = nullptr;
         lambda::components::ColliderSystem* g_collider_system = nullptr;
-        lambda::components::MeshRenderSystem* g_mesh_render_system = nullptr;
         entity::EntitySystem* g_entity_system = nullptr;
 
         void Create(const uint64_t& id)
@@ -83,9 +81,7 @@ namespace lambda
 
         void Unbind()
         {
-          g_transform_system = nullptr;
           g_collider_system = nullptr;
-          g_mesh_render_system = nullptr;
           g_entity_system = nullptr;
         }
       }

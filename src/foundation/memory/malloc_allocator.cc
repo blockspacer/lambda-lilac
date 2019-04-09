@@ -26,14 +26,6 @@ namespace lambda
 			for (uint32_t i = 0; i < header_count_; ++i)
 				std::printf("==========CALLSTACK==========\n%s", headers_[i].src);
 #endif
-
- 			LMB_ASSERT(allocated_ == 0ull, "Not all allocations were released");
-		}
-
-		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		size_t MallocAllocator::allocated() const
-		{
-			return allocated_;
 		}
 
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -44,21 +36,10 @@ namespace lambda
 			size += kHeaderSize;
 			void* base_addr = _aligned_malloc(size, align);
 
-			allocated_ += size;
-
 			AllocationHeader header;
 			header.size = size;
 
 			memcpy(base_addr, &header, kHeaderSize);
-
-#if VIOLET_DEBUG_MEMORY
-			Header* new_headers_ = (Header*)malloc(sizeof(Header) * (header_count_ + 1));
-			memcpy(new_headers_, headers_, sizeof(Header) * header_count_);
-			free(headers_);
-			headers_ = new_headers_;
-			headers_[header_count_] = Header{ captureCallStack(2), base_addr, size, align };
-			header_count_++;
-#endif
 
 			return offsetBytes(base_addr, kHeaderSize);
 		}
@@ -72,29 +53,9 @@ namespace lambda
 
 			size_t size = header->size;
 
-			allocated_ -= size + kHeaderSize;
-
 			_aligned_free(header);
 
-#if VIOLET_DEBUG_MEMORY
-			for (uint32_t i = 0; i < header_count_; ++i)
-			{
-				if (headers_[i].ptr == header)
-				{
-					if (strcmp(headers_[i].src, "") != 0)
-						free((void*)headers_[i].src);
-					Header* new_headers_ = (Header*)malloc(sizeof(Header) * (header_count_ - 1));
-					memcpy(new_headers_, headers_, sizeof(Header) * i);
-					memcpy(new_headers_ + i, headers_ + i + 1, sizeof(Header) * (header_count_ - i - 1));
-					free(headers_);
-					headers_ = new_headers_;
-					header_count_--;
-					break;
-				}
-			}
-#endif
-
-			return size + kHeaderSize;
+			return size;
 		}
 
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

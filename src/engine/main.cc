@@ -1,45 +1,45 @@
 #include <memory/memory.h>
 #include <memory/frame_heap.h>
-void* operator new  (std::size_t count)
-{
-	return lambda::foundation::Memory::allocate(count, lambda::foundation::Memory::new_allocator());
-}
-void* operator new[](std::size_t count)
-{
-	return lambda::foundation::Memory::allocate(count, lambda::foundation::Memory::new_allocator());
-}
-void* operator new  (std::size_t count, const std::nothrow_t& tag)
-{
-	return lambda::foundation::Memory::allocate(count, lambda::foundation::Memory::new_allocator());
-}
-void* operator new[](std::size_t count, const std::nothrow_t& tag)
-{
-	return lambda::foundation::Memory::allocate(count, lambda::foundation::Memory::new_allocator());
-}
-void operator delete  (void* ptr)
-{
-	lambda::foundation::Memory::deallocate(ptr);
-}
-void operator delete[](void* ptr)
-{
-	lambda::foundation::Memory::deallocate(ptr);
-}
-void operator delete  (void* ptr, const std::nothrow_t& tag)
-{
-	lambda::foundation::Memory::deallocate(ptr);
-}
-void operator delete[](void* ptr, const std::nothrow_t& tag)
-{
-	lambda::foundation::Memory::deallocate(ptr);
-}
-void operator delete  (void* ptr, std::size_t sz)
-{
-	lambda::foundation::Memory::deallocate(ptr);
-}
-void operator delete[](void* ptr, std::size_t sz)
-{
-	lambda::foundation::Memory::deallocate(ptr);
-}
+//void* operator new  (std::size_t count)
+//{
+//	return lambda::foundation::Memory::allocate(count, lambda::foundation::Memory::new_allocator());
+//}
+//void* operator new[](std::size_t count)
+//{
+//	return lambda::foundation::Memory::allocate(count, lambda::foundation::Memory::new_allocator());
+//}
+//void* operator new  (std::size_t count, const std::nothrow_t& tag)
+//{
+//	return lambda::foundation::Memory::allocate(count, lambda::foundation::Memory::new_allocator());
+//}
+//void* operator new[](std::size_t count, const std::nothrow_t& tag)
+//{
+//	return lambda::foundation::Memory::allocate(count, lambda::foundation::Memory::new_allocator());
+//}
+//void operator delete  (void* ptr)
+//{
+//	lambda::foundation::Memory::deallocate(ptr);
+//}
+//void operator delete[](void* ptr)
+//{
+//	lambda::foundation::Memory::deallocate(ptr);
+//}
+//void operator delete  (void* ptr, const std::nothrow_t& tag)
+//{
+//	lambda::foundation::Memory::deallocate(ptr);
+//}
+//void operator delete[](void* ptr, const std::nothrow_t& tag)
+//{
+//	lambda::foundation::Memory::deallocate(ptr);
+//}
+//void operator delete  (void* ptr, std::size_t sz)
+//{
+//	lambda::foundation::Memory::deallocate(ptr);
+//}
+//void operator delete[](void* ptr, std::size_t sz)
+//{
+//	lambda::foundation::Memory::deallocate(ptr);
+//}
 
 #include "assets/shader.h"
 #include "assets/mesh.h"
@@ -58,6 +58,7 @@ void operator delete[](void* ptr, std::size_t sz)
 
 #include "systems/transform_system.h"
 #include "platform/scene.h"
+#include "interfaces/iworld.h"
 #include "scripting/binding/script_binding.h"
 #include <containers/containers.h>
 
@@ -300,7 +301,7 @@ public:
 			XX("ImGUI: Update");
 			XX("ImGUI: GenerateCommandList");
 
-			imgui->imTextMultiLine(getScene().getSystem<components::MeshRenderSystem>()->profilerInfo());
+			//imgui->imTextMultiLine(getScene().getSystem<components::MeshRenderSystem>()->profilerInfo());
 
       /*static Average timer_clear_everything;
       static Average timer_main_camera;
@@ -454,7 +455,8 @@ int main(int argc, char** argv)
 	    MyWorld world(window, renderer, scripting, imgui);
 		imgui->setFont("resources/fonts/DroidSans.ttf", 16.0f);
 
-		scripting::ScriptBinding(&world);
+		//scripting::ScriptBinding(&world);
+		scripting->initialize({});
 		scripting->loadScripts({ script });
 
 	    world.run();
@@ -462,7 +464,7 @@ int main(int argc, char** argv)
 		scripting->terminate();
 	  }
 
-	  scripting::ScriptRelease();
+	  //scripting::ScriptRelease();
 
 	  foundation::Memory::destruct(asset::ShaderManager::getInstance());
 	  foundation::Memory::destruct(asset::TextureManager::getInstance());

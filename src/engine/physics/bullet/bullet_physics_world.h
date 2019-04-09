@@ -19,13 +19,6 @@ class btTriangleMesh;
 
 namespace lambda
 {
-	namespace components
-	{
-		class TransformSystem;
-		class RigidBodySystem;
-		class MonoBehaviourSystem;
-	}
-
 	namespace physics
 	{
 		class MyEventListener;
@@ -136,9 +129,6 @@ namespace lambda
 			virtual glm::vec3 getGravity() const override;
 
 		private:
-			foundation::SharedPointer<components::RigidBodySystem>
-				rigid_body_system_;
-
 			world::IWorld* world_;
 			BulletPhysicVisualizer physics_visualizer_;
 			MyEventListener* event_listener_;

@@ -10,12 +10,13 @@
 
 namespace lambda
 {
+	namespace world
+	{
+		struct SceneData;
+	}
+
 	namespace components
 	{
-		class RigidBodySystem;
-		class TransformSystem;
-		class ColliderSystem;
-
 		enum class RigidBodyConstraints : uint8_t
 		{
 			kNone = 0,
@@ -27,7 +28,7 @@ namespace lambda
 		class RigidBodyComponent : public IComponent
 		{
 		public:
-			RigidBodyComponent(const entity::Entity& entity, RigidBodySystem* system);
+			RigidBodyComponent(const entity::Entity& entity, world::SceneData& scene);
 			RigidBodyComponent(const RigidBodyComponent& other);
 			RigidBodyComponent();
 
@@ -46,64 +47,61 @@ namespace lambda
 			float getFriction() const;
 
 		private:
-			RigidBodySystem* system_;
+			world::SceneData* scene_;
 		};
 
-		struct RigidBodyData
+		namespace RigidBodySystem
 		{
-			RigidBodyData(const entity::Entity& entity) : entity(entity) {};
-			RigidBodyData(const RigidBodyData& other);
-			RigidBodyData& operator=(const RigidBodyData& other);
+			struct Data
+			{
+				Data(const entity::Entity& entity) : entity(entity) {};
+				Data(const Data& other);
+				Data& operator=(const Data& other);
 
-			physics::ICollisionBody* collision_body = nullptr;
-			bool valid = true;
-			entity::Entity entity;
-		};
+				physics::ICollisionBody* collision_body = nullptr;
+				bool valid = true;
+				entity::Entity entity;
+			};
 
-		class RigidBodySystem : public ISystem
-		{
-		public:
-			static size_t systemId() { return (size_t)SystemIds::kRigidBodySystem; };
-			RigidBodyComponent addComponent(const entity::Entity& entity);
-			RigidBodyComponent getComponent(const entity::Entity& entity);
-			bool hasComponent(const entity::Entity& entity);
-			void removeComponent(const entity::Entity& entity);
-			physics::IPhysicsWorld* getPhysicsWorld() const;
-			virtual void initialize(world::IWorld& world) override;
-			virtual void deinitialize() override;
-			virtual void update(const double& delta_time) override;
-			virtual void fixedUpdate(const double& time_step) override;
-			virtual void collectGarbage() override;
-			virtual ~RigidBodySystem() override {};
+			struct SystemData
+			{
+				Vector<Data>                  data;
+				Map<entity::Entity, uint32_t> entity_to_data;
+				Map<uint32_t, entity::Entity> data_to_entity;
+				Set<entity::Entity>           marked_for_delete;
+				Queue<uint32_t>               unused_data_entries;
 
-			float getMass(const entity::Entity& entity) const;
-			void setMass(const entity::Entity& entity, const float& mass);
-			glm::vec3 getVelocity(const entity::Entity& entity) const;
-			void setVelocity(const entity::Entity& entity, const glm::vec3& velocity);
-			glm::vec3 getAngularVelocity(const entity::Entity& entity) const;
-			void setAngularVelocity(const entity::Entity& entity, const glm::vec3& velocity);
-			uint8_t getAngularConstraints(const entity::Entity& entity) const;
-			void setAngularConstraints(const entity::Entity& entity, const uint8_t& constraints);
-			uint8_t getVelocityConstraints(const entity::Entity& entity) const;
-			void setVelocityConstraints(const entity::Entity& entity, const uint8_t& constraints);
-			void applyImpulse(const entity::Entity& entity, const glm::vec3& impulse);
-			void setFriction(const entity::Entity& entity, float friction);
-			float getFriction(const entity::Entity& entity) const;
+				Data& add(const entity::Entity& entity);
+				Data& get(const entity::Entity& entity);
+				void  remove(const entity::Entity& entity);
+				bool  has(const entity::Entity& entity);
 
-		protected:
-			RigidBodyData& lookUpData(const entity::Entity& entity);
-			const RigidBodyData& lookUpData(const entity::Entity& entity) const;
+				physics::IPhysicsWorld* physics_world;
+			};
 
-		private:
-			Vector<RigidBodyData> data_;
-			Map<entity::Entity, uint32_t> entity_to_data_;
-			Map<uint32_t, entity::Entity> data_to_entity_;
-			Set<entity::Entity> marked_for_delete_;
-			Queue<uint32_t> unused_data_entries_;
+			RigidBodyComponent addComponent(const entity::Entity& entity, world::SceneData& scene);
+			RigidBodyComponent getComponent(const entity::Entity& entity, world::SceneData& scene);
+			bool hasComponent(const entity::Entity& entity, world::SceneData& scene);
+			void removeComponent(const entity::Entity& entity, world::SceneData& scene);
+			physics::IPhysicsWorld* getPhysicsWorld(world::SceneData& scene);
 
-			foundation::SharedPointer<TransformSystem> transform_system_;
-			ColliderSystem* collider_system_;
-			physics::IPhysicsWorld* physics_world_;
-		};
+			void collectGarbage(world::SceneData& scene);
+			void initialize(world::SceneData& scene);
+			void deinitialize(world::SceneData& scene);
+
+			float getMass(const entity::Entity& entity, world::SceneData& scene);
+			void setMass(const entity::Entity& entity, const float& mass, world::SceneData& scene);
+			glm::vec3 getVelocity(const entity::Entity& entity, world::SceneData& scene);
+			void setVelocity(const entity::Entity& entity, const glm::vec3& velocity, world::SceneData& scene);
+			glm::vec3 getAngularVelocity(const entity::Entity& entity, world::SceneData& scene);
+			void setAngularVelocity(const entity::Entity& entity, const glm::vec3& velocity, world::SceneData& scene);
+			uint8_t getAngularConstraints(const entity::Entity& entity, world::SceneData& scene);
+			void setAngularConstraints(const entity::Entity& entity, const uint8_t& constraints, world::SceneData& scene);
+			uint8_t getVelocityConstraints(const entity::Entity& entity, world::SceneData& scene);
+			void setVelocityConstraints(const entity::Entity& entity, const uint8_t& constraints, world::SceneData& scene);
+			void applyImpulse(const entity::Entity& entity, const glm::vec3& impulse, world::SceneData& scene);
+			void setFriction(const entity::Entity& entity, float friction, world::SceneData& scene);
+			float getFriction(const entity::Entity& entity, world::SceneData& scene);
+		}
 	}
 }

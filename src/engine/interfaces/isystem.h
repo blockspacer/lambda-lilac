@@ -14,18 +14,7 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     enum class SystemIds : size_t
     {
-			kEntitySystem,
-			kNameSystem,
-      kTransformSystem,
-      kCameraSystem,
       kLightSystem,
-      kMeshRenderSystem,
-      kColliderSystem,
-      kMonoBehaviourSystem,
-      kRigidBodySystem,
-      kSkeletonSystem,
-      kLODSystem,
-      kWaveSourceSystem,
       kCount
     };
 

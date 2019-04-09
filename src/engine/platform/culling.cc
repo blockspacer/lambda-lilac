@@ -7,6 +7,7 @@
 #include <memory/frame_heap.h>
 #include "frustum.h"
 #include <algorithm>
+#include <platform/scene.h>
 
 namespace lambda
 {
@@ -41,13 +42,7 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    void Culler::cullDynamics(
-      const Vector<entity::Entity>& dynamic_entities,
-      const Map<entity::Entity, uint32_t>& entity_to_data,
-      const Vector<components::MeshRenderData>& mesh_render_data,
-      foundation::SharedPointer<components::TransformSystem> transform_system,
-      const Frustum& frustum
-    )
+    void Culler::cullDynamics(world::SceneData& scene, const Frustum& frustum)
     {
       dynamic_.data = nullptr;
       dynamic_.next = nullptr;
@@ -57,11 +52,11 @@ namespace lambda
       CullType cull_type = CullType::kAABB;
       LinkedNode* node_it = &dynamic_;
       
-      for (const entity::Entity& entity : dynamic_entities)
+      for (const entity::Entity& entity : scene.mesh_render.dynamic_renderables)
       {
-        const components::MeshRenderData* data =
-          &mesh_render_data[entity_to_data.at(entity)];
-
+		  const components::MeshRenderSystem::Data* data =
+			  &scene.mesh_render.get(entity);
+		  
         bool visible = true;
 
         // If not culling, at least remove invisible or invalid objects.
@@ -69,7 +64,7 @@ namespace lambda
         {
           visible = (data->mesh && data->visible);
         }
-        else if (cull_shadow_casters_ && !data->cast_shadows) 
+        else if (cull_shadow_casters_ && !data->cast_shadows)
           // TODO (Hilze): Fix this hack!
         {
           visible = false;
@@ -82,12 +77,12 @@ namespace lambda
         if (visible)
         {
           const asset::SubMesh& sub_mesh = 
-            (data->sub_mesh < data->mesh->getSubMeshes().size()) ? 
+            (data->sub_mesh < data->mesh->getSubMeshes().size()) ?
             data->mesh->getSubMeshes()[data->sub_mesh] : asset::SubMesh();
           const glm::vec3 position = 
-            transform_system->getWorldTranslation(data->entity);
+            components::TransformSystem::getWorldTranslation(data->entity, scene);
           const glm::vec3 scale    = 
-            transform_system->getWorldScale(data->entity);
+			  components::TransformSystem::getWorldScale(data->entity, scene);
           const float r_min2       = glm::length2(sub_mesh.min);
           const float r_max2       = glm::length2(sub_mesh.max);
 
@@ -99,7 +94,7 @@ namespace lambda
           }
           else
           {
-            const glm::mat4 world = transform_system->getWorld(data->entity);
+            const glm::mat4 world = components::TransformSystem::getWorld(data->entity, scene);
 
             const glm::vec3 sm_min = world * glm::vec4(sub_mesh.min, 1.0f);
             const glm::vec3 sm_max = world * glm::vec4(sub_mesh.max, 1.0f);
@@ -129,10 +124,10 @@ namespace lambda
             renderable->sub_mesh = data->sub_mesh;
             renderable->albedo_texture = data->albedo_texture;
 			renderable->normal_texture = data->normal_texture;
-			renderable->metallic_roughness_texture = data->metallic_roughness_texture;
+			renderable->dmra_texture = data->dmra_texture;
 			renderable->metallicness = data->metallicness;
             renderable->roughness = data->roughness;
-            renderable->model_matrix = transform_system->getWorld(data->entity);
+            renderable->model_matrix = components::TransformSystem::getWorld(data->entity, scene);
             
             LinkedNode* node = (LinkedNode*)foundation::GetFrameHeap()->alloc(
               sizeof(LinkedNode)
@@ -171,7 +166,7 @@ namespace lambda
           renderable->sub_mesh = data->sub_mesh;
           renderable->albedo_texture = data->albedo_texture;
           renderable->normal_texture = data->normal_texture;
-          renderable->metallic_roughness_texture = data->metallic_roughness_texture;
+          renderable->dmra_texture = data->dmra_texture;
           renderable->metallicness = data->metallicness;
           renderable->roughness = data->roughness;
           renderable->model_matrix = data->model_matrix;

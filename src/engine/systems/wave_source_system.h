@@ -12,11 +12,13 @@ namespace SoLoud
 
 namespace lambda
 {
+	namespace world
+	{
+		struct SceneData;
+	}
+
 	namespace components
 	{
-		class TransformSystem;
-		class WaveSourceSystem;
-
 		enum class WaveSourceState : uint8_t
 		{
 			kInitial = 0,
@@ -28,7 +30,7 @@ namespace lambda
 		class WaveSourceComponent : public IComponent
 		{
 		public:
-			WaveSourceComponent(const entity::Entity& entity, WaveSourceSystem* system);
+			WaveSourceComponent(const entity::Entity& entity, world::SceneData& scene);
 			WaveSourceComponent(const WaveSourceComponent& other);
 			WaveSourceComponent();
 
@@ -53,82 +55,80 @@ namespace lambda
 			float getRadius() const;
 
 		private:
-			WaveSourceSystem* system_;
+			world::SceneData* scene_;
 		};
 
-		struct WaveSourceData
+		namespace WaveSourceSystem
 		{
-			WaveSourceData(const entity::Entity& entity) : entity(entity) {}
-			WaveSourceData(const WaveSourceData& other);
-			WaveSourceData& operator=(const WaveSourceData& other);
+			struct Data
+			{
+				Data(const entity::Entity& entity) : entity(entity) {}
+				Data(const Data& other);
+				Data& operator=(const Data& other);
 
-			entity::Entity    entity;
-			WaveSourceState   state;
-			asset::VioletWaveHandle buffer;
-			unsigned int handle = 0u;
-			bool  in_world = false;
-			bool  loop = false;
-			float gain = 1.0f;
-			float pitch = 1.0f;
-			float radius = 100.0f;
-			bool  valid = true;
-			glm::vec3 last_position;
-		};
+				entity::Entity    entity;
+				WaveSourceState   state;
+				asset::VioletWaveHandle buffer;
+				unsigned int handle = 0u;
+				bool  in_world = false;
+				bool  loop = false;
+				float gain = 1.0f;
+				float pitch = 1.0f;
+				float radius = 100.0f;
+				bool  valid = true;
+				glm::vec3 last_position;
+			};
 
-		class WaveSourceSystem : public ISystem
-		{
-		public:
-			virtual void initialize(world::IWorld& world) override;
-			virtual void deinitialize() override;
-			virtual void update(const double& delta_time) override;
-			virtual void collectGarbage() override;
-			~WaveSourceSystem();
+			struct SystemData
+			{
+				Vector<Data>                  data;
+				Map<entity::Entity, uint32_t> entity_to_data;
+				Map<uint32_t, entity::Entity> data_to_entity;
+				Set<entity::Entity>           marked_for_delete;
+				Queue<uint32_t>               unused_data_entries;
 
-			static size_t systemId() { return (size_t)SystemIds::kWaveSourceSystem; };
-			WaveSourceComponent addComponent(const entity::Entity& entity);
-			WaveSourceComponent getComponent(const entity::Entity& entity);
-			bool hasComponent(const entity::Entity& entity);
-			void removeComponent(const entity::Entity& entity);
+				Data& add(const entity::Entity& entity);
+				Data& get(const entity::Entity& entity);
+				void  remove(const entity::Entity& entity);
+				bool  has(const entity::Entity& entity);
 
-			void setBuffer(const entity::Entity& entity, const asset::VioletWaveHandle& buffer);
-			asset::VioletWaveHandle getBuffer(const entity::Entity& entity) const;
-			void play(const entity::Entity& entity);
-			void pause(const entity::Entity& entity);
-			void stop(const entity::Entity& entity);
-			WaveSourceState getState(const entity::Entity& entity) const;
-			void setRelativeToListener(const entity::Entity& entity, bool relative);
-			bool getRelativeToListener(const entity::Entity& entity) const;
-			void setLoop(const entity::Entity& entity, bool loop);
-			bool getLoop(const entity::Entity& entity) const;
-			void setOffset(const entity::Entity& entity, float seconds);
-			void setVolume(const entity::Entity& entity, float volume); // Range 0 to 100;
-			float getVolume(const entity::Entity& entity) const;
-			void setGain(const entity::Entity& entity, float gain); // Range 0 to 1
-			float getGain(const entity::Entity& entity) const;
-			void setPitch(const entity::Entity& entity, float pitch);
-			float getPitch(const entity::Entity& entity) const;
-			void setRadius(const entity::Entity& entity, float radius);
-			float getRadius(const entity::Entity& entity) const;
+				entity::Entity listener;
+				glm::vec3 last_listener_position;
+				SoLoud::Soloud* engine;
+			};
 
-			void setListener(entity::Entity listener);
 
-		private:
-			WaveSourceData& lookUpData(const entity::Entity& entity);
-			const WaveSourceData& lookUpData(const entity::Entity& entity) const;
-			void updateState(WaveSourceData& data, float delta_time);
+			WaveSourceComponent addComponent(const entity::Entity& entity, world::SceneData& scene);
+			WaveSourceComponent getComponent(const entity::Entity& entity, world::SceneData& scene);
+			bool hasComponent(const entity::Entity& entity, world::SceneData& scene);
+			void removeComponent(const entity::Entity& entity, world::SceneData& scene);
 
-		private:
-			Vector<WaveSourceData> data_;
-			Map<entity::Entity, uint32_t> entity_to_data_;
-			Map<uint32_t, entity::Entity> data_to_entity_;
-			Set<entity::Entity> marked_for_delete_;
-			Queue<uint32_t> unused_data_entries_;
+			void initialize(world::SceneData& scene);
+			void deinitialize(world::SceneData& scene);
+			void update(const float& delta_time, world::SceneData& scene);
+			void collectGarbage(world::SceneData& scene);
 
-			entity::Entity listener_;
-			glm::vec3 last_listener_position_;
-			SoLoud::Soloud* engine_;
+			void setBuffer(const entity::Entity& entity, const asset::VioletWaveHandle& buffer, world::SceneData& scene);
+			asset::VioletWaveHandle getBuffer(const entity::Entity& entity, world::SceneData& scene);
+			void play(const entity::Entity& entity, world::SceneData& scene);
+			void pause(const entity::Entity& entity, world::SceneData& scene);
+			void stop(const entity::Entity& entity, world::SceneData& scene);
+			WaveSourceState getState(const entity::Entity& entity, world::SceneData& scene);
+			void setRelativeToListener(const entity::Entity& entity, bool relative, world::SceneData& scene);
+			bool getRelativeToListener(const entity::Entity& entity, world::SceneData& scene);
+			void setLoop(const entity::Entity& entity, bool loop, world::SceneData& scene);
+			bool getLoop(const entity::Entity& entity, world::SceneData& scene);
+			void setOffset(const entity::Entity& entity, float seconds, world::SceneData& scene);
+			void setVolume(const entity::Entity& entity, float volume, world::SceneData& scene); // Range 0 to 100;
+			float getVolume(const entity::Entity& entity, world::SceneData& scene);
+			void setGain(const entity::Entity& entity, float gain, world::SceneData& scene); // Range 0 to 1
+			float getGain(const entity::Entity& entity, world::SceneData& scene);
+			void setPitch(const entity::Entity& entity, float pitch, world::SceneData& scene);
+			float getPitch(const entity::Entity& entity, world::SceneData& scene);
+			void setRadius(const entity::Entity& entity, float radius, world::SceneData& scene);
+			float getRadius(const entity::Entity& entity, world::SceneData& scene);
 
-			foundation::SharedPointer<TransformSystem> transform_system_;
-		};
+			void setListener(entity::Entity listener, world::SceneData& scene);
+		}
 	}
 }

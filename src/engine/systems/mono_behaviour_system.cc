@@ -5,278 +5,295 @@
 
 namespace lambda
 {
-  namespace components
-  {
-    MonoBehaviourComponent MonoBehaviourSystem::addComponent(const entity::Entity& entity)
-    {
-			if (!unused_data_entries_.empty())
-			{
-				uint32_t idx = unused_data_entries_.front();
-				unused_data_entries_.pop();
-
-				data_[idx] = MonoBehaviourData(entity);
-				data_to_entity_[idx] = entity;
-				entity_to_data_[entity] = idx;
-			}
-			else
-			{
-				data_.push_back(MonoBehaviourData(entity));
-				uint32_t idx = (uint32_t)data_.size() - 1u;
-				data_to_entity_[idx] = entity;
-				entity_to_data_[entity] = idx;
-			}
-
-      return MonoBehaviourComponent(entity, this);
-    }
-    MonoBehaviourComponent MonoBehaviourSystem::getComponent(const entity::Entity& entity)
-    {
-      return MonoBehaviourComponent(entity, this);
-    }
-    bool MonoBehaviourSystem::hasComponent(const entity::Entity& entity) const
-    {
-			if (entity_to_data_.empty())
-				return false;
-
-      return entity_to_data_.find(entity) != entity_to_data_.end();
-    }
-    void MonoBehaviourSystem::removeComponent(const entity::Entity& entity)
-    {
-			marked_for_delete_.insert(entity);
-    }
-		void MonoBehaviourSystem::collectGarbage()
+	namespace components
+	{
+		namespace MonoBehaviourSystem
 		{
-
-			if (!marked_for_delete_.empty())
+			MonoBehaviourComponent addComponent(const entity::Entity& entity, world::SceneData& scene)
 			{
-				for (entity::Entity entity : marked_for_delete_)
+				scene.mono_behaviour.add(entity);
+
+				return MonoBehaviourComponent(entity, scene);
+			}
+			MonoBehaviourComponent getComponent(const entity::Entity& entity, world::SceneData& scene)
+			{
+				return MonoBehaviourComponent(entity, scene);
+			}
+			bool hasComponent(const entity::Entity& entity, world::SceneData& scene)
+			{
+				return scene.mono_behaviour.has(entity);
+			}
+			void removeComponent(const entity::Entity& entity, world::SceneData& scene)
+			{
+				scene.mono_behaviour.remove(entity);
+			}
+			void collectGarbage(world::SceneData& scene)
+			{
+				if (!scene.mono_behaviour.marked_for_delete.empty())
 				{
+					for (entity::Entity entity : scene.mono_behaviour.marked_for_delete)
 					{
-						MonoBehaviourData& data = lookUpData(entity);
-#define FREE(x) if (x) world_->getScripting()->freeHandle(x), x = nullptr
-						FREE(data.object);
-						FREE(data.initialize);
-						FREE(data.deinitialize);
-						FREE(data.update);
-						FREE(data.fixed_update);
-						FREE(data.on_collision_enter);
-						FREE(data.on_collision_exit);
-						FREE(data.on_trigger_enter);
-						FREE(data.on_trigger_exit);
+						{
+							Data& data = scene.mono_behaviour.get(entity);
+#define FREE(x) if (x) scene.world->getScripting()->freeHandle(x), x = nullptr
+							FREE(data.object);
+							FREE(data.initialize);
+							FREE(data.deinitialize);
+							FREE(data.update);
+							FREE(data.fixed_update);
+							FREE(data.on_collision_enter);
+							FREE(data.on_collision_exit);
+							FREE(data.on_trigger_enter);
+							FREE(data.on_trigger_exit);
 #undef FREE
-					}
+						}
 
-					const auto& it = entity_to_data_.find(entity);
-					if (it != entity_to_data_.end())
-					{
-						uint32_t idx = it->second;
-						unused_data_entries_.push(idx);
-						data_to_entity_.erase(idx);
-						entity_to_data_.erase(entity);
-						data_[idx].valid = false;
+						const auto& it = scene.mono_behaviour.entity_to_data.find(entity);
+						if (it != scene.mono_behaviour.entity_to_data.end())
+						{
+							uint32_t idx = it->second;
+							scene.mono_behaviour.unused_data_entries.push(idx);
+							scene.mono_behaviour.data_to_entity.erase(idx);
+							scene.mono_behaviour.entity_to_data.erase(entity);
+							scene.mono_behaviour.data[idx].valid = false;
+						}
+						else
+							Warning("Could not find id: " + toString(entity));
 					}
-					else
-						Warning("Could not find id: " + toString(entity));
+					scene.mono_behaviour.marked_for_delete.clear();
 				}
-				marked_for_delete_.clear();
 			}
-		}
-    void MonoBehaviourSystem::initialize(world::IWorld& world)
-    {
-      world_ = &world;
-    }
-    void MonoBehaviourSystem::deinitialize()
-    {
-			Vector<entity::Entity> entities;
-			for (const auto& it : entity_to_data_)
-				entities.push_back(it.first);
+			void deinitialize(world::SceneData& scene)
+			{
+				Vector<entity::Entity> entities;
+				for (const auto& it : scene.mono_behaviour.entity_to_data)
+					entities.push_back(it.first);
 
-			for (const auto& entity : entities)
-				removeComponent(entity);
-			collectGarbage();
-    }
-		void MonoBehaviourSystem::update(const double& delta_time)
-		{
-			for (uint32_t i = 0u; i < data_.size(); ++i)
-			{
-				const auto& data = data_[i];
-				if (data.valid && data.object && data.update)
-					world_->getScripting()->executeFunction(data.object, data.update, {});
+				for (const auto& entity : entities)
+					removeComponent(entity, scene);
+				collectGarbage(scene);
 			}
-		}
-    void MonoBehaviourSystem::fixedUpdate(const double& delta_time)
-    {
-			for(uint32_t i = 0u; i < data_.size(); ++i)
+			void update(const float& delta_time, world::SceneData& scene)
 			{
-				const auto& data = data_[i];
-				if (data.valid && data.object && data.fixed_update)
-					world_->getScripting()->executeFunction(data.object, data.fixed_update, {});
+				for (uint32_t i = 0u; i < scene.mono_behaviour.data.size(); ++i)
+				{
+					const auto& data = scene.mono_behaviour.data[i];
+					if (data.valid && data.object && data.update)
+						scene.world->getScripting()->executeFunction(data.object, data.update, {});
+				}
 			}
-    }
-    void MonoBehaviourSystem::setObject(const entity::Entity& entity, void* ptr)
-    {
-      lookUpData(entity).object = ptr;
-    }
-    void MonoBehaviourSystem::setInitialize(const entity::Entity& entity, void* ptr)
-    {
-      lookUpData(entity).initialize = ptr;
-    }
-    void MonoBehaviourSystem::setDeinitialize(const entity::Entity& entity, void* ptr)
-    {
-      lookUpData(entity).deinitialize = ptr;
-    }
-    void MonoBehaviourSystem::setUpdate(const entity::Entity& entity, void* ptr)
-    {
-      lookUpData(entity).update = ptr;
-    }
-    void MonoBehaviourSystem::setFixedUpdate(const entity::Entity& entity, void* ptr)
-    {
-      lookUpData(entity).fixed_update = ptr;
-    }
-    void MonoBehaviourSystem::setOnCollisionEnter(const entity::Entity& entity, void* ptr)
-    {
-      lookUpData(entity).on_collision_enter = ptr;
-    }
-    void MonoBehaviourSystem::setOnCollisionExit(const entity::Entity& entity, void* ptr)
-    {
-      lookUpData(entity).on_collision_exit = ptr;
-    }
-    void MonoBehaviourSystem::setOnTriggerEnter(const entity::Entity& entity, void* ptr)
-    {
-      lookUpData(entity).on_trigger_enter = ptr;
-    }
-    void MonoBehaviourSystem::setOnTriggerExit(const entity::Entity& entity, void* ptr)
-    {
-      lookUpData(entity).on_trigger_exit = ptr;
-    }
-    void* MonoBehaviourSystem::getObject(const entity::Entity& entity) const
-    {
-      return lookUpData(entity).object;
-    }
-    void* MonoBehaviourSystem::getInitialize(const entity::Entity& entity) const
-    {
-      return lookUpData(entity).initialize;
-    }
-    void* MonoBehaviourSystem::getDeinitialize(const entity::Entity& entity) const
-    {
-      return lookUpData(entity).deinitialize;
-    }
-    void* MonoBehaviourSystem::getUpdate(const entity::Entity& entity) const
-    {
-      return lookUpData(entity).update;
-    }
-    void* MonoBehaviourSystem::getFixedUpdate(const entity::Entity& entity) const
-    {
-      return lookUpData(entity).fixed_update;
-    }
-    void* MonoBehaviourSystem::getOnCollisionEnter(const entity::Entity& entity) const
-    {
-      return lookUpData(entity).on_collision_enter;
-    }
-    void* MonoBehaviourSystem::getOnCollisionExit(const entity::Entity& entity) const
-    {
-      return lookUpData(entity).on_collision_exit;
-    }
-    void* MonoBehaviourSystem::getOnTriggerEnter(const entity::Entity& entity) const
-    {
-      return lookUpData(entity).on_trigger_enter;
-    }
-    void* MonoBehaviourSystem::getOnTriggerExit(const entity::Entity& entity) const
-    {
-      return lookUpData(entity).on_trigger_exit;
-    }
+			void fixedUpdate(const float& delta_time, world::SceneData& scene)
+			{
+				for (uint32_t i = 0u; i < scene.mono_behaviour.data.size(); ++i)
+				{
+					const auto& data = scene.mono_behaviour.data[i];
+					if (data.valid && data.object && data.fixed_update)
+						scene.world->getScripting()->executeFunction(data.object, data.fixed_update, {});
+				}
+			}
+			void setObject(const entity::Entity& entity, void* ptr, world::SceneData& scene)
+			{
+				scene.mono_behaviour.get(entity).object = ptr;
+			}
+			void setInitialize(const entity::Entity& entity, void* ptr, world::SceneData& scene)
+			{
+				scene.mono_behaviour.get(entity).initialize = ptr;
+			}
+			void setDeinitialize(const entity::Entity& entity, void* ptr, world::SceneData& scene)
+			{
+				scene.mono_behaviour.get(entity).deinitialize = ptr;
+			}
+			void setUpdate(const entity::Entity& entity, void* ptr, world::SceneData& scene)
+			{
+				scene.mono_behaviour.get(entity).update = ptr;
+			}
+			void setFixedUpdate(const entity::Entity& entity, void* ptr, world::SceneData& scene)
+			{
+				scene.mono_behaviour.get(entity).fixed_update = ptr;
+			}
+			void setOnCollisionEnter(const entity::Entity& entity, void* ptr, world::SceneData& scene)
+			{
+				scene.mono_behaviour.get(entity).on_collision_enter = ptr;
+			}
+			void setOnCollisionExit(const entity::Entity& entity, void* ptr, world::SceneData& scene)
+			{
+				scene.mono_behaviour.get(entity).on_collision_exit = ptr;
+			}
+			void setOnTriggerEnter(const entity::Entity& entity, void* ptr, world::SceneData& scene)
+			{
+				scene.mono_behaviour.get(entity).on_trigger_enter = ptr;
+			}
+			void setOnTriggerExit(const entity::Entity& entity, void* ptr, world::SceneData& scene)
+			{
+				scene.mono_behaviour.get(entity).on_trigger_exit = ptr;
+			}
+			void* getObject(const entity::Entity& entity, world::SceneData& scene)
+			{
+				return scene.mono_behaviour.get(entity).object;
+			}
+			void* getInitialize(const entity::Entity& entity, world::SceneData& scene)
+			{
+				return scene.mono_behaviour.get(entity).initialize;
+			}
+			void* getDeinitialize(const entity::Entity& entity, world::SceneData& scene)
+			{
+				return scene.mono_behaviour.get(entity).deinitialize;
+			}
+			void* getUpdate(const entity::Entity& entity, world::SceneData& scene)
+			{
+				return scene.mono_behaviour.get(entity).update;
+			}
+			void* getFixedUpdate(const entity::Entity& entity, world::SceneData& scene)
+			{
+				return scene.mono_behaviour.get(entity).fixed_update;
+			}
+			void* getOnCollisionEnter(const entity::Entity& entity, world::SceneData& scene)
+			{
+				return scene.mono_behaviour.get(entity).on_collision_enter;
+			}
+			void* getOnCollisionExit(const entity::Entity& entity, world::SceneData& scene)
+			{
+				return scene.mono_behaviour.get(entity).on_collision_exit;
+			}
+			void* getOnTriggerEnter(const entity::Entity& entity, world::SceneData& scene)
+			{
+				return scene.mono_behaviour.get(entity).on_trigger_enter;
+			}
+			void* getOnTriggerExit(const entity::Entity& entity, world::SceneData& scene)
+			{
+				return scene.mono_behaviour.get(entity).on_trigger_exit;
+			}
 #define SCR_COL(other, normal) { scripting::ScriptValue(other, true), scripting::ScriptValue(normal) }
-		void MonoBehaviourSystem::onCollisionEnter(const entity::Entity& lhs, const entity::Entity& rhs, glm::vec3 normal) const
-		{
-			auto data_lhs = getClosest(lhs);
-			auto data_rhs = getClosest(rhs);
-			if (data_lhs) world_->getScripting()->executeFunction(data_lhs->object, data_lhs->on_collision_enter, SCR_COL(rhs, normal));
-			if (data_rhs) world_->getScripting()->executeFunction(data_rhs->object, data_rhs->on_collision_enter, SCR_COL(lhs, normal));
-		}
-		void MonoBehaviourSystem::onCollisionExit(const entity::Entity& lhs, const entity::Entity& rhs, glm::vec3 normal) const
-		{
-			auto data_lhs = getClosest(lhs);
-			auto data_rhs = getClosest(rhs);
-			if (data_lhs) world_->getScripting()->executeFunction(data_lhs->object, data_lhs->on_collision_exit, SCR_COL(rhs, normal));
-			if (data_rhs) world_->getScripting()->executeFunction(data_rhs->object, data_rhs->on_collision_exit, SCR_COL(lhs, normal));
-		}
-		void MonoBehaviourSystem::onTriggerEnter(const entity::Entity& lhs, const entity::Entity& rhs, glm::vec3 normal) const
-		{
-			auto data_lhs = getClosest(lhs);
-			auto data_rhs = getClosest(rhs);
-			if (data_lhs) world_->getScripting()->executeFunction(data_lhs->object, data_lhs->on_trigger_enter, SCR_COL(rhs, normal));
-			if (data_rhs) world_->getScripting()->executeFunction(data_rhs->object, data_rhs->on_trigger_enter, SCR_COL(lhs, normal));
-		}
-		void MonoBehaviourSystem::onTriggerExit(const entity::Entity& lhs, const entity::Entity& rhs, glm::vec3 normal) const
-		{
-			auto data_lhs = getClosest(lhs);
-			auto data_rhs = getClosest(rhs);
-			if (data_lhs) world_->getScripting()->executeFunction(data_lhs->object, data_lhs->on_trigger_exit, SCR_COL(rhs, normal));
-			if (data_rhs) world_->getScripting()->executeFunction(data_rhs->object, data_rhs->on_trigger_exit, SCR_COL(lhs, normal));
-		}
-    MonoBehaviourData& MonoBehaviourSystem::lookUpData(const entity::Entity& entity)
-    {
-      assert(entity_to_data_.find(entity) != entity_to_data_.end());
-			assert(data_.at(entity_to_data_.at(entity)).valid);
-			return data_.at(entity_to_data_.at(entity));
-    }
-    const MonoBehaviourData& MonoBehaviourSystem::lookUpData(const entity::Entity& entity) const
-    {
-      assert(entity_to_data_.find(entity) != entity_to_data_.end());
-			assert(data_.at(entity_to_data_.at(entity)).valid);
-			return data_.at(entity_to_data_.at(entity));
-    }
-		const MonoBehaviourData* MonoBehaviourSystem::getClosest(entity::Entity entity) const
-		{
-			if (hasComponent(entity))
-				return &lookUpData(entity);
+			void onCollisionEnter(const entity::Entity& lhs, const entity::Entity& rhs, glm::vec3 normal, world::SceneData& scene)
+			{
+				auto data_lhs = getClosest(lhs, scene);
+				auto data_rhs = getClosest(rhs, scene);
+				if (data_lhs) scene.world->getScripting()->executeFunction(data_lhs->object, data_lhs->on_collision_enter, SCR_COL(rhs, normal));
+				if (data_rhs) scene.world->getScripting()->executeFunction(data_rhs->object, data_rhs->on_collision_enter, SCR_COL(lhs, normal));
+			}
+			void onCollisionExit(const entity::Entity& lhs, const entity::Entity& rhs, glm::vec3 normal, world::SceneData& scene)
+			{
+				auto data_lhs = getClosest(lhs, scene);
+				auto data_rhs = getClosest(rhs, scene);
+				if (data_lhs) scene.world->getScripting()->executeFunction(data_lhs->object, data_lhs->on_collision_exit, SCR_COL(rhs, normal));
+				if (data_rhs) scene.world->getScripting()->executeFunction(data_rhs->object, data_rhs->on_collision_exit, SCR_COL(lhs, normal));
+			}
+			void onTriggerEnter(const entity::Entity& lhs, const entity::Entity& rhs, glm::vec3 normal, world::SceneData& scene)
+			{
+				auto data_lhs = getClosest(lhs, scene);
+				auto data_rhs = getClosest(rhs, scene);
+				if (data_lhs) scene.world->getScripting()->executeFunction(data_lhs->object, data_lhs->on_trigger_enter, SCR_COL(rhs, normal));
+				if (data_rhs) scene.world->getScripting()->executeFunction(data_rhs->object, data_rhs->on_trigger_enter, SCR_COL(lhs, normal));
+			}
+			void onTriggerExit(const entity::Entity& lhs, const entity::Entity& rhs, glm::vec3 normal, world::SceneData& scene)
+			{
+				auto data_lhs = getClosest(lhs, scene);
+				auto data_rhs = getClosest(rhs, scene);
+				if (data_lhs) scene.world->getScripting()->executeFunction(data_lhs->object, data_lhs->on_trigger_exit, SCR_COL(rhs, normal));
+				if (data_rhs) scene.world->getScripting()->executeFunction(data_rhs->object, data_rhs->on_trigger_exit, SCR_COL(lhs, normal));
+			}
+			const Data* getClosest(entity::Entity entity, world::SceneData& scene)
+			{
+				if (hasComponent(entity, scene))
+					return &scene.mono_behaviour.get(entity);
 
-			auto parent = world_->getScene().getSystem<TransformSystem>()->getParent(entity);
-			if (parent)
-				return getClosest(parent);
+				auto parent = TransformSystem::getParent(entity, scene);
+				if (parent)
+					return getClosest(parent, scene);
 
-			return nullptr;
+				return nullptr;
+			}
 		}
-    MonoBehaviourComponent::MonoBehaviourComponent(const entity::Entity& entity, MonoBehaviourSystem* system) :
-      IComponent(entity), system_(system)
-    {
-    }
-    MonoBehaviourComponent::MonoBehaviourComponent(const MonoBehaviourComponent& other) :
-      IComponent(other.entity_), system_(other.system_)
-    {
-    }
-    MonoBehaviourComponent::MonoBehaviourComponent() :
-      IComponent(entity::Entity()), system_(nullptr)
-    {
-    }
-    MonoBehaviourData::MonoBehaviourData(const MonoBehaviourData & other)
-    {
-      object             = other.object;
-      initialize         = other.initialize;
-      deinitialize       = other.deinitialize;
-      update             = other.update;
-      fixed_update       = other.fixed_update;
-      on_collision_enter = other.on_collision_enter;
-      on_collision_exit  = other.on_collision_exit;
-      on_trigger_enter   = other.on_trigger_enter;
-      on_trigger_exit    = other.on_trigger_exit;
-      entity             = other.entity;
-			valid              = other.valid;
-    }
-    MonoBehaviourData & MonoBehaviourData::operator=(const MonoBehaviourData & other)
-    {
-      object             = other.object;
-      initialize         = other.initialize;
-      deinitialize       = other.deinitialize;
-      update             = other.update;
-      fixed_update       = other.fixed_update;
-      on_collision_enter = other.on_collision_enter;
-      on_collision_exit  = other.on_collision_exit;
-      on_trigger_enter   = other.on_trigger_enter;
-      on_trigger_exit    = other.on_trigger_exit;
-      entity             = other.entity;
-			valid              = other.valid;
 
-      return *this;
-    }
-}
+		// The system data.
+		namespace MonoBehaviourSystem
+		{
+			Data& SystemData::add(const entity::Entity& entity)
+			{
+				uint32_t idx = 0ul;
+				if (!unused_data_entries.empty())
+				{
+					idx = unused_data_entries.front();
+					unused_data_entries.pop();
+					data[idx] = Data(entity);
+				}
+				else
+				{
+					idx = (uint32_t)data.size();
+					data.push_back(Data(entity));
+					data_to_entity[idx] = entity;
+				}
+
+				data_to_entity[idx] = entity;
+				entity_to_data[entity] = idx;
+
+				return data[idx];
+			}
+
+			Data& SystemData::get(const entity::Entity& entity)
+			{
+				auto it = entity_to_data.find(entity);
+				LMB_ASSERT(it != entity_to_data.end(), "MONOBEHAVIOUR: %llu does not have a component", entity);
+				LMB_ASSERT(data[it->second].valid, "MONOBEHAVIOUR: %llu's data was not valid", entity);
+				return data[it->second];
+			}
+
+			void SystemData::remove(const entity::Entity& entity)
+			{
+				marked_for_delete.insert(entity);
+			}
+
+			bool SystemData::has(const entity::Entity& entity)
+			{
+				return entity_to_data.find(entity) != entity_to_data.end();
+			}
+		}
+
+		namespace MonoBehaviourSystem
+		{
+			Data::Data(const Data & other)
+			{
+				object = other.object;
+				initialize = other.initialize;
+				deinitialize = other.deinitialize;
+				update = other.update;
+				fixed_update = other.fixed_update;
+				on_collision_enter = other.on_collision_enter;
+				on_collision_exit = other.on_collision_exit;
+				on_trigger_enter = other.on_trigger_enter;
+				on_trigger_exit = other.on_trigger_exit;
+				entity = other.entity;
+				valid = other.valid;
+			}
+			Data & Data::operator=(const Data & other)
+			{
+				object = other.object;
+				initialize = other.initialize;
+				deinitialize = other.deinitialize;
+				update = other.update;
+				fixed_update = other.fixed_update;
+				on_collision_enter = other.on_collision_enter;
+				on_collision_exit = other.on_collision_exit;
+				on_trigger_enter = other.on_trigger_enter;
+				on_trigger_exit = other.on_trigger_exit;
+				entity = other.entity;
+				valid = other.valid;
+
+				return *this;
+			}
+		}
+
+		MonoBehaviourComponent::MonoBehaviourComponent(const entity::Entity& entity, world::SceneData& scene) :
+			IComponent(entity), scene_(&scene)
+		{
+		}
+		MonoBehaviourComponent::MonoBehaviourComponent(const MonoBehaviourComponent& other) :
+			IComponent(other.entity_), scene_(other.scene_)
+		{
+		}
+		MonoBehaviourComponent::MonoBehaviourComponent() :
+			IComponent(entity::Entity()), scene_(nullptr)
+		{
+		}
+	}
 }

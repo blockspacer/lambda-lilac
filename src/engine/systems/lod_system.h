@@ -1,102 +1,97 @@
 #pragma once
-#include "interfaces/icomponent.h"
-#include "interfaces/isystem.h"
-#include "assets/mesh.h"
-#include "systems/mesh_render_system.h"
-#include "systems/transform_system.h"
-#include "systems/camera_system.h"
+#include <interfaces/icomponent.h>
+#include <interfaces/isystem.h>
+#include <assets/mesh.h>
+#include <systems/mesh_render_system.h>
+#include <systems/transform_system.h>
+#include <systems/camera_system.h>
 
 namespace lambda
 {
-  namespace components
-  {
-    class LODSystem;
+	namespace components
+	{
+		class LOD
+		{
+		public:
+			void setMesh(asset::VioletMeshHandle mesh);
+			void setDistance(const float& distance);
+			asset::VioletMeshHandle getMesh() const;
+			float getDistance() const;
 
-    class LOD
-    {
-    public:
-      void setMesh(asset::VioletMeshHandle mesh);
-      void setDistance(const float& distance);
-      asset::VioletMeshHandle getMesh() const;
-      float getDistance() const;
+			bool operator<(const LOD& other) const
+			{
+				return distance_ < other.distance_;
+			}
+			bool operator>(const LOD& other) const
+			{
+				return distance_ > other.distance_;
+			}
 
-      bool operator<(const LOD& other) const
-      {
-        return distance_ < other.distance_;
-      }
-      bool operator>(const LOD& other) const
-      {
-        return distance_ > other.distance_;
-      }
+		private:
+			asset::VioletMeshHandle mesh_;
+			float distance_; // Distance AFTER which this LOD should be used.
+		};
 
-    private:
-      asset::VioletMeshHandle mesh_;
-      float distance_; // Distance AFTER which this LOD should be used.
-    };
+		class LODComponent : public IComponent
+		{
+		public:
+			LODComponent(const entity::Entity& entity, world::SceneData& scene);
+			LODComponent(const LODComponent& other);
+			LODComponent();
 
-    class LODComponent : public IComponent
-    {
-    public:
-      LODComponent(const entity::Entity& entity, LODSystem* system);
-      LODComponent(const LODComponent& other);
-      LODComponent();
+			void setBaseLOD(const LOD& lod);
+			LOD getBaseLOD() const;
+			void addLOD(const LOD& lod);
+			Vector<LOD> getLODs() const;
 
-      void setBaseLOD(const LOD& lod);
-      LOD getBaseLOD() const;
-      void addLOD(const LOD& lod);
-      Vector<LOD> getLODs() const;
+		private:
+			world::SceneData* scene_;
+		};
 
-    private:
-      LODSystem* system_;
-    };
+		namespace LODSystem
+		{
+			struct Data
+			{
+				Data(const entity::Entity& entity) : entity(entity) {};
+				Data(const Data& other);
+				Data& operator=(const Data& other);
 
-    struct LODData
-    {
-      LODData(const entity::Entity& entity) : entity(entity) {};
-      LODData(const LODData& other);
-      LODData& operator=(const LODData& other);
+				Vector<LOD> lods;
+				LOD base_lod;
+				entity::Entity entity;
+				bool valid = true;
+			};
 
-      Vector<LOD> lods;
-      LOD base_lod;
-      entity::Entity entity;
-			bool valid = true;
-    };
+			struct SystemData
+			{
+				Vector<Data>                  data;
+				Map<entity::Entity, uint32_t> entity_to_data;
+				Map<uint32_t, entity::Entity> data_to_entity;
+				Set<entity::Entity>           marked_for_delete;
+				Queue<uint32_t>               unused_data_entries;
 
-    class LODSystem : public ISystem
-    {
-    public:
-      static size_t systemId() { return (size_t)SystemIds::kLODSystem; };
-      LODComponent addComponent(const entity::Entity& entity);
-      LODComponent getComponent(const entity::Entity& entity);
-      bool hasComponent(const entity::Entity& entity);
-      void removeComponent(const entity::Entity& entity);
-      virtual void initialize(world::IWorld& world) override;
-      virtual void deinitialize() override;
-      virtual void update(const double& delta_time) override;
-			virtual void collectGarbage() override;
-			virtual ~LODSystem() override {};
+				Data& add(const entity::Entity& entity);
+				Data& get(const entity::Entity& entity);
+				void  remove(const entity::Entity& entity);
+				bool  has(const entity::Entity& entity);
 
-      void setBaseLOD(const entity::Entity& entity, const LOD& lod);
-      void addLOD(const entity::Entity& entity, const LOD& lod);
-      LOD getBaseLOD(const entity::Entity& entity) const;
-      Vector<LOD> getLODs(const entity::Entity& entity) const;
+				float time;
+				float update_frequency = 1.0f / 30.0f;
+			};
 
-    protected:
-      LODData& lookUpData(const entity::Entity& entity);
-      const LODData& lookUpData(const entity::Entity& entity) const;
+			LODComponent addComponent(const entity::Entity& entity, world::SceneData& scene);
+			LODComponent getComponent(const entity::Entity& entity, world::SceneData& scene);
+			bool hasComponent(const entity::Entity& entity, world::SceneData& scene);
+			void removeComponent(const entity::Entity& entity, world::SceneData& scene);
+			
+			void  collectGarbage(world::SceneData& scene);
+			void  deinitialize(world::SceneData& scene);
 
-    private:
-      Vector<LODData> data_;
-			Map<entity::Entity, uint32_t> entity_to_data_;
-			Map<uint32_t, entity::Entity> data_to_entity_;
-			Set<entity::Entity> marked_for_delete_;
-			Queue<uint32_t> unused_data_entries_;
+			void setBaseLOD(const entity::Entity& entity, const LOD& lod, world::SceneData& scene);
+			void addLOD(const entity::Entity& entity, const LOD& lod, world::SceneData& scene);
+			LOD getBaseLOD(const entity::Entity& entity, world::SceneData& scene);
+			Vector<LOD> getLODs(const entity::Entity& entity, world::SceneData& scene);
 
-      foundation::SharedPointer<TransformSystem> transform_system_;
-      foundation::SharedPointer<MeshRenderSystem> mesh_render_system_;
-      foundation::SharedPointer<CameraSystem> camera_system_;
-      double time_ = 0.0;
-      double update_frequency_ = 1.0 / 30.0;
-    };
-  }
+		}
+	}
 }

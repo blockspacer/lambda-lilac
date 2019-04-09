@@ -1,210 +1,201 @@
-#include "lod_system.h"
+#include <systems/lod_system.h>
+#include <interfaces/iworld.h>
+#include <platform/scene.h>
+
 #include <algorithm>
 
 namespace lambda
 {
-  namespace components
-  {
-    void LOD::setMesh(asset::VioletMeshHandle mesh)
-    {
-      mesh_ = mesh;
-    }
-    void LOD::setDistance(const float& distance)
-    {
-      distance_ = distance;
-    }
-    asset::VioletMeshHandle LOD::getMesh() const
-    {
-      return mesh_;
-    }
-    float LOD::getDistance() const
-    {
-      return distance_;
-    }
-    LODComponent::LODComponent(const entity::Entity& entity, LODSystem* system) :
-      IComponent(entity), system_(system)
-    {
-    }
-    LODComponent::LODComponent(const LODComponent& other) :
-      IComponent(other.entity_), system_(other.system_)
-    {
-    }
-    LODComponent::LODComponent() :
-      IComponent(entity::Entity()), system_(nullptr)
-    {
-    }
-    void LODComponent::setBaseLOD(const LOD& lod)
-    {
-      system_->setBaseLOD(entity_, lod);
-    }
-    LOD LODComponent::getBaseLOD() const
-    {
-      return system_->getBaseLOD(entity_);
-    }
-    void LODComponent::addLOD(const LOD& lod)
-    {
-      return system_->addLOD(entity_, lod);
-    }
-    Vector<LOD> LODComponent::getLODs() const
-    {
-      return system_->getLODs(entity_);
-    }
-    LODComponent LODSystem::addComponent(const entity::Entity& entity)
-    {
-      require(mesh_render_system_.get(), entity);
-      require(transform_system_.get(), entity);
-
-			if (!unused_data_entries_.empty())
-			{
-				uint32_t idx = unused_data_entries_.front();
-				unused_data_entries_.pop();
-
-				data_[idx] = LODData(entity);
-				data_to_entity_[idx] = entity;
-				entity_to_data_[entity] = idx;
-			}
-			else
-			{
-				data_.push_back(LODData(entity));
-				uint32_t idx = (uint32_t)data_.size() - 1u;
-				data_to_entity_[idx] = entity;
-				entity_to_data_[entity] = idx;
-			}
-
-      auto& data =lookUpData(entity);
-      data.base_lod.setDistance(0.0f);
-      data.base_lod.setMesh(mesh_render_system_->getMesh(entity));
-
-      return LODComponent(entity, this);
-    }
-    LODComponent LODSystem::getComponent(const entity::Entity& entity)
-    {
-      return LODComponent(entity, this);
-    }
-    bool LODSystem::hasComponent(const entity::Entity& entity)
-    {
-      return entity_to_data_.find(entity) != entity_to_data_.end();
-    }
-    void LODSystem::removeComponent(const entity::Entity& entity)
-    {
-			marked_for_delete_.insert(entity);
-    }
-		void LODSystem::collectGarbage()
+	namespace components
+	{
+		void LOD::setMesh(asset::VioletMeshHandle mesh)
 		{
-			if (!marked_for_delete_.empty())
+			mesh_ = mesh;
+		}
+		void LOD::setDistance(const float& distance)
+		{
+			distance_ = distance;
+		}
+		asset::VioletMeshHandle LOD::getMesh() const
+		{
+			return mesh_;
+		}
+		float LOD::getDistance() const
+		{
+			return distance_;
+		}
+
+		namespace LODSystem
+		{
+			LODComponent LODSystem::addComponent(const entity::Entity& entity, world::SceneData& scene)
 			{
-				for (entity::Entity entity : marked_for_delete_)
+				if (!TransformSystem::hasComponent(entity, scene))
+					TransformSystem::addComponent(entity, scene);
+
+				if (!MeshRenderSystem::hasComponent(entity, scene))
+					MeshRenderSystem::addComponent(entity, scene);
+
+				scene.lod.add(entity);
+
+				auto& data = scene.lod.get(entity);
+				data.base_lod.setDistance(0.0f);
+				data.base_lod.setMesh(MeshRenderSystem::getMesh(entity, scene));
+
+				return LODComponent(entity, scene);
+			}
+			LODComponent getComponent(const entity::Entity& entity, world::SceneData& scene)
+			{
+				return LODComponent(entity, scene);
+			}
+			bool hasComponent(const entity::Entity& entity, world::SceneData& scene)
+			{
+				return scene.lod.has(entity);
+			}
+			void removeComponent(const entity::Entity& entity, world::SceneData& scene)
+			{
+				scene.lod.remove(entity);
+			}
+			void collectGarbage(world::SceneData& scene)
+			{
+				if (!scene.lod.marked_for_delete.empty())
 				{
-					const auto& it = entity_to_data_.find(entity);
-					if (it != entity_to_data_.end())
+					for (entity::Entity entity : scene.lod.marked_for_delete)
 					{
-						uint32_t idx = it->second;
-						unused_data_entries_.push(idx);
-						data_to_entity_.erase(idx);
-						entity_to_data_.erase(entity);
-						data_[idx].valid = false;
+						const auto& it = scene.lod.entity_to_data.find(entity);
+						if (it != scene.lod.entity_to_data.end())
+						{
+							uint32_t idx = it->second;
+							scene.lod.unused_data_entries.push(idx);
+							scene.lod.data_to_entity.erase(idx);
+							scene.lod.entity_to_data.erase(entity);
+							scene.lod.data[idx].valid = false;
+						}
 					}
+					scene.lod.marked_for_delete.clear();
 				}
-				marked_for_delete_.clear();
+			}
+			void deinitialize(world::SceneData& scene)
+			{
+				Vector<entity::Entity> entities;
+				for (const auto& it : scene.lod.entity_to_data)
+					entities.push_back(it.first);
+
+				for (const auto& entity : entities)
+					scene.lod.remove(entity);
+				collectGarbage(scene);
+			}
+			void setBaseLOD(const entity::Entity& entity, const LOD& lod, world::SceneData& scene)
+			{
+				scene.lod.get(entity).base_lod = lod;
+			}
+			void addLOD(const entity::Entity& entity, const LOD& lod, world::SceneData& scene)
+			{
+				auto& data = scene.lod.get(entity);
+				data.lods.push_back(lod);
+
+				std::sort(data.lods.begin(), data.lods.end(), std::greater<LOD>());
+			}
+			LOD getBaseLOD(const entity::Entity& entity, world::SceneData& scene)
+			{
+				return scene.lod.get(entity).base_lod;
+			}
+			Vector<LOD> getLODs(const entity::Entity& entity, world::SceneData& scene)
+			{
+				return scene.lod.get(entity).lods;
 			}
 		}
-    void LODSystem::initialize(world::IWorld& world)
-    {
-      transform_system_   = world.getScene().getSystem<TransformSystem>();
-      mesh_render_system_ = world.getScene().getSystem<MeshRenderSystem>();
-      camera_system_      = world.getScene().getSystem<CameraSystem>();
-    }
-    void LODSystem::deinitialize()
-    {
-			Vector<entity::Entity> entities;
-			for (const auto& it : entity_to_data_)
-				entities.push_back(it.first);
 
-			for (const auto& entity : entities)
-				removeComponent(entity);
-			collectGarbage();
+		// The system data.
+		namespace LODSystem
+		{
+			Data& SystemData::add(const entity::Entity& entity)
+			{
+				uint32_t idx = 0ul;
+				if (!unused_data_entries.empty())
+				{
+					idx = unused_data_entries.front();
+					unused_data_entries.pop();
+					data[idx] = Data(entity);
+				}
+				else
+				{
+					idx = (uint32_t)data.size();
+					data.push_back(Data(entity));
+					data_to_entity[idx] = entity;
+				}
 
-			transform_system_ = nullptr;
-			mesh_render_system_ = nullptr;
-			camera_system_ = nullptr;
-    }
-    void LODSystem::update(const double& delta_time)
-    {
-      // Do not update the LODs every frame. Just not worth it.
-      time_ += delta_time;
-      if (time_ < update_frequency_)
-      {
-        return;
-      }
-      time_ -= update_frequency_;
+				data_to_entity[idx] = entity;
+				entity_to_data[entity] = idx;
 
+				return data[idx];
+			}
 
-      // Update LODs.
-      glm::vec3 camera_position = transform_system_->getWorldTranslation(camera_system_->getMainCamera());
+			Data& SystemData::get(const entity::Entity& entity)
+			{
+				auto it = entity_to_data.find(entity);
+				LMB_ASSERT(it != entity_to_data.end(), "LOD: %llu does not have a component", entity);
+				LMB_ASSERT(data[it->second].valid, "LOD: %llu's data was not valid", entity);
+				return data[it->second];
+			}
 
-      for (LODData& data : data_)
-      {
-        LOD* chosen_lod =&data.base_lod;
-        float distance = glm::length(transform_system_->getWorldTranslation(data.entity) - camera_position);
-        
-        for (LOD& lod : data.lods)
-        {
-          if (distance > lod.getDistance())
-          {
-            chosen_lod =&lod;
-            break;
-          }
-        }
+			void SystemData::remove(const entity::Entity& entity)
+			{
+				marked_for_delete.insert(entity);
+			}
 
-        mesh_render_system_->setMesh(data.entity, chosen_lod->getMesh());
-      }
-    }
-    void LODSystem::setBaseLOD(const entity::Entity& entity, const LOD& lod)
-    {
-      lookUpData(entity).base_lod = lod;
-    }
-    void LODSystem::addLOD(const entity::Entity& entity, const LOD& lod)
-    {
-      auto& data = lookUpData(entity);
-      data.lods.push_back(lod);
+			bool SystemData::has(const entity::Entity& entity)
+			{
+				return entity_to_data.find(entity) != entity_to_data.end();
+			}
+		}
 
-      std::sort(data.lods.begin(), data.lods.end(), std::greater<LOD>());
-    }
-    LOD LODSystem::getBaseLOD(const entity::Entity& entity) const
-    {
-      return lookUpData(entity).base_lod;
-    }
-    Vector<LOD> LODSystem::getLODs(const entity::Entity& entity) const
-    {
-      return lookUpData(entity).lods;
-    }
-    LODData& LODSystem::lookUpData(const entity::Entity& entity)
-    {
-      LMB_ASSERT(entity_to_data_.find(entity) != entity_to_data_.end(), "LOD: could not find component");
-			assert(data_.at(entity_to_data_.at(entity)).valid);
-			return data_.at(entity_to_data_.at(entity));
-    }
-    const LODData& LODSystem::lookUpData(const entity::Entity& entity) const
-    {
-      LMB_ASSERT(entity_to_data_.find(entity) != entity_to_data_.end(), "LOD: could not find component");
-			assert(data_.at(entity_to_data_.at(entity)).valid);
-			return data_.at(entity_to_data_.at(entity));
-    }
-    LODData::LODData(const LODData & other)
-    {
-      lods     = other.lods;
-      base_lod = other.base_lod;
-      entity   = other.entity;
-			valid    = other.valid;
-    }
-    LODData & LODData::operator=(const LODData & other)
-    {
-      lods     = other.lods;
-      base_lod = other.base_lod;
-      entity   = other.entity;
-			valid    = other.valid;
-      
-      return *this;
-    }
-}
+		namespace LODSystem
+		{
+			Data::Data(const Data& other)
+			{
+				lods = other.lods;
+				base_lod = other.base_lod;
+				entity = other.entity;
+				valid = other.valid;
+			}
+			Data& Data::operator=(const Data& other)
+			{
+				lods = other.lods;
+				base_lod = other.base_lod;
+				entity = other.entity;
+				valid = other.valid;
+
+				return *this;
+			}
+		}
+
+		LODComponent::LODComponent(const entity::Entity& entity, world::SceneData& scene) :
+			IComponent(entity), scene_(&scene)
+		{
+		}
+		LODComponent::LODComponent(const LODComponent& other) :
+			IComponent(other.entity_), scene_(other.scene_)
+		{
+		}
+		LODComponent::LODComponent() :
+			IComponent(entity::Entity()), scene_(nullptr)
+		{
+		}
+		void LODComponent::setBaseLOD(const LOD& lod)
+		{
+			LODSystem::setBaseLOD(entity_, lod, *scene_);
+		}
+		LOD LODComponent::getBaseLOD() const
+		{
+			return LODSystem::getBaseLOD(entity_, *scene_);
+		}
+		void LODComponent::addLOD(const LOD& lod)
+		{
+			return LODSystem::addLOD(entity_, lod, *scene_);
+		}
+		Vector<LOD> LODComponent::getLODs() const
+		{
+			return LODSystem::getLODs(entity_, *scene_);
+		}
+	}
 }

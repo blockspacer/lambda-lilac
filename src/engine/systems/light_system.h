@@ -11,9 +11,6 @@ namespace lambda
 	namespace components
 	{
 		class LightSystem;
-		class TransformSystem;
-		class MeshRenderSystem;
-		class CameraSystem;
 
 		enum class ShadowType
 		{
@@ -225,9 +222,6 @@ namespace lambda
 			platform::RenderTarget default_shadow_map_;
 			asset::VioletTextureHandle default_texture_;
 
-			foundation::SharedPointer<TransformSystem> transform_system_;
-			foundation::SharedPointer<MeshRenderSystem> mesh_render_system_;
-			foundation::SharedPointer<CameraSystem> camera_system_;
 			world::IWorld* world_;
 		};
 	}

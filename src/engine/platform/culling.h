@@ -25,13 +25,7 @@ namespace lambda
       void setShouldCull(const bool& should_cull);
       void setCullShadowCasters(const bool& cull_shadow_casters);
       void setCullFrequency(const uint8_t& cull_frequency);
-      void cullDynamics(
-        const Vector<entity::Entity>& dynamic_entities,
-        const Map<entity::Entity, uint32_t>& entity_to_data,
-        const Vector<components::MeshRenderData>& mesh_render_data, 
-       foundation::SharedPointer<components::TransformSystem> transform_system, 
-        const Frustum& frustum
-      );
+      void cullDynamics(world::SceneData& scene, const Frustum& frustum);
       void cullStatics(
         const ZoneManager& zone_manager, 
         const Frustum& frustum

@@ -4,8 +4,8 @@
 #include <atomic>
 
 #define VIOLET_DEBUG_MEMORY 0
-#define VIOLET_OPEN_ALLOCATIONS 0
-#define VIOLET_BUFFER_OVERFLOW 0
+#define VIOLET_OPEN_ALLOCATIONS 1
+#define VIOLET_BUFFER_OVERFLOW 1
 
 namespace lambda
 {
@@ -34,6 +34,19 @@ namespace lambda
 
     private:
       const size_t max_size_;
+
+#if VIOLET_DEBUG_MEMORY
+	  struct Header
+	  {
+		  const char* src;
+		  void* ptr;
+		  size_t size;
+		  size_t align;
+	  };
+	  Header* headers_;
+	  size_t header_count_;
+#endif
+
     protected:
       std::atomic<size_t> open_allocations_;
       std::atomic<size_t> allocated_;

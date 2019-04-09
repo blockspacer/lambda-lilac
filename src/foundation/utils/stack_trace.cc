@@ -63,11 +63,11 @@ private:
 	bool hit_main;
 };
 
-static bool g_initialized = false;
-
 extern const char* captureCallStack(int to_skip)
 {
-	static bool kIsInCallstack = false;
+	return "";
+
+	/*static bool kIsInCallstack = false;
 
 	if (kIsInCallstack)
 		return "";
@@ -78,5 +78,5 @@ extern const char* captureCallStack(int to_skip)
 	stackWalker.ShowCallstack();
 	kIsInCallstack = false;
 	
-	return stackWalker.callstack;
+	return stackWalker.callstack;*/
 }

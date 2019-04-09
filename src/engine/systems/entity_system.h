@@ -5,26 +5,20 @@
 
 namespace lambda
 {
-  namespace entity
-  {
-    class EntitySystem : public components::ISystem
-    {
-    public:
-      static size_t systemId() { return (size_t)components::SystemIds::kEntitySystem; };
+	namespace components
+	{
+		namespace EntitySystem
+		{
+			struct SystemData
+			{
+				static constexpr entity::Entity kFreeIdIncrement = 64ull;
+				entity::Entity free_id_count = 1;
+				Queue<entity::Entity> free_ids;
 
-      Entity createEntity();
-      void destroyEntity(const Entity& entity);
-      bool isAlive(const Entity& entity);
-
-    private:
-      virtual void initialize(world::IWorld&) override {};
-      virtual void deinitialize() override {};
-			virtual void collectGarbage() override {};
-
-    private:
-      static const uint32_t kFreeIdIncrement = 64u;
-			uint32_t free_id_count_ = 1;
-      Queue<uint32_t> free_ids_;
-    };
-  }
+				entity::Entity create();
+				void destroy(entity::Entity entity);
+				bool valid(entity::Entity entity);
+			};
+		}
+	}
 }

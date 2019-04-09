@@ -46,11 +46,11 @@ class Door is MonoBehaviour {
     transform.worldScale    = Vec3.new(0.1, 0.5, 0.5) * 2.5
     transform.worldPosition = Vec3.new(-4.75, 2.5, -4.1) * 2.5
 
-    gameObject.addComponent(MeshRender).mesh              = Mesh.generate("cube")
-    gameObject.getComponent(MeshRender).subMesh           = 0
-    gameObject.getComponent(MeshRender).albedo            = Texture.load("resources/textures/wood/FloorMahogany_alb.jpg")
-    gameObject.getComponent(MeshRender).normal            = Texture.load("resources/textures/wood/FloorMahogany_nrm.jpg")
-    gameObject.getComponent(MeshRender).metallicRoughness = Texture.load("resources/textures/wood/FloorMahogany_dmra.png")
+    gameObject.addComponent(MeshRender).mesh     = Mesh.generate("cube")
+    gameObject.getComponent(MeshRender).subMesh  = 0
+    gameObject.getComponent(MeshRender).albedo   = Texture.load("resources/textures/wood/FloorMahogany_alb.jpg")
+    gameObject.getComponent(MeshRender).normal   = Texture.load("resources/textures/wood/FloorMahogany_nrm.jpg")
+    gameObject.getComponent(MeshRender).DMRA     = Texture.load("resources/textures/wood/FloorMahogany_dmra.png")
     
     var button_collider = gameObject.addComponent(Collider)
     button_collider.makeBoxCollider()
@@ -63,11 +63,11 @@ class Door is MonoBehaviour {
     _door.transform.worldScale    = Vec3.new(0.25, 2.0, 2.0) * 2.5
     _door.transform.worldPosition = Vec3.new(-5.0, 1.0, 0.0) * 2.5
 
-    _door.addComponent(MeshRender).mesh              = Mesh.generate("cube")
-    _door.getComponent(MeshRender).subMesh           = 0
-    _door.getComponent(MeshRender).albedo            = Texture.load("resources/textures/wood/FloorMahogany_alb.jpg")
-    _door.getComponent(MeshRender).normal            = Texture.load("resources/textures/wood/FloorMahogany_nrm.jpg")
-    _door.getComponent(MeshRender).metallicRoughness = Texture.load("resources/textures/wood/FloorMahogany_dmra.png")
+    _door.addComponent(MeshRender).mesh    = Mesh.generate("cube")
+    _door.getComponent(MeshRender).subMesh = 0
+    _door.getComponent(MeshRender).albedo  = Texture.load("resources/textures/wood/FloorMahogany_alb.jpg")
+    _door.getComponent(MeshRender).normal  = Texture.load("resources/textures/wood/FloorMahogany_nrm.jpg")
+    _door.getComponent(MeshRender).DMRA    = Texture.load("resources/textures/wood/FloorMahogany_dmra.png")
   
     var door_collider = _door.addComponent(Collider)
     door_collider.makeBoxCollider()

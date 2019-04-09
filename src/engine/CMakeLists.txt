@@ -370,7 +370,6 @@ SET(Sources
   ${InterfacesSources}
   ${PlatformSources}
   ${ScriptingSources}
-  ${ScriptingBindingSources}
   ${SystemsSources}
   ${UtilsSources}
   ${MainSources}
@@ -408,7 +407,7 @@ ENDIF()
 # ///////////////////////////////////////////////////////////////
 # /// SCRIPTING /////////////////////////////////////////////////
 IF(${VIOLET_SCRIPTING} STREQUAL "AngelScript")
-	SET(Sources ${Sources} ${AngelScriptSources} ${AngelScriptAddonsSources})
+	SET(Sources ${Sources} ${AngelScriptSources} ${AngelScriptAddonsSources} ${ScriptingBindingSources})
 ENDIF()
 IF(${VIOLET_SCRIPTING} STREQUAL "Wren")
 	SET(Sources ${Sources} ${WrenSources})
