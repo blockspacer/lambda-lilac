@@ -727,6 +727,8 @@ namespace lambda
 #endif
 
 			asset_manager_.deleteNotReffedAssets((float)delta_time_);
+
+			foundation::GetFrameHeap()->update();
 		}
 
 

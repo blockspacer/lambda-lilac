@@ -409,6 +409,7 @@ namespace lambda
 					);
 				}
 			}
+#pragma optimize ("", off)
 			void renderDirectional(const entity::Entity& entity, scene::Scene& scene)
 			{
 				Data& data = scene.light.get(entity);
