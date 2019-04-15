@@ -345,6 +345,24 @@ public:
 	  float mem_def = (float)(foundation::Memory::default_allocator()->allocated() + foundation::Memory::new_allocator()->allocated()) / (1024.0f * 1024.0f);
 	  getGUI().executeJavaScript("updateAllocatedMemory(" + toString(round(mem_def, 3)) + ")");
 
+	  static constexpr uint32_t kTimerCount = 5u;
+	  static Average kTimers[kTimerCount];
+	  static constexpr char* kTimerNames[kTimerCount] = { "FixedUpdate", "Update", "CollectGarbage", "ConstructRender", "OnRender" };
+	  static Average kTotal;
+	  kTotal.add((float)getProfiler().getTime("Total"));
+
+	  for (uint32_t i = 0; i < kTimerCount; ++i)
+	  {
+		  kTimers[i].add((float)getProfiler().getTime(kTimerNames[i]));
+		  double val = 0.0;
+		  if (kTotal.average() != 0.0)
+		  {
+			  //val = std::round((kTimers[i].average() / kTotal.average()) * 100);
+			  val = std::round(kTimers[i].average() * 1000);
+		  }
+		  getGUI().executeJavaScript("setTimer(\"" + String(kTimerNames[i]) + "\"," + toString(val) + ")");
+	  }
+
 	  float dynamic_resolution_scale =
 			getScene().shader_variable_manager.getShaderVariable(
 			  Name("dynamic_resolution_scale")

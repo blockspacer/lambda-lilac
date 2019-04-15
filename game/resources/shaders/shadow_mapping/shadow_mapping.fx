@@ -85,7 +85,6 @@ VSOutput VS(uint id : SV_VertexID)
 Make_CBuffer(cbPostProcess, 0)
 {
   float4x4 light_view_projection_matrix;
-  float3 light_camera_position;
   float3 camera_position;
   float3 light_position;
   float3 light_direction;
@@ -110,7 +109,7 @@ float4 PS(VSOutput pIn) : SV_TARGET0
 
 #elif LIGHT_POINT && !NO_SHADOWS
   float4 overlay = 1.0f;
-  float3 coords = position.xyz - light_camera_position;
+  float3 coords = position.xyz - light_position;
   float position_depth = length(coords);
   coords = normalize(coords);
   float hide_shadows = position_depth > light_far;
@@ -120,7 +119,7 @@ float4 PS(VSOutput pIn) : SV_TARGET0
   float4 trans_position = mul(light_view_projection_matrix, position);
   trans_position.xyz /= trans_position.w;
   float2 coords = trans_position.xy * float2(0.5f, -0.5f) + 0.5f;
-  float position_depth = length(position.xyz - light_camera_position);
+  float position_depth = length(position.xyz - light_position);
   float4 overlay = tex_overlay.Sample(SamLinearClamp, coords);
   float hide_shadows = clamp(when_le(coords.x, 0.0f) + when_ge(coords.x, 1.0f) + when_le(coords.y, 0.0f) + when_ge(coords.y, 1.0f) + when_le(trans_position.z, 0.0f) + when_ge(trans_position.z, 1.0f), 0.0f, 1.0f);
 #endif
@@ -158,13 +157,13 @@ float4 PS(VSOutput pIn) : SV_TARGET0
   );
 #elif LIGHT_POINT
   col = PBRPoint(
-    light_position, light_camera_position,
+    light_position, light_position,
     position.xyz, normal, metallic, 
     roughness, light, light_far
   );
 #elif LIGHT_SPOT
   col = PBRSpot(
-    light_position, light_camera_position,
+    light_position, light_position,
     position.xyz, normal, metallic, roughness,
     light, light_far,
     light_direction, light_cut_off, light_outer_cut_off

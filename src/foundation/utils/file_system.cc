@@ -2,6 +2,7 @@
 #include <fstream>
 #include "console.h"
 #include <memory/memory.h>
+#include <mutex>
 
 #if VIOLET_WIN32
 #include <experimental/filesystem>
@@ -11,10 +12,12 @@ namespace lambda
 {
   //////////////////////////////////////////////////////////////////////////////
   const char* FileSystem::s_base_dir_ = nullptr;
+  std::mutex k_mutex;
 
   //////////////////////////////////////////////////////////////////////////////
   FILE* FileSystem::fopen(const String& file, const String& mode)
   {
+	  k_mutex.lock();
     String path = FullFilePath(file);
     Vector<char> buffer;
     FILE* fp;
@@ -26,17 +29,21 @@ namespace lambda
 #endif
     if (!fp)
     {
+		k_mutex.unlock();
       foundation::Error("FileSystem: Could not open file: " + path + ".\n");
       return nullptr;
     }
+	k_mutex.unlock();
     return fp;
   }
 
   //////////////////////////////////////////////////////////////////////////////
   void FileSystem::fclose(FILE* file)
   {
+	  k_mutex.lock();
     if (file)
       std::fclose(file);
+	k_mutex.unlock();
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -44,6 +51,7 @@ namespace lambda
                            const char* header,
                            const size_t& header_size)
   {
+	  k_mutex.lock();
     if (!file)
     {
       LMB_ASSERT(false, "FileSystem: Tried to use an empty file.\n");
@@ -53,6 +61,7 @@ namespace lambda
     long ret = ftell(file);
     if (ret < 0)
     {
+		k_mutex.unlock();
       fclose(file);
       LMB_ASSERT(false, "FileSystem: Tried to use an empty file.\n");
       return "";
@@ -61,7 +70,9 @@ namespace lambda
     String buffer(ret, '\0');
     fseek(file, 0, SEEK_SET);
     fread((void*)buffer.data(), 1u, ret, file);
-    fclose(file);
+	k_mutex.unlock();
+	fclose(file);
+	k_mutex.lock();
 
     if (header != nullptr)
     {
@@ -70,12 +81,14 @@ namespace lambda
         if (buffer[i] != header[i])
         {
           foundation::Error("FileSystem: Header mismatch!");
-          return "";
+		  k_mutex.unlock();
+		  return "";
         }
       }
       buffer.erase(buffer.begin(), buffer.begin() + header_size);
     }
 
+	k_mutex.unlock();
     return buffer;
   }
 
@@ -95,7 +108,8 @@ namespace lambda
                                         const char* header,
                                         const size_t& header_size)
   {
-    if (!file)
+	  k_mutex.lock();
+	  if (!file)
     {
       LMB_ASSERT(false, "FileSystem: Tried to use an empty file.\n");
       return Vector<char>();
@@ -104,7 +118,8 @@ namespace lambda
     long ret = ftell(file);
     if (ret < 0)
     {
-      fclose(file);
+		k_mutex.unlock();
+		fclose(file);
       LMB_ASSERT(false, "FileSystem: Tried to use an empty file.\n");
       return Vector<char>();
     }
@@ -112,7 +127,9 @@ namespace lambda
     Vector<char> buffer(ret);
     fseek(file, 0, SEEK_SET);
     fread(buffer.data(), 1u, ret, file);
-    fclose(file);
+	k_mutex.unlock();
+	fclose(file);
+	k_mutex.lock();
 
     if (header != nullptr)
     {
@@ -121,13 +138,15 @@ namespace lambda
         if (buffer[i] != header[i])
         {
           foundation::Error("FileSystem: Header mismatch!");
-          return Vector<char>();
+		  k_mutex.unlock();
+		  return Vector<char>();
         }
       }
       buffer.erase(buffer.begin(), buffer.begin() + header_size);
     }
 
-    return eastl::move(buffer);
+	k_mutex.unlock();
+	return eastl::move(buffer);
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -246,20 +265,22 @@ namespace lambda
 #if VIOLET_OSX
     fp = std::fopen(FullFilePath(file).c_str(), "wb");
 #else
-    fopen_s(&fp, FullFilePath(file).c_str(), "wb");
+    fp = fopen(FullFilePath(file).c_str(), "wb");
 #endif
     if (fp == NULL)
     {
       String errorMessage = "Package: Could not open file: " + file + ".\n";
       LMB_ASSERT(false, errorMessage.c_str());
     }
-    char* nullHeader = (char*)foundation::Memory::allocate(header_size);
+	k_mutex.lock();
+	char* nullHeader = (char*)foundation::Memory::allocate(header_size);
     fwrite(nullHeader, header_size, 1u, fp);
     fwrite(data, data_size, 1u, fp);
     fseek(fp, 0, SEEK_SET);
     fwrite(header, header_size, 1u, fp);
     fclose(fp);
-		foundation::Memory::deallocate(nullHeader);
+	foundation::Memory::deallocate(nullHeader);
+	k_mutex.unlock();
   }
 
 #ifdef VIOLET_WIN32

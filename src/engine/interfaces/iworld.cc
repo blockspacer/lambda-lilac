@@ -69,6 +69,8 @@ namespace lambda
 
 				scripting_->executeFunction("Input::InputHelper::UpdateAxes", {});
 
+				profiler_.startTimer("Total");
+				profiler_.startTimer("FixedUpdate");
 				static unsigned char max_step_count_count = 8u;
 				unsigned char time_step_count = 0u;
 				time_step_remainer += delta_time_;
@@ -76,69 +78,42 @@ namespace lambda
 					time_step_count++ < max_step_count_count)
 				{
 					fixedUpdate();
-
-					profiler_.startTimer("Scripting: FixedUpdate");
 					time_step_remainer -= time_step;
-					scripting_->executeFunction(
-						"Game::FixedUpdate",
-						{
-						  scripting::ScriptValue((float)time_step)
-						}
-					);
-					profiler_.endTimer("Scripting: FixedUpdate");
 
-					profiler_.startTimer("Systems: FixedUpdate");
+					scripting_->executeFunction("Game::FixedUpdate", { scripting::ScriptValue((float)time_step) });
+
 					scene::sceneFixedUpdate((float)time_step, scene_);
-					profiler_.endTimer("Systems: FixedUpdate");
 
-					profiler_.startTimer("Systems: FixedCollectGarbage");
 					scene::sceneCollectGarbage(scene_);
-					profiler_.endTimer("Systems: FixedCollectGarbage");
 				}
 				if (time_step_remainer >= time_step)
 				{
-					time_step_remainer -=
-						std::floor(time_step_remainer / time_step) * time_step;
+					time_step_remainer -= std::floor(time_step_remainer / time_step) * time_step;
 				}
+				profiler_.endTimer("FixedUpdate");
 
 				update(delta_time_);
 
-				profiler_.startTimer("GUI: Update");
+				profiler_.startTimer("Update");
 				gui_.update(delta_time_);
-				profiler_.endTimer("GUI: Update");
-
-				profiler_.startTimer("Scripting: Update");
-				scripting_->executeFunction(
-					"Game::Update",
-					{
-					  scripting::ScriptValue((float)delta_time_)
-					}
-				);
-				profiler_.endTimer("Scripting: Update");
-
-				profiler_.startTimer("Systems: Update");
+				scripting_->executeFunction("Game::Update", { scripting::ScriptValue((float)delta_time_) });
 				scene::sceneUpdate((float)delta_time_, scene_);
-				profiler_.endTimer("Systems: Update");
-
-				//profiler_.startTimer("ImGUI: Update");
-				//imgui_->update(delta_time_);
-				//profiler_.endTimer("ImGUI: Update");
-
-				profiler_.startTimer("Renderer: Update");
 				scene_.renderer->update(delta_time_);
-				profiler_.endTimer("Renderer: Update");
+				profiler_.endTimer("Update");
 
-				profiler_.startTimer("Scripting: CollectGarbage");
+				profiler_.startTimer("CollectGarbage");
 				scripting_->collectGarbage();
-				profiler_.endTimer("Scripting: CollectGarbage");
-
-				profiler_.startTimer("Systems: CollectGarbage");
 				scene::sceneCollectGarbage(scene_);
-				profiler_.endTimer("Systems: CollectGarbage");
+				profiler_.endTimer("CollectGarbage");
 
-				profiler_.startTimer("Systems: OnRender");
+				profiler_.startTimer("ConstructRender");
+				scene::sceneConstructRender(scene_);
+				profiler_.endTimer("ConstructRender");
+				
+				profiler_.startTimer("OnRender");
 				scene::sceneOnRender(scene_);
-				profiler_.endTimer("Systems: OnRender");
+				profiler_.endTimer("OnRender");
+				profiler_.endTimer("Total");
 			}
 
 			scripting_->executeFunction("Game::Deinitialize", {});

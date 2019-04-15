@@ -16,6 +16,25 @@ namespace lambda
 	namespace gui
 	{
 		///////////////////////////////////////////////////////////////////////////
+		String exceptionToString(JSValueRef exception, JSContextRef js_context)
+		{
+			JSStringRef js_string = JSValueToStringCopy(js_context, exception, nullptr);
+			String str(JSStringGetLength(js_string) + 1u, '\0');
+			JSStringGetUTF8CString(js_string, (char*)str.c_str(), str.length());
+			return str;
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		void handleException(JSValueRef exception, JSContextRef js_context)
+		{
+			JSType type = JSValueGetType(js_context, exception);
+
+			if (type != kJSTypeUndefined && type != kJSTypeNull)
+				LMB_ASSERT(false, exceptionToString(exception, js_context).c_str());
+		}
+
+
+		///////////////////////////////////////////////////////////////////////////
 		///// lOAD LISTENER IMPL //////////////////////////////////////////////////
 		///////////////////////////////////////////////////////////////////////////
 		class LoadListenerImpl : public ultralight::LoadListener
@@ -210,23 +229,36 @@ namespace lambda
 			foundation::Memory::destruct(load_listener);
 		}
 
+		std::mutex k_mutex;
+
 		///////////////////////////////////////////////////////////////////////////
 		void GUI::update(double delta_time)
 		{
-			if (!enabled_)
-				return;
+			k_mutex.lock();
 
-			switch_ += delta_time;
-			if (switch_ < switch_time_)
+			if (!enabled_)
+			{
+				k_mutex.unlock();
 				return;
-			switch_ -= switch_time_;
+			}
+
+			/*switch_ += delta_time;
+			if (switch_ < switch_time_)
+			{
+				k_mutex.unlock();
+				return;
+			}
+			switch_ -= switch_time_;*/
 
 			renderer_->Update();
+			k_mutex.unlock();
 		}
 
 		///////////////////////////////////////////////////////////////////////////
 		void GUI::render(scene::Scene& scene)
 		{
+			k_mutex.lock();
+
 			gui::MyGPUDriver* driver = (gui::MyGPUDriver*)ultralight::Platform::instance().gpu_driver();
 			driver->setScene(scene);
 
@@ -253,6 +285,8 @@ namespace lambda
 					);
 				}
 			}
+
+			k_mutex.unlock();
 		}
 
 		///////////////////////////////////////////////////////////////////////////
@@ -307,35 +341,19 @@ namespace lambda
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		String exceptionToString(JSValueRef exception, JSContextRef js_context)
-		{
-			JSStringRef js_string = JSValueToStringCopy(js_context, exception, nullptr);
-			String str(JSStringGetLength(js_string) + 1u, '\0');
-			JSStringGetUTF8CString(js_string, (char*)str.c_str(), str.length());
-			return str;
-		}
-
-		///////////////////////////////////////////////////////////////////////////
-		void handleException(JSValueRef exception, JSContextRef js_context)
-		{
-			JSType type = JSValueGetType(js_context, exception);
-
-			if (type != kJSTypeUndefined && type != kJSTypeNull)
-				LMB_ASSERT(false, exceptionToString(exception, js_context).c_str());
-		}
-
-		///////////////////////////////////////////////////////////////////////////
 		void GUI::executeJavaScript(String js)
 		{
 			if (!enabled_)
 				return;
 
+			k_mutex.lock();
 			JSContextRef js_context = view_->js_context();
 			JSStringRef str = JSStringCreateWithUTF8CString(js.c_str());
 
 			JSValueRef exception = JSValueMakeNull(js_context);
 			auto res = JSEvaluateScript(js_context, str, 0, 0, 0, &exception);
 			handleException(exception, js_context);
+			k_mutex.unlock();
 		}
 
 		///////////////////////////////////////////////////////////////////////////

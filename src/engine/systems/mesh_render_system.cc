@@ -338,27 +338,33 @@ namespace lambda
 
 			void createSortedRenderList(utilities::LinkedNode* statics, utilities::LinkedNode* dynamics, Vector<utilities::Renderable*>& opaque, Vector<utilities::Renderable*>& alpha, scene::Scene& scene)
 			{
-				for (utilities::LinkedNode* node = statics->next; node != nullptr; node = node->next)
+				if (statics)
 				{
-					utilities::Renderable* renderable = (utilities::Renderable*)node->data;
-					// TODO (Hilze): Implement.
-					if (renderable->albedo_texture && renderable->albedo_texture->getLayer(0u).containsAlpha())
-						alpha.push_back(renderable);
-					else
-						opaque.push_back(renderable);
+					for (utilities::LinkedNode* node = statics->next; node != nullptr; node = node->next)
+					{
+						utilities::Renderable* renderable = (utilities::Renderable*)node->data;
+						// TODO (Hilze): Implement.
+						if (renderable->albedo_texture && renderable->albedo_texture->getLayer(0u).containsAlpha())
+							alpha.push_back(renderable);
+						else
+							opaque.push_back(renderable);
+					}
 				}
 
-				for (utilities::LinkedNode* node = dynamics->next; node != nullptr; node = node->next)
+				if (dynamics)
 				{
-					utilities::Renderable* renderable = (utilities::Renderable*)node->data;
-					// TODO (Hilze): Implement.
-					if (renderable->albedo_texture && renderable->albedo_texture->getLayer(0u).containsAlpha())
+					for (utilities::LinkedNode* node = dynamics->next; node != nullptr; node = node->next)
 					{
-						alpha.push_back(renderable);
-					}
-					else
-					{
-						opaque.push_back(renderable);
+						utilities::Renderable* renderable = (utilities::Renderable*)node->data;
+						// TODO (Hilze): Implement.
+						if (renderable->albedo_texture && renderable->albedo_texture->getLayer(0u).containsAlpha())
+						{
+							alpha.push_back(renderable);
+						}
+						else
+						{
+							opaque.push_back(renderable);
+						}
 					}
 				}
 			}

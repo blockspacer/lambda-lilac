@@ -5,14 +5,14 @@ namespace lambda
 {
   namespace platform
   {
-		////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		void PostProcessManager::operator=(const PostProcessManager& other)
-		{
-			last_size_    = other.last_size_;
-			final_target_ = other.final_target_;
-			targets_      = other.targets_;
-			passes_       = other.passes_;
-		}
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    void PostProcessManager::operator=(const PostProcessManager& other)
+    {
+      last_size_    = other.last_size_;
+      final_target_ = other.final_target_;
+      targets_      = other.targets_;
+      passes_       = other.passes_;
+    }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void PostProcessManager::addTarget(const RenderTarget& target)

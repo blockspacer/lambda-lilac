@@ -599,6 +599,18 @@
 			<p class="menu_BodySubName" style="padding: 0pt; margin: 0pt; width: 50pt; font-weight: bold;">MS</p>
 			<p class="menu_BodySubName" id="dbg_mem" style="padding: 0pt; margin: 0pt; width: 50pt; text-align: right;">0</p>
 		</div>
+		<div style="padding: 10pt; margin: 10pt; left:50% -152pt; top: 0px; position: fixed; width: 304pt; height: fit-content; background: black; border-right: 2pt solid orange; border-left:  2pt solid orange;">
+			<p class="menu_BodySubName" style="padding: 0pt; margin: 0pt; width: 150pt; font-weight: bold;">FixedUpdate</p>
+			<p class="menu_BodySubName" id="timer_FixedUpdate" style="padding: 0pt; margin: 0pt; width: 150pt; text-align: right;">0</p>
+			<p class="menu_BodySubName" style="padding: 0pt; margin: 0pt; width: 150pt; font-weight: bold;">Update</p>
+			<p class="menu_BodySubName" id="timer_Update" style="padding: 0pt; margin: 0pt; width: 150pt; text-align: right;">0</p>
+			<p class="menu_BodySubName" style="padding: 0pt; margin: 0pt; width: 150pt; font-weight: bold;">CollectGarbage</p>
+			<p class="menu_BodySubName" id="timer_CollectGarbage" style="padding: 0pt; margin: 0pt; width: 150pt; text-align: right;">0</p>
+			<p class="menu_BodySubName" style="padding: 0pt; margin: 0pt; width: 150pt; font-weight: bold;">ConstructRender</p>
+			<p class="menu_BodySubName" id="timer_ConstructRender" style="padding: 0pt; margin: 0pt; width: 150pt; text-align: right;">0</p>
+			<p class="menu_BodySubName" style="padding: 0pt; margin: 0pt; width: 150pt; font-weight: bold;">OnRender</p>
+			<p class="menu_BodySubName" id="timer_OnRender" style="padding: 0pt; margin: 0pt; width: 150pt; text-align: right;">0</p>
+		</div>
 		<script>
 			var m = document.getElementsByClassName("menu");
 			for (var i = 0; i < m.length; ++i)
@@ -663,6 +675,9 @@
 			}
 			function updateAllocatedMemory(memSize) {
 				document.getElementById("dbg_mem").innerHTML = memSize + "MB"
+			}
+			function setTimer(name, value) {
+				document.getElementById("timer_" + name).innerHTML = value;
 			}
 		</script>
 	</body>
