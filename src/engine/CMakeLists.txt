@@ -91,9 +91,6 @@ SET(PlatformSources
   "platform/scene.h"
   "platform/scene.cc"
   "platform/shader_pass.h"
-  "platform/shader_variable.h"
-  "platform/shader_variable_manager.h"
-  "platform/shader_variable_manager.cc"
 )
 SET(D3D11RendererSources
   "renderers/d3d11/d3d11_context.h"

@@ -414,6 +414,14 @@ namespace lambda
 		}
 
 		///////////////////////////////////////////////////////////////////////////
+		VioletTextureHandle TextureManager::getFromCache(Name name)
+		{
+			auto it = texture_cache_.find(name.getHash());
+			LMB_ASSERT(it != texture_cache_.end(), "Could not find texture in cache: %s", name.getName().c_str());
+			return VioletTextureHandle(it->second, name);
+		}
+
+		///////////////////////////////////////////////////////////////////////////
 		VioletTextureHandle TextureManager::get(Name name)
 		{
 			uint64_t hash = manager_.GetHash(FileSystem::MakeRelative(name.getName()));
@@ -424,7 +432,7 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		VioletTextureHandle TextureManager::get(uint64_t hash)
 		{
-			LMB_ASSERT(manager_.HasHeader(hash), "Could not find texture: %ull", hash);
+			LMB_ASSERT(manager_.HasHeader(hash), "Could not find texture: %llu", hash);
 			VioletTexture texture = manager_.GetTexture(hash);
 			return create(texture.file, texture);
 		}

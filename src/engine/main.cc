@@ -260,83 +260,6 @@ public:
     static constexpr uint8_t kCount = 100u;
     float averages[kCount];
   };
-  void frameInfo()
-  {
-    foundation::SharedPointer<platform::IImGUI> imgui = getImGUI();
-
-    static double frame_target_max = 60.0;
-    static double frame_target_min = 40.0;
-    double frame_fps = (double)frame_counter.getFrames();
-    double frame_budget = frame_target_max / frame_fps;
-    double frame_budget_h;
-    if (frame_fps < frame_target_min)
-      frame_budget_h = 0.0;
-    else if (frame_fps > frame_target_max)
-      frame_budget_h = 120.0;
-    else
-      frame_budget_h = 120.0 * ((frame_fps - frame_target_min) / (frame_target_max - frame_target_min));
-
-    static bool open = true;
-    if (imgui->imBegin("info", open, glm::vec2(0.0f, 0.0f), glm::vec2(170.0f, 600.0f)))
-    {
-      imgui->imText("fps:");
-      imgui->imText(toString(round(frame_fps, 3u)));
-      imgui->imText("ms:");
-      imgui->imText(toString(round(1.0 / frame_fps, 3u)));
-      imgui->imText("budget:");
-      imgui->imTextColoured(toString(round(frame_budget, 3u)), HSVtoRGB(glm::vec4(frame_budget_h, 1.0f, 1.0f, 1.0f)));
-
-			// Profiler.
-
-#define XX(x) imgui->imTextMultiLine(toString(round(getProfiler().getTime(x), 3u)) + " - " + x);
-			XX("Scripting: CollectGarbage");
-			XX("Scripting: FixedUpdate");
-			XX("Scripting: Update");
-			XX("Systems: FixedUpdate");
-			XX("Systems: Update");
-			XX("Systems: OnRender");
-			XX("Renderer: Update");
-			XX("Renderer: StartFrame");
-			XX("Renderer: EndFrame");
-			XX("ImGUI: Update");
-			XX("ImGUI: GenerateCommandList");
-
-			//imgui->imTextMultiLine(getScene().getSystem<components::MeshRenderSystem>()->profilerInfo());
-
-      /*static Average timer_clear_everything;
-      static Average timer_main_camera;
-      static Average timer_lighting;
-      static Average timer_post_processing;
-      static Average timer_debug_rendering;
-      static Average timer_copy_to_screen;
-      static Average timer_imgui;
-      timer_clear_everything.add((float)getRenderer()->getTimerMicroSeconds("Clear Everything") / 1000.0f);
-      timer_main_camera.add((float)getRenderer()->getTimerMicroSeconds("Main Camera") / 1000.0f);
-      timer_lighting.add((float)getRenderer()->getTimerMicroSeconds("Lighting") / 1000.0f);
-      timer_post_processing.add((float)getRenderer()->getTimerMicroSeconds("Post Processing") / 1000.0f);
-      timer_debug_rendering.add((float)getRenderer()->getTimerMicroSeconds("Debug Rendering") / 1000.0f);
-      timer_copy_to_screen.add((float)getRenderer()->getTimerMicroSeconds("Copy To Screen") / 1000.0f);
-      timer_imgui.add((float)getRenderer()->getTimerMicroSeconds("ImGUI") / 1000.0f);
-
-      imgui->imText(toString(std::round(timer_clear_everything.average() * 100.0f) / 100.0f) + " - Clear Everything");
-      imgui->imText(toString(std::round(timer_main_camera.average() * 100.0f) / 100.0f) + " - Main Camera");
-      imgui->imText(toString(std::round(timer_lighting.average() * 100.0f) / 100.0f) + " - Lighting");
-      imgui->imText(toString(std::round(timer_post_processing.average() * 100.0f) / 100.0f) + " - Post Processing");
-      imgui->imText(toString(std::round(timer_debug_rendering.average() * 100.0f) / 100.0f) + " - Debug Rendering");
-      imgui->imText(toString(std::round(timer_copy_to_screen.average() * 100.0f) / 100.0f) + " - Copy To Screen");
-      imgui->imText(toString(std::round(timer_imgui.average() * 100.0f) / 100.0f) + " - ImGUI");*/
-
-      static float dynamic_resolution_scale = 1.0f;
-      if (imgui->imFloat1("DRS", dynamic_resolution_scale))
-				getScene().shader_variable_manager.setVariable(platform::ShaderVariable(Name("dynamic_resolution_scale"), dynamic_resolution_scale));
-
-      static float ambient_intensity = 1.0f;
-      if (imgui->imFloat1("AI", ambient_intensity))
-				getScene().shader_variable_manager.setVariable(platform::ShaderVariable(Name("ambient_intensity"), ambient_intensity));
-    }
-
-    imgui->imEnd();
-  }
 
   void update(const double& delta_time) override
   {
@@ -348,8 +271,12 @@ public:
 	  static constexpr uint32_t kTimerCount = 5u;
 	  static Average kTimers[kTimerCount];
 	  static constexpr char* kTimerNames[kTimerCount] = { "FixedUpdate", "Update", "CollectGarbage", "ConstructRender", "OnRender" };
+	  static constexpr bool  kGameTimer[kTimerCount]  = { true,          true,     true,             false,             false      };
 	  static Average kTotal;
 	  kTotal.add((float)getProfiler().getTime("Total"));
+
+	  double total_game   = 0.0;
+	  double total_render = 0.0;
 
 	  for (uint32_t i = 0; i < kTimerCount; ++i)
 	  {
@@ -357,16 +284,23 @@ public:
 		  double val = 0.0;
 		  if (kTotal.average() != 0.0)
 		  {
-			  //val = std::round((kTimers[i].average() / kTotal.average()) * 100);
 			  val = std::round(kTimers[i].average() * 1000);
+
+			  if (kGameTimer[i])
+				  total_game += val;
+			  else
+				  total_render += val;
 		  }
 		  getGUI().executeJavaScript("setTimer(\"" + String(kTimerNames[i]) + "\"," + toString(val) + ")");
 	  }
+	  
+	  double game_vs_render = (total_game != 0.0 && total_render != 0.0) ? std::round(total_game / (total_game + total_render) * 100.0) : 0.0;
 
-	  float dynamic_resolution_scale =
-			getScene().shader_variable_manager.getShaderVariable(
-			  Name("dynamic_resolution_scale")
-		  ).data.at(0);
+	  getGUI().executeJavaScript("setTimer(\"TotalGame\"," + toString(total_game) + ")");
+	  getGUI().executeJavaScript("setTimer(\"TotalRender\"," + toString(total_render) + ")");
+	  getGUI().executeJavaScript("setTimer(\"GameVSRender\"," + toString(game_vs_render) + ")");
+
+	  float dynamic_resolution_scale = 1.0f;
 
 	  static const float drs[] = {
 		  0.2f,
@@ -396,8 +330,6 @@ public:
 
 		// TODO (Hilze): Get rid of this ASAP!
 		dynamic_resolution_scale = 1.0f;
-
-	  getScene().shader_variable_manager.setVariable(platform::ShaderVariable(Name("dynamic_resolution_scale"), dynamic_resolution_scale));
   }
 
   virtual void fixedUpdate() override

@@ -97,6 +97,7 @@ namespace lambda
 				uint32_t flags,
 				const Vector<unsigned char>& data
 			);
+			VioletTextureHandle getFromCache(Name name);
 			VioletTextureHandle get(Name name);
 			VioletTextureHandle get(uint64_t hash);
 			Vector<char> getData(VioletTextureHandle texture);

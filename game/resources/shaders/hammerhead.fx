@@ -6,11 +6,6 @@ struct VSOutput
   float2 tex      : TEX_COORD;
 };
 
-Make_CBuffer(cbPostProcess, 0)
-{
-  float roughness;
-};
-
 VSOutput VS(uint id: SV_VertexID)
 {
   VSOutput vOut;
@@ -71,7 +66,7 @@ float4 PS(VSOutput pIn) : SV_TARGET0
   for (uint i = 0u; i < SAMPLE_COUNT; ++i)
   {
     float2 Xi = Hammersley(i, SAMPLE_COUNT);
-    float3 H  = ImportanceSampleGGX(Xi, N, roughness);
+    float3 H  = ImportanceSampleGGX(Xi, N, metallic_roughness.y);
     float3 L  = normalize(2.0 * dot(V, H) * H - V);
 
     float NdotL = max(dot(N, L), 0.0);

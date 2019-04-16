@@ -44,9 +44,8 @@ VSOutput VS(uint id : SV_VertexID)
   return vOut;
 }
 
-Make_CBuffer(cbPostProcess, 0)
+Make_CBuffer(cbUser, cbUserIdx)
 {
-  float2 inv_texture_size;
 #if IS_CUBE
   float face;
 #endif

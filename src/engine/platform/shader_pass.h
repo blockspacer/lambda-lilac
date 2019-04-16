@@ -17,6 +17,7 @@ namespace lambda
         Vector<RenderTarget> inputs,
         Vector<RenderTarget> outputs
       );
+	  ~ShaderPass() {};
 
       asset::VioletShaderHandle getShader() const;
       const Vector<RenderTarget>& getInputs() const;

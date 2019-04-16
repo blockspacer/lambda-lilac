@@ -16,7 +16,7 @@ VSOutput VS(uint id: SV_VertexID)
 
 Make_Texture2D(tex_to_screen, 0);
 
-Make_CBuffer(relScal, 0)
+Make_CBuffer(cbUser, cbUserIdx)
 {
   float copy_resolution_scale;
 }

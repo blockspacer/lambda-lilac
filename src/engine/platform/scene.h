@@ -10,7 +10,6 @@
 #include <systems/camera_system.h>
 #include <systems/transform_system.h>
 #include <systems/mesh_render_system.h>
-#include <platform/shader_variable_manager.h>
 #include <platform/post_process_manager.h>
 #include <platform/debug_renderer.h>
 #include <interfaces/iscript_context.h>
@@ -38,9 +37,8 @@ namespace lambda
 			components::LightSystem::SystemData         light;
 			components::TransformSystem::SystemData     transform;
 			components::MeshRenderSystem::SystemData    mesh_render;
-			platform::ShaderVariableManager shader_variable_manager;
 			platform::DebugRenderer         debug_renderer;
-			platform::PostProcessManager    post_process_manager;
+			platform::PostProcessManager*   post_process_manager;
 			scripting::IScriptContext* scripting = nullptr;
 			platform::IRenderer*       renderer  = nullptr;
 			platform::IWindow*         window    = nullptr;

@@ -1,7 +1,6 @@
 #pragma once
 #include "assets/shader.h"
 #include "d3d11_mesh.h"
-#include "platform/shader_variable_manager.h"
 
 struct ID3D11Device;
 struct ID3D11DeviceContext;
@@ -22,29 +21,15 @@ namespace lambda
     class D3D11RenderBuffer;
 
     ///////////////////////////////////////////////////////////////////////////
-    struct D3D11Buffer
-    {
-      D3D11RenderBuffer* buffer;
-	  platform::ShaderBuffer shader_buffer;
-      size_t slot = 0u;
-      bool bound = false;
-	  ShaderStages stage;
-    };
-
-    ///////////////////////////////////////////////////////////////////////////
     class D3D11Shader
     {
     public:
       D3D11Shader(asset::VioletShaderHandle shader, D3D11Context* context);
       ~D3D11Shader();
       void bind();
-      void unbind();
-      void bindBuffers();
 	  Vector<uint32_t> getStages() const;
 
-      void updateShaderVariable(const platform::ShaderVariable& variable);
-
-      Vector<D3D11Buffer>& getBuffers();
+	  const Vector<VioletShaderResource>& getBuffers();
 	  const Vector<VioletShaderResource>& getTextures();
 	  const Vector<VioletShaderResource>& getSamplers();
 
@@ -59,7 +44,7 @@ namespace lambda
 	  
 	  Vector<VioletShaderResource> textures_;
 	  Vector<VioletShaderResource> samplers_;
-      Vector<D3D11Buffer> buffers_;
+	  Vector<VioletShaderResource> buffers_;
 	  Vector<uint32_t> stages_;
 
       D3D11Context* context_;

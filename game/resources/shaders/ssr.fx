@@ -1,15 +1,5 @@
 #include "common.fxh"
 
-Make_CBuffer(cbPostProcess, 0)
-{
-  float4x4 view_matrix;
-  float4x4 inverse_view_matrix;
-  float4x4 projection_matrix;
-  float4x4 inverse_projection_matrix;
-  float4x4 view_projection_matrix;
-  float4x4 inverse_view_projection_matrix;
-};
-
 struct VSOutput
 {
   float4 position : SV_POSITION;

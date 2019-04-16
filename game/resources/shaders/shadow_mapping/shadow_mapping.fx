@@ -82,19 +82,6 @@ VSOutput VS(uint id : SV_VertexID)
   return vOut;
 }
 
-Make_CBuffer(cbPostProcess, 0)
-{
-  float4x4 light_view_projection_matrix;
-  float3 camera_position;
-  float3 light_position;
-  float3 light_direction;
-  float3 light_colour;
-  float  light_cut_off;
-  float  light_outer_cut_off;
-  float  light_near;
-  float  light_far;
-};
-
 float4 PS(VSOutput pIn) : SV_TARGET0
 {
   float4 position = float4(Sample(tex_position, SamLinearClamp, pIn.tex).xyz, 1.0f);

@@ -14,7 +14,6 @@
 #include <cmath>
 #include "platform/culling.h"
 #include "utils/renderable.h"
-#include "platform/shader_variable_manager.h"
 #include <platform/scene.h>
 #include <interfaces/irenderer.h>
 
@@ -411,8 +410,8 @@ namespace lambda
 					scene.renderer->setTexture(renderable->normal_texture, 1);
 					scene.renderer->setTexture(renderable->dmra_texture, 2);
 
-					scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("metallic_roughness"), glm::vec2(renderable->metallicness, renderable->roughness)));
-					scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("model_matrix"), renderable->model_matrix));
+					//scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("metallic_roughness"), glm::vec2(renderable->metallicness, renderable->roughness)));
+					//scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("model_matrix"), renderable->model_matrix));
 
 					auto sub_mesh = renderable->mesh->getSubMeshes().at(renderable->sub_mesh);
 					// TODO (Hilze): Implement.
@@ -435,12 +434,12 @@ namespace lambda
 				for (const utilities::Renderable* renderable : alpha)
 				{
 					scene.renderer->setMesh(renderable->mesh);
-					scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("metallic_roughness"), glm::vec2(renderable->metallicness, renderable->roughness)));
+					//scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("metallic_roughness"), glm::vec2(renderable->metallicness, renderable->roughness)));
 					scene.renderer->setSubMesh(renderable->sub_mesh);
 					scene.renderer->setTexture(renderable->albedo_texture, 0);
 					scene.renderer->setTexture(renderable->normal_texture, 1);
 					scene.renderer->setTexture(renderable->dmra_texture, 2);
-					scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("model_matrix"), renderable->model_matrix));
+					//scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("model_matrix"), renderable->model_matrix));
 
 					auto sub_mesh = renderable->mesh->getSubMeshes().at(renderable->sub_mesh);
 					// TODO (Hilze): Implement.

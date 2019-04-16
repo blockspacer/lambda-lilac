@@ -110,30 +110,8 @@ namespace lambda
 					switch (resource.type)
 					{
 					case VioletShaderResourceType::kConstantBuffer:
-					{
-						Vector<platform::BufferVariable> variables;
-						foundation::SharedPtr<void> data = foundation::Memory::makeShared(foundation::Memory::allocate(resource.size));
-						memset(data.get(), 0, resource.size);
-
-						for (const auto& item : resource.items)
-						{
-							platform::BufferVariable variable;
-							variable.name  = item.name;
-							variable.count = 0;
-							variable.size  = item.size;
-							variable.data  = (char*)data.get() + item.offset;
-							variables.push_back(variable);
-						}
-
-						D3D11Buffer buffer;
-						buffer.buffer        = (D3D11RenderBuffer*)context->allocRenderBuffer(resource.size, platform::IRenderBuffer::kFlagConstant);
-						buffer.slot          = resource.slot;
-						buffer.shader_buffer = platform::ShaderBuffer(Name(resource.name), variables, data);
-						buffer.stage         = resource.stage;
-
-						buffers_.push_back(buffer);
+						buffers_.push_back(resource);
 						break;
-					}
 					case VioletShaderResourceType::kSampler:
 						samplers_.push_back(resource);
 						break; 
@@ -152,11 +130,6 @@ namespace lambda
 	  if (vs_) vs_->Release(), vs_ = nullptr;
 	  if (gs_) gs_->Release(), gs_ = nullptr;
 	  if (il_) il_->Release(), il_ = nullptr;
-
-	  for (auto& buffer : buffers_)
-		  context_->freeRenderBuffer((platform::IRenderBuffer*&)buffer.buffer);
-
-      buffers_.resize(0u);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -167,66 +140,7 @@ namespace lambda
       context_->getD3D11Context()->GSSetShader(gs_, nullptr, 0);
       context_->getD3D11Context()->IASetInputLayout(il_);
     }
-
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Shader::unbind()
-    {
-      for (auto& buffer : buffers_)
-        buffer.bound = false;
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Shader::bindBuffers()
-    {
-      for (auto& buffer : buffers_)
-      {
-        if (buffer.shader_buffer.getChanged() == true)
-        {
-          buffer.shader_buffer.setChanged(false);
-          context_->getD3D11Context()->UpdateSubresource(
-			  buffer.buffer->getBuffer(),
-            0u, 
-            NULL, 
-            buffer.shader_buffer.getData(),
-            0u, 
-            0u
-          );
-		  buffer.bound = false;
-        }
-
-        if (!buffer.bound)
-        {
-          buffer.bound = true;
-          ID3D11Buffer* buf = (ID3D11Buffer*)buffer.buffer->getBuffer();
-          
-		  switch (buffer.stage)
-		  {
-		  case ShaderStages::kVertex:
-			  context_->getD3D11Context()->VSSetConstantBuffers(
-				  (UINT)buffer.slot,
-				  1u,
-				  &buf
-			  );
-			  break;
-		  case ShaderStages::kPixel:
-			  context_->getD3D11Context()->PSSetConstantBuffers(
-				  (UINT)buffer.slot,
-				  1u,
-				  &buf
-			  );
-			  break;
-		  case ShaderStages::kGeometry:
-			  context_->getD3D11Context()->GSSetConstantBuffers(
-				  (UINT)buffer.slot,
-				  1u,
-				  &buf
-			  );
-			  break;
-		  }
-        }
-      }
-    }
-    
+	
     ///////////////////////////////////////////////////////////////////////////
 		Vector<uint32_t> D3D11Shader::getStages() const
     {
@@ -234,27 +148,7 @@ namespace lambda
     }
     
     ///////////////////////////////////////////////////////////////////////////
-    void D3D11Shader::updateShaderVariable(
-      const platform::ShaderVariable& variable)
-    {
-      for (size_t i = 0u; i < buffers_.size(); ++i)
-      {
-        auto& buffer = buffers_.at(i);
-
-        for (auto& v : buffer.shader_buffer.getVariables())
-        {
-          if (variable.name == v.name)
-          {
-            memcpy(v.data, variable.data.data(), v.size);
-            buffer.shader_buffer.setChanged(true);
-            continue;
-          }
-        }
-      }
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    Vector<D3D11Buffer>& D3D11Shader::getBuffers()
+	const Vector<VioletShaderResource>& D3D11Shader::getBuffers()
     {
       return buffers_;
     }

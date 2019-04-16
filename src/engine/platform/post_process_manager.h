@@ -13,8 +13,8 @@ namespace lambda
     class PostProcessManager
     {
     public:
-			void operator=(const PostProcessManager& other);
-			void addTarget(const RenderTarget& target);
+      void operator=(const PostProcessManager& other);
+	  void addTarget(const RenderTarget& target);
       void removeTarget(const RenderTarget& target);
       const RenderTarget& getTarget(const Name& name) const;
       RenderTarget& getTarget(const Name& name);

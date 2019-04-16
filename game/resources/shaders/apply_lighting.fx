@@ -24,11 +24,11 @@ Make_Texture2D(tex_prefiltered, 6);
 Make_Texture2D(tex_brdfLUT, 7);
 Make_Texture2D(tex_SSAO, 8);
 
-Make_CBuffer(AmbientValues, 0)
-{
-  float ambient_intensity;
-  float3 camera_position;
-}
+// Make_CBuffer(cbUser, cbUserIdx)
+// {
+//   float ambient_intensity;
+// }
+static const float ambient_intensity = 1.0f;
 
 ///////////////////////////////////////////////////////////////////////////
 // Vertex /////////////////////////////////////////////////////////////////

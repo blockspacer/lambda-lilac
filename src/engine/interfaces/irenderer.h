@@ -6,6 +6,14 @@
 #include <glm/glm.hpp>
 #include <memory/memory.h>
 
+#define cbUserIdx 0
+#define cbPerFrameIdx 1
+#define cbPerCameraIdx 2
+#define cbPerMeshIdx 3
+#define cbPerTextureIdx 4
+#define cbPerLightIdx 5
+#define cbDynamicResolutionIdx 6
+
 namespace lambda
 {
 	namespace scene
@@ -24,6 +32,7 @@ namespace lambda
 			static constexpr uint32_t kFlagVertex = 1u << 4u;
 			static constexpr uint32_t kFlagIndex = 1u << 5u;
 			static constexpr uint32_t kFlagConstant = 1u << 6u;
+			static constexpr uint32_t kFlagTransient = 1u << 7u;
 
 			virtual void*    lock() = 0;
 			virtual void     unlock() = 0;
@@ -60,6 +69,9 @@ namespace lambda
 		class IRenderer
 		{
 		public:
+			virtual platform::IRenderBuffer* allocRenderBuffer(uint32_t size, uint32_t flags, void* data = nullptr) = 0;
+			virtual void freeRenderBuffer(platform::IRenderBuffer*& buffer) = 0;
+
 			virtual ~IRenderer() = default;
 			virtual void setWindow(platform::IWindow* window) = 0;
 			virtual void setOverrideScene(scene::Scene* scene) = 0;
@@ -106,6 +118,10 @@ namespace lambda
 			virtual void setShader(asset::VioletShaderHandle shader) = 0;
 			virtual void setTexture(
 				asset::VioletTextureHandle texture,
+				uint8_t slot = 0
+			) = 0;
+			virtual void setConstantBuffer(
+				IRenderBuffer* constant_buffer,
 				uint8_t slot = 0
 			) = 0;
 			virtual void setRenderTargets(

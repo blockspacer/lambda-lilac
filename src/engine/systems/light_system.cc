@@ -11,7 +11,6 @@
 #include "platform/depth_stencil_state.h"
 #include "platform/sampler_state.h"
 #include <glm/gtc/matrix_transform.hpp>
-#include "platform/shader_variable.h"
 #include "platform/debug_renderer.h"
 #include <algorithm>
 #include "interfaces/irenderer.h"
@@ -113,7 +112,7 @@ namespace lambda
 		}
 		void initialize(scene::Scene& scene)
 			{
-			scene.post_process_manager.addTarget(platform::RenderTarget(Name("light_map"),
+			scene.post_process_manager->addTarget(platform::RenderTarget(Name("light_map"),
 					1.0f, TextureFormat::kR16G16B16A16
 				));
 
@@ -155,7 +154,7 @@ namespace lambda
 				// Prepare the light buffer.
 				scene.renderer->pushMarker("Clear Light Buffer");
 				scene.renderer->clearRenderTarget(
-					scene.post_process_manager.getTarget(Name("light_map")).getTexture(),
+					scene.post_process_manager->getTarget(Name("light_map")).getTexture(),
 					glm::vec4(0.0f)
 				);
 				scene.renderer->popMarker();
@@ -365,51 +364,55 @@ namespace lambda
 			{
 				return scene.light.get(entity).type;
 			}
-		void createShadowMaps(const entity::Entity& entity, scene::Scene& scene)
-		{
-			Data& data = scene.light.get(entity);
+			void createShadowMaps(const entity::Entity& entity, scene::Scene& scene)
+			{
+				Data& data = scene.light.get(entity);
 
-			uint32_t size   = 1u; // TODO (Hilze): Do RSM stuff here.
-			uint32_t layers = (data.type == LightType::kPoint) ? 6u : 1u;
+				uint32_t size = 1u; // TODO (Hilze): Do RSM stuff here.
+				uint32_t layers = (data.type == LightType::kPoint) ? 6u : 1u;
 
-			data.depth_target.resize(size * layers);
-			data.render_target.resize(size * layers);
+				data.depth_target.resize(size * layers);
+				data.render_target.resize(size * layers);
+				data.depth_target_texture.resize(size * layers);
+				data.render_target_texture.resize(size * layers);
 				data.culler.resize(size * layers);
 				data.view_position.resize(size * layers, glm::vec3(0.0f));
-			data.projection.resize(size * layers, glm::mat4x4(1.0f));
-			data.view.resize(size * layers, glm::mat4x4(1.0f));
-			data.depth.resize(size * layers, data.depth.back());
+				data.projection.resize(size * layers, glm::mat4x4(1.0f));
+				data.view.resize(size * layers, glm::mat4x4(1.0f));
+				data.depth.resize(size * layers, data.depth.back());
 
-			for (uint32_t i = 0u; i < size; ++i)
-			{
-			static int kIdx = 0;
-  			Name depth_name = Name("shadow_map_depth_" + toString(kIdx));
-			Name color_name = Name("shadow_map_color_" + toString(kIdx++));
-			data.render_target.at(i) = platform::RenderTarget(color_name,
-						asset::TextureManager::getInstance()->create(
-							color_name,
-							data.shadow_map_size_px,
-							data.shadow_map_size_px,
-							layers,
-							TextureFormat::kR32G32,
-							kTextureFlagIsRenderTarget
-						)
+				for (uint32_t i = 0u; i < size; ++i)
+				{
+					static int kIdx = 0;
+					Name depth_name = Name("shadow_map_depth_" + toString(kIdx));
+					Name color_name = Name("shadow_map_color_" + toString(kIdx++));
+
+					// Create the textures.
+					data.render_target_texture[i] = asset::TextureManager::getInstance()->create(
+						color_name,
+						data.shadow_map_size_px,
+						data.shadow_map_size_px,
+						layers,
+						TextureFormat::kR32G32,
+						kTextureFlagIsRenderTarget
 					);
-				data.render_target.at(i).getTexture()->setKeepInMemory(true);
-				scene.renderer->clearRenderTarget(data.render_target.at(i).getTexture(), glm::vec4(FLT_MAX));
-				data.depth_target.at(i) = platform::RenderTarget(depth_name,
-				asset::TextureManager::getInstance()->create(
-					depth_name,
-					data.shadow_map_size_px,
-					data.shadow_map_size_px,
-					layers,
-							TextureFormat::kD32,
-							kTextureFlagIsRenderTarget
-						)
+					data.render_target_texture[i]->setKeepInMemory(true);
+					data.depth_target_texture[i] = asset::TextureManager::getInstance()->create(
+						depth_name,
+						data.shadow_map_size_px,
+						data.shadow_map_size_px,
+						layers,
+						TextureFormat::kD32,
+						kTextureFlagIsRenderTarget
 					);
+					// Creat the render targets.
+					data.render_target[i] = platform::RenderTarget(color_name, data.render_target_texture[i]);
+					data.depth_target[i]  = platform::RenderTarget(depth_name, data.depth_target_texture[i]);
+
+					// Clear the render target.
+					scene.renderer->clearRenderTarget(data.render_target_texture[i], glm::vec4(FLT_MAX));
 				}
 			}
-#pragma optimize ("", off)
 			void renderDirectional(const entity::Entity& entity, scene::Scene& scene)
 			{
 				Data& data = scene.light.get(entity);
@@ -456,12 +459,12 @@ namespace lambda
 					data.projection.back() = glm::orthoRH(-smh_size, smh_size, -smh_size, smh_size, -light_depth * 0.5f, light_depth * 0.5f);
 				}
 
-				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_view_projection_matrix"), data.projection.back() * data.view.back()));
+				/*scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_view_projection_matrix"), data.projection.back() * data.view.back()));
 				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_camera_position"), data.view_position.back()));
 				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_direction"), -forward));
 				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_colour"), data.colour * data.intensity));
 				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_ambient"), data.ambient));
-				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_far"), data.depth.back()));
+				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_far"), data.depth.back()));*/
 
 			String shadow_type = data.shadow_type == ShadowType::kNone ? "|NO_" : ("|" + scene.light.shader_shadow_type + "_");
 			String shader_type = shadow_type + "DIRECTIONAL";
@@ -551,9 +554,9 @@ namespace lambda
 				Vector<platform::RenderTarget> input = {
 					shadow_maps.at(0u),
 					platform::RenderTarget(Name("texture"), data.texture),
-					scene.post_process_manager.getTarget(Name("position")),
-					scene.post_process_manager.getTarget(Name("normal")),
-					scene.post_process_manager.getTarget(Name("metallic_roughness"))
+					scene.post_process_manager->getTarget(Name("position")),
+					scene.post_process_manager->getTarget(Name("normal")),
+					scene.post_process_manager->getTarget(Name("metallic_roughness"))
 				};
 				if (shadow_maps.size() > 1u)
 				input.insert(input.end(), shadow_maps.begin() + 1u, shadow_maps.end());
@@ -562,7 +565,7 @@ namespace lambda
 						Name("shadow_publish"),
 					asset::ShaderManager::getInstance()->get(scene.light.shader_publish + shader_type),
 						input, {
-							scene.post_process_manager.getTarget(Name("light_map"))
+							scene.post_process_manager->getTarget(Name("light_map"))
 						}
 					)
 				);
@@ -624,17 +627,17 @@ namespace lambda
 					data.projection.back()    = glm::perspectiveRH(data.outer_cut_off.asRad(), 1.0f, 0.001f, data.depth.back());
 				}
 
-				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_view_projection_matrix"), data.projection.back() * data.view.back()));
-				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_camera_position"), data.view_position.back()));
-				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_direction"), forward));
-				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_colour"), data.colour * data.intensity));
-				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_ambient"), data.ambient));
-				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_far"), data.depth.back()));
-				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_position"), transform.getWorldTranslation()));
+				//scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_view_projection_matrix"), data.projection.back() * data.view.back()));
+				//scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_camera_position"), data.view_position.back()));
+				//scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_direction"), forward));
+				//scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_colour"), data.colour * data.intensity));
+				//scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_ambient"), data.ambient));
+				//scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_far"), data.depth.back()));
+				//scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_position"), transform.getWorldTranslation()));
 
-				// Required by: spot.
-				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_cut_off"), data.cut_off.asRad()));
-				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_outer_cut_off"), data.outer_cut_off.asRad()));
+				//// Required by: spot.
+				//scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_cut_off"), data.cut_off.asRad()));
+				//scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_outer_cut_off"), data.outer_cut_off.asRad()));
 
 			String shadow_type = data.shadow_type == ShadowType::kNone ? "|NO_" : ("|" + scene.light.shader_shadow_type + "_");
 			String shader_type = shadow_type + "SPOT";
@@ -724,9 +727,9 @@ namespace lambda
 				Vector<platform::RenderTarget> input = {
 					shadow_maps.at(0u),
 					platform::RenderTarget(Name("texture"), data.texture),
-					scene.post_process_manager.getTarget(Name("position")),
-					scene.post_process_manager.getTarget(Name("normal")),
-					scene.post_process_manager.getTarget(Name("metallic_roughness"))
+					scene.post_process_manager->getTarget(Name("position")),
+					scene.post_process_manager->getTarget(Name("normal")),
+					scene.post_process_manager->getTarget(Name("metallic_roughness"))
 				};
 				if (shadow_maps.size() > 1u) input.insert(input.end(), shadow_maps.begin() + 1u, shadow_maps.end());
 				scene.renderer->bindShaderPass(
@@ -734,7 +737,7 @@ namespace lambda
 						Name("shadow_publish"),
 						asset::ShaderManager::getInstance()->get(scene.light.shader_publish + shader_type),
 						input, {
-							scene.post_process_manager.getTarget(Name("light_map"))
+							scene.post_process_manager->getTarget(Name("light_map"))
 						}
 						)
 				);
@@ -805,8 +808,8 @@ namespace lambda
 				}
 
 				glm::vec3 pos = data.view_position.back();
-				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_camera_position"), pos));
-				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_far"),        data.depth.back()));
+				/*scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_camera_position"), pos));
+				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_far"),        data.depth.back()));*/
 	  
 				String shadow_type = data.shadow_type == ShadowType::kNone ? "|NO_" : ("|" + scene.light.shader_shadow_type + "_");
 					String shader_type = shadow_type + "POINT";
@@ -829,7 +832,7 @@ namespace lambda
 					{
 						scene.renderer->pushMarker("Render Face " + toString(i));
 
-						scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_view_projection_matrix"), data.projection[i] * data.view[i]));
+						//scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_view_projection_matrix"), data.projection[i] * data.view[i]));
           
 						// Render to the shadow map.
 						shadow_map.setLayer(i);
@@ -919,21 +922,21 @@ namespace lambda
 					{
 						shadow_map,
 						platform::RenderTarget(Name("texture"), data.texture),
-						scene.post_process_manager.getTarget(Name("position")),
-						scene.post_process_manager.getTarget(Name("normal")),
-						scene.post_process_manager.getTarget(Name("metallic_roughness"))
+						scene.post_process_manager->getTarget(Name("position")),
+						scene.post_process_manager->getTarget(Name("normal")),
+						scene.post_process_manager->getTarget(Name("metallic_roughness"))
 					}, {
-						scene.post_process_manager.getTarget(Name("light_map"))
+						scene.post_process_manager->getTarget(Name("light_map"))
 					}
 					)
 				);
 
 				// Required by: dir, point and spot.
-				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_direction"),  glm::vec3(0.0f)));
+				/*scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_direction"),  glm::vec3(0.0f)));
 				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_colour"),     data.colour * data.intensity));
 				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_ambient"),    data.ambient));
 				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_far"),        data.depth.back()));
-				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_position"),   transform.getWorldTranslation()));
+				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_position"),   transform.getWorldTranslation()));*/
           
 				scene.renderer->setBlendState(platform::BlendState(
 					false,                                /*alpha_to_coverage*/
@@ -1021,7 +1024,7 @@ namespace lambda
 						float radius = glm::length(corners.at(0u) - corners.at(6u)) * 0.25f;
 
 						// Remove shimmering
-						float texels_per_unit = (float)data.render_target.at(i).getTexture()->getLayer(0u).getWidth() / (radius * 2.0f);
+						float texels_per_unit = (float)data.render_target[i].getTexture()->getLayer(0u).getWidth() / (radius * 2.0f);
 						glm::vec3 scalar(texels_per_unit);
 
 						glm::mat4x4 look_at = glm::lookAtRH(glm::vec3(0.0f), -forward, glm::vec3(0.0f, 1.0f, 0.0f));
@@ -1034,16 +1037,16 @@ namespace lambda
 						center = glm::vec3(glm::vec4(center, 1.0f) * look_at_inv);
 
 						// Construct a frustum out of the min and max.
-						data.view_position.at(i) = center;
-						data.view.at(i)          = glm::lookAtRH(data.view_position.at(i), data.view_position.at(i) + forward, glm::vec3(0.0f, 1.0f, 0.0f));
-						data.projection.at(i)    = glm::orthoRH(-radius, radius, -radius, radius, -100.0f, 100.0f);
-						data.depth.at(i)         = 200.0f;
+						data.view_position[i] = center;
+						data.view[i]          = glm::lookAtRH(data.view_position[i], data.view_position[i] + forward, glm::vec3(0.0f, 1.0f, 0.0f));
+						data.projection[i]    = glm::orthoRH(-radius, radius, -radius, radius, -100.0f, 100.0f);
+						data.depth[i]         = 200.0f;
 
-						scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_view_projection_matrix"), data.projection.at(i) * data.view.at(i)));
+						//scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_view_projection_matrix"), data.projection[i] * data.view[i]));
 
 						// Clear the shadow map.
-						scene.renderer->clearRenderTarget(data.render_target.at(i).getTexture(), glm::vec4(0.0f));
-						scene.renderer->clearRenderTarget(data.depth_target.at(i).getTexture(), glm::vec4(1.0f));
+						scene.renderer->clearRenderTarget(data.render_target[i].getTexture(), glm::vec4(0.0f));
+						scene.renderer->clearRenderTarget(data.depth_target[i].getTexture(), glm::vec4(1.0f));
 
 						// Render to the shadow map.
 						scene.renderer->bindShaderPass(
@@ -1051,25 +1054,25 @@ namespace lambda
 								Name("shadow_generate"),
 								asset::ShaderManager::getInstance()->get(scene.light.shader_generate + shader_type),
 								{},
-								{ data.render_target.at(i), data.depth_target.at(i) }
+								{ data.render_target[i], data.depth_target[i] }
 							)
 						);
 
 						// Handle frustum culling.
 						if (data.shadow_type == ShadowType::kDynamic)
 						{
-							data.culler.at(i).setCullFrequency(std::max(1u, 10u / data.dynamic_frequency));
+							data.culler[i].setCullFrequency(std::max(1u, 10u / data.dynamic_frequency));
 						}
 						else
 						{
-							data.culler.at(i).setCullFrequency(1u);
+							data.culler[i].setCullFrequency(1u);
 						}
 
 						utilities::Frustum frustum;
-						frustum.construct(data.projection.at(i), data.view.at(i));
+						frustum.construct(data.projection[i], data.view[i]);
 
 						// Render to the shadow map.
-				MeshRenderSystem::renderAll(data.culler.at(i), frustum, scene);
+				MeshRenderSystem::renderAll(data.culler[i], frustum, scene);
 
 						// Set up the post processing passes.
 						scene.renderer->setMesh(scene.light.full_screen_mesh);
@@ -1083,8 +1086,8 @@ namespace lambda
 								platform::ShaderPass(
 									Name("shadow_modify"),
 									asset::ShaderManager::getInstance()->get(scene.light.shader_modify + shadow_type + "HORIZONTAL"),
-									{ data.render_target.at(i) },
-									{ data.render_target.at(i) }
+									{ data.render_target[i] },
+									{ data.render_target[i] }
 								)
 							);
 							scene.renderer->draw();
@@ -1092,8 +1095,8 @@ namespace lambda
 								platform::ShaderPass(
 									Name("shadow_modify"),
 									asset::ShaderManager::getInstance()->get(scene.light.shader_modify + shadow_type + "VERTICAL"),
-									{ data.render_target.at(i) },
-									{ data.render_target.at(i) }
+									{ data.render_target[i] },
+									{ data.render_target[i] }
 								)
 							);
 							scene.renderer->draw();
@@ -1117,16 +1120,16 @@ namespace lambda
 							data.render_target.at(1u),
 							data.render_target.at(2u),
 							platform::RenderTarget(Name("texture"), data.texture),
-							scene.post_process_manager.getTarget(Name("position")),
-							scene.post_process_manager.getTarget(Name("normal")),
-							scene.post_process_manager.getTarget(Name("metallic_roughness"))
+							scene.post_process_manager->getTarget(Name("position")),
+							scene.post_process_manager->getTarget(Name("normal")),
+							scene.post_process_manager->getTarget(Name("metallic_roughness"))
 						}, {
-							scene.post_process_manager.getTarget(Name("light_map"))
+							scene.post_process_manager->getTarget(Name("light_map"))
 						}
 					)
 				);
 
-				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_view_projection_matrix_01"), data.projection.at(0u) * data.view.at(0u)));
+				/*scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_view_projection_matrix_01"), data.projection.at(0u) * data.view.at(0u)));
 				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_view_projection_matrix_02"), data.projection.at(1u) * data.view.at(1u)));
 				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_view_projection_matrix_03"), data.projection.at(2u) * data.view.at(2u)));
 				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_camera_position_01"),        data.view_position.at(0u)));
@@ -1138,7 +1141,7 @@ namespace lambda
 
 				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_direction"), -forward));
 				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_colour"),     data.colour * data.intensity));
-				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_ambient"),    data.ambient));
+				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_ambient"),    data.ambient));*/
          
 				scene.renderer->setBlendState(platform::BlendState(
 					false,                                /*alpha_to_coverage*/
@@ -1237,6 +1240,8 @@ namespace lambda
 				view = other.view;
 				view_position = other.view_position;
 				valid = other.valid;
+				render_target_texture = other.render_target_texture;
+				depth_target_texture = other.depth_target_texture;
 			}
 			Data & Data::operator=(const Data & other)
 			{
@@ -1262,6 +1267,8 @@ namespace lambda
 				view = other.view;
 				view_position = other.view_position;
 				valid = other.valid;
+				render_target_texture = other.render_target_texture;
+				depth_target_texture = other.depth_target_texture;
 
 				return *this;
 			}

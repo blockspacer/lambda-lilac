@@ -6,18 +6,19 @@
 #define Lilac_CBuffer_Offset 0
 #define Lilac_Texture_Offset 100
 #define Lilac_SamplerState_Offset 200
-#define Make_CBuffer(name, slot) [[vk::binding(slot + Lilac_CBuffer_Offset)]] cbuffer name : register(b##slot)
+#define Make_CBuffer_Internal(name, slot) [[vk::binding(slot + Lilac_CBuffer_Offset)]] cbuffer name : register(b##slot)
 #define Make_Texture2D(name, slot) [[vk::binding(slot + Lilac_Texture_Offset)]] Texture2D name : register(t##slot)
 #define Make_Texture2DArray(name, slot) [[vk::binding(slot + Lilac_Texture_Offset)]] Texture2DArray name : register(t##slot)
 #define Make_TextureCube(name, slot) [[vk::binding(slot + Lilac_Texture_Offset)]] TextureCube name : register(t##slot)
 #define Make_SamplerState(name, slot) [[vk::binding(slot + Lilac_SamplerState_Offset)]] SamplerState name : register(s##slot)
 #else
-#define Make_CBuffer(name, slot) cbuffer name : register(b##slot)
+#define Make_CBuffer_Internal(name, slot) cbuffer name : register(b##slot)
 #define Make_Texture2D(name, slot) Texture2D name : register(t##slot)
 #define Make_Texture2DArray(name, slot) Texture2DArray name : register(t##slot)
 #define Make_TextureCube(name, slot) TextureCube name : register(t##slot)
 #define Make_SamplerState(name, slot) SamplerState name : register(s##slot)
 #endif
+#define Make_CBuffer(name, slot) Make_CBuffer_Internal(name, slot)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 static const float PI  = 3.14159265359f;
@@ -34,12 +35,63 @@ Make_SamplerState(SamPointWarp, 12);
 Make_SamplerState(SamLinearWarp, 13);
 Make_SamplerState(SamAnisotrophicWarp, 14);
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-Make_CBuffer(cbDynamicResolution, 10)
+#define cbUserIdx 0
+#define cbPerFrameIdx 1
+#define cbPerCameraIdx 2
+#define cbPerMeshIdx 3
+#define cbPerTextureIdx 4
+#define cbPerLightIdx 5
+#define cbDynamicResolutionIdx 6
+
+Make_CBuffer(cbPerFrame, cbPerFrameIdx)
 {
-  float dynamic_resolution_scale = 0.5f;
+  float2 screen_size;
+  float delta_time;
+  float total_time;
 };
 
+Make_CBuffer(cbPerCamera, cbPerCameraIdx)
+{
+  float4x4 view_matrix;
+  float4x4 projection_matrix;
+  float4x4 view_projection_matrix;
+  float4x4 inverse_view_matrix;
+  float4x4 inverse_projection_matrix;
+  float4x4 inverse_view_projection_matrix;
+  float3   camera_position;
+  float    camera_far;
+  float    camera_near;
+};
+
+Make_CBuffer(cbPerMesh, cbPerMeshIdx)
+{
+  float4x4 model_matrix;
+  float2 metallic_roughness;
+};
+
+Make_CBuffer(cbPerTexture, cbPerTextureIdx)
+{
+  float2 inv_texture_size;
+};
+
+Make_CBuffer(cbPerLight, cbPerLightIdx)
+{
+  float4x4 light_view_projection_matrix;
+  float3 light_position;
+  float  light_near;
+  float3 light_direction;
+  float  light_far;
+  float3 light_colour;
+  float  light_cut_off;
+  float  light_outer_cut_off;
+};
+
+Make_CBuffer(cbDynamicResolution, cbDynamicResolutionIdx)
+{
+  float dynamic_resolution_scale;
+};
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 float4 Sample(Texture2D t, SamplerState s, float2 tex)
 {
   return t.Sample(s, tex * dynamic_resolution_scale);

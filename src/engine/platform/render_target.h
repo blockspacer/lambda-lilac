@@ -25,6 +25,8 @@ namespace lambda
         asset::VioletTextureHandle texture, 
         const bool& from_texture
       );
+	  ~RenderTarget() {};
+	  void operator=(const RenderTarget& other);
 
     private:
       void resize(const glm::uvec2& size);
@@ -42,7 +44,7 @@ namespace lambda
 
     private:
       float render_scale_;
-      asset::VioletTextureHandle texture_;
+	  asset::VioletTextureHandle texture_;
       Name name_;
 	  int mip_map_;
 	  int layer_;

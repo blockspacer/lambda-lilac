@@ -10,7 +10,6 @@
 #include "input/input_manager.h"
 #include "interfaces/iscript_context.h"
 #include "iimgui.h"
-#include "platform/shader_variable_manager.h"
 #include "platform/debug_renderer.h"
 #include "platform/post_process_manager.h"
 #include "utils/profiler.h"
@@ -68,7 +67,8 @@ namespace lambda
       io::Input<io::Keyboard::State> keyboard_;
       io::ControllerManager controller_manager_;
       io::InputManager input_manager_;
-      scripting::IScriptContext* scripting_;
+	  platform::PostProcessManager post_process_manager_;
+	  scripting::IScriptContext* scripting_;
       foundation::SharedPointer<platform::IImGUI> imgui_;
 			gui::GUI gui_;
 			utilities::Profiler profiler_;

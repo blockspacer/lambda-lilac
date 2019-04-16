@@ -205,7 +205,7 @@ namespace lambda
 			texture.mip_count = 1u;
 			texture_->addLayer(asset::TextureLayer(texture));
 
-			scene_->post_process_manager.addTarget(
+			scene_->post_process_manager->addTarget(
 				platform::RenderTarget(Name("gui"), texture_)
 			);
 		}
@@ -242,15 +242,16 @@ namespace lambda
 				return;
 			}
 
-			/*switch_ += delta_time;
+			switch_ += delta_time;
 			if (switch_ < switch_time_)
 			{
 				k_mutex.unlock();
 				return;
 			}
-			switch_ -= switch_time_;*/
+			switch_ -= switch_time_;
 
 			renderer_->Update();
+			JSGarbageCollect(view_->js_context());
 			k_mutex.unlock();
 		}
 
@@ -351,8 +352,9 @@ namespace lambda
 			JSStringRef str = JSStringCreateWithUTF8CString(js.c_str());
 
 			JSValueRef exception = JSValueMakeNull(js_context);
-			auto res = JSEvaluateScript(js_context, str, 0, 0, 0, &exception);
+			JSEvaluateScript(js_context, str, 0, 0, 0, &exception);
 			handleException(exception, js_context);
+			JSStringRelease(str);
 			k_mutex.unlock();
 		}
 

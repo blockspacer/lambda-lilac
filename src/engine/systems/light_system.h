@@ -100,6 +100,8 @@ namespace lambda
 
 				// Shadow maps.
 				uint32_t shadow_map_size_px = 1024u;
+				Vector<asset::VioletTextureHandle> render_target_texture;
+				Vector<asset::VioletTextureHandle> depth_target_texture;
 				Vector<platform::RenderTarget> render_target;
 				Vector<platform::RenderTarget> depth_target;
 			};

@@ -3,7 +3,6 @@
 #include "platform/post_process_manager.h"
 #include "d3d11_state_manager.h"
 #include "platform/debug_renderer.h"
-#include "platform/shader_variable_manager.h"
 #include <renderers/d3d11/d3d11_context.h>
 
 #define FLUSH_METHOD 0

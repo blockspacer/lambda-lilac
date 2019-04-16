@@ -1,6 +1,7 @@
 #pragma once
 #include "utils/name.h"
 #include <utils/console.h>
+#include <mutex>
 
 namespace lambda
 {
@@ -17,19 +18,28 @@ namespace lambda
 		public:
 			static void incRef(const size_t& hash)
 			{
+				g_mutex.lock();
 				LMB_ASSERT(g_valid, "AssetHandle not valid anymore");
 
 				if (hash == 0u)
+				{
+					g_mutex.unlock();
 					return;
+				}
 
 				g_refs[hash]++;
+				g_mutex.unlock();
 			}
 			static bool decRef(const size_t& hash)
 			{
+				g_mutex.lock();
 				LMB_ASSERT(g_valid, "AssetHandle not valid anymore");
 
 				if (hash == 0u)
+				{
+					g_mutex.unlock();
 					return true;
+				}
 
 				const int ref = --g_refs[hash];
 
@@ -38,22 +48,28 @@ namespace lambda
 					g_refs.erase(hash);
 					g_names.erase(hash);
 				}
+				g_mutex.unlock();
 
 				return ref > 0;
 			}
 			static Name& getName(const size_t& hash)
 			{
+				g_mutex.lock();
 				LMB_ASSERT(g_valid, "AssetHandle not valid anymore");
-				return g_names[hash];
+				Name& name = g_names[hash];
+				g_mutex.unlock();
+				return name;
 			}
 			static void releaseAll()
 			{
+				g_mutex.lock();
 				g_refs  = UnorderedMap<size_t, int>();
 				g_names = UnorderedMap<size_t, Name>();
 				g_valid = false;
 			}
 
 		private:
+			static std::mutex g_mutex;
 			static UnorderedMap<size_t, int> g_refs;
 			static UnorderedMap<size_t, Name> g_names;
 			static bool g_valid;
@@ -66,6 +82,8 @@ namespace lambda
 		UnorderedMap<size_t, Name> VioletRefHandler<T>::g_names;
 		template<typename T>
 		bool VioletRefHandler<T>::g_valid = true;
+		template<typename T>
+		std::mutex VioletRefHandler<T>::g_mutex;
 
 
 		template<typename T>

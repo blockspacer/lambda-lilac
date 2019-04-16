@@ -173,7 +173,7 @@ namespace lambda
 					view
 				);
 
-				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("view_matrix"), view));
+				/*scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("view_matrix"), view));
 				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("inverse_view_matrix"), glm::inverse(view)));
 
 				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("projection_matrix"), projection));
@@ -184,7 +184,7 @@ namespace lambda
 				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("camera_position"), transform.getWorldTranslation()));
 
 				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("camera_near"), data.near_plane.asMeter()));
-				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("camera_far"), data.far_plane.asMeter()));
+				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("camera_far"), data.far_plane.asMeter()));*/
 			}
 			entity::Entity CameraSystem::getMainCamera(scene::Scene& scene)
 			{

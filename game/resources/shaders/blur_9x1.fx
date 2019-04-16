@@ -24,11 +24,6 @@ VSOutput VS(uint id : SV_VertexID)
   return vOut;
 }
 
-Make_CBuffer(cbPostProcess, 0)
-{
-  float2 inv_texture_size;
-};
-
 Make_Texture2D(tex_to_blur, 0);
 
 #ifndef BLUR_SCALE

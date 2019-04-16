@@ -19,6 +19,7 @@ struct ID3DUserDefinedAnnotation;
 #define GPU_TIMERS 0
 
 #define MAX_TEXTURE_COUNT 16u
+#define MAX_CONSTANT_BUFFER_COUNT 16u
 
 namespace lambda
 {
@@ -136,12 +137,12 @@ namespace lambda
 #define TO_MB(bytes) (std::round(bytes / 10000) / 100)
 
 		public:
-			platform::IRenderBuffer* allocRenderBuffer(
+			virtual platform::IRenderBuffer* allocRenderBuffer(
 				uint32_t size,
 				uint32_t flags,
 				void* data = nullptr
-			);
-			void freeRenderBuffer(platform::IRenderBuffer*& buffer);
+			) override;
+			virtual void freeRenderBuffer(platform::IRenderBuffer*& buffer) override;
 			platform::IRenderTexture* allocRenderTexture(
 				asset::VioletTextureHandle texture
 			);
@@ -207,6 +208,10 @@ namespace lambda
 			virtual void setTexture(
 				asset::VioletTextureHandle texture,
 				uint8_t slot
+			) override;
+			virtual void setConstantBuffer(
+				platform::IRenderBuffer* constant_buffer,
+				uint8_t slot = 0
 			) override;
 			virtual void setRenderTargets(
 				Vector<asset::VioletTextureHandle> render_targets,
@@ -277,8 +282,10 @@ namespace lambda
 			D3D11Default default_;
 
 			glm::vec2 screen_size_;
-			double delta_time_ = 0.0f;
-			double total_time_ = 0.0f;
+			float delta_time_ = 0.0f;
+			float total_time_ = 0.0f;
+			float dynamic_resolution_scale_ = 1.0f;
+			Vector<D3D11RenderBuffer*> transient_render_buffers_;
 
 			struct State
 			{
@@ -294,6 +301,8 @@ namespace lambda
 				asset::VioletMeshHandle    mesh;
 				uint32_t                   sub_mesh;
 				asset::VioletShaderHandle  shader;
+				platform::IRenderBuffer*   constant_buffers[MAX_CONSTANT_BUFFER_COUNT];
+				uint16_t                   dirty_constant_buffers;
 			} state_;
 
 			struct DXState
@@ -305,6 +314,7 @@ namespace lambda
 				ID3D11ShaderResourceView* textures[MAX_TEXTURE_COUNT];
 				D3D11Shader*              shader;
 				D3D11Mesh*                mesh;
+				ID3D11Buffer*             constant_buffers[MAX_CONSTANT_BUFFER_COUNT];
 			} dx_state_;
 
 			enum class DirtyStates : uint32_t
@@ -315,6 +325,7 @@ namespace lambda
 				kTextures = 1ull << 4ull,
 				kMesh = 1ull << 5ull,
 				kShader = 1ull << 6ull,
+				kConstantBuffers = 1ull << 7ull,
 			};
 
 			uint32_t dirty_state_;
@@ -323,6 +334,13 @@ namespace lambda
 			void cleanDirty(DirtyStates state) { dirty_state_ &= ~((uint32_t)state); }
 			void invalidateAll() { dirty_state_ = ~0ul; }
 			void cleanAll() { dirty_state_ = 0ul; }
+
+			struct ConstantBuffers
+			{
+				D3D11RenderBuffer* per_frame   = nullptr;
+				D3D11RenderBuffer* per_texture = nullptr;
+				D3D11RenderBuffer* drs         = nullptr;
+			} cbs_;
 
 #if GPU_MARKERS
 			Microsoft::WRL::ComPtr<ID3DUserDefinedAnnotation>

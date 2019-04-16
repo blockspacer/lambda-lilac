@@ -1,10 +1,5 @@
 #include "common.fxh"
 
-cbuffer buffer0 : register(b0)
-{
-	float4x4 projection_matrix;
-};
-
 Make_Texture2D(tex, 0);
 Make_SamplerState(sam, 0);
 

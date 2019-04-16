@@ -1,17 +1,14 @@
 [STRENGTH1|STRENGTH2|STRENGTH3|STRENGTH4|STRENGTH5]
 #include "common.fxh"
 
-Make_CBuffer(cbPostProcess, 0)
-{
-  float4x4 view_matrix;
-  float4x4 projection_matrix;
-  float4x4 view_projection_matrix;
+// Make_CBuffer(cbUser, cbUserIdx)
+// {
+//   float bias          = 0.025f;
+//   float sample_radius = 0.0025f;
+// };
+static const float bias          = 0.025f;
+static const float sample_radius = 0.0025f;
 
-  float2 screen_size;
-
-  float bias          = 0.025f;
-  float sample_radius = 0.0025f;
-};
 
 #if TYPE == STRENGTH1 || TYPE == DEFAULT
 static const float kStrength = 1.0f;

@@ -1,12 +1,5 @@
 #include "common.fxh"
 
-Make_CBuffer(cbPerPass, 0)
-{
-  float4x4 view_matrix;
-  float3 camera_position;
-  float camera_far;
-};
-
 struct VSOutput
 {
   float4 position : SV_POSITION0;

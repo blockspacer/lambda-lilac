@@ -14,11 +14,9 @@ VSOutput VS(uint id: SV_VertexID)
   return vOut;
 }
 
-Make_CBuffer(CBUFFER, 0)
+Make_CBuffer(cbUser, cbUserIdx)
 {
-  float total_time;
   float water_height;
-  float3 camera_position;
 }
 
 Make_Texture2D(tex_albedo, 0);

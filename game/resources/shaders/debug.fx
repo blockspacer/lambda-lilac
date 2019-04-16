@@ -14,11 +14,6 @@ struct VSOutput
   float4 colour    : COLOUR;
 };
 
-Make_CBuffer(cbPerMesh, 0)
-{
-  float4x4 view_projection_matrix;
-}
-
 VSOutput VS(VSInput vIn)
 {
   VSOutput vOut;
@@ -33,12 +28,6 @@ struct PSOutput
 {
   float4 albedo   : SV_Target0;
 };
-
-Make_CBuffer(cbPerMesh, 1)
-{
-  float2 metallic_roughness;
-  float3 camera_position;
-}
 
 PSOutput PS(VSOutput pIn)
 {

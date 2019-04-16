@@ -19,8 +19,7 @@ namespace lambda
 			scene_.scripting = scripting;
 			scene_.renderer  = renderer;
 			scene_.gui       = &gui_;
-			scene_.shader_variable_manager.setVariable(platform::ShaderVariable(Name("dynamic_resolution_scale"), 1.0f));
-			scene_.shader_variable_manager.setVariable(platform::ShaderVariable(Name("ambient_intensity"), 1.0f));
+			scene_.post_process_manager = &post_process_manager_;
 
 			asset::TextureManager::setRenderer(scene_.renderer);
 			asset::ShaderManager::setRenderer(scene_.renderer);

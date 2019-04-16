@@ -2,7 +2,6 @@
 #include "assets/asset_handle.h"
 #include <containers/containers.h>
 #include <assets/shader_manager.h>
-#include <platform/shader_variable.h>
 
 namespace lambda
 {

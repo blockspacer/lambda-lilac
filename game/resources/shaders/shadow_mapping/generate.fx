@@ -38,21 +38,6 @@ struct VSOutput
   float2 tex       : TEX_COORD;
 };
 
-Make_CBuffer(cbPerMesh, 0)
-{
-  float4x4 model_matrix;
-  float4x4 light_view_projection_matrix;
-}
-
-Make_CBuffer(cbPostProcess, 1)
-{
-#if LIGHT_POINT || LIGHT_SPOT
-  float3 light_camera_position;
-#elif LIGHT_DIRECTIONAL
-  float light_far = 10.0f;
-#endif
-}
-
 VSOutput VS(VSInput vIn)
 {
   VSOutput vOut;
@@ -76,7 +61,7 @@ float4 PS(VSOutput pIn) : SV_Target0
 
 #if LIGHT_POINT || LIGHT_SPOT
   float3 position = pIn.hPosition.xyz;
-  float depth = length(position - light_camera_position);
+  float depth = length(position - camera_position);
 #elif LIGHT_DIRECTIONAL
   float depth = pIn.position.z * light_far;
 #else

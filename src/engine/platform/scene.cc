@@ -44,8 +44,25 @@ namespace lambda
 			components::MonoBehaviourSystem::fixedUpdate(delta_time, scene);
 		}
 
+		struct SceneShaderPass
+		{
+			~SceneShaderPass() {};
+			void operator=(const SceneShaderPass& other)
+			{
+				shader = other.shader;
+				input  = other.input;
+				output = other.output;
+			}
+
+			asset::VioletShaderHandle      shader;
+			Vector<platform::RenderTarget> input;
+			Vector<platform::RenderTarget> output;
+		};
+
 		struct CameraBatch
 		{
+			~CameraBatch() {};
+
 			glm::mat4x4 view;
 			glm::mat4x4 projection;
 			glm::vec3 position;
@@ -53,7 +70,7 @@ namespace lambda
 			float far;
 			Vector<utilities::Renderable*> opaque;
 			Vector<utilities::Renderable*> alpha;
-			Vector<platform::ShaderPass>   shader_passes;
+			Vector<SceneShaderPass>        shader_passes;
 
 			void operator=(const CameraBatch& other)
 			{
@@ -70,16 +87,20 @@ namespace lambda
 
 		struct LightBatch
 		{
+			~LightBatch() {};
+
 			struct Face
 			{
+				~Face() {};
+			
 				glm::mat4x4 view_projection;
 				glm::vec3   direction;
 
 				Vector<utilities::Renderable*> opaque;
 				Vector<utilities::Renderable*> alpha;
 
-				platform::ShaderPass           generate;
-				Vector<platform::ShaderPass>   modify;
+				SceneShaderPass           generate;
+				Vector<SceneShaderPass>   modify;
 
 				void operator=(const Face& other)
 				{
@@ -103,7 +124,7 @@ namespace lambda
 			float       far;
 			bool        is_rh;
 
-			platform::ShaderPass publish;
+			SceneShaderPass publish;
 
 			void operator=(const LightBatch& other)
 			{
@@ -120,21 +141,31 @@ namespace lambda
 			}
 		};
 
-		void renderMeshes(platform::IRenderer* renderer, platform::ShaderVariableManager& shader_variable_manager, const Vector<utilities::Renderable*>& opaque, const Vector<utilities::Renderable*>& alpha, bool is_rh)
+		void renderMeshes(platform::IRenderer* renderer, const Vector<utilities::Renderable*>& opaque, const Vector<utilities::Renderable*>& alpha, bool is_rh)
 		{
+			struct CBData
+			{
+				glm::mat4x4 mm;
+				glm::vec2 mr;
+			} data;
+
+			platform::IRenderBuffer* cb = renderer->allocRenderBuffer(sizeof(data), platform::IRenderBuffer::kFlagConstant | platform::IRenderBuffer::kFlagTransient | platform::IRenderBuffer::kFlagDynamic, &data);
+			renderer->setConstantBuffer(cb, cbPerMeshIdx);
+
 			// -------------------------RENDER-STATIC-OPAQUE-------------------------
 			renderer->setBlendState(platform::BlendState::Default());
 			for (const utilities::Renderable* renderable : opaque)
 			{
+				data = { renderable->model_matrix, glm::vec2(renderable->metallicness, renderable->roughness) };
+				memcpy(cb->lock(), &data, sizeof(data));
+				cb->unlock();
+
 				renderer->setMesh(renderable->mesh);
 				renderer->setSubMesh(renderable->sub_mesh);
 
 				renderer->setTexture(renderable->albedo_texture, 0);
 				renderer->setTexture(renderable->normal_texture, 1);
 				renderer->setTexture(renderable->dmra_texture, 2);
-
-				shader_variable_manager.setVariable(platform::ShaderVariable(Name("metallic_roughness"), glm::vec2(renderable->metallicness, renderable->roughness)));
-				shader_variable_manager.setVariable(platform::ShaderVariable(Name("model_matrix"), renderable->model_matrix));
 
 				auto sub_mesh = renderable->mesh->getSubMeshes().at(renderable->sub_mesh);
 				// TODO (Hilze): Implement.
@@ -154,13 +185,15 @@ namespace lambda
 			renderer->setBlendState(platform::BlendState::Alpha());
 			for (const utilities::Renderable* renderable : alpha)
 			{
+				data = { renderable->model_matrix, glm::vec2(renderable->metallicness, renderable->roughness) };
+				memcpy(cb->lock(), &data, sizeof(data));
+				cb->unlock();
+
 				renderer->setMesh(renderable->mesh);
-				shader_variable_manager.setVariable(platform::ShaderVariable(Name("metallic_roughness"), glm::vec2(renderable->metallicness, renderable->roughness)));
 				renderer->setSubMesh(renderable->sub_mesh);
 				renderer->setTexture(renderable->albedo_texture, 0);
 				renderer->setTexture(renderable->normal_texture, 1);
 				renderer->setTexture(renderable->dmra_texture, 2);
-				shader_variable_manager.setVariable(platform::ShaderVariable(Name("model_matrix"), renderable->model_matrix));
 
 				auto sub_mesh = renderable->mesh->getSubMeshes().at(renderable->sub_mesh);
 				// TODO (Hilze): Implement.
@@ -208,33 +241,56 @@ namespace lambda
 			auto statics  = culler.getStatics();
 			auto dynamics = culler.getDynamics();
 			components::MeshRenderSystem::createSortedRenderList(&statics, &dynamics, camera_batch.opaque, camera_batch.alpha, scene);
-			camera_batch.shader_passes = camera.shader_passes;
+			for (const auto& shader_pass : camera.shader_passes)
+			{
+				SceneShaderPass sp;
+				sp.shader = shader_pass.getShader();
+				sp.input  = shader_pass.getInputs();
+				sp.output = shader_pass.getOutputs();
+				camera_batch.shader_passes.push_back(sp);
+			}
 
 			return camera_batch;
 		}
 
-		void renderCamera(platform::IRenderer* renderer, platform::ShaderVariableManager& shader_variable_manager, const CameraBatch& camera_batch)
+		void renderCamera(platform::IRenderer* renderer, const CameraBatch& camera_batch)
 		{
 			renderer->beginTimer("Main Camera");
 			renderer->pushMarker("Main Camera");
 
 			// Set shader variables.
-			shader_variable_manager.setVariable(platform::ShaderVariable(Name("view_matrix"), camera_batch.view));
-			shader_variable_manager.setVariable(platform::ShaderVariable(Name("inverse_view_matrix"), glm::inverse(camera_batch.view)));
-			shader_variable_manager.setVariable(platform::ShaderVariable(Name("projection_matrix"), camera_batch.projection));
-			shader_variable_manager.setVariable(platform::ShaderVariable(Name("inverse_projection_matrix"), glm::inverse(camera_batch.projection)));
-			shader_variable_manager.setVariable(platform::ShaderVariable(Name("view_projection_matrix"), camera_batch.projection * camera_batch.view));
-			shader_variable_manager.setVariable(platform::ShaderVariable(Name("inverse_view_projection_matrix"), glm::inverse(camera_batch.projection * camera_batch.view)));
-			shader_variable_manager.setVariable(platform::ShaderVariable(Name("camera_position"), camera_batch.position));
-			shader_variable_manager.setVariable(platform::ShaderVariable(Name("camera_near"), camera_batch.near));
-			shader_variable_manager.setVariable(platform::ShaderVariable(Name("camera_far"), camera_batch.far));
+			struct CBData
+			{
+				glm::mat4x4 view_matrix;
+				glm::mat4x4 projection_matrix;
+				glm::mat4x4 view_projection_matrix;
+				glm::mat4x4 inverse_view_matrix;
+				glm::mat4x4 inverse_projection_matrix;
+				glm::mat4x4 inverse_view_projection_matrix;
+				glm::vec3   camera_position;
+				float       camera_far;
+				float       camera_near;
+			} data = {
+				camera_batch.view,
+				camera_batch.projection,
+				camera_batch.projection * camera_batch.view,
+				glm::inverse(camera_batch.view),
+				glm::inverse(camera_batch.projection),
+				glm::inverse(camera_batch.view * camera_batch.projection),
+				camera_batch.position,
+				camera_batch.near,
+				camera_batch.far
+			};
+
+			platform::IRenderBuffer* cb = renderer->allocRenderBuffer(sizeof(data), platform::IRenderBuffer::kFlagConstant | platform::IRenderBuffer::kFlagTransient | platform::IRenderBuffer::kFlagImmutable, &data);
+			renderer->setConstantBuffer(cb, cbPerCameraIdx);
 
 			// Draw all passes.
 			for (uint32_t i = 0u; i < camera_batch.shader_passes.size(); ++i)
 			{
 				renderer->setDepthStencilState(platform::DepthStencilState::Default());
-				renderer->bindShaderPass(camera_batch.shader_passes[i]);
-				renderMeshes(renderer, shader_variable_manager, camera_batch.opaque, camera_batch.alpha, true);
+				renderer->bindShaderPass(platform::ShaderPass(Name(""), camera_batch.shader_passes[i].shader, camera_batch.shader_passes[i].input, camera_batch.shader_passes[i].output));
+				renderMeshes(renderer, camera_batch.opaque, camera_batch.alpha, true);
 			}
 
 			renderer->popMarker();
@@ -321,12 +377,9 @@ namespace lambda
 					light_batch.clear_queue_texture.push_back(shadow_map);
 				light_batch.clear_queue_depth.push_back(depth_map);
 
-				light_batch_face.generate = platform::ShaderPass(
-					Name("shadow_generate"),
-					asset::ShaderManager::getInstance()->get(scene.light.shader_generate + shader_type),
-					{},
-					output
-				);
+				light_batch_face.generate.shader = asset::ShaderManager::getInstance()->get(scene.light.shader_generate + shader_type);
+				light_batch_face.generate.input  = {};
+				light_batch_face.generate.output = output;
 
 				// Handle frustum culling.
 				if (data.shadow_type == components::ShadowType::kDynamic)
@@ -345,22 +398,13 @@ namespace lambda
 				// Draw all modify shaders.
 				for (uint32_t i = 0; i < scene.light.shader_modify_count; ++i)
 				 {
-					light_batch_face.modify.push_back(
-						platform::ShaderPass(
-							Name("shadow_modify"),
-							asset::ShaderManager::getInstance()->get(scene.light.shader_modify + shadow_type + "HORIZONTAL"),
-							{ shadow_maps.at(0u) },
-							{ shadow_maps.at(0u) }
-						)
-					);
-					light_batch_face.modify.push_back(
-						platform::ShaderPass(
-							Name("shadow_modify"),
-							asset::ShaderManager::getInstance()->get(scene.light.shader_modify + shadow_type + "VERTICAL"),
-							{ shadow_maps.at(0u) },
-							{ shadow_maps.at(0u) }
-						)
-					);
+					SceneShaderPass modify;
+					modify.input  = { shadow_maps.at(0u) };
+					modify.output = { shadow_maps.at(0u) };
+					modify.shader = asset::ShaderManager::getInstance()->get(scene.light.shader_modify + shadow_type + "HORIZONTAL");
+					light_batch_face.modify.push_back(modify);
+					modify.shader = asset::ShaderManager::getInstance()->get(scene.light.shader_modify + shadow_type + "VERTICAL");
+					light_batch_face.modify.push_back(modify);
 				}
 			}
 
@@ -368,20 +412,17 @@ namespace lambda
 			Vector<platform::RenderTarget> input = {
 				shadow_maps.at(0u),
 				platform::RenderTarget(Name("texture"), data.texture),
-				scene.post_process_manager.getTarget(Name("position")),
-				scene.post_process_manager.getTarget(Name("normal")),
-				scene.post_process_manager.getTarget(Name("metallic_roughness"))
+				scene.post_process_manager->getTarget(Name("position")),
+				scene.post_process_manager->getTarget(Name("normal")),
+				scene.post_process_manager->getTarget(Name("metallic_roughness"))
 			};
 			if (shadow_maps.size() > 1u)
 				input.insert(input.end(), shadow_maps.begin() + 1u, shadow_maps.end());
 
-			light_batch.publish = platform::ShaderPass(
-				Name("shadow_publish"),
-				asset::ShaderManager::getInstance()->get(scene.light.shader_publish + shader_type),
-				input, {
-					scene.post_process_manager.getTarget(Name("light_map"))
-				}
-			);
+			
+			light_batch.publish.shader = asset::ShaderManager::getInstance()->get(scene.light.shader_publish + shader_type);
+			light_batch.publish.input  = input;
+			light_batch.publish.output = { scene.post_process_manager->getTarget(Name("light_map")) };
 
 			light_batch.faces.push_back(light_batch_face);
 			return light_batch;
@@ -476,12 +517,9 @@ namespace lambda
 					// Render to the shadow map.
 					shadow_map.setLayer(i);
 					depth_map.setLayer(i);
-					light_batch_faces[i].generate = platform::ShaderPass(
-						Name("shadow_generate"),
-						asset::ShaderManager::getInstance()->get(scene.light.shader_generate + shader_type),
-						{},
-						{ shadow_map, depth_map }
-					);
+					light_batch_faces[i].generate.shader = asset::ShaderManager::getInstance()->get(scene.light.shader_generate + shader_type);
+					light_batch_faces[i].generate.input  = {};
+					light_batch_faces[i].generate.output = { shadow_map, depth_map };
 
 					// Handle frustum culling.
 					if (data.shadow_type == components::ShadowType::kDynamic)
@@ -511,20 +549,16 @@ namespace lambda
 				shadow_map.setLayer(-1);
 				depth_map.setLayer(-1);
 			}
-
-			light_batch.publish = platform::ShaderPass(
-				Name("shadow_publish"),
-				asset::ShaderManager::getInstance()->get(scene.light.shader_publish + shader_type),
-				{
-					shadow_map,
-					platform::RenderTarget(Name("texture"), data.texture),
-					scene.post_process_manager.getTarget(Name("position")),
-					scene.post_process_manager.getTarget(Name("normal")),
-					scene.post_process_manager.getTarget(Name("metallic_roughness"))
-				}, {
-					scene.post_process_manager.getTarget(Name("light_map"))
-				}
-			);
+			
+			light_batch.publish.shader = asset::ShaderManager::getInstance()->get(scene.light.shader_publish + shader_type);
+			light_batch.publish.input  = {
+				shadow_map,
+				platform::RenderTarget(Name("texture"), data.texture),
+				scene.post_process_manager->getTarget(Name("position")),
+				scene.post_process_manager->getTarget(Name("normal")),
+				scene.post_process_manager->getTarget(Name("metallic_roughness"))
+			};
+			light_batch.publish.output = { scene.post_process_manager->getTarget(Name("light_map")) };
 
 			for (uint32_t i = 0; i < 6; ++i)
 				light_batch.faces.push_back(light_batch_faces[i]);
@@ -580,9 +614,26 @@ namespace lambda
 			return light_batches;
 		}
 
-		void renderLight(platform::IRenderer* renderer, platform::ShaderVariableManager& shader_variable_manager, platform::PostProcessManager& post_process_manager, const LightBatch* light_batches, uint32_t light_batch_count)
+		void renderLight(platform::IRenderer* renderer, platform::PostProcessManager& post_process_manager, const LightBatch* light_batches, uint32_t light_batch_count)
 		{
 			renderer->beginTimer("Lighting");
+
+			struct CBData
+			{
+				glm::mat4x4 light_view_projection_matrix;
+				glm::vec3 light_position;
+				float     light_near;
+				glm::vec3 light_direction;
+				float     light_far;
+				glm::vec3 light_colour;
+				float     light_cut_off;
+				float     light_outer_cut_off;
+
+			} data;
+
+			platform::IRenderBuffer* cb = renderer->allocRenderBuffer(sizeof(data), platform::IRenderBuffer::kFlagConstant | platform::IRenderBuffer::kFlagTransient | platform::IRenderBuffer::kFlagDynamic, &data);
+			renderer->setConstantBuffer(cb, cbPerLightIdx);
+
 
 			// Prepare the light buffer.
 			renderer->pushMarker("Clear Light Buffer");
@@ -596,12 +647,9 @@ namespace lambda
 			{
 				renderer->pushMarker("Light");
 
-				const auto& light_batch = light_batches[i];
+				platform::IRenderBuffer* last_cb = nullptr;
 
-				shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_colour"), light_batch.colour));
-				shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_near"), light_batch.near));
-				shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_far"), light_batch.far));
-				shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_position"), light_batch.position));
+				const auto& light_batch = light_batches[i];
 
 				for (const auto& to_clear : light_batch.clear_queue_depth)
 					renderer->clearRenderTarget(to_clear.getTexture(), glm::vec4(1.0f));
@@ -611,15 +659,25 @@ namespace lambda
 
 				for (const auto& face : light_batch.faces)
 				{
-					shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_view_projection_matrix"), face.view_projection));
-					shader_variable_manager.setVariable(platform::ShaderVariable(Name("light_direction"), face.direction));
-					
-					// Generate shadow maps.
-					if (!face.generate.getOutputs().empty())
-					{
-						renderer->bindShaderPass(face.generate);
+					data = {
+						face.view_projection,
+						light_batch.position,
+						light_batch.near,
+						face.direction,
+						light_batch.far,
+						light_batch.colour,
+						0.0f,
+						0.0f
+					};
+					memcpy(cb->lock(), &data, sizeof(data));
+					cb->unlock();
 
-						renderMeshes(renderer, shader_variable_manager, face.opaque, face.alpha, light_batch.is_rh);
+					// Generate shadow maps.
+					if (face.generate.shader)
+					{
+						renderer->bindShaderPass(platform::ShaderPass(Name(""), face.generate.shader, face.generate.input, face.generate.output));
+
+						renderMeshes(renderer, face.opaque, face.alpha, light_batch.is_rh);
 
 						// Set up the post processing passes.
 						renderer->setMesh(light_batch.full_screen_mesh);
@@ -630,7 +688,7 @@ namespace lambda
 						// Draw all modify shaders.
 						for (auto modify : face.modify)
 						{
-							renderer->bindShaderPass(modify);
+							renderer->bindShaderPass(platform::ShaderPass(Name(""), modify.shader, modify.input, modify.output));
 							renderer->draw();
 						}
 					}
@@ -643,7 +701,7 @@ namespace lambda
 				renderer->setRasterizerState(platform::RasterizerState::SolidBack());
 
 				// Render light using the shadow map.
-				renderer->bindShaderPass(light_batch.publish);
+				renderer->bindShaderPass(platform::ShaderPass(Name(""), light_batch.publish.shader, light_batch.publish.input, light_batch.publish.output));
 
 				renderer->setBlendState(platform::BlendState(
 					false,                                /*alpha_to_coverage*/
@@ -667,15 +725,22 @@ namespace lambda
 			renderer->endTimer("Lighting");
 		}
 
+		struct RenderData
+		{
+			~RenderData() {};
+
+			Scene scene;
+			CameraBatch camera_batch;
+			Vector<LightBatch> light_batches;
+		};
+
 #define USE_MT 1
 
 #if USE_MT
 		std::atomic<bool> k_can_read  = false;
 		std::atomic<bool> k_can_write = true;
-		scene::Scene* k_scene = nullptr;
-		CameraBatch* k_camera_batch = nullptr;
-		LightBatch* k_light_batches = nullptr;
-		uint32_t k_light_batch_count;
+		RenderData* k_curr_render_data = nullptr;
+		RenderData* k_next_render_data = nullptr;
 		std::thread k_thread;
 
 		///////////////////////////////////////////////////////////////////////////
@@ -687,16 +752,16 @@ namespace lambda
 					Sleep(0);
 				k_can_read = false;
 
-				k_scene->renderer->setOverrideScene(k_scene);
-				k_scene->renderer->startFrame();
+				k_curr_render_data->scene.renderer->setOverrideScene(&k_curr_render_data->scene);
+				k_curr_render_data->scene.renderer->startFrame();
 
-				renderCamera(k_scene->renderer, k_scene->shader_variable_manager, *k_camera_batch);
-				renderLight(k_scene->renderer, k_scene->shader_variable_manager, k_scene->post_process_manager, k_light_batches, k_light_batch_count);
+				renderCamera(k_curr_render_data->scene.renderer, k_curr_render_data->camera_batch);
+				renderLight(k_curr_render_data->scene.renderer, *k_curr_render_data->scene.post_process_manager, k_curr_render_data->light_batches.data(), (uint32_t)k_curr_render_data->light_batches.size());
 
-				k_scene->gui->render(*k_scene);
+				k_curr_render_data->scene.gui->render(k_curr_render_data->scene);
 
-				k_scene->renderer->endFrame();
-				k_scene->renderer->setOverrideScene(nullptr);
+				k_curr_render_data->scene.renderer->endFrame();
+				k_curr_render_data->scene.renderer->setOverrideScene(nullptr);
 
 				k_can_write = true;
 			}
@@ -706,10 +771,21 @@ namespace lambda
 		void sceneConstructRender(scene::Scene& scene)
 		{
 #if USE_MT
-			while (!k_can_write)
-				Sleep(0);
-			k_can_write = false;
+			// Create new.
+			if (!k_next_render_data)
+				k_next_render_data = foundation::Memory::construct<RenderData>();
 
+			k_next_render_data->camera_batch  = constructCamera(scene, scene.camera.main_camera);
+			k_next_render_data->light_batches = constructLight(k_next_render_data->camera_batch, scene);
+
+			// Required by flush.
+			k_next_render_data->scene.renderer = scene.renderer;
+			// Required by the renderer.
+			k_next_render_data->scene.post_process_manager    = scene.post_process_manager;
+			k_next_render_data->scene.window                  = scene.window;
+			k_next_render_data->scene.gui                     = scene.gui;
+
+			scene.debug_renderer.Clear();
 #endif
 		}
 
@@ -718,46 +794,14 @@ namespace lambda
 			components::RigidBodySystem::onRender(scene);
 
 #if USE_MT
-			// Create new.
-			auto new_camera_batch = foundation::Memory::construct<CameraBatch>();
-			auto new_scene = foundation::Memory::construct<scene::Scene>();
+			while (!k_can_write)
+				Sleep(0);
+			k_can_write = false;
 
-			*new_camera_batch = constructCamera(scene, scene.camera.main_camera);
-			auto lightBatches = constructLight(*new_camera_batch, scene);
-			auto new_light_batch_count = (uint32_t)lightBatches.size();
-			auto new_light_batches = (LightBatch*)foundation::Memory::allocate(sizeof(LightBatch) * new_light_batch_count);
-			memset(new_light_batches, 0, new_light_batch_count * sizeof(LightBatch));
-
-			for (uint32_t i = 0; i < lightBatches.size(); ++i)
-				new_light_batches[i] = lightBatches[i];
-
-			// Required by flush.
-			new_scene->renderer = scene.renderer;
-			// Required by the renderer.
-			new_scene->post_process_manager = scene.post_process_manager;
-			new_scene->shader_variable_manager = scene.shader_variable_manager;
-			new_scene->window = scene.window;
-			new_scene->gui = scene.gui;
-
-			scene.debug_renderer.Clear();
-
-			// Destroy old.
-			if (k_scene)
-				foundation::Memory::destruct(k_scene);
-			if (!k_camera_batch)
-				foundation::Memory::destruct(k_camera_batch);
-			if (k_light_batches)
-			{
-				for (uint32_t i = 0; i < k_light_batch_count; ++i)
-					k_light_batches[i].~LightBatch();
-				foundation::Memory::deallocate(k_light_batches);
-			}
-
-			// Set new.
-			k_scene = new_scene;
-			k_camera_batch = new_camera_batch;
-			k_light_batches = new_light_batches;
-			k_light_batch_count = new_light_batch_count;
+			// Swap data.
+			RenderData* temp_render_data = k_curr_render_data;
+			k_curr_render_data = k_next_render_data;
+			k_next_render_data = temp_render_data;
 
 			if (!k_thread.joinable())
 			{
@@ -776,7 +820,6 @@ namespace lambda
 
 			// Required by the renderer.
 			k_scene.post_process_manager    = scene.post_process_manager;
-			k_scene.shader_variable_manager = scene.shader_variable_manager;
 			k_scene.window                  = scene.window;
 			k_scene.gui                     = scene.gui;
 
@@ -785,8 +828,8 @@ namespace lambda
 			CameraBatch camera_batch = constructCamera(scene, scene.camera.main_camera);
 			Vector<LightBatch> light_batches = constructLight(camera_batch, scene);
 
-			renderCamera(scene.renderer, scene.shader_variable_manager, camera_batch);
-			renderLight(scene.renderer, scene.shader_variable_manager, scene.post_process_manager, light_batches.data(), (uint32_t)light_batches.size());
+			renderCamera(scene.renderer, camera_batch);
+			renderLight(scene.renderer, *scene.post_process_manager, light_batches.data(), (uint32_t)light_batches.size());
 
 			scene.renderer->endFrame();
 			scene.renderer->setOverrideScene(nullptr);
@@ -807,6 +850,13 @@ namespace lambda
 		}
 		void sceneDeinitialize(scene::Scene& scene)
 		{
+#if USE_MT
+			foundation::Memory::destruct(k_curr_render_data);
+			k_curr_render_data = nullptr;
+			foundation::Memory::destruct(k_next_render_data);
+			k_next_render_data = nullptr;
+#endif
+
 			components::RigidBodySystem::deinitialize(scene);
 			components::ColliderSystem::deinitialize(scene);
 			components::NameSystem::deinitialize(scene);

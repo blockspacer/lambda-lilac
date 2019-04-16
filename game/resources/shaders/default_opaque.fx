@@ -1,8 +1,8 @@
 #include "common.fxh"
 #include "tbn.fxh"
 
-#define VIOLET_PARALLAX_MAPPING 1
-#define NORMAL_MAPPING 1
+#define VIOLET_PARALLAX_MAPPING 0
+#define NORMAL_MAPPING 0
 #define VIOLET_GRID_ALBEDO 0
 #define VIOLET_DYNAMIC_GRID_SIZE 1
 
@@ -27,12 +27,6 @@ struct VSOutput
 #endif
   float3 normal    : NORMAL;
 };
-
-Make_CBuffer(cbPerMesh, 0)
-{
-  float4x4 model_matrix;
-  float4x4 view_projection_matrix;
-}
 
 VSOutput VS(VSInput vIn)
 {
@@ -65,12 +59,6 @@ struct PSOutput
   float4 normal   : SV_Target2;
   float4 mra      : SV_Target3; // Metallic - Roughness - Ambient Occlusion.
 };
-
-Make_CBuffer(cbPerMesh, 1)
-{
-  float2 metallic_roughness;
-  float3 camera_position;
-}
 
 #if VIOLET_PARALLAX_MAPPING
 static const float height_scale = 0.03f;

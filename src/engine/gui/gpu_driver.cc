@@ -2,7 +2,6 @@
 #include <utils/utilities.h>
 #include <interfaces/irenderer.h>
 #include <interfaces/iworld.h>
-#include <platform/shader_variable.h>
 #include <platform/blend_state.h>
 #include <platform/sampler_state.h>
 #include <platform/render_target.h>
@@ -500,16 +499,33 @@ namespace lambda
 
 			scene_->renderer->setShader(shader);
 
+			struct Uniforms {
+				glm::vec4 State;
+				glm::mat4x4 Transform;
+				glm::vec4 Scalar4[2];
+				glm::vec4 Vector[8];
+				uint32_t ClipSize;
+				glm::mat4x4 Clip[8];
+			};
+
 			float scale = 1.0f; // TODO (Hilze): Re-evaluate.
-			scene_->shader_variable_manager.setVariable(platform::ShaderVariable(Name("State"),     glm::vec4(0.0, state.viewport_width, state.viewport_height, scale)));
-			scene_->shader_variable_manager.setVariable(platform::ShaderVariable(Name("Transform"), toMat4(state.transform)));
-			scene_->shader_variable_manager.setVariable(platform::ShaderVariable(Name("Scalar4_0"), glm::vec4(state.uniform_scalar[0], state.uniform_scalar[1], state.uniform_scalar[2], state.uniform_scalar[3])));
-			scene_->shader_variable_manager.setVariable(platform::ShaderVariable(Name("Scalar4_1"), glm::vec4(state.uniform_scalar[4], state.uniform_scalar[5], state.uniform_scalar[6], state.uniform_scalar[7])));
+
+			Uniforms uniforms;
+			uniforms.State = { 0.0, state.viewport_width, state.viewport_height, (float)scale };
+			uniforms.Transform = toMat4(state.transform);
+			uniforms.Scalar4[0] =
+			{ state.uniform_scalar[0], state.uniform_scalar[1], state.uniform_scalar[2], state.uniform_scalar[3] };
+			uniforms.Scalar4[1] =
+			{ state.uniform_scalar[4], state.uniform_scalar[5], state.uniform_scalar[6], state.uniform_scalar[7] };
 			for (size_t i = 0; i < 8; ++i)
-				scene_->shader_variable_manager.setVariable(platform::ShaderVariable(Name("Vector_" + toString(i)), toVec4(state.uniform_vector[i])));
-			scene_->shader_variable_manager.setVariable(platform::ShaderVariable(Name("ClipSize"),  (float)state.clip_size));
+				uniforms.Vector[i] = toVec4(state.uniform_vector[i].value);
+			uniforms.ClipSize = state.clip_size;
 			for (size_t i = 0; i < state.clip_size; ++i)
-				scene_->shader_variable_manager.setVariable(platform::ShaderVariable(Name("Clip_" + toString(i)), toMat4(state.clip[i])));
+				uniforms.Clip[i] = toMat4(state.clip[i]);
+
+			uint32_t flags = platform::IRenderBuffer::kFlagConstant | platform::IRenderBuffer::kFlagTransient | platform::IRenderBuffer::kFlagImmutable;
+			platform::IRenderBuffer* cb = scene_->renderer->allocRenderBuffer(sizeof(Uniforms), flags, &uniforms);
+			scene_->renderer->setConstantBuffer(cb, cbUserIdx);
 		}
 
 		///////////////////////////////////////////////////////////////////////////

@@ -220,6 +220,18 @@ namespace lambda
       }
     }
 
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	void RenderTarget::operator=(const RenderTarget& other)
+	{
+		render_scale_  = other.render_scale_;
+		texture_       = other.texture_;
+		name_          = other.name_;
+		mip_map_       = other.mip_map_;
+		layer_         = other.layer_;
+		is_back_buffer_= other.is_back_buffer_;
+		from_texture_  = other.from_texture_;
+	}
+
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void RenderTarget::resize(const glm::uvec2& size)
     {

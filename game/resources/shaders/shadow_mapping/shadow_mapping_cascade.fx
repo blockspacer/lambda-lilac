@@ -31,7 +31,7 @@ VSOutput VS(uint id : SV_VertexID)
   return vOut;
 }
 
-Make_CBuffer(cbPostProcess, 0)
+Make_CBuffer(cbUser, cbUserIdx)
 {
   float4x4 light_view_projection_matrix_01;
   float4x4 light_view_projection_matrix_02;
@@ -39,9 +39,6 @@ Make_CBuffer(cbPostProcess, 0)
   float3 light_camera_position_01;
   float3 light_camera_position_02;
   float3 light_camera_position_03;
-  float3 light_direction;
-  float3 light_colour;
-  float3 light_ambient;
   float light_far_01;
   float light_far_02;
   float light_far_03;

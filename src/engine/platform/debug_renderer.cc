@@ -93,8 +93,8 @@ namespace lambda
 			tris_.mesh->setTopology(asset::Topology::kTriangles);
 
 			shader_pass_ = ShaderPass(Name("debug"), shader, {}, {
-				scene.post_process_manager.getTarget(
-					scene.post_process_manager.getFinalTarget()
+				scene.post_process_manager->getTarget(
+					scene.post_process_manager->getFinalTarget()
 				)
 			});
 		}

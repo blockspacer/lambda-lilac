@@ -1,15 +1,7 @@
 #include "common.fxh"
 #include "atmosphere.fxh"
 
-Make_CBuffer(cbPerPass, 0)
-{
-  float4x4 model_matrix;
-  float4x4 view_matrix;
-  float4x4 projection_matrix;
-  float4x4 inverse_projection_matrix;
-};
-
-Make_CBuffer(cbPerFrameSky, 1)
+Make_CBuffer(cbUser, cbUserIdx)
 {
   float3 eSunDir = normalize(float3(1.0f, 1.0f, 1.0f));
   float eNearPlane = 0.1f;
