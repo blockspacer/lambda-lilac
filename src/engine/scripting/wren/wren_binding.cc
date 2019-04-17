@@ -20,6 +20,7 @@
 #include <gui/gui.h>
 
 #include <memory/memory.h>
+#include <memory/frame_heap.h>
 #include <containers/containers.h>
 #include <utils/file_system.h>
 #include <utils/console.h>
@@ -3712,8 +3713,14 @@ class PostProcess {
 				  scene.renderer->bindShaderPass(shader_pass);
 				  scene.renderer->draw();
 			  }
+
+				virtual ~RenderAction() override
+				{
+					shader_pass = platform::ShaderPass();
+					mesh = nullptr;
+				}
 		  };
-		  RenderAction* render_action = foundation::Memory::construct<RenderAction>();
+		  RenderAction* render_action = foundation::GetFrameHeap()->construct<RenderAction>();
 		  g_world->getScene().render_actions.push_back(render_action);
 
           VioletTexture violet_texture;
@@ -3778,8 +3785,13 @@ class PostProcess {
 					  scene.renderer->draw();
 				  }
 			  }
+
+				virtual ~RenderAction() override 
+				{
+					passes.resize(0u);
+				}
 		  };
-		  RenderAction* render_action = foundation::Memory::construct<RenderAction>();
+		  RenderAction* render_action = foundation::GetFrameHeap()->construct<RenderAction>();
 		  g_world->getScene().render_actions.push_back(render_action);
 
           render_action->mesh = asset::MeshManager::getInstance()->create(Name("__hammerhead_mesh__"), asset::Mesh::createScreenQuad());

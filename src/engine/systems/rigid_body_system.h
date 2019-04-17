@@ -89,7 +89,6 @@ namespace lambda
 			void initialize(scene::Scene& scene);
 			void deinitialize(scene::Scene& scene);
 			void fixedUpdate(const float& delta_time, scene::Scene& scene);
-			void onRender(scene::Scene& scene);
 
 			float getMass(const entity::Entity& entity, scene::Scene& scene);
 			void setMass(const entity::Entity& entity, const float& mass, scene::Scene& scene);

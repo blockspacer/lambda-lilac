@@ -9,12 +9,10 @@ namespace lambda
 		IWorld::IWorld(
 			platform::IWindow* window,
 			platform::IRenderer* renderer,
-			scripting::IScriptContext* scripting,
-			foundation::SharedPointer<platform::IImGUI> imgui
+			scripting::IScriptContext* scripting
 		)
 			: input_manager_(keyboard_, mouse_, controller_manager_)
 			, scripting_(scripting)
-			, imgui_(nullptr)
 		{
 			scene_.scripting = scripting;
 			scene_.renderer  = renderer;
@@ -27,7 +25,6 @@ namespace lambda
 
 			scene_.renderer->initialize(scene_);
 			setWindow(window);
-			setImGUI(imgui);
 			gui_.init(scene_);
 
 			scene::sceneInitialize(scene_);
@@ -56,7 +53,7 @@ namespace lambda
 			{
 				handleWindowMessages();
 				if (scene_.window->isOpen() == false)
-					return;
+					break;
 
 				controller_manager_.update();
 
@@ -118,14 +115,14 @@ namespace lambda
 			scripting_->executeFunction("Game::Deinitialize", {});
 			deinitialize();
 			scene_.debug_renderer.Deinitialize();
+			scene_.scripting->terminate();
 			scene::sceneDeinitialize(scene_);
+			memset(&scene_, 0, sizeof(scene_));
 		}
 
 		///////////////////////////////////////////////////////////////////////////
 		void IWorld::handleWindowMessages()
 		{
-			//imgui_->inputStart();
-
 			io::Mouse::State mouse_state = mouse_.getCurrentState();
 			io::Keyboard::State keyboard_state = keyboard_.getCurrentState();
 			mouse_state.setAxis(io::MouseAxes::kScroll, 0.0f);
@@ -139,8 +136,6 @@ namespace lambda
 				bool was_handled = false;
 				if (!was_handled && gui_.handleWindowMessage(message))
 					was_handled = true;
-				//if (!was_handled && imgui_->inputHandleMessage(message))
-				//was_handled = true;
 
 				switch (message.type)
 				{
@@ -178,8 +173,6 @@ namespace lambda
 
 			mouse_.update(mouse_state);
 			keyboard_.update(keyboard_state);
-
-			//imgui_->inputEnd();
 		}
 
 		///////////////////////////////////////////////////////////////////////////
@@ -198,21 +191,6 @@ namespace lambda
 		scripting::IScriptContext* IWorld::getScripting()
 		{
 			return scripting_;
-		}
-
-		///////////////////////////////////////////////////////////////////////////
-		foundation::SharedPointer<platform::IImGUI> IWorld::getImGUI()
-		{
-			return imgui_;
-		}
-
-		///////////////////////////////////////////////////////////////////////////
-		void IWorld::setImGUI(foundation::SharedPointer<platform::IImGUI> imgui)
-		{
-			if (imgui_)
-				imgui_->deinitialize();
-			imgui_ = imgui;
-			imgui_->initialize(this);
 		}
 
 		///////////////////////////////////////////////////////////////////////////

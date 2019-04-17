@@ -1474,7 +1474,6 @@ namespace lambda
 		}
 
     ///////////////////////////////////////////////////////////////////////////
-#pragma optimize ("", off)
 		void D3D11Context::draw(ID3D11Buffer* buffer)
 		{
 			LMB_ASSERT(override_scene_, "D3D11 CONTEXT: Tried to render outside of the flush thread");

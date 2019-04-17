@@ -500,8 +500,8 @@ namespace lambda
 		{
 			destroyBody();
 
-			glm::quat rotation = components::TransformSystem::getWorldRotation(entity_, scene_);
-			glm::vec3 translation = components::TransformSystem::getWorldTranslation(entity_, scene_) * VIOLET_PHYSICS_SCALE;
+			glm::quat rotation = components::TransformSystem::hasComponent(entity_, scene_) ? components::TransformSystem::getWorldRotation(entity_, scene_) : glm::quat();
+			glm::vec3 translation = components::TransformSystem::hasComponent(entity_, scene_) ? (components::TransformSystem::getWorldTranslation(entity_, scene_) * VIOLET_PHYSICS_SCALE) : glm::vec3();
 
 			motion_state_ = foundation::Memory::construct<btDefaultMotionState>(btTransform(toBt(rotation), toBt(translation)));
 			btRigidBody::btRigidBodyConstructionInfo rigid_body_ci(

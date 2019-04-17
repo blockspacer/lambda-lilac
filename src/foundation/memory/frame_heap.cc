@@ -13,26 +13,27 @@ namespace lambda
       , current_history_(0u)
       , allocated_(0u)
     {
-      for (uint32_t i = 0u; i < kHeapCount; ++i)
-      {
-        frame_heaps_[i] = nullptr;
-        heap_sizes_[i]  = 0u;
-      }
-      for (uint32_t i = 0u; i < kHistoryCount; ++i)
-        size_history_[i] = 0u;
-    }
+			mutex_.lock();
+			memset(frame_heaps_, 0, sizeof(frame_heaps_));
+			memset(heap_sizes_, 0, sizeof(heap_sizes_));
+			memset(size_history_, 0, sizeof(size_history_));
+			mutex_.unlock();
+		}
 		FrameHeap::~FrameHeap()
 		{
+			mutex_.lock();
 			for (const auto& frame_heap : frame_heaps_)
 				foundation::Memory::deallocate(frame_heap);
 
 			for (const auto& temp_allocs : temp_allocs_)
 				for (const auto& alloc : temp_allocs)
 					foundation::Memory::deallocate(alloc);
+			mutex_.unlock();
 		}
     void FrameHeap::update()
     {
-      // Calculate the size of this alloc.
+			mutex_.lock();
+			// Calculate the size of this alloc.
       size_history_[current_history_] = allocated_;
       
       // Calculate the largest size in history.
@@ -62,26 +63,34 @@ namespace lambda
       for (const auto& temp_alloc : temp_allocs_[current_frame_heap_])
 				foundation::Memory::deallocate(temp_alloc);
       temp_allocs_[current_frame_heap_].resize(0u);
-
+			mutex_.unlock();
     }
     void* FrameHeap::alloc(uint32_t size)
     {
-      if (allocated_ + size <= heap_sizes_[current_frame_heap_])
+			mutex_.lock();
+			if (allocated_ + size <= heap_sizes_[current_frame_heap_])
       {
         void* data = (char*)frame_heaps_[current_frame_heap_] + allocated_;
         allocated_ += size;
+				mutex_.unlock();
         return data;
       }
       else
       {
-        allocated_ += size;
+				allocated_ += size;
         temp_allocs_[current_frame_heap_].push_back(foundation::Memory::allocate(size));
-        return temp_allocs_[current_frame_heap_].back();
-      }
+        void* data = temp_allocs_[current_frame_heap_].back();
+				mutex_.unlock();
+				return data;
+			}
     }
-    uint32_t FrameHeap::currentHeapSize() const
+    uint32_t FrameHeap::currentHeapSize()
     {
-      return heap_sizes_[current_frame_heap_];
+			mutex_.lock();
+			uint32_t heap_size = heap_sizes_[current_frame_heap_];
+			mutex_.unlock();
+
+			return heap_size;
     }
     FrameHeap* GetFrameHeap()
     {

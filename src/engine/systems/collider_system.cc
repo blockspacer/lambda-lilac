@@ -34,8 +34,6 @@ namespace lambda
 			}
 			void removeComponent(const entity::Entity& entity, scene::Scene& scene)
 			{
-				if (RigidBodySystem::hasComponent(entity, scene))
-					RigidBodySystem::removeComponent(entity, scene);
 				scene.collider.remove(entity);
 			}
 
@@ -48,11 +46,14 @@ namespace lambda
 						const auto& it = scene.collider.entity_to_data.find(entity);
 						if (it != scene.collider.entity_to_data.end())
 						{
-							{
-								auto& data = scene.collider.data.at(it->second);
+							auto& data = scene.collider.data.at(it->second);
+							
+							if (RigidBodySystem::hasComponent(entity, scene))
+								RigidBodySystem::removeComponent(entity, scene);
+							else
 								RigidBodySystem::getPhysicsWorld(scene)->destroyCollisionBody(data.collision_body);
-								data.collision_body = nullptr;
-							}
+							
+							data.collision_body = nullptr;
 
 							uint32_t idx = it->second;
 							scene.collider.unused_data_entries.push(idx);

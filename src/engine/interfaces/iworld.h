@@ -9,7 +9,6 @@
 #include "input/controller.h"
 #include "input/input_manager.h"
 #include "interfaces/iscript_context.h"
-#include "iimgui.h"
 #include "platform/debug_renderer.h"
 #include "platform/post_process_manager.h"
 #include "utils/profiler.h"
@@ -26,8 +25,7 @@ namespace lambda
       IWorld(
         platform::IWindow* window, 
         platform::IRenderer* renderer,
-        scripting::IScriptContext* scripting,
-        foundation::SharedPointer<platform::IImGUI> imgui
+        scripting::IScriptContext* scripting
       );
       ~IWorld();
 
@@ -49,8 +47,6 @@ namespace lambda
       double getDeltaTime() const;
       scene::Scene& getScene();
       scripting::IScriptContext* getScripting();
-      foundation::SharedPointer<platform::IImGUI> getImGUI();
-      void setImGUI(foundation::SharedPointer<platform::IImGUI> imgui);
       void setWindow(platform::IWindow* window);
       const io::Input<io::Mouse::State>& getMouse();
       const io::Input<io::Keyboard::State>& getKeyboard();
@@ -69,7 +65,6 @@ namespace lambda
       io::InputManager input_manager_;
 	  platform::PostProcessManager post_process_manager_;
 	  scripting::IScriptContext* scripting_;
-      foundation::SharedPointer<platform::IImGUI> imgui_;
 			gui::GUI gui_;
 			utilities::Profiler profiler_;
     };

@@ -9,6 +9,7 @@
 #include "platform/blend_state.h"
 #include "platform/rasterizer_state.h"
 #include <gui/gui.h>
+#include <memory/frame_heap.h>
 
 #if VIOLET_WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -732,52 +733,55 @@ namespace lambda
 			Scene scene;
 			CameraBatch camera_batch;
 			Vector<LightBatch> light_batches;
-			Vector<IRenderAction*> render_actions;
 		};
 
 #define USE_MT 1
 
-		RenderData* k_curr_render_data = nullptr;
-		RenderData* k_next_render_data = nullptr;
+		RenderData* k_flush_data = nullptr;
+		RenderData* k_next_flush_data = nullptr;
 
 		///////////////////////////////////////////////////////////////////////////
-		void flush()
+		void flush(scene::Scene& scene, const CameraBatch& camera_batch, const Vector<LightBatch>& light_batches)
 		{
-			k_curr_render_data->scene.renderer->setOverrideScene(&k_curr_render_data->scene);
-			k_curr_render_data->scene.renderer->startFrame();
+			scene.renderer->setOverrideScene(&scene);
+			scene.renderer->startFrame();
 
-			renderCamera(k_curr_render_data->scene.renderer, k_curr_render_data->camera_batch);
-			renderLight(k_curr_render_data->scene.renderer, *k_curr_render_data->scene.post_process_manager, k_curr_render_data->light_batches.data(), (uint32_t)k_curr_render_data->light_batches.size());
+			renderCamera(scene.renderer, camera_batch);
+			renderLight(scene.renderer, *scene.post_process_manager, light_batches.data(), (uint32_t)light_batches.size());
 
-			k_curr_render_data->scene.gui->render(k_curr_render_data->scene);
+			scene.gui->render(scene);
 
-			for (auto render_action : k_curr_render_data->render_actions)
+			for (auto render_action : scene.render_actions)
 			{
-				render_action->execute(k_curr_render_data->scene);
-				foundation::Memory::destruct(render_action);
+				render_action->execute(scene);
+				render_action->~IRenderAction();
 			}
 
-			k_curr_render_data->scene.renderer->endFrame();
-			k_curr_render_data->scene.renderer->setOverrideScene(nullptr);
+			scene.renderer->endFrame();
+			scene.renderer->setOverrideScene(nullptr);
 		}
 
 #if USE_MT
-		std::atomic<bool> k_can_read  = false;
+		std::atomic<bool> k_can_read = false;
 		std::atomic<bool> k_can_write = true;
+		std::atomic<bool> k_keep_alive = true;
 		std::thread k_thread;
 
 		///////////////////////////////////////////////////////////////////////////
 		void flushLoop()
 		{
-			while (true)
+			while (k_keep_alive)
 			{
 				while (!k_can_read)
 					Sleep(0);
 				k_can_read = false;
 
-				flush();
-
+				scene::Scene       scene         = eastl::move(k_flush_data->scene);
+				CameraBatch        camera_batch  = eastl::move(k_flush_data->camera_batch);
+				Vector<LightBatch> light_batches = eastl::move(k_flush_data->light_batches);
 				k_can_write = true;
+
+				flush(scene, camera_batch, light_batches);
 			}
 		}
 #endif
@@ -812,6 +816,8 @@ namespace lambda
 				scene.renderer->popMarker();
 				scene.renderer->endTimer("Post Processing");
 			}
+
+			virtual ~RenderAction_PostProcess() override {};
 		};
 
 		struct RenderAction_DebugRenderer : public scene::IRenderAction
@@ -824,6 +830,22 @@ namespace lambda
 				scene.renderer->popMarker();
 				scene.renderer->endTimer("Debug Renderer");
 			}
+
+			virtual ~RenderAction_DebugRenderer() override {};
+		};
+
+		struct RenderAction_RigidBodyRenderer : public scene::IRenderAction
+		{
+			virtual void execute(scene::Scene& scene) override
+			{
+				scene.renderer->beginTimer("RigidBody Renderer");
+				scene.renderer->pushMarker("RigidBody Renderer");
+				scene.rigid_body.physics_world->render(scene);
+				scene.renderer->popMarker();
+				scene.renderer->endTimer("RigidBody Renderer");
+			}
+
+			virtual ~RenderAction_RigidBodyRenderer() override {};
 		};
 
 		struct RenderAction_CopyToScreen : public scene::IRenderAction
@@ -847,58 +869,57 @@ namespace lambda
 				scene.renderer->popMarker();
 				scene.renderer->endTimer("Copy To Screen");
 			}
+
+			virtual ~RenderAction_CopyToScreen() override {};
 		};
 
 		void sceneConstructRender(scene::Scene& scene)
 		{
 			//Add all render actions.
-			scene.render_actions.push_back(foundation::Memory::construct<RenderAction_PostProcess>());
-			scene.render_actions.push_back(foundation::Memory::construct<RenderAction_DebugRenderer>());
-			scene.render_actions.push_back(foundation::Memory::construct<RenderAction_CopyToScreen>());
+			scene.render_actions.push_back(foundation::GetFrameHeap()->construct<RenderAction_PostProcess>());
+			scene.render_actions.push_back(foundation::GetFrameHeap()->construct<RenderAction_RigidBodyRenderer>());
+			scene.render_actions.push_back(foundation::GetFrameHeap()->construct<RenderAction_DebugRenderer>());
+			scene.render_actions.push_back(foundation::GetFrameHeap()->construct<RenderAction_CopyToScreen>());
 
 			// Create new.
-			if (!k_next_render_data)
-				k_next_render_data = foundation::Memory::construct<RenderData>();
+			if (!k_next_flush_data)
+				k_next_flush_data = foundation::Memory::construct<RenderData>();
 
-			k_next_render_data->camera_batch  = constructCamera(scene, scene.camera.main_camera);
-			k_next_render_data->light_batches = constructLight(k_next_render_data->camera_batch, scene);
+			k_next_flush_data->camera_batch  = constructCamera(scene, scene.camera.main_camera);
+			k_next_flush_data->light_batches = constructLight(k_next_flush_data->camera_batch, scene);
 
-			// Required by flush.
-			k_next_render_data->scene.renderer = scene.renderer;
-			// Required by the renderer.
-			k_next_render_data->scene.post_process_manager    = scene.post_process_manager;
-			k_next_render_data->scene.window                  = scene.window;
-			k_next_render_data->scene.gui                     = scene.gui;
-			k_next_render_data->render_actions                = eastl::move(scene.render_actions);
+			k_next_flush_data->scene.renderer                 = scene.renderer;
+			k_next_flush_data->scene.post_process_manager     = scene.post_process_manager;
+			k_next_flush_data->scene.window                   = scene.window;
+			k_next_flush_data->scene.gui                      = scene.gui;
+			k_next_flush_data->scene.render_actions           = scene.render_actions;
+			k_next_flush_data->scene.rigid_body.physics_world = scene.rigid_body.physics_world;
 
+			scene.render_actions.clear();
 			scene.debug_renderer.Clear();
 		}
 
 		void sceneOnRender(scene::Scene& scene)
 		{
-			components::RigidBodySystem::onRender(scene);
-
-#if USE_MT
-			while (!k_can_write)
-				Sleep(0);
-			k_can_write = false;
-#endif
-
-			// Swap data.
-			RenderData* temp_render_data = k_curr_render_data;
-			k_curr_render_data = k_next_render_data;
-			k_next_render_data = temp_render_data;
-
 #if USE_MT
 			if (!k_thread.joinable())
 			{
 				k_thread = std::thread(flushLoop);
 				SetThreadPriority(k_thread.native_handle(), THREAD_PRIORITY_HIGHEST);
+				SetThreadDescription(k_thread.native_handle(), L"Flush Thread");
+				SetThreadPriorityBoost(k_thread.native_handle(), TRUE);
 			}
 
+			while (!k_can_write)
+				Sleep(0);
+			k_can_write = false;
+
+			auto temp = k_flush_data;
+			k_flush_data = k_next_flush_data;
+			k_next_flush_data = temp;
 			k_can_read = true;
 #else
-			flush();
+			flush(k_next_flush_data->scene, k_next_flush_data->camera_batch, k_next_flush_data->light_batches);
 #endif
 		}
 		void sceneCollectGarbage(scene::Scene& scene)
@@ -916,13 +937,19 @@ namespace lambda
 		}
 		void sceneDeinitialize(scene::Scene& scene)
 		{
-			foundation::Memory::destruct(k_curr_render_data);
-			k_curr_render_data = nullptr;
-			foundation::Memory::destruct(k_next_render_data);
-			k_next_render_data = nullptr;
+#if USE_MT
+			k_can_read = true;
+			k_keep_alive = false;
+			k_thread.join();
+#endif
 
-			components::RigidBodySystem::deinitialize(scene);
+			foundation::Memory::destruct(k_flush_data);
+			k_flush_data = nullptr;
+			foundation::Memory::destruct(k_next_flush_data);
+			k_next_flush_data = nullptr;
+			
 			components::ColliderSystem::deinitialize(scene);
+			components::RigidBodySystem::deinitialize(scene);
 			components::NameSystem::deinitialize(scene);
 			components::LODSystem::deinitialize(scene);
 			components::CameraSystem::deinitialize(scene);

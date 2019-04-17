@@ -293,8 +293,13 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		bool GUI::handleWindowMessage(const platform::WindowMessage& message)
 		{
+			k_mutex.lock();
+			
 			if (!enabled_)
+			{
+				k_mutex.unlock();
 				return false;
+			}
 
 			switch (message.type)
 			{
@@ -338,6 +343,7 @@ namespace lambda
 			}
 			}
 
+			k_mutex.unlock();
 			return false;
 		}
 

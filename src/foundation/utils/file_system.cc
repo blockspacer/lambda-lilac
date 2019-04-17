@@ -3,6 +3,7 @@
 #include "console.h"
 #include <memory/memory.h>
 #include <mutex>
+#include <containers/containers.h>
 
 #if VIOLET_WIN32
 #include <experimental/filesystem>

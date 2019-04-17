@@ -164,5 +164,11 @@ assert(true); } } while (0)
 #define LMB_ASSERT(expr, ...) do { if ((expr) == false) { \
 LMB_LOG_ERR("Assertion failure\n=============================\n", __VA_ARGS__);\
 LMB_LOG(__VA_ARGS__); \
-LMB_LOG("\n\n"); } while (0)
+LMB_LOG("\n\nCallstack:\n"); \
+const char* callstack = captureCallStack(); \
+LMB_LOG(callstack); \
+::free((void*)callstack); \
+LMB_LOG("\n\n"); \
+__debugbreak();\
+assert(true); } } while (0)
 #endif

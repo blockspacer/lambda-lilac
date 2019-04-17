@@ -109,11 +109,6 @@ namespace lambda
 				scene.rigid_body.physics_world->update(delta_time);
 			}
 
-			void onRender(scene::Scene& scene)
-			{
-				scene.rigid_body.physics_world->render(scene);
-			}
-
 		  physics::IPhysicsWorld* RigidBodySystem::getPhysicsWorld(scene::Scene& scene)
 		  {
 			  return scene.rigid_body.physics_world;

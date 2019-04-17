@@ -197,6 +197,9 @@ namespace lambda
 				if (hasComponent(entity, scene))
 					return &scene.mono_behaviour.get(entity);
 
+				if (!TransformSystem::hasComponent(entity, scene))
+					return nullptr;
+
 				auto parent = TransformSystem::getParent(entity, scene);
 				if (parent)
 					return getClosest(parent, scene);

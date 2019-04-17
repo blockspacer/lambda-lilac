@@ -1,4 +1,5 @@
 #include <containers/containers.h>
+#include <mutex>
 
 namespace lambda
 {
@@ -8,7 +9,7 @@ namespace lambda
     {
     public:
       friend FrameHeap* GetFrameHeap();
-      static constexpr uint32_t kHeapCount    = 3u;
+      static constexpr uint32_t kHeapCount    = 5u;
       static constexpr uint32_t kHistoryCount = 10u;
 
 			FrameHeap();
@@ -30,7 +31,7 @@ namespace lambda
         return allocated;
       }
 
-      uint32_t currentHeapSize() const;
+      uint32_t currentHeapSize();
 
     private:
       uint32_t current_frame_heap_;
@@ -41,7 +42,8 @@ namespace lambda
       uint32_t heap_sizes_[kHeapCount];
       uint32_t size_history_[kHistoryCount];
       Vector<void*> temp_allocs_[kHeapCount];
-      
+			std::mutex mutex_;
+
     protected:
       static FrameHeap* s_frame_heap_;
     };

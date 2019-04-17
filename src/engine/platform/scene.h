@@ -27,6 +27,7 @@ namespace lambda
 
 		struct IRenderAction
 		{
+			virtual ~IRenderAction() {};
 			virtual void execute(Scene& scene) = 0;
 		};
 

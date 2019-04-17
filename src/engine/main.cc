@@ -97,17 +97,6 @@
 #include "scripting/wren/wren_context.h"
 #endif
 
-#if defined VIOLET_IMGUI_NUKLEAR
-#include "imgui/nuklear_imgui.h"
-#endif
-#if defined VIOLET_IMGUI_DEAR
-#include "imgui/dear_imgui.h"
-#endif
-#if defined VIOLET_IMGUI_NO
-#include "imgui/no_imgui.h"
-#endif
-
-
 using namespace lambda;
 
 glm::vec4 RGBtoHSV(const glm::vec4& rgb) {
@@ -223,9 +212,8 @@ public:
   MyWorld(
     platform::IWindow* window,
     platform::IRenderer* renderer,
-    scripting::IScriptContext* scripting,
-    foundation::SharedPointer<platform::IImGUI> imgui
-  ) : IWorld(window, renderer, scripting, imgui) {}
+    scripting::IScriptContext* scripting
+  ) : IWorld(window, renderer, scripting) {}
 
   virtual ~MyWorld() {};
 
@@ -384,29 +372,16 @@ int main(int argc, char** argv)
 #error No valid scripting engine found!
 #endif
 
-#if defined VIOLET_IMGUI_NUKLEAR
-			foundation::SharedPointer<platform::IImGUI> imgui = foundation::Memory::constructShared<imgui::NuklearImGUI>();
-#elif defined VIOLET_IMGUI_DEAR
-			foundation::SharedPointer<platform::IImGUI> imgui = foundation::Memory::constructShared<imgui::DearImGUI>();
-#elif defined VIOLET_IMGUI_NO
-			foundation::SharedPointer<platform::IImGUI> imgui = foundation::Memory::constructShared<imgui::NoImGUI>();
-#else
-#error No valid imgui found!
-#endif
-
 			window->create(glm::uvec2(1280u, 720u), "Engine");
 
 			{
-				MyWorld world(window, renderer, scripting, imgui);
-				imgui->setFont("resources/fonts/DroidSans.ttf", 16.0f);
+				MyWorld world(window, renderer, scripting);
 
 				//scripting::ScriptBinding(&world);
 				scripting->initialize({});
 				scripting->loadScripts({ script });
 
 				world.run();
-
-				scripting->terminate();
 			}
 
 			//scripting::ScriptRelease();
