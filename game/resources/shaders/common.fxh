@@ -35,13 +35,18 @@ Make_SamplerState(SamPointWarp, 12);
 Make_SamplerState(SamLinearWarp, 13);
 Make_SamplerState(SamAnisotrophicWarp, 14);
 
-#define cbUserIdx 0
+#define cbUserDataIdx 0
 #define cbPerFrameIdx 1
 #define cbPerCameraIdx 2
 #define cbPerMeshIdx 3
-#define cbPerTextureIdx 4
-#define cbPerLightIdx 5
-#define cbDynamicResolutionIdx 6
+#define cbPerLightIdx 4
+#define cbDynamicResolutionIdx 5
+#define cbGuiIdx 6
+
+Make_CBuffer(cbUserData, cbUserDataIdx)
+{
+  float4 user_data[16];
+};
 
 Make_CBuffer(cbPerFrame, cbPerFrameIdx)
 {
@@ -67,11 +72,6 @@ Make_CBuffer(cbPerMesh, cbPerMeshIdx)
 {
   float4x4 model_matrix;
   float2 metallic_roughness;
-};
-
-Make_CBuffer(cbPerTexture, cbPerTextureIdx)
-{
-  float2 inv_texture_size;
 };
 
 Make_CBuffer(cbPerLight, cbPerLightIdx)

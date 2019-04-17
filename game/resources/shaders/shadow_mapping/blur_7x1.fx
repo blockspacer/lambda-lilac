@@ -44,12 +44,11 @@ VSOutput VS(uint id : SV_VertexID)
   return vOut;
 }
 
-Make_CBuffer(cbUser, cbUserIdx)
-{
 #if IS_CUBE
-  float face;
+#define face user_data[0].x
 #endif
-};
+
+#define inv_texture_size user_data[15].xy
 
 #if IS_CUBE
 Make_TextureCube(tex_to_blur, 0);

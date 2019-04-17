@@ -14,10 +14,7 @@ VSOutput VS(uint id: SV_VertexID)
   return vOut;
 }
 
-Make_CBuffer(cbUser, cbUserIdx)
-{
-  float water_height;
-}
+#define water_height user_data[0].x
 
 Make_Texture2D(tex_albedo, 0);
 

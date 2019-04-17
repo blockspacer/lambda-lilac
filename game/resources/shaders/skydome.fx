@@ -1,12 +1,9 @@
 #include "common.fxh"
 #include "atmosphere.fxh"
 
-Make_CBuffer(cbUser, cbUserIdx)
-{
-  float3 eSunDir = normalize(float3(1.0f, 1.0f, 1.0f));
-  float eNearPlane = 0.1f;
-  float eFarPlane = 1000.0f;
-};
+#define eSunDir user_data[0].xyz
+#define eNearPlane user_data[1].x
+#define eFarPlane user_data[1].y
 
 struct VSOutput
 {

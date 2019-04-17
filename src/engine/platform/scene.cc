@@ -732,19 +732,42 @@ namespace lambda
 			Scene scene;
 			CameraBatch camera_batch;
 			Vector<LightBatch> light_batches;
+			Vector<IRenderAction*> render_actions;
 		};
 
 #define USE_MT 1
 
-#if USE_MT
-		std::atomic<bool> k_can_read  = false;
-		std::atomic<bool> k_can_write = true;
 		RenderData* k_curr_render_data = nullptr;
 		RenderData* k_next_render_data = nullptr;
-		std::thread k_thread;
 
 		///////////////////////////////////////////////////////////////////////////
 		void flush()
+		{
+			k_curr_render_data->scene.renderer->setOverrideScene(&k_curr_render_data->scene);
+			k_curr_render_data->scene.renderer->startFrame();
+
+			renderCamera(k_curr_render_data->scene.renderer, k_curr_render_data->camera_batch);
+			renderLight(k_curr_render_data->scene.renderer, *k_curr_render_data->scene.post_process_manager, k_curr_render_data->light_batches.data(), (uint32_t)k_curr_render_data->light_batches.size());
+
+			k_curr_render_data->scene.gui->render(k_curr_render_data->scene);
+
+			for (auto render_action : k_curr_render_data->render_actions)
+			{
+				render_action->execute(k_curr_render_data->scene);
+				foundation::Memory::destruct(render_action);
+			}
+
+			k_curr_render_data->scene.renderer->endFrame();
+			k_curr_render_data->scene.renderer->setOverrideScene(nullptr);
+		}
+
+#if USE_MT
+		std::atomic<bool> k_can_read  = false;
+		std::atomic<bool> k_can_write = true;
+		std::thread k_thread;
+
+		///////////////////////////////////////////////////////////////////////////
+		void flushLoop()
 		{
 			while (true)
 			{
@@ -752,25 +775,87 @@ namespace lambda
 					Sleep(0);
 				k_can_read = false;
 
-				k_curr_render_data->scene.renderer->setOverrideScene(&k_curr_render_data->scene);
-				k_curr_render_data->scene.renderer->startFrame();
-
-				renderCamera(k_curr_render_data->scene.renderer, k_curr_render_data->camera_batch);
-				renderLight(k_curr_render_data->scene.renderer, *k_curr_render_data->scene.post_process_manager, k_curr_render_data->light_batches.data(), (uint32_t)k_curr_render_data->light_batches.size());
-
-				k_curr_render_data->scene.gui->render(k_curr_render_data->scene);
-
-				k_curr_render_data->scene.renderer->endFrame();
-				k_curr_render_data->scene.renderer->setOverrideScene(nullptr);
+				flush();
 
 				k_can_write = true;
 			}
 		}
 #endif
 
+		struct RenderAction_PostProcess : public scene::IRenderAction
+		{
+			virtual void execute(scene::Scene& scene) override
+			{
+				scene.renderer->setMesh(asset::MeshManager::getInstance()->getFromCache(Name("__full_screen_quad__")));
+				scene.renderer->setSubMesh(0u);
+				scene.renderer->setRasterizerState(platform::RasterizerState::SolidBack());
+				scene.renderer->setBlendState(platform::BlendState::Default());
+				scene.renderer->setDepthStencilState(platform::DepthStencilState::Default());
+
+				scene.renderer->beginTimer("Post Processing");
+				scene.renderer->pushMarker("Post Processing");
+				for (auto& pass : scene.post_process_manager->getPasses())
+				{
+					if (pass.getEnabled())
+					{
+						scene.renderer->pushMarker(pass.getName().getName());
+						scene.renderer->bindShaderPass(pass);
+
+						scene.renderer->draw();
+						scene.renderer->popMarker();
+					}
+					else
+					{
+						scene.renderer->setMarker(pass.getName().getName() + " - Disabled");
+					}
+				}
+				scene.renderer->popMarker();
+				scene.renderer->endTimer("Post Processing");
+			}
+		};
+
+		struct RenderAction_DebugRenderer : public scene::IRenderAction
+		{
+			virtual void execute(scene::Scene& scene) override
+			{
+				scene.renderer->beginTimer("Debug Renderer");
+				scene.renderer->pushMarker("Debug Renderer");
+				scene.debug_renderer.Render(scene);
+				scene.renderer->popMarker();
+				scene.renderer->endTimer("Debug Renderer");
+			}
+		};
+
+		struct RenderAction_CopyToScreen : public scene::IRenderAction
+		{
+			virtual void execute(scene::Scene& scene) override
+			{
+				scene.renderer->beginTimer("Copy To Screen");
+				scene.renderer->pushMarker("Copy To Screen");
+
+				scene.renderer->setBlendState(platform::BlendState::Alpha());
+
+				scene.renderer->copyToScreen(
+					scene.post_process_manager->getTarget(
+						scene.post_process_manager->getFinalTarget()
+					).getTexture()
+				);
+
+				if (scene.gui->getEnabled())
+					scene.renderer->copyToScreen(scene.post_process_manager->getTarget(Name("gui")).getTexture());
+
+				scene.renderer->popMarker();
+				scene.renderer->endTimer("Copy To Screen");
+			}
+		};
+
 		void sceneConstructRender(scene::Scene& scene)
 		{
-#if USE_MT
+			//Add all render actions.
+			scene.render_actions.push_back(foundation::Memory::construct<RenderAction_PostProcess>());
+			scene.render_actions.push_back(foundation::Memory::construct<RenderAction_DebugRenderer>());
+			scene.render_actions.push_back(foundation::Memory::construct<RenderAction_CopyToScreen>());
+
 			// Create new.
 			if (!k_next_render_data)
 				k_next_render_data = foundation::Memory::construct<RenderData>();
@@ -784,9 +869,9 @@ namespace lambda
 			k_next_render_data->scene.post_process_manager    = scene.post_process_manager;
 			k_next_render_data->scene.window                  = scene.window;
 			k_next_render_data->scene.gui                     = scene.gui;
+			k_next_render_data->render_actions                = eastl::move(scene.render_actions);
 
 			scene.debug_renderer.Clear();
-#endif
 		}
 
 		void sceneOnRender(scene::Scene& scene)
@@ -797,42 +882,23 @@ namespace lambda
 			while (!k_can_write)
 				Sleep(0);
 			k_can_write = false;
+#endif
 
 			// Swap data.
 			RenderData* temp_render_data = k_curr_render_data;
 			k_curr_render_data = k_next_render_data;
 			k_next_render_data = temp_render_data;
 
+#if USE_MT
 			if (!k_thread.joinable())
 			{
-				k_thread = std::thread(flush);
+				k_thread = std::thread(flushLoop);
 				SetThreadPriority(k_thread.native_handle(), THREAD_PRIORITY_HIGHEST);
 			}
 
 			k_can_read = true;
 #else
-			scene.renderer->setOverrideScene(&scene);
-			scene.renderer->startFrame();
-
-			Scene k_scene;
-			CameraBatch k_camera_batch;
-			LightBatch k_light_batches;
-
-			// Required by the renderer.
-			k_scene.post_process_manager    = scene.post_process_manager;
-			k_scene.window                  = scene.window;
-			k_scene.gui                     = scene.gui;
-
-			scene.gui->render(scene);
-
-			CameraBatch camera_batch = constructCamera(scene, scene.camera.main_camera);
-			Vector<LightBatch> light_batches = constructLight(camera_batch, scene);
-
-			renderCamera(scene.renderer, camera_batch);
-			renderLight(scene.renderer, *scene.post_process_manager, light_batches.data(), (uint32_t)light_batches.size());
-
-			scene.renderer->endFrame();
-			scene.renderer->setOverrideScene(nullptr);
+			flush();
 #endif
 		}
 		void sceneCollectGarbage(scene::Scene& scene)
@@ -850,12 +916,10 @@ namespace lambda
 		}
 		void sceneDeinitialize(scene::Scene& scene)
 		{
-#if USE_MT
 			foundation::Memory::destruct(k_curr_render_data);
 			k_curr_render_data = nullptr;
 			foundation::Memory::destruct(k_next_render_data);
 			k_next_render_data = nullptr;
-#endif
 
 			components::RigidBodySystem::deinitialize(scene);
 			components::ColliderSystem::deinitialize(scene);

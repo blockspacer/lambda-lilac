@@ -243,21 +243,26 @@ public:
   class Average
   {
   public:
+    Average()
+	{
+		memset(averages, 0, sizeof(averages));
+		total = 0.0f;
+		idx = 0u;
+	}
     void add(float entry)
-    {
+	{
       idx = (idx + 1u) % kCount;
+	  total = total - averages[idx] + entry;
       averages[idx] = entry;
     }
     float average() const
     {
-      float average = 0.0f;
-      for (uint8_t i = 0u; i < kCount; ++i)
-        average += averages[i];
-      return average / (float)kCount;
+		return total / kCount;
     }
   private:
-    uint8_t idx = 0u;
-    static constexpr uint8_t kCount = 100u;
+    uint32_t idx;
+	float total;
+    static constexpr uint32_t kCount = 100u;
     float averages[kCount];
   };
 
@@ -270,36 +275,23 @@ public:
 
 	  static constexpr uint32_t kTimerCount = 5u;
 	  static Average kTimers[kTimerCount];
-	  static constexpr char* kTimerNames[kTimerCount] = { "FixedUpdate", "Update", "CollectGarbage", "ConstructRender", "OnRender" };
-	  static constexpr bool  kGameTimer[kTimerCount]  = { true,          true,     true,             false,             false      };
-	  static Average kTotal;
-	  kTotal.add((float)getProfiler().getTime("Total"));
-
-	  double total_game   = 0.0;
-	  double total_render = 0.0;
+	  static constexpr char* kTimerNames[kTimerCount]   = { "FixedUpdate",  "Update",       "CollectGarbage", "ConstructRender", "OnRender"     };
+	  static constexpr bool  kGameTimer[kTimerCount]    = { true,           true,           true,             false,             false          };
+	  static constexpr char* kTimerColours[kTimerCount] = { "rgb(100,0,0)", "rgb(144,0,0)", "rgb(188,0,0)",   "rgb(0,0,144)",    "rgb(0,0,188)" };
+	  String execute_string = "";
 
 	  for (uint32_t i = 0; i < kTimerCount; ++i)
 	  {
 		  kTimers[i].add((float)getProfiler().getTime(kTimerNames[i]));
-		  double val = 0.0;
-		  if (kTotal.average() != 0.0)
-		  {
-			  val = std::round(kTimers[i].average() * 1000);
 
-			  if (kGameTimer[i])
-				  total_game += val;
-			  else
-				  total_render += val;
-		  }
-		  getGUI().executeJavaScript("setTimer(\"" + String(kTimerNames[i]) + "\"," + toString(val) + ")");
+		  // name, colour, value
+		  execute_string += "\"" + String(kTimerNames[i]) + "\", " + toString(kTimers[i].average()) + ", \"" + kTimerColours[i] + "\"";
+		  if (i < kTimerCount - 1)
+			  execute_string += ", ";
 	  }
+
+	  getGUI().executeJavaScript("setAllTimers([" + execute_string + "] );");
 	  
-	  double game_vs_render = (total_game != 0.0 && total_render != 0.0) ? std::round(total_game / (total_game + total_render) * 100.0) : 0.0;
-
-	  getGUI().executeJavaScript("setTimer(\"TotalGame\"," + toString(total_game) + ")");
-	  getGUI().executeJavaScript("setTimer(\"TotalRender\"," + toString(total_render) + ")");
-	  getGUI().executeJavaScript("setTimer(\"GameVSRender\"," + toString(game_vs_render) + ")");
-
 	  float dynamic_resolution_scale = 1.0f;
 
 	  static const float drs[] = {

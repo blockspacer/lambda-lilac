@@ -30,6 +30,7 @@ namespace lambda
 			, flags_(flags)
 			, buffer_(buffer)
 			, context_(context)
+			, changed_(true)
 		{
 		}
 
@@ -38,6 +39,7 @@ namespace lambda
 		{
 			LMB_ASSERT(flags_ & kFlagDynamic, "TODO (Hilze): Fill in");
 
+			changed_ = true;
 			D3D11_MAPPED_SUBRESOURCE resource;
 			context_->Map(buffer_, 0u, D3D11_MAP_WRITE_DISCARD, 0u, &resource);
 			return resource.pData;
@@ -67,6 +69,18 @@ namespace lambda
 		ID3D11Buffer* D3D11RenderBuffer::getBuffer() const
 		{
 			return buffer_;
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		bool D3D11RenderBuffer::getChanged() const
+		{
+			return changed_;
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		void D3D11RenderBuffer::setChanged(bool changed)
+		{
+			changed_ = changed;
 		}
 
 		///////////////////////////////////////////////////////////////////////////
@@ -548,7 +562,7 @@ namespace lambda
 		{
 			scene_ = &scene;
 
-			full_screen_quad_.mesh = asset::MeshManager::getInstance()->create(Name("__full_screen_quad_mesh__"), asset::Mesh::createScreenQuad());
+			full_screen_quad_.mesh = asset::MeshManager::getInstance()->create(Name("__full_screen_quad__"), asset::Mesh::createScreenQuad());
 			full_screen_quad_.shader = asset::ShaderManager::getInstance()->get(Name("resources/shaders/full_screen_quad.fx"));
 
 			memset(&state_, 0, sizeof(state_));
@@ -675,57 +689,6 @@ namespace lambda
 		void D3D11Context::endFrame(bool display)
 		{
 			LMB_ASSERT(override_scene_, "D3D11 CONTEXT: Tried to render outside of the flush thread");
-
-			setMesh(full_screen_quad_.mesh);
-			setSubMesh(0u);
-			setRasterizerState(platform::RasterizerState::SolidBack());
-			setBlendState(platform::BlendState::Default());
-			setDepthStencilState(platform::DepthStencilState::Default());
-
-			context_.context->OMSetRenderTargets(0u, nullptr, nullptr);
-
-			beginTimer("Post Processing");
-			pushMarker("Post Processing");
-			for (auto& pass : getScene()->post_process_manager->getPasses())
-			{
-				if (pass.getEnabled())
-				{
-					pushMarker(pass.getName().getName());
-					bindShaderPass(pass);
-
-					draw();
-					popMarker();
-				}
-				else
-				{
-					setMarker(pass.getName().getName() + " - Disabled");
-				}
-			}
-			popMarker();
-			endTimer("Post Processing");
-
-			beginTimer("Debug Rendering");
-			pushMarker("Debug Rendering");
-			getScene()->debug_renderer.Render(*getScene());
-			popMarker();
-			endTimer("Debug Rendering");
-
-			beginTimer("Copy To Screen");
-			pushMarker("Copy To Screen");
-
-			setBlendState(platform::BlendState::Alpha());
-
-			copyToScreen(
-				getScene()->post_process_manager->getTarget(
-					getScene()->post_process_manager->getFinalTarget()
-				).getTexture()
-			);
-
-			if (getScene()->gui->getEnabled())
-			  copyToScreen(getScene()->post_process_manager->getTarget(Name("gui")).getTexture());
-
-			popMarker();
-			endTimer("Copy To Screen");
 
 			pushMarker("Present");
 			present();
@@ -861,7 +824,7 @@ namespace lambda
 	  asset::VioletShaderHandle  shader   = state_.shader;
 	  asset::VioletMeshHandle    mesh     = state_.mesh;
 	  uint32_t                   sub_mesh = state_.sub_mesh;
-	  platform::IRenderBuffer* last_user  = state_.constant_buffers[cbUserIdx];
+	  glm::vec4                  ud       = cbs_.user_data[0];
 
 	  ID3D11ShaderResourceView* srv = nullptr;
 	  for (uint32_t i = 0; i < MAX_TEXTURE_COUNT; ++i)
@@ -880,15 +843,11 @@ namespace lambda
 	  setRasterizerState(platform::RasterizerState::SolidBack());
 
 	  bool src_use_drs = (texture->getLayer(0u).getFlags() & kTextureFlagDynamicScale) != 0u;
-
-	  float temp_data[] = { src_use_drs ? dynamic_resolution_scale_ : 1.0f };
-	  platform::IRenderBuffer* temp_user = (D3D11RenderBuffer*)allocRenderBuffer(sizeof(float) * 4, platform::IRenderBuffer::kFlagConstant | platform::IRenderBuffer::kFlagTransient | platform::IRenderBuffer::kFlagImmutable, (void*)temp_data);
-	  setConstantBuffer(temp_user, cbUserIdx);
+	  setUserData(glm::vec4(src_use_drs ? dynamic_resolution_scale_ : 1.0f, 0.0f, 0.0f, 0.0f), 0);
 
 	  draw();
 
-	  setConstantBuffer(last_user, cbUserIdx);
-
+	  setUserData(ud, 0);
 	  setViewports(viewports);
 	  setScissorRects(scissor_rects);
 	  setMesh(mesh);
@@ -1204,12 +1163,8 @@ namespace lambda
 				glm::vec2 val(1.0f);
 				if (texture)
 					val = 1.0f / glm::vec2((float)texture->getLayer(0u).getWidth(), (float)texture->getLayer(0u).getHeight());
-
-				if (!cbs_.per_texture) cbs_.per_texture = (D3D11RenderBuffer*)allocRenderBuffer(sizeof(float) * 2, platform::IRenderBuffer::kFlagConstant | platform::IRenderBuffer::kFlagDynamic, nullptr);
-				float per_texture_data[] = { val.x, val.y };
-				memcpy(cbs_.per_texture->lock(), per_texture_data, sizeof(per_texture_data));
-				cbs_.per_texture->unlock();
-				setConstantBuffer(cbs_.per_texture, cbPerTextureIdx);
+				
+				setUserData(glm::vec4(val.x, val.y, 0.0f, 0.0f), 15);
 			}
 
 			state_.textures[slot] = texture;
@@ -1227,7 +1182,26 @@ namespace lambda
 			state_.constant_buffers[slot] = constant_buffer;
 			dx_state_.constant_buffers[slot] = constant_buffer ? ((D3D11RenderBuffer*)constant_buffer)->getBuffer() : nullptr;
 			makeDirty(DirtyStates::kConstantBuffers);
-			state_.dirty_constant_buffers |= 1ull << slot;
+
+			for (int i = 0; i < (int)ShaderStages::kCount; ++i)
+				state_.dirty_constant_buffers[i] |= 1ull << slot;
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		void D3D11Context::setUserData(glm::vec4 user_data, uint8_t slot)
+		{
+			if (cbs_.user_data[slot] != user_data)
+			{
+				cbs_.user_data[slot] = user_data;
+
+				if (!cbs_.cb_user_data)
+					cbs_.cb_user_data = (D3D11RenderBuffer*)allocRenderBuffer(sizeof(cbs_.user_data), platform::IRenderBuffer::kFlagConstant | platform::IRenderBuffer::kFlagDynamic, nullptr);
+				
+				memcpy(cbs_.cb_user_data->lock(), cbs_.user_data, sizeof(cbs_.user_data));
+				cbs_.cb_user_data->unlock();
+				
+				setConstantBuffer(cbs_.cb_user_data, cbUserDataIdx);
+			}
 		}
 
 		///////////////////////////////////////////////////////////////////////////
@@ -1548,29 +1522,42 @@ namespace lambda
 			{
 				for (const auto& buffer : shader->getBuffers())
 				{
-					switch (buffer.stage)
+					bool changed = (state_.dirty_constant_buffers[(int)buffer.stage] & (1 << buffer.slot)) ? true : false;
+
+					if (!changed && (state_.constant_buffers[buffer.slot] && ((D3D11RenderBuffer*)state_.constant_buffers[buffer.slot])->getChanged()))
 					{
-					case ShaderStages::kVertex:
-						context_.context->VSSetConstantBuffers(
-							(UINT)buffer.slot,
-							1u,
-							&dx_state_.constant_buffers[buffer.slot]
-						);
-						break;
-					case ShaderStages::kPixel:
-						context_.context->PSSetConstantBuffers(
-							(UINT)buffer.slot,
-							1u,
-							&dx_state_.constant_buffers[buffer.slot]
-						);
-						break;
-					case ShaderStages::kGeometry:
-						context_.context->GSSetConstantBuffers(
-							(UINT)buffer.slot,
-							1u,
-							&dx_state_.constant_buffers[buffer.slot]
-						);
-						break;
+						((D3D11RenderBuffer*)state_.constant_buffers[buffer.slot])->setChanged(false);
+						changed = true;
+					}
+
+					if (changed)
+					{
+						state_.dirty_constant_buffers[(int)buffer.stage] &= ~(1 << buffer.slot);
+					
+						switch (buffer.stage)
+						{
+						case ShaderStages::kVertex:
+							context_.context->VSSetConstantBuffers(
+								(UINT)buffer.slot,
+								1u,
+								&dx_state_.constant_buffers[buffer.slot]
+							);
+							break;
+						case ShaderStages::kPixel:
+							context_.context->PSSetConstantBuffers(
+								(UINT)buffer.slot,
+								1u,
+								&dx_state_.constant_buffers[buffer.slot]
+							);
+							break;
+						case ShaderStages::kGeometry:
+							context_.context->GSSetConstantBuffers(
+								(UINT)buffer.slot,
+								1u,
+								&dx_state_.constant_buffers[buffer.slot]
+							);
+							break;
+						}
 					}
 				}
 			}

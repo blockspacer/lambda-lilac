@@ -946,6 +946,14 @@ namespace lambda
 		}
 
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		VioletMeshHandle MeshManager::getFromCache(Name name)
+		{
+			auto it = mesh_cache_.find(name.getHash());
+			LMB_ASSERT(it != mesh_cache_.end(), "Could not find mseh in cache: %s", name.getName().c_str());
+			return VioletMeshHandle(it->second, name);
+		}
+
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		void lambda::asset::MeshManager::destroy(Mesh* mesh, const size_t& hash)
 		{
 			if (mesh_cache_.empty())

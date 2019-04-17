@@ -66,7 +66,7 @@ float4 PS(VSOutput pIn) : SV_TARGET0
   for (uint i = 0u; i < SAMPLE_COUNT; ++i)
   {
     float2 Xi = Hammersley(i, SAMPLE_COUNT);
-    float3 H  = ImportanceSampleGGX(Xi, N, metallic_roughness.y);
+    float3 H  = ImportanceSampleGGX(Xi, N, user_data[0].x);
     float3 L  = normalize(2.0 * dot(V, H) * H - V);
 
     float NdotL = max(dot(N, L), 0.0);

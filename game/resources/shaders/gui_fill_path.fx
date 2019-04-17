@@ -1,6 +1,6 @@
 #include "common.fxh"
 
-Make_CBuffer(cbUser, cbUserIdx)
+Make_CBuffer(cbGui, cbGuiIdx)
 {
   float4 State;
   matrix Transform;

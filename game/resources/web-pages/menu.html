@@ -600,24 +600,8 @@
 			<p class="menu_BodySubName" id="dbg_mem" style="padding: 0pt; margin: 0pt; width: 50pt; text-align: right;">0</p>
 		</div>
 		<div style="padding: 10pt; margin: 10pt; left:50% -152pt; top: 0px; position: fixed; width: 304pt; height: fit-content; background: black; border-right: 2pt solid orange; border-left:  2pt solid orange;">
-			<p class="menu_BodySubName" style="padding: 0pt; margin: 0pt; width: 150pt; font-weight: bold;">FixedUpdate</p>
-			<p class="menu_BodySubName" id="timer_FixedUpdate" style="padding: 0pt; margin: 0pt; width: 150pt; text-align: right;">0</p>
-			<p class="menu_BodySubName" style="padding: 0pt; margin: 0pt; width: 150pt; font-weight: bold;">Update</p>
-			<p class="menu_BodySubName" id="timer_Update" style="padding: 0pt; margin: 0pt; width: 150pt; text-align: right;">0</p>
-			<p class="menu_BodySubName" style="padding: 0pt; margin: 0pt; width: 150pt; font-weight: bold;">CollectGarbage</p>
-			<p class="menu_BodySubName" id="timer_CollectGarbage" style="padding: 0pt; margin: 0pt; width: 150pt; text-align: right;">0</p>
-			<p class="menu_BodySubName" style="padding: 0pt; margin: 0pt; width: 150pt; font-weight: bold;">ConstructRender</p>
-			<p class="menu_BodySubName" id="timer_ConstructRender" style="padding: 0pt; margin: 0pt; width: 150pt; text-align: right;">0</p>
-			<p class="menu_BodySubName" style="padding: 0pt; margin: 0pt; width: 150pt; font-weight: bold;">OnRender</p>
-			<p class="menu_BodySubName" id="timer_OnRender" style="padding: 0pt; margin: 0pt; width: 150pt; text-align: right;">0</p>
-			<p class="menu_BodySubName" style="padding: 0pt; margin: 0pt; width: 150pt; font-weight: bold;"></p>
-			<p class="menu_BodySubName" style="padding: 0pt; margin: 0pt; width: 150pt; font-weight: bold;"></p>
-			<p class="menu_BodySubName" style="padding: 0pt; margin: 0pt; width: 150pt; font-weight: bold;">Game Total</p>
-			<p class="menu_BodySubName" id="timer_TotalGame" style="padding: 0pt; margin: 0pt; width: 150pt; text-align: right;">0</p>
-			<p class="menu_BodySubName" style="padding: 0pt; margin: 0pt; width: 150pt; font-weight: bold;">Render Total</p>
-			<p class="menu_BodySubName" id="timer_TotalRender" style="padding: 0pt; margin: 0pt; width: 150pt; text-align: right;">0</p>
-			<p class="menu_BodySubName" style="padding: 0pt; margin: 0pt; width: 150pt; font-weight: bold;">GameVSRender</p>
-			<p class="menu_BodySubName" id="timer_GameVSRender" style="padding: 0pt; margin: 0pt; width: 150pt; text-align: right;">0</p>
+			<p class="menu_BodySubName" style="padding: 0pt; margin: 0pt; width: 300pt; font-weight: bold;">Frame Layout</p>
+			<div style="width:100%; height:20pt; position:relative;"><div id="timers"></div></div>
 		</div>
 		<script>
 			var m = document.getElementsByClassName("menu");
@@ -684,9 +668,44 @@
 			function updateAllocatedMemory(memSize) {
 				document.getElementById("dbg_mem").innerHTML = memSize + "MB"
 			}
-			function setTimer(name, value) {
-				document.getElementById("timer_" + name).innerHTML = value;
+			function setAllTimers(timerInfo) {
+				var numTimers = timerInfo.length / 3;
+				var total = 0;
+				for (var i = 0; i < numTimers; ++i) {
+					total += timerInfo[1 + i * 3];
+				}
+
+				var timers = document.getElementById("timers");
+
+				while (timers.children.length > numTimers) {
+					timers.removeChild(timers.children[timers.children.length - 1]);
+				}
+
+				while (timers.children.length < numTimers) {
+					var child = document.createElement("DIV");
+					child.style.display    = "table-cell";
+					child.style.padding    = "0pt";
+					child.style.margin     = "0pt";
+					child.style.fontSize   = "15pt";
+					child.style.fontFamily = "arial";
+					child.style.position   = "absolute";
+					child.style.color      = "#DDDDDD";
+					timers.appendChild(child);
+				}
+
+				var offset = 0.0;
+				for (var i = 0; i < numTimers; ++i) {
+					var width = (timerInfo[1 + i * 3] / total) * 100;
+					timers.children[i].style.left       = offset + "%";
+					timers.children[i].style.width      = width  + "%";
+					timers.children[i].style.background = timerInfo[2 + i * 3];
+					timers.children[i].innerHTML        = timerInfo[0 + i * 3];
+					timers.children[i].lastChild.innerHTML = timerInfo[0 + i * 3];
+					offset += width;
+				}
 			}
+
+			setAllTimers([ "test", 100, "red","all", 200, "green", "things", 50, "blue" ]);
 		</script>
 	</body>
 </html>

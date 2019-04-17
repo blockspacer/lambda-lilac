@@ -71,12 +71,15 @@ namespace lambda
 			virtual uint32_t getFlags()  const override;
 			virtual uint32_t getSize()   const override;
 			ID3D11Buffer*    getBuffer() const;
+			bool             getChanged() const;
+			void             setChanged(bool changed);
 
 		private:
 			ID3D11DeviceContext* context_;
 			ID3D11Buffer* buffer_;
 			uint32_t flags_;
 			uint32_t size_;
+			bool     changed_;
 		};
 
 		///////////////////////////////////////////////////////////////////////////
@@ -213,6 +216,7 @@ namespace lambda
 				platform::IRenderBuffer* constant_buffer,
 				uint8_t slot = 0
 			) override;
+			virtual void setUserData(glm::vec4 user_data, uint8_t slot = 0) override;
 			virtual void setRenderTargets(
 				Vector<asset::VioletTextureHandle> render_targets,
 				asset::VioletTextureHandle depth_buffer
@@ -302,7 +306,7 @@ namespace lambda
 				uint32_t                   sub_mesh;
 				asset::VioletShaderHandle  shader;
 				platform::IRenderBuffer*   constant_buffers[MAX_CONSTANT_BUFFER_COUNT];
-				uint16_t                   dirty_constant_buffers;
+				uint16_t                   dirty_constant_buffers[(int)ShaderStages::kCount];
 			} state_;
 
 			struct DXState
@@ -337,9 +341,11 @@ namespace lambda
 
 			struct ConstantBuffers
 			{
-				D3D11RenderBuffer* per_frame   = nullptr;
-				D3D11RenderBuffer* per_texture = nullptr;
-				D3D11RenderBuffer* drs         = nullptr;
+				D3D11RenderBuffer* per_frame    = nullptr;
+				D3D11RenderBuffer* per_texture  = nullptr;
+				D3D11RenderBuffer* drs          = nullptr;
+				D3D11RenderBuffer* cb_user_data = nullptr;
+				glm::vec4 user_data[16];
 			} cbs_;
 
 #if GPU_MARKERS

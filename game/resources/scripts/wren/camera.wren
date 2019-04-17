@@ -195,9 +195,6 @@ class FreeLookCamera is MonoBehaviour {
     var last_held_attack = _held_attack
     _held_attack = getHeldAttack
     if (_held_attack && !last_held_attack) {
-      _useNormalMapping = _useNormalMapping + 1.0
-      if (_useNormalMapping >= 4.0) _useNormalMapping = 0.0
-      PostProcess.setShaderVariableFloat1("useNormalMapping", _useNormalMapping)
       //_shurikens.add(ShurikenBehaviour.create(_camera_transform.worldPosition, _camera_transform.worldForward))
     }
 

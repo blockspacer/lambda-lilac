@@ -30,6 +30,8 @@ Make_Texture2D(tex_to_blur, 0);
 #define BLUR_SCALE 1.0f
 #endif
 
+#define inv_texture_size user_data[15].xy
+
 static const float blur_table[5] = {
   0.016216f,
   0.054054f, 

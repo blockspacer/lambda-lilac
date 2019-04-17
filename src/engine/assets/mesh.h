@@ -247,6 +247,7 @@ namespace lambda
 			VioletMeshHandle create(Name name);
 			VioletMeshHandle create(Name name, Mesh mesh);
 			VioletMeshHandle get(Name name);
+			VioletMeshHandle getFromCache(Name name);
 			void destroy(Mesh* mesh, const size_t& hash);
 
 		public:

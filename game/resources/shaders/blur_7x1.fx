@@ -26,6 +26,8 @@ VSOutput VS(uint id : SV_VertexID)
 
 Make_Texture2D(tex_to_blur, 0);
 
+#define inv_texture_size user_data[15].xy
+
 static const float blur_table[4] = {
   1.0f / 64.0f,
   6.0f / 64.0f,

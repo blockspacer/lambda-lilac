@@ -101,7 +101,7 @@ class PostProcessor {
     PostProcess.addShaderPass("apply_lighting", Shader.load("resources/shaders/apply_lighting.fx"), [ "post_process_buffer", "position", "normal", "metallic_roughness", "light_map", "irradiance_map", "prefiltered", "brdf_lut", "ssao_target" ], [ "post_process_buffer" ])
   }
   ssao(strength, blur_scale, blur_passes, render_target_scale) {
-    if (strength == 0 || strength > 5) {
+    if (strength <= 0 || strength > 5) {
       PostProcess.addRenderTarget("ssao_target", Texture.create(Vec2.new(1.0), [ 255 ], TextureFormat.A8))
       return
     }

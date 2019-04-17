@@ -3700,6 +3700,22 @@ class PostProcess {
 
           float as = (float)rt_input.getTexture()->getLayer(0u).getHeight() / (float)rt_input.getTexture()->getLayer(0u).getWidth();
 
+		  struct RenderAction : public scene::IRenderAction
+		  {
+			  platform::ShaderPass shader_pass;
+			  asset::VioletMeshHandle mesh;
+
+			  virtual void execute(scene::Scene& scene) override
+			  {
+				  scene.renderer->setMesh(mesh);
+				  scene.renderer->setSubMesh(0u);
+				  scene.renderer->bindShaderPass(shader_pass);
+				  scene.renderer->draw();
+			  }
+		  };
+		  RenderAction* render_action = foundation::Memory::construct<RenderAction>();
+		  g_world->getScene().render_actions.push_back(render_action);
+
           VioletTexture violet_texture;
           violet_texture.width = 512u;
           violet_texture.height = (uint32_t)(512.0f * as);
@@ -3710,21 +3726,14 @@ class PostProcess {
           violet_texture.hash = hash(output);
           asset::VioletTextureHandle texture = asset::TextureManager::getInstance()->create(output, violet_texture);
 
-          auto mesh = asset::MeshManager::getInstance()->create(Name("__irradiance_convolution_mesh__"), asset::Mesh::createScreenQuad());
-					//g_scene->renderer->setMesh(mesh);
-					//g_scene->renderer->setSubMesh(0u);
+          render_action->mesh = asset::MeshManager::getInstance()->create(Name("__irradiance_convolution_mesh__"), asset::Mesh::createScreenQuad());
 
-          platform::RenderTarget rt_out(Name("IrradianceConvolution_Out"), texture);
-
-          platform::ShaderPass shader_pass(
+		  render_action->shader_pass = platform::ShaderPass(
             Name("IrradianceConvolution"),
             shader,
             { rt_input },
-            { rt_out }
+            { platform::RenderTarget(Name("IrradianceConvolution_Out"), texture) }
           );
-
-					//g_scene->renderer->bindShaderPass(shader_pass);
-					//g_scene->renderer->draw();
 
           g_world->getScene().post_process_manager->addTarget(platform::RenderTarget(Name(output), texture));
         };
@@ -3746,27 +3755,50 @@ class PostProcess {
           violet_texture.hash = hash(output);
           asset::VioletTextureHandle texture = asset::TextureManager::getInstance()->create(output, violet_texture);
 
-          auto mesh = asset::MeshManager::getInstance()->create(Name("__hammerhead_mesh__"), asset::Mesh::createScreenQuad());
-					//g_scene->renderer->setMesh(mesh);
-					//g_scene->renderer->setSubMesh(0u);
+		  struct RenderAction : public scene::IRenderAction
+		  {
+			  asset::VioletMeshHandle mesh;
+
+			  struct Pass
+			  {
+				  platform::ShaderPass shader_pass;
+				  float user_data;
+			  };
+			  Vector<Pass> passes;
+
+			  virtual void execute(scene::Scene& scene) override
+			  {
+				  scene.renderer->setMesh(mesh);
+				  scene.renderer->setSubMesh(0u);
+
+				  for (auto pass : passes)
+				  {
+					  scene.renderer->bindShaderPass(pass.shader_pass);
+					  scene.renderer->setUserData(glm::vec4(pass.user_data, 0.0f, 0.0f, 0.0f), 0);
+					  scene.renderer->draw();
+				  }
+			  }
+		  };
+		  RenderAction* render_action = foundation::Memory::construct<RenderAction>();
+		  g_world->getScene().render_actions.push_back(render_action);
+
+          render_action->mesh = asset::MeshManager::getInstance()->create(Name("__hammerhead_mesh__"), asset::Mesh::createScreenQuad());
 
           platform::RenderTarget rt_in(Name("Hammerhead_In"), texture);
           for (uint32_t i = 0u; i < violet_texture.mip_count; ++i)
           {
-            //g_scene->shader_variable_manager.setVariable(platform::ShaderVariable(Name("metallic_roughness"), glm::vec2(0.0f, (float)i / (float)violet_texture.mip_count)));
             platform::RenderTarget rt_out(Name("Hammerhead_Out_" + toString(i)), texture);
             rt_out.setMipMap(i);
 
-            platform::ShaderPass shader_pass(
+			RenderAction::Pass pass;
+            pass.user_data = (float)i / (float)violet_texture.mip_count;
+            pass.shader_pass = platform::ShaderPass(
               Name("Hammerhead_" + toString(i)),
               shader,
               { rt_input },
-              //{ i == 0u ? rt_input : rt_in },
               { rt_out }
             );
-
-						//g_scene->renderer->bindShaderPass(shader_pass);
-						//g_scene->renderer->draw();
+			render_action->passes.push_back(pass);
           }
 
 		  g_world->getScene().post_process_manager->addTarget(platform::RenderTarget(Name(output), texture));

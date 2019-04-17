@@ -6,13 +6,13 @@
 #include <glm/glm.hpp>
 #include <memory/memory.h>
 
-#define cbUserIdx 0
+#define cbUserDataIdx 0
 #define cbPerFrameIdx 1
 #define cbPerCameraIdx 2
 #define cbPerMeshIdx 3
-#define cbPerTextureIdx 4
-#define cbPerLightIdx 5
-#define cbDynamicResolutionIdx 6
+#define cbPerLightIdx 4
+#define cbDynamicResolutionIdx 5
+#define cbGuiIdx 6
 
 namespace lambda
 {
@@ -26,12 +26,12 @@ namespace lambda
 		class IRenderBuffer
 		{
 		public:
-			static constexpr uint32_t kFlagDynamic = 1u << 1u;
-			static constexpr uint32_t kFlagStaging = 1u << 2u;
+			static constexpr uint32_t kFlagDynamic   = 1u << 1u;
+			static constexpr uint32_t kFlagStaging   = 1u << 2u;
 			static constexpr uint32_t kFlagImmutable = 1u << 3u;
-			static constexpr uint32_t kFlagVertex = 1u << 4u;
-			static constexpr uint32_t kFlagIndex = 1u << 5u;
-			static constexpr uint32_t kFlagConstant = 1u << 6u;
+			static constexpr uint32_t kFlagVertex    = 1u << 4u;
+			static constexpr uint32_t kFlagIndex     = 1u << 5u;
+			static constexpr uint32_t kFlagConstant  = 1u << 6u;
 			static constexpr uint32_t kFlagTransient = 1u << 7u;
 
 			virtual void*    lock() = 0;
@@ -124,6 +124,7 @@ namespace lambda
 				IRenderBuffer* constant_buffer,
 				uint8_t slot = 0
 			) = 0;
+			virtual void setUserData(glm::vec4 data, uint8_t slot = 0) = 0;
 			virtual void setRenderTargets(
 				Vector<asset::VioletTextureHandle> render_targets,
 				asset::VioletTextureHandle depth_buffer

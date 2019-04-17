@@ -23,6 +23,13 @@ namespace lambda
 
 	namespace scene
 	{
+		struct Scene;
+
+		struct IRenderAction
+		{
+			virtual void execute(Scene& scene) = 0;
+		};
+
 		///////////////////////////////////////////////////////////////////////////
 		struct Scene
 		{
@@ -43,6 +50,7 @@ namespace lambda
 			platform::IRenderer*       renderer  = nullptr;
 			platform::IWindow*         window    = nullptr;
 			gui::GUI*                  gui       = nullptr;
+			Vector<IRenderAction*>     render_actions;
 		};
 
 		///////////////////////////////////////////////////////////////////////////

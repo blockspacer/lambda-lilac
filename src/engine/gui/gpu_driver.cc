@@ -525,7 +525,7 @@ namespace lambda
 
 			uint32_t flags = platform::IRenderBuffer::kFlagConstant | platform::IRenderBuffer::kFlagTransient | platform::IRenderBuffer::kFlagImmutable;
 			platform::IRenderBuffer* cb = scene_->renderer->allocRenderBuffer(sizeof(Uniforms), flags, &uniforms);
-			scene_->renderer->setConstantBuffer(cb, cbUserIdx);
+			scene_->renderer->setConstantBuffer(cb, cbGuiIdx);
 		}
 
 		///////////////////////////////////////////////////////////////////////////
