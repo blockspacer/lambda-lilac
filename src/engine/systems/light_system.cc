@@ -410,7 +410,7 @@ namespace lambda
 					data.depth_target[i]  = platform::RenderTarget(depth_name, data.depth_target_texture[i]);
 
 					// Clear the render target.
-					scene.renderer->clearRenderTarget(data.render_target_texture[i], glm::vec4(FLT_MAX));
+					//scene.renderer->clearRenderTarget(data.render_target_texture[i], glm::vec4(FLT_MAX));
 				}
 			}
 			void renderDirectional(const entity::Entity& entity, scene::Scene& scene)

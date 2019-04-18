@@ -107,11 +107,11 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		void* D3D11RenderTexture::lock(uint32_t level)
 		{
-			//LMB_ASSERT(flags_ & kFlagDynamic, "TODO (Hilze): Fill in");
+			//LMB_ASSERT(flags_ & IRenderTexture::kFlagDynamic, "TODO (Hilze): Fill in");
 
 			D3D11_MAPPED_SUBRESOURCE resource;
 			context_->Map(
-				texture_->getTexture(0u),
+				texture_->getTexture(),
 				level,
 				D3D11_MAP_WRITE_DISCARD,
 				0u,
@@ -124,9 +124,9 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		void D3D11RenderTexture::unlock(uint32_t level)
 		{
-			//LMB_ASSERT(flags_ & kFlagDynamic, "TODO (Hilze): Fill in");
+			//LMB_ASSERT(flags_ & IRenderTexture::kFlagDynamic, "TODO (Hilze): Fill in");
 
-			context_->Unmap(texture_->getTexture(0u), level);
+			context_->Unmap(texture_->getTexture(), level);
 		}
 
 		///////////////////////////////////////////////////////////////////////////
@@ -229,7 +229,7 @@ namespace lambda
 				size,
 				flags,
 				buffer,
-				context_.context.Get()
+				getD3D11Context()
 				);
 
 			if ((flags & platform::IRenderBuffer::kFlagTransient))
@@ -293,9 +293,9 @@ namespace lambda
 					foundation::Memory::construct<D3D11Texture>(
 						texture,
 						context_.device.Get(),
-						context_.context.Get()
+						getD3D11Context()
 						),
-					context_.context.Get()
+					getD3D11Context()
 					);
 
 			uint32_t size = 0u;
@@ -364,7 +364,11 @@ namespace lambda
 		{
 			LMB_ASSERT(override_scene_, "D3D11 CONTEXT: Tried to render outside of the flush thread");
 
+#if USE_DEFERRED_CONTEXT
+			return context_.deferred_context.Get();
+#else
 			return context_.context.Get();
+#endif
 		}
 
 		///////////////////////////////////////////////////////////////////////////
@@ -452,7 +456,7 @@ namespace lambda
 					D3D_FEATURE_LEVEL_9_3,
 					D3D_FEATURE_LEVEL_9_2,
 					D3D_FEATURE_LEVEL_9_1
-			};
+				};
 				D3D_FEATURE_LEVEL supported_level;
 
 				UINT create_device_flags = 0;
@@ -518,7 +522,7 @@ namespace lambda
 						"CreateDeviceAndSwapChain failed!", "Graphics Error", 0);
 					return;
 				}
-		}
+			}
 
 #if GPU_MARKERS
 			HRESULT result = context_.context->QueryInterface(
@@ -541,23 +545,33 @@ namespace lambda
 				timer_disjoint_.ReleaseAndGetAddressOf()
 			);
 #endif
+#if USE_DEFERRED_CONTEXT
+			{
+				HRESULT result = context_.device->CreateDeferredContext(0, context_.deferred_context.ReleaseAndGetAddressOf());
+				LMB_ASSERT(SUCCEEDED(result), "D3D11 CONTEXT: Failed to create deferred context");
+			}
 
-			state_manager_.initialize(context_.device, context_.context);
+			ID3D11DeviceContext* context = context_.deferred_context.Get();
+#else
+			ID3D11DeviceContext* context = context_.context.Get();
+#endif
+
+			state_manager_.initialize(context_.device, context);
 			asset_manager_.setD3D11Context(this);
 			asset_manager_.setDevice(context_.device.Get());
-			asset_manager_.setContext(context_.context.Get());
+			asset_manager_.setContext(context);
 
 			resize();
 			setVSync(context_.vsync);
-	}
+		}
 
-	///////////////////////////////////////////////////////////////////////////
-	void D3D11Context::setOverrideScene(scene::Scene* scene)
-	{
-		override_scene_ = scene;
-	}
+		///////////////////////////////////////////////////////////////////////////
+		void D3D11Context::setOverrideScene(scene::Scene* scene)
+		{
+			override_scene_ = scene;
+		}
 
-    ///////////////////////////////////////////////////////////////////////////
+		///////////////////////////////////////////////////////////////////////////
 		void D3D11Context::initialize(scene::Scene& scene)
 		{
 			scene_ = &scene;
@@ -578,23 +592,26 @@ namespace lambda
 			context_.backbuffer = nullptr;
 			context_.swap_chain = nullptr;
 			context_.context = nullptr;
+#if USE_DEFERRED_CONTEXT
+			context_.deferred_context = nullptr;
+#endif
 			context_.device = nullptr;
 		}
-    void D3D11Context::resize()
-    {
+		void D3D11Context::resize()
+		{
 			queued_resize_ = true;
-    }
-   
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Context::update(const double& delta_time)
-    {
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		void D3D11Context::update(const double& delta_time)
+		{
 			queued_update_ = true;
 			queued_delta_time_ = (float)delta_time;
-    }
-    
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Context::startFrame()
-    {
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		void D3D11Context::startFrame()
+		{
 			LMB_ASSERT(override_scene_, "D3D11 CONTEXT: Tried to render outside of the flush thread");
 
 			setSamplerState(platform::SamplerState::PointClamp(), 6u);
@@ -620,84 +637,83 @@ namespace lambda
 				resizeImpl();
 			}
 
-      // Clear everything.
-      beginTimer("Clear Everything");
-      pushMarker("Clear Everything");
-      glm::vec4 colour(0.0f);
-      for (const auto& target : getScene()->post_process_manager->getAllTargets())
-      {
-        if (target.second.getTexture()->getLayer(0u).getFlags()
-          & kTextureFlagClear)
-        {
-          clearRenderTarget(target.second.getTexture(), colour);
-        }
-      }
-      popMarker();
-      endTimer("Clear Everything");
+			// Clear everything.
+			beginTimer("Clear Everything");
+			pushMarker("Clear Everything");
+			glm::vec4 colour(0.0f);
+			for (const auto& target : getScene()->post_process_manager->getAllTargets())
+			{
+				if (target.second.getTexture()->getLayer(0u).getFlags()
+					& kTextureFlagClear)
+				{
+					clearRenderTarget(target.second.getTexture(), colour);
+				}
+			}
+			popMarker();
+			endTimer("Clear Everything");
 
-      // Reset everything back to normal.
-      state_manager_.bindTopology(asset::Topology::kTriangles);
-      setSamplerState(platform::SamplerState::LinearWrap(), 0u);
-      setRasterizerState(platform::RasterizerState::SolidFront());
+			// Reset everything back to normal.
+			state_manager_.bindTopology(asset::Topology::kTriangles);
+			setSamplerState(platform::SamplerState::LinearWrap(), 0u);
+			setRasterizerState(platform::RasterizerState::SolidFront());
 
-	  memset(&state_,    0, sizeof(state_));
-	  state_.sub_mesh = UINT32_MAX;
-	  memset(&dx_state_, 0, sizeof(dx_state_));
-	  invalidateAll();
+			memset(&state_, 0, sizeof(state_));
+			state_.sub_mesh = UINT32_MAX;
+			memset(&dx_state_, 0, sizeof(dx_state_));
+			invalidateAll();
 
-	  if (!cbs_.drs) cbs_.drs = (D3D11RenderBuffer*)allocRenderBuffer(sizeof(float), platform::IRenderBuffer::kFlagConstant | platform::IRenderBuffer::kFlagDynamic, nullptr);
-	  float drs_data[] = { dynamic_resolution_scale_ };
-	  memcpy(cbs_.drs->lock(), drs_data, sizeof(drs_data));
-	  cbs_.drs->unlock();
-	  setConstantBuffer(cbs_.drs, cbDynamicResolutionIdx);
+			if (!cbs_.drs) cbs_.drs = (D3D11RenderBuffer*)allocRenderBuffer(sizeof(float), platform::IRenderBuffer::kFlagConstant | platform::IRenderBuffer::kFlagDynamic, nullptr);
+			float drs_data[] = { dynamic_resolution_scale_ };
+			memcpy(cbs_.drs->lock(), drs_data, sizeof(drs_data));
+			cbs_.drs->unlock();
+			setConstantBuffer(cbs_.drs, cbDynamicResolutionIdx);
 
-	  if (!cbs_.per_frame) cbs_.per_frame = (D3D11RenderBuffer*)allocRenderBuffer(sizeof(float) * 4, platform::IRenderBuffer::kFlagConstant | platform::IRenderBuffer::kFlagDynamic, nullptr);
-	  float per_frame_data[] = { screen_size_.x, screen_size_.y, delta_time_, total_time_ };
-	  memcpy(cbs_.per_frame->lock(), per_frame_data, sizeof(per_frame_data));
-	  cbs_.per_frame->unlock();
-	  setConstantBuffer(cbs_.per_frame, cbPerFrameIdx);
+			if (!cbs_.per_frame) cbs_.per_frame = (D3D11RenderBuffer*)allocRenderBuffer(sizeof(float) * 4, platform::IRenderBuffer::kFlagConstant | platform::IRenderBuffer::kFlagDynamic, nullptr);
+			float per_frame_data[] = { screen_size_.x, screen_size_.y, delta_time_, total_time_ };
+			memcpy(cbs_.per_frame->lock(), per_frame_data, sizeof(per_frame_data));
+			cbs_.per_frame->unlock();
+			setConstantBuffer(cbs_.per_frame, cbPerFrameIdx);
 
-      // Handle markers.
+			// Handle markers.
 #if GPU_TIMERS
-      while (context_.context->GetData(timer_disjoint_.Get(), NULL, 0, 0) 
-        == S_FALSE)
-        Sleep(1);
+			while (context_.context->GetData(timer_disjoint_.Get(), NULL, 0, 0)
+				== S_FALSE)
+				Sleep(1);
 
-      D3D11_QUERY_DATA_TIMESTAMP_DISJOINT timestamp_disjoint;
-      context_.context->GetData(timer_disjoint_.Get(), &timestamp_disjoint, 
-        sizeof(timestamp_disjoint), 0);
-      
-      for (auto& timer : gpu_timers_)
-      {
-        uint64_t push, pop;
-        context_.context->GetData(timer.second.push[gpu_timer_idx].Get(),
-          &push, sizeof(uint64_t), 0);
-        context_.context->GetData(timer.second.pop[gpu_timer_idx].Get(), 
-          &pop, sizeof(uint64_t), 0);
-        if (pop <= push)
-          timer.second.micro_seconds = 0u;
-        else
-          timer.second.micro_seconds = (pop - push) / 
-          (timestamp_disjoint.Frequency / 1000000u);
-      }
-      gpu_timer_idx = gpu_timer_idx == 0u ? 1u : 0u;
-      context_.context->Begin(timer_disjoint_.Get());
+			D3D11_QUERY_DATA_TIMESTAMP_DISJOINT timestamp_disjoint;
+			context_.context->GetData(timer_disjoint_.Get(), &timestamp_disjoint,
+				sizeof(timestamp_disjoint), 0);
+
+			for (auto& timer : gpu_timers_)
+			{
+				uint64_t push, pop;
+				context_.context->GetData(timer.second.push[gpu_timer_idx].Get(),
+					&push, sizeof(uint64_t), 0);
+				context_.context->GetData(timer.second.pop[gpu_timer_idx].Get(),
+					&pop, sizeof(uint64_t), 0);
+				if (pop <= push)
+					timer.second.micro_seconds = 0u;
+				else
+					timer.second.micro_seconds = (pop - push) /
+					(timestamp_disjoint.Frequency / 1000000u);
+			}
+			gpu_timer_idx = gpu_timer_idx == 0u ? 1u : 0u;
+			context_.context->Begin(timer_disjoint_.Get());
 #endif
-    }
+		}
 
-    ///////////////////////////////////////////////////////////////////////////
+		///////////////////////////////////////////////////////////////////////////
 		void D3D11Context::endFrame(bool display)
 		{
-			LMB_ASSERT(override_scene_, "D3D11 CONTEXT: Tried to render outside of the flush thread");
-
 			pushMarker("Present");
 			present();
 			popMarker();
 
+			LMB_ASSERT(override_scene_, "D3D11 CONTEXT: Tried to render outside of the flush thread");
+
 #if GPU_TIMERS
 			context_.context->End(timer_disjoint_.Get());
 #endif
-
 			asset_manager_.deleteNotReffedAssets((float)delta_time_);
 
 			for (D3D11RenderBuffer* buffer : transient_render_buffers_)
@@ -706,19 +722,6 @@ namespace lambda
 
 			foundation::GetFrameHeap()->update();
 		}
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     ///////////////////////////////////////////////////////////////////////////
     void D3D11Context::draw()
@@ -806,7 +809,7 @@ namespace lambda
         return;
 
       D3D11RenderTexture* tex = asset_manager_.getTexture(texture);
-      tex->getTexture()->generateMips(context_.context.Get());
+      tex->getTexture()->generateMips(getD3D11Context());
     }
    
     ///////////////////////////////////////////////////////////////////////////
@@ -830,7 +833,7 @@ namespace lambda
 	  for (uint32_t i = 0; i < MAX_TEXTURE_COUNT; ++i)
 	  {
 		  setTexture(asset::VioletTextureHandle(), i);
-		  context_.context->PSSetShaderResources(i, 1, &srv);
+		  getD3D11Context()->PSSetShaderResources(i, 1, &srv);
 	  }
 
       setViewports({ default_.viewport });
@@ -878,13 +881,13 @@ namespace lambda
 
 		auto src_tex = asset_manager_.getTexture(src)->getTexture();
 		auto dst_tex = asset_manager_.getTexture(dst)->getTexture();
-		context_.context->CopySubresourceRegion(
-			dst_tex->getTexture(dst_tex->pingPongIdx()),
+		getD3D11Context()->CopySubresourceRegion(
+			dst_tex->getTexture(),
 			0u,
 			0u,
 			0u,
 			0u,
-			src_tex->getTexture(src_tex->pingPongIdx()),
+			src_tex->getTexture(),
 			0u,
 			&box
 		);
@@ -905,7 +908,7 @@ namespace lambda
 		  {
 			  setTexture(asset::VioletTextureHandle(), i);
 			  ID3D11ShaderResourceView* srv = nullptr;
-			  context_.context->PSSetShaderResources(i, 1, &srv);
+			  getD3D11Context()->PSSetShaderResources(i, 1, &srv);
 		  }
 	  }
       
@@ -940,7 +943,6 @@ namespace lambda
         {
           dsv = getDSV(
             output.getTexture(),
-            -1,
             output.getLayer(),
             output.getMipMap()
 		  );
@@ -948,18 +950,10 @@ namespace lambda
         else
         {
           for (const auto& input : shader_pass.getInputs())
-          {
-            if (input.getName() == output.getName())
-            {
-              asset_manager_.getTexture(
-                output.getTexture()
-              )->getTexture()->pingPong();
-            }
-          }
+            LMB_ASSERT(input.getName() != output.getName(), "D3D11 RENDERER: Tried to bind \"%s\" as both input and output in pass \"%s\"", input.getName().getName().c_str(), shader_pass.getName().getName().c_str());
 
           rtvs.push_back(getRTV(
             output.getTexture(),
-            -1,
             output.getLayer(),
             output.getMipMap())
           );
@@ -1025,31 +1019,25 @@ namespace lambda
       if (texture->getLayer(0u).getFormat() == TextureFormat::kR24G8 ||
 		  texture->getLayer(0u).getFormat() == TextureFormat::kD32)
       {
-		  for (int i = 0; i < 2; ++i)
-		  {
-			  for (int l = 0; l < (int)texture->getLayerCount(); ++l)
-			  {
-				  context_.context->ClearDepthStencilView(
-					  getDSV(texture, i, l, 0),
-					  D3D11_CLEAR_DEPTH /*| D3D11_CLEAR_STENCIL*/,
-					  1.0f,
-					  0
-				  );
-			  }
-		  }
+			for (int l = 0; l < (int)texture->getLayerCount(); ++l)
+			{
+				getD3D11Context()->ClearDepthStencilView(
+					getDSV(texture, l, 0),
+					D3D11_CLEAR_DEPTH /*| D3D11_CLEAR_STENCIL*/,
+					1.0f,
+					0
+				);
+			}
       }
       else
       {
         float c[]{ colour.x, colour.y, colour.z, colour.w };
-		for (int i = 0; i < 2; ++i)
+		for (int l = 0; l < (int)texture->getLayerCount(); ++l)
 		{
-			for (int l = 0; l < (int)texture->getLayerCount(); ++l)
-			{
-				context_.context->ClearRenderTargetView(
-					getRTV(texture, i, l, 0),
-					c
-				);
-			}
+			getD3D11Context()->ClearRenderTargetView(
+				getRTV(texture, l, 0),
+				c
+			);
 		}
       }
     }
@@ -1438,7 +1426,6 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     ID3D11RenderTargetView* D3D11Context::getRTV(
       asset::VioletTextureHandle texture, 
-      int idx, 
       int layer,
       int mip_map)
     {
@@ -1449,15 +1436,12 @@ namespace lambda
         return nullptr;
 
       D3D11RenderTexture* tex = asset_manager_.getTexture(texture);
-      if (idx == -1)
-        idx = tex->getTexture()->pingPongIdx();
-      return tex->getTexture()->getRTV(idx, layer, mip_map);
+      return tex->getTexture()->getRTV(layer, mip_map);
     }
 
     ///////////////////////////////////////////////////////////////////////////
 		ID3D11DepthStencilView* D3D11Context::getDSV(
 			asset::VioletTextureHandle texture,
-			int idx,
 			int layer,
 			int mip_map)
 		{
@@ -1468,9 +1452,7 @@ namespace lambda
 				return nullptr;
 
 			D3D11RenderTexture* tex = asset_manager_.getTexture(texture);
-			if (idx == -1)
-				idx = tex->getTexture()->pingPongIdx();
-			return tex->getTexture()->getDSV(idx, layer, mip_map);
+			return tex->getTexture()->getDSV(layer, mip_map);
 		}
 
     ///////////////////////////////////////////////////////////////////////////
@@ -1491,17 +1473,17 @@ namespace lambda
 
 			if (isDirty(DirtyStates::kViewports))
 			{
-				context_.context->RSSetViewports(state_.num_viewports, dx_state_.viewports);
+				getD3D11Context()->RSSetViewports(state_.num_viewports, dx_state_.viewports);
 			}
 
 			if (isDirty(DirtyStates::kScissorRects))
 			{
-				context_.context->RSSetScissorRects(state_.num_scissor_rects, dx_state_.scissor_rects);
+				getD3D11Context()->RSSetScissorRects(state_.num_scissor_rects, dx_state_.scissor_rects);
 			}
 
 			if (isDirty(DirtyStates::kRenderTargets))
 			{
-				context_.context->OMSetRenderTargets(state_.num_render_targets, dx_state_.render_targets, dx_state_.depth_target);
+				getD3D11Context()->OMSetRenderTargets(state_.num_render_targets, dx_state_.render_targets, dx_state_.depth_target);
 			}
 
 			// TODO (Hilze): Add support for isDirty here. Should probably have a dirty state per stage.
@@ -1511,7 +1493,7 @@ namespace lambda
 				{
 					if ((state_.dirty_textures & (1 << i)))
 					{
-						context_.context->PSSetShaderResources(i, 1, &dx_state_.textures[i]);
+						getD3D11Context()->PSSetShaderResources(i, 1, &dx_state_.textures[i]);
 						state_.dirty_textures &= ~(1 << i);
 					}
 				}
@@ -1536,21 +1518,21 @@ namespace lambda
 						switch (buffer.stage)
 						{
 						case ShaderStages::kVertex:
-							context_.context->VSSetConstantBuffers(
+							getD3D11Context()->VSSetConstantBuffers(
 								(UINT)buffer.slot,
 								1u,
 								&dx_state_.constant_buffers[buffer.slot]
 							);
 							break;
 						case ShaderStages::kPixel:
-							context_.context->PSSetConstantBuffers(
+							getD3D11Context()->PSSetConstantBuffers(
 								(UINT)buffer.slot,
 								1u,
 								&dx_state_.constant_buffers[buffer.slot]
 							);
 							break;
 						case ShaderStages::kGeometry:
-							context_.context->GSSetConstantBuffers(
+							getD3D11Context()->GSSetConstantBuffers(
 								(UINT)buffer.slot,
 								1u,
 								&dx_state_.constant_buffers[buffer.slot]
@@ -1588,7 +1570,7 @@ namespace lambda
 			unsigned int width = 0;
 			unsigned int height = 0;
 
-			context_.context->OMSetRenderTargets(0, nullptr, nullptr);
+			getD3D11Context()->OMSetRenderTargets(0, nullptr, nullptr);
 			context_.backbuffer.Reset();
 
 			glm::uvec2 render_size =
@@ -1650,8 +1632,12 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     void D3D11Context::present()
     {
-			LMB_ASSERT(override_scene_, "D3D11 CONTEXT: Tried to render outside of the flush thread");
-
+#if USE_DEFERRED_CONTEXT
+      ID3D11CommandList* list = nullptr;
+	  context_.deferred_context->FinishCommandList(true, &list);
+	  context_.context->ExecuteCommandList(list, true);
+	  list->Release();
+#endif
       context_.swap_chain->Present(context_.vsync, 0);
     }
 

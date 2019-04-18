@@ -396,16 +396,38 @@ namespace lambda
 				auto dynamics = data.culler.back().getDynamics();
 				components::MeshRenderSystem::createSortedRenderList(&statics, &dynamics, light_batch_face.opaque, light_batch_face.alpha, scene);
 
+				static uint32_t kOffset = 0ul;
+
+				String config = "__temp_target_" + toString(shadow_maps.at(0u).getTexture()->getLayer(0).getWidth()) + "_" + toString(shadow_maps.at(0u).getTexture()->getLayer(0).getHeight()) + "_" + toString(kOffset++) + "__";
+				asset::VioletTextureHandle temp = asset::TextureManager::getInstance()->create(Name(config),
+					shadow_maps.at(0u).getTexture()->getLayer(0).getWidth(),
+					shadow_maps.at(0u).getTexture()->getLayer(0).getHeight(),
+					1,
+					shadow_maps.at(0u).getTexture()->getLayer(0).getFormat(),
+					shadow_maps.at(0u).getTexture()->getLayer(0).getFlags()
+				);
+
+				platform::RenderTarget rt_input = shadow_maps.at(0u);
+				platform::RenderTarget rt_output(config, temp);
+
 				// Draw all modify shaders.
 				for (uint32_t i = 0; i < scene.light.shader_modify_count; ++i)
 				 {
 					SceneShaderPass modify;
-					modify.input  = { shadow_maps.at(0u) };
-					modify.output = { shadow_maps.at(0u) };
+					modify.input  = { rt_input };
+					modify.output = { rt_output };
 					modify.shader = asset::ShaderManager::getInstance()->get(scene.light.shader_modify + shadow_type + "HORIZONTAL");
 					light_batch_face.modify.push_back(modify);
+					platform::RenderTarget rt_temp = rt_input;
+					rt_input = rt_output;
+					rt_output = rt_temp;
+					modify.input = { rt_input };
+					modify.output = { rt_output };
 					modify.shader = asset::ShaderManager::getInstance()->get(scene.light.shader_modify + shadow_type + "VERTICAL");
 					light_batch_face.modify.push_back(modify);
+					rt_temp = rt_input;
+					rt_input = rt_output;
+					rt_output = rt_temp;
 				}
 			}
 
@@ -905,9 +927,11 @@ namespace lambda
 			if (!k_thread.joinable())
 			{
 				k_thread = std::thread(flushLoop);
+#if VIOLET_WIN32
 				SetThreadPriority(k_thread.native_handle(), THREAD_PRIORITY_HIGHEST);
-				SetThreadDescription(k_thread.native_handle(), L"Flush Thread");
 				SetThreadPriorityBoost(k_thread.native_handle(), TRUE);
+				//SetThreadDescription(k_thread.native_handle(), L"Flush Thread");
+#endif
 			}
 
 			while (!k_can_write)

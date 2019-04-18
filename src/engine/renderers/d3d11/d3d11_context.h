@@ -17,6 +17,12 @@ struct ID3DUserDefinedAnnotation;
 
 #define GPU_MARKERS 1
 #define GPU_TIMERS 0
+#define USE_DEFERRED_CONTEXT 0
+
+#if USE_DEFERRED_CONTEXT && GPU_TIMERS
+#undef GPU_TIMERS
+#define GPU_TIMERS 0
+#endif
 
 #define MAX_TEXTURE_COUNT 16u
 #define MAX_CONSTANT_BUFFER_COUNT 16u
@@ -35,6 +41,9 @@ namespace lambda
 			Microsoft::WRL::ComPtr<IDXGISwapChain> swap_chain;
 			Microsoft::WRL::ComPtr<ID3D11Device> device;
 			Microsoft::WRL::ComPtr<ID3D11DeviceContext> context;
+#if USE_DEFERRED_CONTEXT
+			Microsoft::WRL::ComPtr<ID3D11DeviceContext> deferred_context;
+#endif
 			Microsoft::WRL::ComPtr<ID3D11RenderTargetView> backbuffer;
 			bool vsync;
 		};
@@ -255,13 +264,11 @@ namespace lambda
 		protected:
 			ID3D11RenderTargetView* getRTV(
 				asset::VioletTextureHandle texture,
-				int idx = -1,
 				int layer = 0,
 				int mip_map = 0
 			);
 			ID3D11DepthStencilView* getDSV(
 				asset::VioletTextureHandle texture,
-				int idx = -1,
 				int layer = 0,
 				int mip_map = 0
 			);

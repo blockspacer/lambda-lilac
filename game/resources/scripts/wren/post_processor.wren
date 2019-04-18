@@ -9,10 +9,51 @@ import "Core/Mesh" for Mesh
 import "Core/Graphics" for Graphics
 import "Core/GUI" for GUI
 import "Core/PostProcess" for PostProcess
+import "Core/Console" for Console
 
 import "resources/scripts/wren/ini" for Ini
 
 class PostProcessor {
+  flipFlopPostProcess() {
+    if (_post_process_output == "post_process_buffer") {
+      _post_process_output = "post_process_temp"
+    } else {
+      _post_process_output = "post_process_buffer"
+    }
+    return _post_process_output
+  }
+  flipFlopPosition() {
+    if (_position_output == "position") {
+      _position_output = "position_temp"
+    } else {
+      _position_output = "position"
+    }
+    return _position_output
+  }
+  flipFlopBloom() {
+    if (_bloom_output == "bloom") {
+      _bloom_output = "bloom_temp"
+    } else {
+      _bloom_output = "bloom"
+    }
+    return _bloom_output
+  }
+  flipFlopDof() {
+    if (_dof_output == "dof") {
+      _dof_output = "dof_temp"
+    } else {
+      _dof_output = "dof"
+    }
+    return _dof_output
+  }
+  flipFlopDofPos() {
+    if (_dof_pos_output == "dof_pos") {
+      _dof_pos_output = "dof_pos_temp"
+    } else {
+      _dof_pos_output = "dof_pos"
+    }
+    return _dof_pos_output
+  }
   construct new() {
     // Load the .INI file.
     var ini_reader = Ini.new("resources/settings.ini")
@@ -20,14 +61,15 @@ class PostProcessor {
     // Create all required render targets.
     PostProcess.addRenderTarget("albedo",              1.0, TextureFormat.R8G8B8A8)
     PostProcess.addRenderTarget("position",            1.0, TextureFormat.R32G32B32A32)
+    PostProcess.addRenderTarget("position_temp",       1.0, TextureFormat.R32G32B32A32)
     PostProcess.addRenderTarget("normal",              1.0, TextureFormat.R8G8B8A8)
     PostProcess.addRenderTarget("metallic_roughness",  1.0, TextureFormat.R8G8B8A8)
     PostProcess.addRenderTarget("depth_buffer",        1.0, TextureFormat.D32)
     PostProcess.addRenderTarget("post_process_buffer", 1.0, TextureFormat.R16G16B16A16)
-
-    // Set the final pass.
-    PostProcess.setFinalRenderTarget("post_process_buffer")
-
+    PostProcess.addRenderTarget("post_process_temp",   1.0, TextureFormat.R16G16B16A16)
+    _post_process_output = "post_process_buffer"
+    _position_output = "position"
+    
     // Add and generate the environment maps.
     PostProcess.addRenderTarget("brdf_lut", Texture.load("resources/textures/lighting/ibl_brdf_lut.png"))
     PostProcess.addRenderTarget("environment_map", Texture.load("resources/textures/hdr/Serpentine_Valley_3k.hdr"))
@@ -78,10 +120,13 @@ class PostProcessor {
     gui(
       ini_reader["GUI", "Enabled"]
     )
+
+    // Set the final pass.
+    PostProcess.setFinalRenderTarget(_post_process_output)
   }
 
   copyAlbedoToPostProcessBuffer() {
-    PostProcess.addShaderPass("copy_albedo_to_post_process_buffer", Shader.load("resources/shaders/copy.fx"), [ "albedo" ], [ "post_process_buffer" ])
+    PostProcess.addShaderPass("copy_albedo_to_post_process_buffer", Shader.load("resources/shaders/copy.fx"), [ "albedo" ], [ _post_process_output ])
   }
 
   shadowMapping(enabled) {
@@ -98,7 +143,7 @@ class PostProcessor {
     Graphics.setLightShaders(generate, modify, modifyCount, apply, shadowType)
   }
   applyLighting(enabled) {
-    PostProcess.addShaderPass("apply_lighting", Shader.load("resources/shaders/apply_lighting.fx"), [ "post_process_buffer", "position", "normal", "metallic_roughness", "light_map", "irradiance_map", "prefiltered", "brdf_lut", "ssao_target" ], [ "post_process_buffer" ])
+    PostProcess.addShaderPass("apply_lighting", Shader.load("resources/shaders/apply_lighting.fx"), [ _post_process_output, _position_output, "normal", "metallic_roughness", "light_map", "irradiance_map", "prefiltered", "brdf_lut", "ssao_target" ], [ flipFlopPostProcess() ])
   }
   ssao(strength, blur_scale, blur_passes, render_target_scale) {
     if (strength <= 0 || strength > 5) {
@@ -108,18 +153,27 @@ class PostProcessor {
 
     // Add the required render targets.
     PostProcess.addRenderTarget("ssao_target", render_target_scale, TextureFormat.A8)
+    PostProcess.addRenderTarget("ssao_target_temp", render_target_scale, TextureFormat.A8)
     PostProcess.addRenderTarget("random_texture", Texture.load("resources/textures/lighting/noise.png"))
 
     // Add the main SSAO pass.
-    PostProcess.addShaderPass("ssao", Shader.load("resources/shaders/ssao.fx|STRENGTH%(strength)"), [ "position", "normal", "random_texture", "depth_buffer" ], [ "ssao_target" ])
+    PostProcess.addShaderPass("ssao", Shader.load("resources/shaders/ssao.fx|STRENGTH%(strength)"), [ _position_output, "normal", "random_texture", "depth_buffer" ], [ "ssao_target" ])
 
     // // Horizontal blur.
     var shader_blur_x = Shader.load("resources/shaders/blur_7x1.fx|HORIZONTAL")
 
+    var input = "ssao_target"
+    var output = "ssao_target_temp"
+
     var i = 0
     while (i < blur_passes.x && blur_scale.x > 0.0) {
-      PostProcess.addShaderPass("ssao_blur_x_%(i)", shader_blur_x, [ "ssao_target" ], [ "ssao_target" ])
+      PostProcess.addShaderPass("ssao_blur_x_%(i)", shader_blur_x, [ input ], [ output ])
       i = i + 1
+      {
+        var temp = input
+        input = output
+        output = temp
+      }
     }
 
     // Vertical blur.
@@ -127,8 +181,13 @@ class PostProcessor {
 
     i = 0
     while (i < blur_passes.y && blur_scale.y > 0.0) {
-      PostProcess.addShaderPass("ssao_blur_y_%(i)", shader_blur_y, [ "ssao_target" ], [ "ssao_target" ])
+      PostProcess.addShaderPass("ssao_blur_y_%(i)", shader_blur_y, [ input ], [ output ])
       i = i + 1
+      {
+        var temp = input
+        input = output
+        output = temp
+      }
     }
   }
 
@@ -136,24 +195,26 @@ class PostProcessor {
     if (!enabled) return
 
     var shader = Shader.load("resources/shaders/skydome.fx")
-    PostProcess.addShaderPass("skydome", shader, [ "post_process_buffer", "position", "environment_map" ], [ "post_process_buffer", "position" ])
+    PostProcess.addShaderPass("skydome", shader, [ _post_process_output, _position_output, "environment_map" ], [ flipFlopPostProcess(), flipFlopPosition() ])
   }
   bloom(enabled, blur_scale, blur_passes, render_target_scale) {
     if (!enabled) return
 
     // Add the render target.
-    PostProcess.addRenderTarget("bloom_target", render_target_scale, TextureFormat.R16G16B16A16)
+    PostProcess.addRenderTarget("bloom", render_target_scale, TextureFormat.R16G16B16A16)
+    PostProcess.addRenderTarget("bloom_temp", render_target_scale, TextureFormat.R16G16B16A16)
+    _bloom_output = "bloom"
 
     // Bloom extract.
     var shader_extract = Shader.load("resources/shaders/bloom_extract.fx")
-    PostProcess.addShaderPass("bloom_extract", shader_extract, [ "post_process_buffer" ], [ "bloom_target" ])
+    PostProcess.addShaderPass("bloom_extract", shader_extract, [ _post_process_output ], [ _bloom_output ])
 
     // Bloom blur horizontal.
     var shader_blur_x  = Shader.load("resources/shaders/blur_7x1.fx|HORIZONTAL")
 
     var i = 0
     while (i < blur_passes.x && blur_scale.x > 0.0) {
-      PostProcess.addShaderPass("bloom_blur_x_%(i)", shader_blur_x, [ "bloom_target" ], [ "bloom_target" ])
+      PostProcess.addShaderPass("bloom_blur_x_%(i)", shader_blur_x, [ _bloom_output ], [ flipFlopBloom() ])
       i = i + 1
     }
 
@@ -162,36 +223,40 @@ class PostProcessor {
 
     i = 0
     while (i < blur_passes.y && blur_scale.y > 0.0) {
-      PostProcess.addShaderPass("bloom_blur_y_%(i)", shader_blur_y, [ "bloom_target" ], [ "bloom_target" ])
+      PostProcess.addShaderPass("bloom_blur_y_%(i)", shader_blur_y, [ _bloom_output ], [ flipFlopBloom() ])
       i = i + 1
     }
 
     // Bloom apply.
-    PostProcess.addShaderPass("bloom_apply", Shader.load("resources/shaders/bloom_apply.fx"), [ "post_process_buffer", "bloom_target" ], [ "post_process_buffer" ])
+    PostProcess.addShaderPass("bloom_apply", Shader.load("resources/shaders/bloom_apply.fx"), [ _post_process_output, _bloom_output ], [ flipFlopPostProcess() ])
   }
   toneMapping(enabled) {
     if (!enabled) return
 
-    PostProcess.addShaderPass("tone_mapping", Shader.load("resources/shaders/tone_mapping.fx"), [ "post_process_buffer" ], [ "post_process_buffer" ])
+    PostProcess.addShaderPass("tone_mapping", Shader.load("resources/shaders/tone_mapping.fx"), [ _post_process_output ], [ flipFlopPostProcess() ])
   }
   fxaa(enabled) {
     if (!enabled) return
 
-    PostProcess.addShaderPass("fxaa", Shader.load("resources/shaders/fxaa.fx"), [ "post_process_buffer" ], [ "post_process_buffer" ])
+    PostProcess.addShaderPass("fxaa", Shader.load("resources/shaders/fxaa.fx"), [ _post_process_output ], [ flipFlopPostProcess() ])
   }
   dof(enabled, blur_scale, blur_passes, render_target_scale) {
     if (!enabled) return
 
     // Add required render targets.
-    PostProcess.addRenderTarget("dof_target", render_target_scale, TextureFormat.R16G16B16A16)
+    PostProcess.addRenderTarget("dof", render_target_scale, TextureFormat.R16G16B16A16)
+    PostProcess.addRenderTarget("dof_temp", render_target_scale, TextureFormat.R16G16B16A16)
     PostProcess.addRenderTarget("dof_pos", Texture.create(Vec2.new(1.0), [ 0, 0 ], TextureFormat.R16))
+    PostProcess.addRenderTarget("dof_pos_temp", Texture.create(Vec2.new(1.0), [ 0, 0 ], TextureFormat.R16))
+    _dof_output = "dof"
+    _dof_pos_output = "dof_pos"
 
     // Blur horizontal.
     var shader_blur_x = Shader.load("resources/shaders/blur_7x1.fx|HORIZONTAL")
 
     var i = 0
     while (i < blur_passes.x && blur_scale.x > 0.0) {
-      PostProcess.addShaderPass("dof_blur_x_%(i)", shader_blur_x, [ (i == 0 ? "post_process_buffer" : "dof_target") ], [ "dof_target" ])
+      PostProcess.addShaderPass("dof_blur_x_%(i)", shader_blur_x, [ (i == 0 ? _post_process_output : _dof_output) ], [ flipFlopDof() ])
       i = i + 1
     }
 
@@ -200,23 +265,23 @@ class PostProcessor {
 
     i = 0
     while (i < blur_passes.y && blur_scale.y > 0.0) {
-      PostProcess.addShaderPass("dof_blur_y_%(i)", shader_blur_y, [ "dof_target" ], [ "dof_target" ])
+      PostProcess.addShaderPass("dof_blur_y_%(i)", shader_blur_y, [ _dof_output ], [ flipFlopDof() ])
       i = i + 1
     }
 
     // Position update.
-    PostProcess.addShaderPass("dof_pos", Shader.load("resources/shaders/dof_pos.fx"), [ "dof_pos", "position" ], [ "dof_pos" ])
+    PostProcess.addShaderPass("dof_pos", Shader.load("resources/shaders/dof_pos.fx"), [ _dof_pos_output, _position_output ], [ flipFlopDofPos() ])
 
     // Apply.
-    PostProcess.addShaderPass("dof_apply", Shader.load("resources/shaders/dof.fx"), [ "post_process_buffer", "dof_target", "dof_pos", "position" ], [ "post_process_buffer" ])
+    PostProcess.addShaderPass("dof_apply", Shader.load("resources/shaders/dof.fx"), [ _post_process_output, _dof_output, _dof_pos_output, _position_output ], [ flipFlopPostProcess() ])
   }
   water(enabled) {
     if (!enabled) return
-    PostProcess.addShaderPass("water", Shader.load("resources/shaders/water.fx"), [ "post_process_buffer" ], [ "post_process_buffer" ])
+    PostProcess.addShaderPass("water", Shader.load("resources/shaders/water.fx"), [ _post_process_output ], [ flipFlopPostProcess() ])
   }
   ssr(enabled) {
     if (!enabled) return
-    PostProcess.addShaderPass("ssr", Shader.load("resources/shaders/ssr.fx"), [ "post_process_buffer", "position", "normal" ], [ "post_process_buffer" ])
+  PostProcess.addShaderPass("ssr", Shader.load("resources/shaders/ssr.fx"), [ _post_process_output, _position_output, "normal" ], [ flipFlopPostProcess() ])
   }
   gui(enabled) {
     GUI.enabled = enabled

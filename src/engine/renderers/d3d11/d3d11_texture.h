@@ -30,22 +30,17 @@ namespace lambda
       ID3D11ShaderResourceView* getSRV() const;
       void generateMips(ID3D11DeviceContext* context) const;
       ID3D11DepthStencilView* getDSV(
-        unsigned char idx,
         unsigned char layer,
         unsigned char mip_map
 	  ) const;
       ID3D11RenderTargetView* getRTV(
-        unsigned char idx,
         unsigned char layer,
         unsigned char mip_map
       ) const;
 
-      void pingPong();
-      unsigned char pingPongIdx() const;
-
     protected:
-      const ID3D11Texture2D* getTexture(unsigned char idx) const;
-      ID3D11Texture2D* getTexture(unsigned char idx);
+      const ID3D11Texture2D* getTexture() const;
+      ID3D11Texture2D* getTexture();
     
     private:
 	  void createSRVs(
@@ -71,11 +66,10 @@ namespace lambda
 		Vector<ID3D11RenderTargetView*> rtvs;
 	  };
       DXGI_FORMAT format_;
-	  ID3D11ShaderResourceView* srvs_[2];
-	  ID3D11Texture2D* textures_[2];
-	  Vector<Layer> layers_[2];
+	  ID3D11ShaderResourceView* srv_;
+	  ID3D11Texture2D* texture_;
+	  Vector<Layer> layers_;
 	  
-	  unsigned char texture_index_;
 	  bool is_render_target_;
 	  bool is_dynamic_;
     };
