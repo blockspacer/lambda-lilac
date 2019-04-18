@@ -25,7 +25,7 @@ namespace lambda
 			uint32_t size,
 			uint32_t flags,
 			ID3D11Buffer* buffer,
-			ID3D11DeviceContext* context)
+			D3D11Context* context)
 			: size_(size)
 			, flags_(flags)
 			, buffer_(buffer)
@@ -41,7 +41,7 @@ namespace lambda
 
 			changed_ = true;
 			D3D11_MAPPED_SUBRESOURCE resource;
-			context_->Map(buffer_, 0u, D3D11_MAP_WRITE_DISCARD, 0u, &resource);
+			context_->getD3D11Context()->Map(buffer_, 0u, D3D11_MAP_WRITE_DISCARD, 0u, &resource);
 			return resource.pData;
 		}
 
@@ -50,7 +50,7 @@ namespace lambda
 		{
 			LMB_ASSERT(flags_ & kFlagDynamic, "TODO (Hilze): Fill in");
 
-			context_->Unmap(buffer_, 0u);
+			context_->getD3D11Context()->Unmap(buffer_, 0u);
 		}
 
 		///////////////////////////////////////////////////////////////////////////
@@ -92,7 +92,7 @@ namespace lambda
 			TextureFormat format,
 			uint32_t flags,
 			D3D11Texture* texture,
-			ID3D11DeviceContext* context)
+			D3D11Context* context)
 			: flags_(flags)
 			, width_(width)
 			, height_(height)
@@ -110,7 +110,7 @@ namespace lambda
 			//LMB_ASSERT(flags_ & IRenderTexture::kFlagDynamic, "TODO (Hilze): Fill in");
 
 			D3D11_MAPPED_SUBRESOURCE resource;
-			context_->Map(
+			context_->getD3D11Context()->Map(
 				texture_->getTexture(),
 				level,
 				D3D11_MAP_WRITE_DISCARD,
@@ -126,7 +126,7 @@ namespace lambda
 		{
 			//LMB_ASSERT(flags_ & IRenderTexture::kFlagDynamic, "TODO (Hilze): Fill in");
 
-			context_->Unmap(texture_->getTexture(), level);
+			context_->getD3D11Context()->Unmap(texture_->getTexture(), level);
 		}
 
 		///////////////////////////////////////////////////////////////////////////
@@ -229,7 +229,7 @@ namespace lambda
 				size,
 				flags,
 				buffer,
-				getD3D11Context()
+				this
 				);
 
 			if ((flags & platform::IRenderBuffer::kFlagTransient))
@@ -295,7 +295,7 @@ namespace lambda
 						context_.device.Get(),
 						getD3D11Context()
 						),
-					getD3D11Context()
+					this
 					);
 
 			uint32_t size = 0u;
@@ -363,12 +363,7 @@ namespace lambda
 		ID3D11DeviceContext* D3D11Context::getD3D11Context() const
 		{
 			LMB_ASSERT(override_scene_, "D3D11 CONTEXT: Tried to render outside of the flush thread");
-
-#if USE_DEFERRED_CONTEXT
-			return context_.deferred_context.Get();
-#else
 			return context_.context.Get();
-#endif
 		}
 
 		///////////////////////////////////////////////////////////////////////////
@@ -545,21 +540,9 @@ namespace lambda
 				timer_disjoint_.ReleaseAndGetAddressOf()
 			);
 #endif
-#if USE_DEFERRED_CONTEXT
-			{
-				HRESULT result = context_.device->CreateDeferredContext(0, context_.deferred_context.ReleaseAndGetAddressOf());
-				LMB_ASSERT(SUCCEEDED(result), "D3D11 CONTEXT: Failed to create deferred context");
-			}
 
-			ID3D11DeviceContext* context = context_.deferred_context.Get();
-#else
-			ID3D11DeviceContext* context = context_.context.Get();
-#endif
-
-			state_manager_.initialize(context_.device, context);
+			state_manager_.initialize(this);
 			asset_manager_.setD3D11Context(this);
-			asset_manager_.setDevice(context_.device.Get());
-			asset_manager_.setContext(context);
 
 			resize();
 			setVSync(context_.vsync);
@@ -592,9 +575,6 @@ namespace lambda
 			context_.backbuffer = nullptr;
 			context_.swap_chain = nullptr;
 			context_.context = nullptr;
-#if USE_DEFERRED_CONTEXT
-			context_.deferred_context = nullptr;
-#endif
 			context_.device = nullptr;
 		}
 		void D3D11Context::resize()
@@ -661,6 +641,7 @@ namespace lambda
 			state_.sub_mesh = UINT32_MAX;
 			memset(&dx_state_, 0, sizeof(dx_state_));
 			invalidateAll();
+			state_manager_.reset();
 
 			if (!cbs_.drs) cbs_.drs = (D3D11RenderBuffer*)allocRenderBuffer(sizeof(float), platform::IRenderBuffer::kFlagConstant | platform::IRenderBuffer::kFlagDynamic, nullptr);
 			float drs_data[] = { dynamic_resolution_scale_ };
@@ -708,7 +689,7 @@ namespace lambda
 			pushMarker("Present");
 			present();
 			popMarker();
-
+				
 			LMB_ASSERT(override_scene_, "D3D11 CONTEXT: Tried to render outside of the flush thread");
 
 #if GPU_TIMERS
@@ -1632,67 +1613,8 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     void D3D11Context::present()
     {
-#if USE_DEFERRED_CONTEXT
-      ID3D11CommandList* list = nullptr;
-	  context_.deferred_context->FinishCommandList(true, &list);
-	  context_.context->ExecuteCommandList(list, true);
-	  list->Release();
-#endif
-      context_.swap_chain->Present(context_.vsync, 0);
+      context_.swap_chain->Present(context_.vsync, DXGI_PRESENT_DO_NOT_WAIT);
     }
-
-
-
-#if FLUSH_METHOD
-    ///////////////////////////////////////////////////////////////////////////
-	std::atomic<int> k_can_read;
-    std::atomic<int> k_can_write;
-    static Vector<IRenderAction*> k_flush_actions;
-  
-    ///////////////////////////////////////////////////////////////////////////
-    void flush(D3D11Context* context)
-    {
-      while (true)
-      {
-				while (k_can_read.load() == 0) {
-					std::this_thread::sleep_for(std::chrono::microseconds(10u));
-				}
-					
-				k_can_read = 0;
-
-				for (uint32_t i = 0u; i < k_flush_actions.size(); ++i)
-				{
-					IRenderAction* action = k_flush_actions[i];
-					action->execute(context);
-					action->~IRenderAction();
-				}
-
-				k_can_write = 1;
-      }
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Context::flush(Vector<IRenderAction*> actions)
-    {
-      static std::thread thead;
-      if (!thead.joinable())
-      {
-				k_can_read  = 0;
-				k_can_write = 1;
-        thead = std::thread(lambda::windows::flush, this);
-      }
-
-			while (k_can_write.load() == 0) {
-				std::this_thread::sleep_for(std::chrono::microseconds(10u));
-			}
-
-			k_can_write = 0;
-
-			k_flush_actions = eastl::move(actions);
-
-			k_can_read = 1;
-    }
-#endif
 
     ///////////////////////////////////////////////////////////////////////////
     D3D11Context::D3D11AssetManager::~D3D11AssetManager()
@@ -1721,7 +1643,7 @@ namespace lambda
       {
         D3D11RenderTexture* d3d11_texture = 
           static_cast<D3D11RenderTexture*>(
-            d3d11_context_->allocRenderTexture(texture)
+						context_->allocRenderTexture(texture)
           );
         textures_.insert(
           eastl::make_pair(
@@ -1736,8 +1658,8 @@ namespace lambda
 			{
 				it->second.t->getTexture()->update(
 					texture,
-					device_,
-					context_
+					context_->getD3D11Device(),
+					context_->getD3D11Context()
 				);
 			}
         
@@ -1759,7 +1681,7 @@ namespace lambda
       if (it != textures_.end())
       {
         platform::IRenderTexture* tex = it->second.t;
-        d3d11_context_->freeRenderTexture(tex);
+				context_->freeRenderTexture(tex);
         textures_.erase(it);
       }
     }
@@ -1772,7 +1694,7 @@ namespace lambda
       if (it == meshes_.end())
       {
         D3D11Mesh* d3d11_mesh = 
-          foundation::Memory::construct<D3D11Mesh>(d3d11_context_);
+          foundation::Memory::construct<D3D11Mesh>(context_);
         
         meshes_.insert(
           eastl::make_pair(
@@ -1814,7 +1736,7 @@ namespace lambda
 			if (it == shaders_.end())
 			{
 				D3D11Shader* d3d11_shader =
-					foundation::Memory::construct<D3D11Shader>(shader, d3d11_context_);
+					foundation::Memory::construct<D3D11Shader>(shader, context_);
 				shaders_.insert(
 					eastl::make_pair(
 						shader.getHash(),
@@ -1851,20 +1773,7 @@ namespace lambda
     void D3D11Context::D3D11AssetManager::setD3D11Context(
       D3D11Context* context)
     {
-      d3d11_context_ = context;
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Context::D3D11AssetManager::setDevice(ID3D11Device* device)
-    {
-      device_ = device;
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Context::D3D11AssetManager::setContext(
-      ID3D11DeviceContext* context)
-    {
-      context_ = context;
+			context_ = context;
     }
 
     ///////////////////////////////////////////////////////////////////////////

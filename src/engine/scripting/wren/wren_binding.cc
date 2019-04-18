@@ -1619,6 +1619,9 @@ foreign class Mesh {
 
 			void getAll(Vector<entity::Entity>& vec, entity::Entity e)
 			{
+				if (!components::TransformSystem::hasComponent(e, *g_scene))
+					return;
+
 				vec.push_back(e);
 				for (auto child : components::TransformSystem::getChildren(e, *g_scene))
 					getAll(vec, child);

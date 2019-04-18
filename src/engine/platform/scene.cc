@@ -396,9 +396,7 @@ namespace lambda
 				auto dynamics = data.culler.back().getDynamics();
 				components::MeshRenderSystem::createSortedRenderList(&statics, &dynamics, light_batch_face.opaque, light_batch_face.alpha, scene);
 
-				static uint32_t kOffset = 0ul;
-
-				String config = "__temp_target_" + toString(shadow_maps.at(0u).getTexture()->getLayer(0).getWidth()) + "_" + toString(shadow_maps.at(0u).getTexture()->getLayer(0).getHeight()) + "_" + toString(kOffset++) + "__";
+				String config = "__temp_target_" + toString(shadow_maps.at(0u).getTexture()->getLayer(0).getWidth()) + "_" + toString(shadow_maps.at(0u).getTexture()->getLayer(0).getHeight()) + "__";
 				asset::VioletTextureHandle temp = asset::TextureManager::getInstance()->create(Name(config),
 					shadow_maps.at(0u).getTexture()->getLayer(0).getWidth(),
 					shadow_maps.at(0u).getTexture()->getLayer(0).getHeight(),
@@ -406,6 +404,7 @@ namespace lambda
 					shadow_maps.at(0u).getTexture()->getLayer(0).getFormat(),
 					shadow_maps.at(0u).getTexture()->getLayer(0).getFlags()
 				);
+				temp->setKeepInMemory(true);
 
 				platform::RenderTarget rt_input = shadow_maps.at(0u);
 				platform::RenderTarget rt_output(config, temp);
@@ -757,7 +756,7 @@ namespace lambda
 			Vector<LightBatch> light_batches;
 		};
 
-#define USE_MT 0
+#define USE_MT 1
 
 		RenderData* k_flush_data = nullptr;
 		RenderData* k_next_flush_data = nullptr;
@@ -768,10 +767,10 @@ namespace lambda
 			scene.renderer->setOverrideScene(&scene);
 			scene.renderer->startFrame();
 
-			//renderCamera(scene.renderer, camera_batch);
-			//renderLight(scene.renderer, *scene.post_process_manager, light_batches.data(), (uint32_t)light_batches.size());
+			renderCamera(scene.renderer, camera_batch);
+			renderLight(scene.renderer, *scene.post_process_manager, light_batches.data(), (uint32_t)light_batches.size());
 
-			//scene.gui->render(scene);
+			scene.gui->render(scene);
 
 			for (auto render_action : scene.render_actions)
 			{
@@ -824,8 +823,6 @@ namespace lambda
 				{
 					if (pass.getEnabled())
 					{
-						foundation::Warning(pass.getName().getName() + "\n");
-
 						scene.renderer->pushMarker(pass.getName().getName());
 						scene.renderer->bindShaderPass(pass);
 

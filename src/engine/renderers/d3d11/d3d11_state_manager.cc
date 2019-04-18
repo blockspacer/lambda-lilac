@@ -2,17 +2,15 @@
 #include <d3d11.h>
 #include "assets/mesh.h"
 #include <utils/console.h>
+#include "d3d11_context.h"
 
 namespace lambda
 {
   namespace windows
   {
     ///////////////////////////////////////////////////////////////////////////
-    void D3D11StateManager::initialize(
-      Microsoft::WRL::ComPtr<ID3D11Device> device, 
-      Microsoft::WRL::ComPtr<ID3D11DeviceContext> context)
+    void D3D11StateManager::initialize(D3D11Context* context)
     {
-      device_  = device;
       context_ = context;
 
       blend_states_.clear();
@@ -105,7 +103,6 @@ namespace lambda
 		blend_op_to_d3d11_.clear();
 		depth_compare_op_to_d3d11_.clear();
 
-		device_                    = nullptr;
 		context_                   = nullptr;
 		bound_rasterizer_state_    = nullptr;
 		bound_blend_state_         = nullptr;
@@ -117,7 +114,6 @@ namespace lambda
     void D3D11StateManager::bindRasterizerState(
       const platform::RasterizerState& rasterizer_state)
     {
-      LMB_ASSERT(device_ != nullptr, "TODO (Hilze): Fill in");
       LMB_ASSERT(context_ != nullptr, "TODO (Hilze): Fill in");
 
       // Get the state.
@@ -144,7 +140,7 @@ namespace lambda
         case platform::RasterizerState::FillMode::kWireframe: 
           desc.FillMode = D3D11_FILL_WIREFRAME; break;
         }
-        device_->CreateRasterizerState(
+        context_->getD3D11Device()->CreateRasterizerState(
           &desc, 
           new_rasterizer_state.ReleaseAndGetAddressOf()
         );
@@ -164,14 +160,13 @@ namespace lambda
       bound_rasterizer_state_ = new_rasterizer_state;
 
       // Set the state.
-      context_->RSSetState(bound_rasterizer_state_.Get());
+      context_->getD3D11Context()->RSSetState(bound_rasterizer_state_.Get());
     }
 
     ///////////////////////////////////////////////////////////////////////////
     void D3D11StateManager::bindBlendState(
       const platform::BlendState& blend_state)
     {
-      LMB_ASSERT(device_ != nullptr, "TODO (Hilze): Fill in");
       LMB_ASSERT(context_ != nullptr, "TODO (Hilze): Fill in");
 
       // Get the state.
@@ -198,7 +193,7 @@ namespace lambda
         desc.RenderTarget[0].RenderTargetWriteMask = 
           blend_state.getWriteMask();
 
-        device_->CreateBlendState(
+        context_->getD3D11Device()->CreateBlendState(
           &desc, 
           new_blend_state.ReleaseAndGetAddressOf()
         );
@@ -219,7 +214,7 @@ namespace lambda
 
       // Set the state.
       static const float blend_factor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-      context_->OMSetBlendState(
+      context_->getD3D11Context()->OMSetBlendState(
         bound_blend_state_.Get(),
         blend_factor, 
         0xffffffff
@@ -230,7 +225,6 @@ namespace lambda
     void D3D11StateManager::bindDepthStencilState(
       const platform::DepthStencilState & depth_stencil_state)
     {
-      LMB_ASSERT(device_ != nullptr, "TODO (Hilze): Fill in");
       LMB_ASSERT(context_ != nullptr, "TODO (Hilze): Fill in");
 
       // Get the state.
@@ -258,7 +252,7 @@ namespace lambda
         desc.StencilWriteMask = D3D11_DEFAULT_STENCIL_WRITE_MASK;
         
 
-        device_->CreateDepthStencilState(
+				context_->getD3D11Device()->CreateDepthStencilState(
           &desc, 
           new_depth_stencil_state.ReleaseAndGetAddressOf()
         );
@@ -274,7 +268,7 @@ namespace lambda
 
       bound_depth_stencil_state_ = new_depth_stencil_state;
 
-      context_->OMSetDepthStencilState(new_depth_stencil_state.Get(), 0u);
+      context_->getD3D11Context()->OMSetDepthStencilState(new_depth_stencil_state.Get(), 0u);
     }
     
     ///////////////////////////////////////////////////////////////////////////
@@ -282,7 +276,6 @@ namespace lambda
       const platform::SamplerState& sampler_state, 
       unsigned char slot)
     {
-      LMB_ASSERT(device_ != nullptr, "TODO (Hilze): Fill in");
       LMB_ASSERT(context_ != nullptr, "TODO (Hilze): Fill in");
 
       // Get the state.
@@ -318,7 +311,7 @@ namespace lambda
           desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT; break;
         }
 
-        device_->CreateSamplerState(
+        context_->getD3D11Device()->CreateSamplerState(
           &desc, 
           new_sampler_state.ReleaseAndGetAddressOf()
         );
@@ -336,7 +329,7 @@ namespace lambda
       bound_sampler_state_ = new_sampler_state;
 
       // Set the state.
-      context_->PSSetSamplers(slot, 1u, bound_sampler_state_.GetAddressOf());
+      context_->getD3D11Context()->PSSetSamplers(slot, 1u, bound_sampler_state_.GetAddressOf());
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -362,7 +355,15 @@ namespace lambda
         break;
       }
 
-      context_->IASetPrimitiveTopology(new_topology);
+      context_->getD3D11Context()->IASetPrimitiveTopology(new_topology);
     }
+		void D3D11StateManager::reset()
+		{
+			bound_rasterizer_state_ = nullptr;
+			bound_blend_state_ = nullptr;
+			bound_sampler_state_ = nullptr;
+			bound_depth_stencil_state_ = nullptr;
+			bound_topology_ = (asset::Topology)-1;
+		}
   }
 }

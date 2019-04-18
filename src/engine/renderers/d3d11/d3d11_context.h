@@ -17,12 +17,6 @@ struct ID3DUserDefinedAnnotation;
 
 #define GPU_MARKERS 1
 #define GPU_TIMERS 0
-#define USE_DEFERRED_CONTEXT 0
-
-#if USE_DEFERRED_CONTEXT && GPU_TIMERS
-#undef GPU_TIMERS
-#define GPU_TIMERS 0
-#endif
 
 #define MAX_TEXTURE_COUNT 16u
 #define MAX_CONSTANT_BUFFER_COUNT 16u
@@ -41,9 +35,6 @@ namespace lambda
 			Microsoft::WRL::ComPtr<IDXGISwapChain> swap_chain;
 			Microsoft::WRL::ComPtr<ID3D11Device> device;
 			Microsoft::WRL::ComPtr<ID3D11DeviceContext> context;
-#if USE_DEFERRED_CONTEXT
-			Microsoft::WRL::ComPtr<ID3D11DeviceContext> deferred_context;
-#endif
 			Microsoft::WRL::ComPtr<ID3D11RenderTargetView> backbuffer;
 			bool vsync;
 		};
@@ -61,10 +52,6 @@ namespace lambda
 			asset::VioletShaderHandle shader;
 		};
 
-#if FLUSH_METHOD
-		struct IRenderAction;
-#endif
-
 		///////////////////////////////////////////////////////////////////////////
 		class D3D11RenderBuffer : public platform::IRenderBuffer
 		{
@@ -73,7 +60,7 @@ namespace lambda
 				uint32_t size,
 				uint32_t flags,
 				ID3D11Buffer* buffer,
-				ID3D11DeviceContext* context
+				D3D11Context* context
 			);
 			virtual void*    lock()   override;
 			virtual void     unlock() override;
@@ -84,7 +71,7 @@ namespace lambda
 			void             setChanged(bool changed);
 
 		private:
-			ID3D11DeviceContext* context_;
+			D3D11Context* context_;
 			ID3D11Buffer* buffer_;
 			uint32_t flags_;
 			uint32_t size_;
@@ -103,7 +90,7 @@ namespace lambda
 				TextureFormat format,
 				uint32_t flags,
 				D3D11Texture* texture,
-				ID3D11DeviceContext* context
+				D3D11Context* context
 			);
 			virtual void*    lock(uint32_t level)   override;
 			virtual void     unlock(uint32_t level) override;
@@ -116,7 +103,7 @@ namespace lambda
 			D3D11Texture* getTexture() const;
 
 		private:
-			ID3D11DeviceContext* context_;
+			D3D11Context* context_;
 			D3D11Texture* texture_;
 			uint32_t flags_;
 			uint32_t width_;
@@ -256,9 +243,6 @@ namespace lambda
 			virtual void destroyShader(const size_t& hash) override;
 			virtual void destroyMesh(const size_t& hash) override;
 
-#if FLUSH_METHOD
-			void flush(Vector<IRenderAction*> actions);
-#endif
 			void present();
 
 		protected:
@@ -381,8 +365,6 @@ namespace lambda
 				void removeShader(asset::VioletShaderHandle shader);
 				void removeShader(size_t shader);
 				void setD3D11Context(D3D11Context* context);
-				void setDevice(ID3D11Device* device);
-				void setContext(ID3D11DeviceContext* context);
 				void deleteNotReffedAssets(const float& dt);
 				void deleteAllAssets();
 
@@ -399,9 +381,7 @@ namespace lambda
 				UnorderedMap<uint64_t, RefType<D3D11RenderTexture>> textures_;
 				UnorderedMap<uint64_t, RefType<D3D11Mesh>> meshes_;
 				UnorderedMap<uint64_t, RefType<D3D11Shader>> shaders_;
-				D3D11Context* d3d11_context_;
-				ID3D11Device* device_;
-				ID3D11DeviceContext* context_;
+				D3D11Context* context_;
 			} asset_manager_;
 		};
 	}

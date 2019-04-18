@@ -20,14 +20,13 @@ namespace lambda
 {
   namespace windows
   {
+		class D3D11Context;
+
     ///////////////////////////////////////////////////////////////////////////
     class D3D11StateManager
     {
     public:
-      void initialize(
-        Microsoft::WRL::ComPtr<ID3D11Device> device, 
-        Microsoft::WRL::ComPtr<ID3D11DeviceContext> context
-      );
+      void initialize(D3D11Context* context);
 	  void deinitialize();
       void bindRasterizerState(
         const platform::RasterizerState& rasterizer_state
@@ -41,6 +40,7 @@ namespace lambda
         unsigned char slots
       );
       void bindTopology(const asset::Topology& topology);
+			void reset();
 
     private:
       UnorderedMap<platform::RasterizerState, 
@@ -56,8 +56,7 @@ namespace lambda
       Map<platform::DepthStencilState::DepthCompareOp, 
         D3D11_COMPARISON_FUNC> depth_compare_op_to_d3d11_;
 
-      Microsoft::WRL::ComPtr<ID3D11Device> device_;
-      Microsoft::WRL::ComPtr<ID3D11DeviceContext> context_;
+			D3D11Context* context_;
       Microsoft::WRL::ComPtr<ID3D11RasterizerState> bound_rasterizer_state_;
       Microsoft::WRL::ComPtr<ID3D11BlendState> bound_blend_state_;
       Microsoft::WRL::ComPtr<ID3D11SamplerState> bound_sampler_state_;
