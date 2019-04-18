@@ -1,7 +1,6 @@
 #pragma once
 #include "assets/shader.h"
 #include "vulkan_mesh.h"
-#include "platform/shader_variable_manager.h"
 #include "vulkan.h"
 #include <set>
 
@@ -13,34 +12,17 @@ namespace lambda
     class VulkanRenderBuffer;
 
     ///////////////////////////////////////////////////////////////////////////
-    struct VulkanBuffer
-    {
-      platform::ShaderBuffer shader_buffer;
-      VulkanRenderBuffer* buffer;
-			int offset;
-			int set;
-			int binding;
-			int slot;
-      bool bound = false;
-    };
-
-    ///////////////////////////////////////////////////////////////////////////
-    class VulkanShader : public asset::IGPUAsset
+    class VulkanShader
     {
     public:
       VulkanShader(asset::VioletShaderHandle shader, VulkanRenderer* renderer);
-      virtual ~VulkanShader() override;
+      ~VulkanShader();
       void bind();
-      void unbind();
-      void bindBuffers();
 	  Vector<uint32_t> getStages() const;
-
-      void updateShaderVariable(const platform::ShaderVariable& variable);
-
-      Vector<VulkanBuffer>& getBuffers();
 
 	  Vector<VulkanReflectionInfo> getTextures();
 	  Vector<VulkanReflectionInfo> getSamplers();
+      Vector<VulkanReflectionInfo> getBuffers();
 	  uint32_t getNumRenderTargets();
 
 	  void reflect();
@@ -56,10 +38,10 @@ namespace lambda
 
 	  Vector<VulkanReflectionInfo> textures_;
 	  Vector<VulkanReflectionInfo> samplers_;
+      Vector<VulkanReflectionInfo> buffers_;
 	  uint32_t num_render_targets_;
 
 	  VulkanRenderer* renderer_;
-      Vector<VulkanBuffer> buffers_;
 	  VezPipeline pipeline_;
 	  VezVertexInputFormat input_format_;
 	};

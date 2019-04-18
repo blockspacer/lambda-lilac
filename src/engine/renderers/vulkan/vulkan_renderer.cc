@@ -103,7 +103,7 @@ namespace lambda
 	}
 
 	///////////////////////////////////////////////////////////////////////////
-	void VulkanRenderer::freeRenderBuffer(platform::IRenderBuffer* buffer)
+	void VulkanRenderer::freeRenderBuffer(platform::IRenderBuffer*& buffer)
 	{
 		const bool is_vertex =
 			(buffer->getFlags() & platform::IRenderBuffer::kFlagVertex)
@@ -154,7 +154,7 @@ namespace lambda
 	}
 
 	///////////////////////////////////////////////////////////////////////////
-	void VulkanRenderer::freeRenderTexture(platform::IRenderTexture* texture)
+	void VulkanRenderer::freeRenderTexture(platform::IRenderTexture*& texture)
 	{
 		if ((texture->getFlags() & kTextureFlagIsRenderTarget) != 0u)
 			memory_stats_.render_target -= ((VulkanRenderTexture*)texture)->getTexture()->getGPUSize();
@@ -167,7 +167,8 @@ namespace lambda
 
 	///////////////////////////////////////////////////////////////////////////
 	VulkanRenderer::VulkanRenderer()
-	  : world_(nullptr)
+	  : scene_(nullptr)
+	  , override_scene_(nullptr)
 	  , vsync_(false)
 	  , instance_(VK_NULL_HANDLE)
 	  , physical_device_(VK_NULL_HANDLE)
@@ -195,18 +196,12 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    void VulkanRenderer::initialize(world::IWorld* world)
+    void VulkanRenderer::initialize(scene::Scene& scene)
     {
-		world_ = world;
+		scene_ = &scene;
 		
-		full_screen_quad_.mesh =
-			asset::AssetManager::getInstance().createAsset<asset::Mesh>(
-				Name("__full_screen_quad_mesh__"),
-				foundation::Memory::constructShared<asset::Mesh>(
-					asset::Mesh::createScreenQuad()
-					)
-				);
-
+		full_screen_quad_.mesh = asset::MeshManager::getInstance()->create(Name("__full_screen_quad__"), asset::Mesh::createScreenQuad());
+		full_screen_quad_.shader = asset::ShaderManager::getInstance()->get(Name("resources/shaders/full_screen_quad.fx"));
 
 		default_texture_ = asset::TextureManager::getInstance()->create(
 			Name("__default_render_texture__"),
@@ -214,8 +209,6 @@ namespace lambda
 			kTextureFlagIsRenderTarget, // TODO (Hilze): Remove!
 			Vector<char>(4, 255)
 		);
-
-		full_screen_quad_.shader = asset::ShaderManager::getInstance()->get(Name("resources/shaders/full_screen_quad.fx"));
 	}
 
     ///////////////////////////////////////////////////////////////////////////
@@ -359,8 +352,7 @@ namespace lambda
 #endif
 
     ///////////////////////////////////////////////////////////////////////////
-    void VulkanRenderer::setWindow(
-      foundation::SharedPointer<platform::IWindow> window)
+    void VulkanRenderer::setWindow(platform::IWindow* window)
     {
 			VkResult result;
 
@@ -515,7 +507,7 @@ namespace lambda
 			VezImageCreateInfo image_create_info = {};
 			image_create_info.imageType   = VK_IMAGE_TYPE_2D;
 			image_create_info.format      = VK_FORMAT_R8G8B8A8_UNORM;
-			image_create_info.extent      = { world_->getWindow()->getSize().x, world_->getWindow()->getSize().y, 1 };
+			image_create_info.extent      = { window->getSize().x, window->getSize().y, 1 };
 			image_create_info.mipLevels   = 1;
 			image_create_info.arrayLayers = 1;
 			image_create_info.samples     = VK_SAMPLE_COUNT_1_BIT;
@@ -558,31 +550,30 @@ namespace lambda
 		  setTexture(default_texture_, i);
     }
 
+	///////////////////////////////////////////////////////////////////////////
+	void VulkanRenderer::setOverrideScene(scene::Scene* scene)
+	{
+		override_scene_ = scene;
+	}
+
     ///////////////////////////////////////////////////////////////////////////
     void VulkanRenderer::resize()
     {
 		glm::uvec2 render_size =
-			(glm::uvec2)((glm::vec2)world_->getWindow()->getSize() *
-				world_->getWindow()->getDPIMultiplier());
+			(glm::uvec2)((glm::vec2)getScene()->window->getSize() *
+				getScene()->window->getDPIMultiplier());
 
-		world_->getPostProcessManager().resize(glm::vec2(render_size.x, render_size.y) * render_scale_);
+		getScene()->post_process_manager->resize(glm::vec2(render_size.x, render_size.y) * render_scale_);
 
-		world_->getShaderVariableManager().setVariable(
-			platform::ShaderVariable(Name("screen_size"), render_size)
-		);
+		screen_size_.x = (float)render_size.x;
+		screen_size_.y = (float)render_size.y;
     }
 
     ///////////////////////////////////////////////////////////////////////////
     void VulkanRenderer::update(const double& delta_time)
     {
-		delta_time_ = delta_time;
+		delta_time_ = (float)delta_time;
 		total_time_ += delta_time_;
-		setShaderVariable(
-			platform::ShaderVariable(Name("delta_time"), (float)delta_time_)
-		);
-		setShaderVariable(
-			platform::ShaderVariable(Name("total_time"), (float)total_time_)
-		);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -594,7 +585,7 @@ namespace lambda
 		beginTimer("Clear Everything");
 		pushMarker("Clear Everything");
 		glm::vec4 colour(0.0f);
-		for (const auto& target : world_->getPostProcessManager().getAllTargets())
+		for (const auto& target : getScene()->post_process_manager->getAllTargets())
 		{
 			if (target.second.getTexture()->getLayer(0u).getFlags()
 				& kTextureFlagClear)
@@ -611,59 +602,28 @@ namespace lambda
 		state_manager_.bindTopology(asset::Topology::kTriangles);
 		setSamplerState(platform::SamplerState::LinearWrap(), 0u);
 		setRasterizerState(platform::RasterizerState::SolidFront());
+
+		memset(&state_, 0, sizeof(state_));
+		state_.sub_mesh = UINT32_MAX;
+		memset(&vk_state_, 0, sizeof(vk_state_));
+		invalidateAll();
+
+		if (!cbs_.drs) cbs_.drs = (VulkanRenderBuffer*)allocRenderBuffer(sizeof(float), platform::IRenderBuffer::kFlagConstant | platform::IRenderBuffer::kFlagDynamic, nullptr);
+		float drs_data[] = { dynamic_resolution_scale_ };
+		memcpy(cbs_.drs->lock(), drs_data, sizeof(drs_data));
+		cbs_.drs->unlock();
+		setConstantBuffer(cbs_.drs, cbDynamicResolutionIdx);
+
+		if (!cbs_.per_frame) cbs_.per_frame = (VulkanRenderBuffer*)allocRenderBuffer(sizeof(float) * 4, platform::IRenderBuffer::kFlagConstant | platform::IRenderBuffer::kFlagDynamic, nullptr);
+		float per_frame_data[] = { screen_size_.x, screen_size_.y, delta_time_, total_time_ };
+		memcpy(cbs_.per_frame->lock(), per_frame_data, sizeof(per_frame_data));
+		cbs_.per_frame->unlock();
+		setConstantBuffer(cbs_.per_frame, cbPerFrameIdx);
 	}
    
     ///////////////////////////////////////////////////////////////////////////
     void VulkanRenderer::endFrame(bool display)
     {
-		setMesh(full_screen_quad_.mesh);
-		setSubMesh(0u);
-		setRasterizerState(platform::RasterizerState::SolidBack());
-		setBlendState(platform::BlendState::Default());
-		setDepthStencilState(platform::DepthStencilState::Default());
-
-		beginTimer("Post Processing");
-		pushMarker("Post Processing");
-		for (auto& pass : world_->getPostProcessManager().getPasses())
-		{
-			if (pass.getEnabled())
-			{
-				pushMarker(pass.getName().getName());
-				bindShaderPass(pass);
-				draw();
-				popMarker();
-			}
-			else
-			{
-				setMarker(pass.getName().getName() + " - Disabled");
-			}
-		}
-		popMarker();
-		endTimer("Post Processing");
-
-		beginTimer("Debug Rendering");
-		pushMarker("Debug Rendering");
-		//world_->getDebugRenderer().Render(world_);
-		popMarker();
-		endTimer("Debug Rendering");
-
-		beginTimer("Copy To Screen");
-		pushMarker("Copy To Screen");
-
-		setBlendState(platform::BlendState::Alpha());
-
-		copyToScreen(
-			world_->getPostProcessManager().getTarget(
-				world_->getPostProcessManager().getFinalTarget()
-			).getTexture()
-		);
-		copyToScreen(
-			world_->getPostProcessManager().getTarget(Name("gui")).getTexture()
-		);
-
-		popMarker();
-		endTimer("Copy To Screen");
-		
 		VkResult result;
 
 		// End command buffer recording.
@@ -707,6 +667,10 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     void VulkanRenderer::draw()
     {
+		static int kFirst = 0;
+		if (kFirst++ == 0)
+			return;
+
 			command_buffer_.tryBegin();
 
 			VulkanShader* shader = memory_.getShader(state_.shader);
@@ -772,14 +736,9 @@ namespace lambda
 			Vector<VulkanReflectionInfo> samplers = shader->getSamplers();
 			state_manager_.update(samplers, shader->getNumRenderTargets());
 
-			for (const auto& variable : state_.shader->getQueuedShaderVariables())
-				shader->updateShaderVariable(variable);
-
 			// Update constant buffers.
 			for (auto& buffer : shader->getBuffers())
-				world_->getShaderVariableManager().updateBuffer(buffer.shader_buffer);
-
-			shader->bindBuffers();
+				vezCmdBindBuffer(vk_state_.constant_buffers[buffer.slot], 0, VK_WHOLE_SIZE, buffer.set, buffer.binding, 0);
 
 			VulkanMesh* mesh = memory_.getMesh(state_.mesh);
 
@@ -796,8 +755,8 @@ namespace lambda
 			// Rend renderpass.
 			vezCmdEndRenderPass();
 
-			command_buffer_.tryEnd();
-			command_buffer_.tryBegin();
+			//command_buffer_.tryEnd();
+			//command_buffer_.tryBegin();
 	}
     
     ///////////////////////////////////////////////////////////////////////////
@@ -850,7 +809,7 @@ namespace lambda
 		VulkanRenderTexture* src_texture = memory_.getTexture(texture);
 
 		copy(
-			src_texture->getTexture()->getTexture(src_texture->getTexture()->pingPongIdx()),
+			src_texture->getTexture()->getTexture(),
 			glm::uvec2(src_texture->getWidth(), src_texture->getHeight()),
 			backbuffer_,
 			glm::uvec2(backbuffer_width_, backbuffer_height_)
@@ -864,9 +823,9 @@ namespace lambda
 		VulkanRenderTexture* dst_texture = memory_.getTexture(dst);
 
 		copy(
-			src_texture->getTexture()->getTexture(src_texture->getTexture()->pingPongIdx()),
+			src_texture->getTexture()->getTexture(),
 			glm::uvec2(src_texture->getWidth(), src_texture->getHeight()),
-			dst_texture->getTexture()->getTexture(dst_texture->getTexture()->pingPongIdx()),
+			dst_texture->getTexture()->getTexture(),
 			glm::uvec2(dst_texture->getWidth(), dst_texture->getHeight())
 		);
 	}
@@ -874,11 +833,6 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     void VulkanRenderer::bindShaderPass(const platform::ShaderPass& shader_pass)
     {
-		float dynamic_resolution_scale =
-			world_->getShaderVariableManager().getShaderVariable(
-				Name("dynamic_resolution_scale")
-			).data.at(0);
-
 		setShader(shader_pass.getShader());
 
 		for (uint32_t i = 0; i < shader_pass.getInputs().size(); ++i)
@@ -917,16 +871,15 @@ namespace lambda
 				output.getTexture()->getLayer(0u).getFormat() == TextureFormat::kD32)
 			{
 				auto t = memory_.getTexture(output.getTexture())->getTexture();
-				dsv = t->getSubView(t->pingPongIdx(), output.getLayer(), output.getMipMap());
+				dsv = t->getSubView(output.getLayer(), output.getMipMap());
 			}
 			else
 			{
 				for (const auto& input : shader_pass.getInputs())
-					if (input.getName() == output.getName())
-						memory_.getTexture(output.getTexture())->getTexture()->pingPong();
+					LMB_ASSERT(input.getName() != output.getName(), "ERR");
 
 				auto t = memory_.getTexture(output.getTexture())->getTexture();
-				rtvs.push_back(t->getSubView(t->pingPongIdx(), output.getLayer(), output.getMipMap()));
+				rtvs.push_back(t->getSubView(output.getLayer(), output.getMipMap()));
 
 				viewports.push_back({
 					0.0f,
@@ -937,7 +890,7 @@ namespace lambda
 
 				if (output.getTexture()->getLayer(0u).getFlags() &
 					kTextureFlagDynamicScale)
-					viewports.back() *= dynamic_resolution_scale;
+					viewports.back() *= dynamic_resolution_scale_;
 
 				scissor_rects.push_back({
 					0u,
@@ -963,7 +916,7 @@ namespace lambda
 
 			if (shader_pass.getOutputs()[0u].getTexture()->getLayer(0u).getFlags()
 				& kTextureFlagDynamicScale)
-				viewports.back() *= dynamic_resolution_scale;
+				viewports.back() *= dynamic_resolution_scale_;
 
 			scissor_rects.push_back({
 				0u,
@@ -992,8 +945,6 @@ namespace lambda
       asset::VioletTextureHandle handle,
       const glm::vec4& colour)
     {
-		return; // TODO (Hilze): Remove ASAP!
-
 		if (!handle)
 			return;
 
@@ -1038,7 +989,7 @@ namespace lambda
 		range.levelCount     = 1;
 		VkClearColorValue color{};
 		memcpy(color.float32, &colour.x, sizeof(colour));
-		vezCmdClearColorImage(texture->getTexture()->getTexture(texture->getTexture()->pingPongIdx()), &color, 1, &range);
+		vezCmdClearColorImage(texture->getTexture()->getTexture(), &color, 1, &range);
 		vezCmdEndRenderPass();
 
 		command_buffer_.tryEnd();
@@ -1106,7 +1057,7 @@ namespace lambda
 	}
 
     ///////////////////////////////////////////////////////////////////////////
-    void VulkanRenderer::setMesh(asset::MeshHandle mesh)
+    void VulkanRenderer::setMesh(asset::VioletMeshHandle mesh)
     {
 		if (!mesh)
 			return;
@@ -1150,11 +1101,51 @@ namespace lambda
     {
 	  if (texture != state_.textures[slot])
 	  {
+		if (slot == 0)
+		{
+			glm::vec2 val(1.0f);
+			if (texture)
+				val = 1.0f / glm::vec2((float)texture->getLayer(0u).getWidth(), (float)texture->getLayer(0u).getHeight());
+
+			setUserData(glm::vec4(val.x, val.y, 0.0f, 0.0f), 15);
+		}
+
         makeDirty(DirtyState::kTextures);
         state_.textures[slot]    = texture;
 		vk_state_.textures[slot] = memory_.getTexture(texture ? texture : default_texture_)->getTexture()->getMainView();
 	  }
     }
+
+	///////////////////////////////////////////////////////////////////////////
+	void VulkanRenderer::setConstantBuffer(platform::IRenderBuffer* constant_buffer, uint8_t slot)
+	{
+		if (state_.constant_buffers[slot] == constant_buffer)
+			return;
+
+		state_.constant_buffers[slot] = constant_buffer;
+		vk_state_.constant_buffers[slot] = constant_buffer ? ((VulkanRenderBuffer*)constant_buffer)->getBuffer() : nullptr;
+		makeDirty(DirtyState::kConstantBuffers);
+
+		for (int i = 0; i < (int)ShaderStages::kCount; ++i)
+			state_.dirty_constant_buffers[i] |= 1ull << slot;
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	void VulkanRenderer::setUserData(glm::vec4 user_data, uint8_t slot)
+	{
+		if (cbs_.user_data[slot] != user_data)
+		{
+			cbs_.user_data[slot] = user_data;
+
+			if (!cbs_.cb_user_data)
+				cbs_.cb_user_data = (VulkanRenderBuffer*)allocRenderBuffer(sizeof(cbs_.user_data), platform::IRenderBuffer::kFlagConstant | platform::IRenderBuffer::kFlagDynamic, nullptr);
+
+			memcpy(cbs_.cb_user_data->lock(), cbs_.user_data, sizeof(cbs_.user_data));
+			cbs_.cb_user_data->unlock();
+
+			setConstantBuffer(cbs_.cb_user_data, cbUserDataIdx);
+		}
+	}
 
 	///////////////////////////////////////////////////////////////////////////
 	void VulkanRenderer::setRenderTargets(Vector<asset::VioletTextureHandle> render_targets, asset::VioletTextureHandle depth_buffer)
@@ -1270,13 +1261,6 @@ namespace lambda
       return 0ul;
     }
     
-    ///////////////////////////////////////////////////////////////////////////
-    void VulkanRenderer::setShaderVariable(
-      const platform::ShaderVariable& variable)
-    {
-		world_->getShaderVariableManager().setVariable(variable);
-	}
-
 	///////////////////////////////////////////////////////////////////////////
 	VkDevice VulkanRenderer::getDevice() const
 	{
@@ -1299,12 +1283,6 @@ namespace lambda
 		}
 	}
 
-    ///////////////////////////////////////////////////////////////////////////
-    void VulkanRenderer::destroyAsset(
-      foundation::SharedPointer<asset::IAsset> asset)
-    {
-    }
-
 	///////////////////////////////////////////////////////////////////////////
 	void VulkanRenderer::destroyTexture(const size_t& hash)
 	{
@@ -1315,6 +1293,12 @@ namespace lambda
 	void VulkanRenderer::destroyShader(const size_t& hash)
 	{
 		memory_.removeShader(hash);
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	void VulkanRenderer::destroyMesh(const size_t& hash)
+	{
+		memory_.removeMesh(hash);
 	}
 
 	///////////////////////////////////////////////////////////////////////////
@@ -1361,6 +1345,12 @@ namespace lambda
 
 		command_buffer_.tryEnd();
 		command_buffer_.tryBegin();
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	scene::Scene* VulkanRenderer::getScene() const
+	{
+		return override_scene_ ? override_scene_ : scene_;
 	}
 
     ///////////////////////////////////////////////////////////////////////////
@@ -1666,19 +1656,19 @@ namespace lambda
 	}
 
 	///////////////////////////////////////////////////////////////////////////
-	VulkanMesh* VulkanRenderer::Memory::getMesh(asset::MeshHandle handle)
+	VulkanMesh* VulkanRenderer::Memory::getMesh(asset::VioletMeshHandle handle)
 	{
 		if (!handle)
 			return nullptr;
 
-		auto it = meshes.find(handle.id);
+		auto it = meshes.find(handle.getHash());
 		if (it == meshes.end())
 		{
 			Entry<VulkanMesh*> entry;
 			entry.ptr = foundation::Memory::construct<VulkanMesh>(handle, renderer);
 			entry.keep_in_memory = false;
-			meshes.insert(eastl::make_pair(handle.id, entry));
-			it = meshes.find(handle.id);
+			meshes.insert(eastl::make_pair(handle.getHash(), entry));
+			it = meshes.find(handle.getHash());
 		}
 
 		it->second.hit_count++;
@@ -1735,9 +1725,9 @@ namespace lambda
 	}
 
 	///////////////////////////////////////////////////////////////////////////
-	void VulkanRenderer::Memory::removeMesh(asset::MeshHandle handle)
+	void VulkanRenderer::Memory::removeMesh(asset::VioletMeshHandle handle)
 	{
-		removeMesh(handle.id);
+		removeMesh(handle.getHash());
 	}
 
 	///////////////////////////////////////////////////////////////////////////
@@ -1769,7 +1759,7 @@ namespace lambda
 		auto it = textures.find(handle);
 		if (it != textures.end())
 		{
-			renderer->freeRenderTexture(it->second.ptr);
+			renderer->freeRenderTexture((platform::IRenderTexture*&)it->second.ptr);
 			textures.erase(it);
 		}
 	}

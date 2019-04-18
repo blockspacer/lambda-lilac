@@ -28,15 +28,11 @@ namespace lambda
       VkImageView getMainView() const;
       void generateMips() const;
       VkImageView getSubView(
-        unsigned char idx,
         unsigned char layer,
         unsigned char mip_map
       ) const;
 
-      void pingPong();
-      unsigned char pingPongIdx() const;
-
-      VkImage getTexture(unsigned char idx) const;
+      VkImage getTexture() const;
 	  size_t getGPUSize() const;
 
     private:
@@ -52,11 +48,10 @@ namespace lambda
     private:
 	  VulkanRenderer* renderer_;
 	  VkFormat format_;
-	  VkImageView srvs_[2];
-	  VkImage textures_[2];
-	  Vector<Vector<VkImageView>> layers_[2];
+	  VkImageView srv_;
+	  VkImage texture_;
+	  Vector<Vector<VkImageView>> layers_;
 	  
-	  unsigned char texture_index_;
 	  bool is_render_target_;
 	  bool is_dynamic_;
 	  size_t size_;

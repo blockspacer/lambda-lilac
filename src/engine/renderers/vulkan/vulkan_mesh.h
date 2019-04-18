@@ -11,11 +11,11 @@ namespace lambda
     class VulkanRenderBuffer;
 
     ///////////////////////////////////////////////////////////////////////////
-    class VulkanMesh : public asset::IGPUAsset
+    class VulkanMesh
     {
     public:
-      VulkanMesh(asset::MeshHandle mesh, VulkanRenderer* renderer);
-      virtual ~VulkanMesh() override;
+      VulkanMesh(asset::VioletMeshHandle mesh, VulkanRenderer* renderer);
+      ~VulkanMesh();
 
       void bind(
         const Vector<uint32_t>& stages,
@@ -45,7 +45,7 @@ namespace lambda
 
     private:
       VulkanRenderer* renderer_;
-	  asset::MeshHandle mesh_;
+	  asset::Mesh* mesh_;
 	  UnorderedMap<uint32_t, VulkanRenderBuffer*> buffer_;
     };
   }

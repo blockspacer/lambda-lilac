@@ -757,7 +757,7 @@ namespace lambda
 			Vector<LightBatch> light_batches;
 		};
 
-#define USE_MT 1
+#define USE_MT 0
 
 		RenderData* k_flush_data = nullptr;
 		RenderData* k_next_flush_data = nullptr;
@@ -768,10 +768,10 @@ namespace lambda
 			scene.renderer->setOverrideScene(&scene);
 			scene.renderer->startFrame();
 
-			renderCamera(scene.renderer, camera_batch);
-			renderLight(scene.renderer, *scene.post_process_manager, light_batches.data(), (uint32_t)light_batches.size());
+			//renderCamera(scene.renderer, camera_batch);
+			//renderLight(scene.renderer, *scene.post_process_manager, light_batches.data(), (uint32_t)light_batches.size());
 
-			scene.gui->render(scene);
+			//scene.gui->render(scene);
 
 			for (auto render_action : scene.render_actions)
 			{
@@ -824,6 +824,8 @@ namespace lambda
 				{
 					if (pass.getEnabled())
 					{
+						foundation::Warning(pass.getName().getName() + "\n");
+
 						scene.renderer->pushMarker(pass.getName().getName());
 						scene.renderer->bindShaderPass(pass);
 
@@ -898,10 +900,12 @@ namespace lambda
 		void sceneConstructRender(scene::Scene& scene)
 		{
 			//Add all render actions.
-			scene.render_actions.push_back(foundation::GetFrameHeap()->construct<RenderAction_PostProcess>());
-			scene.render_actions.push_back(foundation::GetFrameHeap()->construct<RenderAction_RigidBodyRenderer>());
-			scene.render_actions.push_back(foundation::GetFrameHeap()->construct<RenderAction_DebugRenderer>());
-			scene.render_actions.push_back(foundation::GetFrameHeap()->construct<RenderAction_CopyToScreen>());
+			Vector<IRenderAction*> render_actions;
+			render_actions.push_back(foundation::GetFrameHeap()->construct<RenderAction_PostProcess>());
+			render_actions.push_back(foundation::GetFrameHeap()->construct<RenderAction_RigidBodyRenderer>());
+			render_actions.push_back(foundation::GetFrameHeap()->construct<RenderAction_DebugRenderer>());
+			render_actions.push_back(foundation::GetFrameHeap()->construct<RenderAction_CopyToScreen>());
+			render_actions.insert(render_actions.end(), scene.render_actions.begin(), scene.render_actions.end());
 
 			// Create new.
 			if (!k_next_flush_data)
@@ -914,7 +918,7 @@ namespace lambda
 			k_next_flush_data->scene.post_process_manager     = scene.post_process_manager;
 			k_next_flush_data->scene.window                   = scene.window;
 			k_next_flush_data->scene.gui                      = scene.gui;
-			k_next_flush_data->scene.render_actions           = scene.render_actions;
+			k_next_flush_data->scene.render_actions           = render_actions;
 			k_next_flush_data->scene.rigid_body.physics_world = scene.rigid_body.physics_world;
 
 			scene.render_actions.clear();

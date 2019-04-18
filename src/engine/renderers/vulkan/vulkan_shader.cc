@@ -115,31 +115,12 @@ namespace lambda
 				  switch (resource.type)
 				  {
 				  case VioletShaderResourceType::kConstantBuffer:
-				  {
-					  Vector<platform::BufferVariable> variables;
-					  foundation::SharedPtr<void> data = foundation::Memory::makeShared(foundation::Memory::allocate(resource.size));
-					  memset(data.get(), 0, resource.size);
-
-					  for (const auto& item : resource.items)
-					  {
-						  platform::BufferVariable variable;
-						  variable.name = item.name;
-						  variable.count = 0;
-						  variable.size = item.size;
-						  variable.data = (char*)data.get() + item.offset;
-						  variables.push_back(variable);
-					  }
-
-					  VulkanBuffer buffer;
-					  buffer.buffer  = (VulkanRenderBuffer*)renderer_->allocRenderBuffer(resource.size, platform::IRenderBuffer::kFlagConstant | platform::IRenderBuffer::kFlagDynamic);
-					  buffer.offset  = 0;
-					  buffer.set     = 0;
-					  buffer.binding = resource.slot;
-					  buffer.slot    = resource.slot - 0;
-					  buffer.shader_buffer = platform::ShaderBuffer(Name(resource.name), variables, data);
-					  buffers_.push_back(buffer);
+					  info.slot = resource.slot;
+					  info.binding = info.slot + 000;
+					  info.set = 0;
+					  info.name = resource.name;
+					  buffers_.push_back(info);
 					  break;
-				  }
 				  case VioletShaderResourceType::kSampler:
 					  info.slot = resource.slot;
 					  info.binding = info.slot + 200;
@@ -162,19 +143,14 @@ namespace lambda
 	  }
     
     ///////////////////////////////////////////////////////////////////////////
-    VulkanShader::~VulkanShader()
-    {
-			vezDestroyShaderModule(renderer_->getDevice(), vs_);
-			vezDestroyShaderModule(renderer_->getDevice(), ps_);
-			vezDestroyShaderModule(renderer_->getDevice(), gs_);
-			vezDestroyPipeline(renderer_->getDevice(), pipeline_);
-			vezDestroyVertexInputFormat(renderer_->getDevice(), input_format_);
-
-      buffers_.resize(0u);
-      
-      for (auto& buffer : buffers_) 
-        renderer_->freeRenderBuffer((platform::IRenderBuffer*&)buffer.buffer);
-    }
+	  VulkanShader::~VulkanShader()
+	  {
+		  vezDestroyShaderModule(renderer_->getDevice(), vs_);
+		  vezDestroyShaderModule(renderer_->getDevice(), ps_);
+		  vezDestroyShaderModule(renderer_->getDevice(), gs_);
+		  vezDestroyPipeline(renderer_->getDevice(), pipeline_);
+		  vezDestroyVertexInputFormat(renderer_->getDevice(), input_format_);
+	  }
 
     ///////////////////////////////////////////////////////////////////////////
     void VulkanShader::bind()
@@ -184,68 +160,13 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    void VulkanShader::unbind()
-    {
-      for (auto& buffer : buffers_)
-        buffer.bound = false;
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-#pragma optimize ("", off)
-    void VulkanShader::bindBuffers()
-    {
-      for (size_t i = 0u; i < buffers_.size(); ++i)
-      {
-        auto& buffer = buffers_.at(i).shader_buffer;
-        auto& gpu_buffer = buffers_.at(i).buffer;
-
-        if (buffer.getChanged() == true)
-        {
-          buffer.setChanged(false);
-		  
-					void* data = gpu_buffer->lock();
-					memcpy(data, buffer.getData(), gpu_buffer->getSize());
-					gpu_buffer->unlock();
-          
-					buffers_.at(i).bound = false;
-        }
-
-				//if (!buffers_[i].bound)
-				{
-					buffers_[i].bound = true;
-					vezCmdBindBuffer(buffers_[i].buffer->getBuffer(), buffers_[i].offset, VK_WHOLE_SIZE, buffers_[i].set, buffers_[i].binding, 0);
-				}
-      }
-    }
-    
-    ///////////////////////////////////////////////////////////////////////////
 	Vector<uint32_t> VulkanShader::getStages() const
     {
       return stages_;
     }
     
     ///////////////////////////////////////////////////////////////////////////
-    void VulkanShader::updateShaderVariable(
-      const platform::ShaderVariable& variable)
-    {
-      for (size_t i = 0u; i < buffers_.size(); ++i)
-      {
-        auto& buffer = buffers_.at(i);
-
-        for (auto& v : buffer.shader_buffer.getVariables())
-        {
-          if (variable.name == v.name)
-          {
-            memcpy(v.data, variable.data.data(), v.size);
-            buffer.shader_buffer.setChanged(true);
-            continue;
-          }
-        }
-      }
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    Vector<VulkanBuffer>& VulkanShader::getBuffers()
+    Vector<VulkanReflectionInfo> VulkanShader::getBuffers()
     {
       return buffers_;
     }
@@ -268,7 +189,6 @@ namespace lambda
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-#pragma optimize("", off)
 		void VulkanShader::reflect()
 		{
 			VkResult result;

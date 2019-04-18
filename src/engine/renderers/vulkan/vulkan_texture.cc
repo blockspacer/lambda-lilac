@@ -60,7 +60,8 @@ namespace lambda
       asset::VioletTextureHandle texture, 
       VulkanRenderer* renderer) 
       : format_(formatToVulkanFormat(texture->getLayer(0u).getFormat()))
-      , texture_index_(0u)
+      , texture_(nullptr)
+      , srv_(nullptr)
       , size_(0u)
 	  , renderer_(renderer)
     {
@@ -68,9 +69,6 @@ namespace lambda
 
 	  LMB_ASSERT(texture->getLayerCount() > 0,
         "Vulkan TEXTURE: No layers were added to this texture.");
-      
-	  textures_[0u] = textures_[1u] = VK_NULL_HANDLE;
-	  srvs_[0u] = srvs_[1u] = VK_NULL_HANDLE;
 
       if (texture->getLayer(0u).getWidth() == 0u || 
         texture->getLayer(0u).getHeight() == 0u)
@@ -117,79 +115,74 @@ namespace lambda
 	  image_create_info.usage         = usage;
 
 	  // Create the textures.
-	  for (unsigned char i = 0u; i < (is_render_target_ ? 2u : 1u); ++i)
 	  {
-			result = vezCreateImage(renderer_->getDevice(), VEZ_MEMORY_GPU_ONLY, &image_create_info, &textures_[i]);
+			result = vezCreateImage(renderer_->getDevice(), VEZ_MEMORY_GPU_ONLY, &image_create_info, &texture_);
 			LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not create texture | %s", vkErrorCode(result));
 
 			VkMemoryRequirements memory_requirements{};
-			vkGetImageMemoryRequirements(renderer_->getDevice(), textures_[i], &memory_requirements);
+			vkGetImageMemoryRequirements(renderer_->getDevice(), texture_, &memory_requirements);
 			size_ += (size_t)memory_requirements.size;
 	  }
 
 	  // Upload the data.
 	  bool contains_data = !texture->getLayer(0u).getData().empty() || from_dds;
 	  
-	  for (unsigned char i = 0u; i < (is_render_target_ ? 2u : 1u) && contains_data; ++i)
-	  {
-		  for (uint32_t layer = 0u; layer < image_create_info.arrayLayers; ++layer)
-		  {
-			  uint32_t w = texture->getLayer(layer).getWidth();
-			  uint32_t h = texture->getLayer(layer).getHeight();
+		for (uint32_t layer = 0u; layer < image_create_info.arrayLayers && contains_data; ++layer)
+		{
+			uint32_t w = texture->getLayer(layer).getWidth();
+			uint32_t h = texture->getLayer(layer).getHeight();
 
-			  Vector<char> dds_data;
-			  const char* data = texture->getLayer(layer).getData().data();
-			  if (!data && from_dds)
-			  {
-				  dds_data = asset::TextureManager::getInstance()->getData(texture);
-				  data = dds_data.data();
-			  }
+			Vector<char> dds_data;
+			const char* data = texture->getLayer(layer).getData().data();
+			if (!data && from_dds)
+			{
+				dds_data = asset::TextureManager::getInstance()->getData(texture);
+				data = dds_data.data();
+			}
 
 
-			  uint32_t offset = 0u;
-			  if (*((uint32_t*)data) == 0x20534444)
-			  {
-				  // TODO (Hilze): Read the DDS header and find out
-				  // if it uses the extended or normal header.
+			uint32_t offset = 0u;
+			if (*((uint32_t*)data) == 0x20534444)
+			{
+				// TODO (Hilze): Read the DDS header and find out
+				// if it uses the extended or normal header.
 
-				  if (format_ == VK_FORMAT_BC6H_SFLOAT_BLOCK)
-					  offset = 148u;
-				  else
-					  offset = 128u;
-			  }
+				if (format_ == VK_FORMAT_BC6H_SFLOAT_BLOCK)
+					offset = 148u;
+				else
+					offset = 128u;
+			}
 
-			  for (uint32_t mip = 0u; mip < image_create_info.mipLevels; ++mip)
-			  {
-				  uint32_t bpp, bpr, bpl;
-				  calculateImageMemory(
-					  texture->getLayer(layer).getFormat(),
-					  w,
-					  h,
-					  bpp,
-					  bpr,
-					  bpl
-				  );
-				  VezImageSubDataInfo sub_data_info{};
-				  sub_data_info.imageSubresource.mipLevel = mip;
-				  sub_data_info.imageSubresource.baseArrayLayer = layer;
-				  sub_data_info.imageSubresource.layerCount = 1;
-				  sub_data_info.imageOffset = { 0, 0, 0 };
-				  sub_data_info.imageExtent = { w, h, 1 };
-				  result = vezImageSubData(renderer_->getDevice(), textures_[i], &sub_data_info, data);
-				  LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not update iamge sub data | %s", vkErrorCode(result));
+			for (uint32_t mip = 0u; mip < image_create_info.mipLevels; ++mip)
+			{
+				uint32_t bpp, bpr, bpl;
+				calculateImageMemory(
+					texture->getLayer(layer).getFormat(),
+					w,
+					h,
+					bpp,
+					bpr,
+					bpl
+				);
+				VezImageSubDataInfo sub_data_info{};
+				sub_data_info.imageSubresource.mipLevel = mip;
+				sub_data_info.imageSubresource.baseArrayLayer = layer;
+				sub_data_info.imageSubresource.layerCount = 1;
+				sub_data_info.imageOffset = { 0, 0, 0 };
+				sub_data_info.imageExtent = { w, h, 1 };
+				result = vezImageSubData(renderer_->getDevice(), texture_, &sub_data_info, data);
+				LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not update iamge sub data | %s", vkErrorCode(result));
 
-				  offset += bpl;
-				  w /= 2u;
-				  h /= 2u;
-			  }
-		  }
-	  }
+				offset += bpl;
+				w /= 2u;
+				h /= 2u;
+			}
+		}
 
       // Create shader resource view.
 	  createMainViews(image_create_info.arrayLayers, image_create_info.mipLevels);
 
-	  layers_[0].resize(image_create_info.arrayLayers);
-	  layers_[1].resize(image_create_info.arrayLayers);
+	  layers_.resize(image_create_info.arrayLayers);
       if (is_render_target_)
           createSubViews(image_create_info.arrayLayers, image_create_info.mipLevels);
     }
@@ -197,19 +190,16 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     VulkanTexture::~VulkanTexture()
     {
-      for (uint32_t i = 0u; i < 2u; ++i)
-      {
-        if (srvs_[i] != VK_NULL_HANDLE)
-          vezDestroyImageView(renderer_->getDevice(), srvs_[i]);
+    if (srv_ != VK_NULL_HANDLE)
+        vezDestroyImageView(renderer_->getDevice(), srv_);
 		
-		for (auto& layer : layers_[i])
-			for (auto view : layer)
-				vezDestroyImageView(renderer_->getDevice(), view);
-		layers_[i].clear();
+	for (auto& layer : layers_)
+		for (auto view : layer)
+			vezDestroyImageView(renderer_->getDevice(), view);
+	layers_.clear();
 
-        if (textures_[i] != nullptr)
-          vezDestroyImage(renderer_->getDevice(), textures_[i]);
-      }
+    if (texture_ != nullptr)
+        vezDestroyImage(renderer_->getDevice(), texture_);
     }
 
 		///////////////////////////////////////////////////////////////////////////
@@ -229,7 +219,7 @@ namespace lambda
 					sub_data_info.imageSubresource.layerCount = 1;
 					sub_data_info.imageOffset = { 0, 0, 0 };
 					sub_data_info.imageExtent = { layer.getWidth(), layer.getHeight(), 1 };
-					result = vezImageSubData(renderer_->getDevice(), textures_[i], &sub_data_info, layer.getData().data());
+					result = vezImageSubData(renderer_->getDevice(), texture_, &sub_data_info, layer.getData().data());
 					LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not update image data | %s", vkErrorCode(result));
 
 					layer.clean();
@@ -252,7 +242,7 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
 	VkImageView VulkanTexture::getMainView() const
     {
-      return srvs_[texture_index_];
+      return srv_;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -263,32 +253,18 @@ namespace lambda
 
     ///////////////////////////////////////////////////////////////////////////
 	VkImageView VulkanTexture::getSubView(
-	  unsigned char idx,
 	  unsigned char layer,
 	  unsigned char mip_map) const
     {
-		LMB_ASSERT(layers_[idx].size() >= layer && layers_[idx][layer].size() >= mip_map, "getSubView(Idx: %i, Layer: %i, MipMap: %i)", idx, layer, mip_map);
-      return layers_[idx][layer][mip_map];
+		LMB_ASSERT(layers_.size() >= layer && layers_[layer].size() >= mip_map, "getSubView(Layer: %i, MipMap: %i)", layer, mip_map);
+      return layers_[layer][mip_map];
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    void VulkanTexture::pingPong()
+    VkImage VulkanTexture::getTexture() const
     {
-      LMB_ASSERT(srvs_[1u] != nullptr, "Only one texture was created");
-      texture_index_ = (texture_index_ == 0u) ? 1u : 0u;
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    unsigned char VulkanTexture::pingPongIdx() const
-    {
-      return texture_index_;
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    VkImage VulkanTexture::getTexture(unsigned char idx) const
-    {
-      LMB_ASSERT(srvs_[idx] != nullptr, "getTexture(%i) : Texture at index was nullptr", idx);
-      return textures_[idx];
+      LMB_ASSERT(texture_ != nullptr, "getTexture() : Texture was nullptr");
+      return texture_;
     }
 
 	///////////////////////////////////////////////////////////////////////////
@@ -302,22 +278,17 @@ namespace lambda
       unsigned char layer_count,
       unsigned char mip_count)
 	{
-		VkResult result;
-
-		for (unsigned char i = 0u; i < (is_render_target_ ? 2u : 1u); ++i)
-		{
-			VezImageViewCreateInfo image_view_create_info{};
-			image_view_create_info.image = textures_[i];
-			image_view_create_info.viewType = layer_count == 1 ? VK_IMAGE_VIEW_TYPE_2D : VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-			image_view_create_info.format = format_;
-			image_view_create_info.subresourceRange.baseArrayLayer = 0;
-			image_view_create_info.subresourceRange.baseMipLevel = 0;
-			image_view_create_info.subresourceRange.layerCount = layer_count;
-			image_view_create_info.subresourceRange.levelCount = mip_count;
+		VezImageViewCreateInfo image_view_create_info{};
+		image_view_create_info.image = texture_;
+		image_view_create_info.viewType = layer_count == 1 ? VK_IMAGE_VIEW_TYPE_2D : VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+		image_view_create_info.format = format_;
+		image_view_create_info.subresourceRange.baseArrayLayer = 0;
+		image_view_create_info.subresourceRange.baseMipLevel = 0;
+		image_view_create_info.subresourceRange.layerCount = layer_count;
+		image_view_create_info.subresourceRange.levelCount = mip_count;
 			
-			result = vezCreateImageView(renderer_->getDevice(), &image_view_create_info, &srvs_[i]);
-			LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not create dsv | %s", vkErrorCode(result));
-		}
+		VkResult result = vezCreateImageView(renderer_->getDevice(), &image_view_create_info, &srv_);
+		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not create dsv | %s", vkErrorCode(result));
 	}
 
     ///////////////////////////////////////////////////////////////////////////
@@ -327,25 +298,22 @@ namespace lambda
 	{
 		VkResult result;
 
-		for (unsigned char i = 0u; i < (is_render_target_ ? 2u : 1u); ++i)
+		for (unsigned char l = 0u; l < layer_count; ++l)
 		{
-			for (unsigned char l = 0u; l < layer_count; ++l)
+			layers_[l].resize(mip_count);
+			for (unsigned char m = 0u; m < mip_count; ++m)
 			{
-				layers_[i][l].resize(mip_count);
-				for (unsigned char m = 0u; m < mip_count; ++m)
-				{
-					VezImageViewCreateInfo image_view_create_info{};
-					image_view_create_info.image = textures_[i];
-					image_view_create_info.viewType = layer_count == 1 ? VK_IMAGE_VIEW_TYPE_2D : VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-					image_view_create_info.format = format_;
-					image_view_create_info.subresourceRange.baseArrayLayer = l;
-					image_view_create_info.subresourceRange.baseMipLevel = m;
-					image_view_create_info.subresourceRange.layerCount = 1;
-					image_view_create_info.subresourceRange.levelCount = 1;
-					result = vezCreateImageView(renderer_->getDevice(), &image_view_create_info, &layers_[i][l][m]);
+				VezImageViewCreateInfo image_view_create_info{};
+				image_view_create_info.image = texture_;
+				image_view_create_info.viewType = layer_count == 1 ? VK_IMAGE_VIEW_TYPE_2D : VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+				image_view_create_info.format = format_;
+				image_view_create_info.subresourceRange.baseArrayLayer = l;
+				image_view_create_info.subresourceRange.baseMipLevel = m;
+				image_view_create_info.subresourceRange.layerCount = 1;
+				image_view_create_info.subresourceRange.levelCount = 1;
+				result = vezCreateImageView(renderer_->getDevice(), &image_view_create_info, &layers_[l][m]);
 
-					LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not create dsv | %s", vkErrorCode(result));
-				}
+				LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not create dsv | %s", vkErrorCode(result));
 			}
 		}
 	}

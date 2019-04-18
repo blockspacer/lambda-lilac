@@ -6,9 +6,9 @@ namespace lambda
 	namespace linux
 	{
 		///////////////////////////////////////////////////////////////////////////
-		VulkanMesh::VulkanMesh(asset::MeshHandle mesh, VulkanRenderer* renderer)
+		VulkanMesh::VulkanMesh(asset::VioletMeshHandle mesh, VulkanRenderer* renderer)
 			: renderer_(renderer)
-			, mesh_(mesh)
+			, mesh_(mesh.get())
 		{
 		}
 
@@ -21,7 +21,6 @@ namespace lambda
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-#pragma optimize("", off)
 		void VulkanMesh::bind(
 			const Vector<uint32_t>& stages,
 			const uint32_t& sub_mesh_idx)
