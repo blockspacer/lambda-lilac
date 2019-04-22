@@ -1,5 +1,6 @@
 #include "frame_heap.h"
 #include "memory.h"
+#include <algorithm>
 
 namespace lambda
 {
@@ -73,7 +74,8 @@ namespace lambda
         void* data = (char*)frame_heaps_[current_frame_heap_] + allocated_;
         allocated_ += size;
 				mutex_.unlock();
-        return data;
+				memset(data, 0, size);
+				return data;
       }
       else
       {
@@ -81,9 +83,19 @@ namespace lambda
         temp_allocs_[current_frame_heap_].push_back(foundation::Memory::allocate(size));
         void* data = temp_allocs_[current_frame_heap_].back();
 				mutex_.unlock();
+				memset(data, 0, size);
 				return data;
 			}
     }
+		void* FrameHeap::realloc(void* prev, uint32_t prev_size, uint32_t new_size)
+		{
+			if (!new_size)
+				return nullptr;
+
+			void* mem = alloc(new_size);
+			memcpy(mem, prev, std::min(prev_size, new_size));
+			return mem;
+		}
     uint32_t FrameHeap::currentHeapSize()
     {
 			mutex_.lock();

@@ -85,7 +85,9 @@ class World {
         {
           var model = GameObject.new()
           model.transform.worldScale = Vec3.new(2.5)
+          //model.transform.worldPosition = Vec3.new(0.0, 0.0, -1.0)
           var mesh = Mesh.load("resources/gltf/lvl/lvl.gltf")
+          //var mesh = Mesh.load("resources/gltf/san_miguel_low_poly.glb")
           model.addComponent(MeshRender).attach(mesh)
           var collider = model.addComponent(Collider)
           model.getComponent(MeshRender).makeStaticRecursive()
@@ -119,10 +121,10 @@ class World {
 
     changedSetting(id, val) {
       if (id == "vsync") {
-        Graphics.setVSync(val > 0.0 ? true : false)
+        Graphics.vsync = val > 0.0 ? true : false
       }
       if (id == "render_scale") {
-        Graphics.setRenderScale(val)
+        Graphics.renderScale = val
       }
       if (id == "physics_debug_draw") {
         Physics.debugDrawEnabled = val > 0.0 ? true : false

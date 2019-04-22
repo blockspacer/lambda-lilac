@@ -27,7 +27,7 @@ namespace lambda
       void setCullFrequency(const uint8_t& cull_frequency);
       void cullDynamics(scene::Scene& scene, const Frustum& frustum);
       void cullStatics(
-        const ZoneManager& zone_manager, 
+        ZoneManager& zone_manager, 
         const Frustum& frustum
       );
       LinkedNode getDynamics() const { return dynamic_; }

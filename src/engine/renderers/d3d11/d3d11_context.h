@@ -36,7 +36,6 @@ namespace lambda
 			Microsoft::WRL::ComPtr<ID3D11Device> device;
 			Microsoft::WRL::ComPtr<ID3D11DeviceContext> context;
 			Microsoft::WRL::ComPtr<ID3D11RenderTargetView> backbuffer;
-			bool vsync;
 		};
 
 		///////////////////////////////////////////////////////////////////////////
@@ -150,6 +149,7 @@ namespace lambda
 			ID3D11DeviceContext* getD3D11Context() const;
 			ID3D11Device* getD3D11Device() const;
 
+			D3D11Context();
 			virtual ~D3D11Context();
 			virtual void setWindow(platform::IWindow* window) override;
 			virtual void setOverrideScene(scene::Scene* scene) override;
@@ -163,8 +163,7 @@ namespace lambda
 			/////////////////////////////////////////////////////////////////////////
 			///// Deferred Calls ////////////////////////////////////////////////////
 			/////////////////////////////////////////////////////////////////////////
-			virtual void draw() override;
-			virtual void drawInstanced(const Vector<glm::mat4>& matrices) override;
+			virtual void draw(uint32_t instance_count = 1ul) override;
 
 			virtual void setRasterizerState(
 				const platform::RasterizerState& rasterizer_state
@@ -258,7 +257,6 @@ namespace lambda
 			);
 
 		protected:
-			void draw(ID3D11Buffer* buffer);
 			scene::Scene* getScene() const;
 			void resizeImpl();
 
@@ -268,7 +266,8 @@ namespace lambda
 			bool queued_resize_ = false;
 			scene::Scene* scene_;
 			scene::Scene* override_scene_;
-			float render_scale_ = 1.0f;
+			float render_scale_;
+			bool vsync_;
 
 			D3D11FullScreenQuad full_screen_quad_;
 			D3D11StateManager state_manager_;

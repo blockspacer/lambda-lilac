@@ -17,13 +17,6 @@ namespace reactphysics3d
 
 namespace lambda
 {
-  namespace components
-  {
-    class TransformSystem;
-    class RigidBodySystem;
-    class MonoBehaviourSystem;
-  }
-
   namespace physics
   {
 		class MyEventListener;
@@ -39,10 +32,10 @@ namespace lambda
 	  {
 	  public:
 		  ReactCollisionBody(
-			reactphysics3d::DynamicsWorld* dynamics_world,
-			world::IWorld* world,
-			ReactPhysicsWorld* physics_world,
-			entity::Entity entity
+				scene::Scene& scene,
+				reactphysics3d::DynamicsWorld* dynamics_world,
+				ReactPhysicsWorld* physics_world,
+				entity::Entity entity
 		  );
 		  ~ReactCollisionBody();
 		  virtual glm::vec3 getPosition() const override;
@@ -79,7 +72,7 @@ namespace lambda
 		  virtual void makeBoxCollider() override;
 		  virtual void makeSphereCollider() override;
 		  virtual void makeCapsuleCollider() override;
-		  virtual void makeMeshCollider(asset::MeshHandle mesh, uint32_t sub_mesh_id) override;
+		  virtual void makeMeshCollider(asset::VioletMeshHandle mesh, uint32_t sub_mesh_id) override;
 
 		  void setShape(reactphysics3d::CollisionShape* shape);
 
@@ -92,7 +85,7 @@ namespace lambda
 		  Vector<reactphysics3d::ProxyShape*> proxy_shapes_;
 		  Vector<reactphysics3d::CollisionShape*> collision_shapes_;
 		  reactphysics3d::DynamicsWorld* dynamics_world_;
-		  world::IWorld* world_;
+			scene::Scene& scene_;
 		  ReactPhysicsWorld* physics_world_;
 		  ReactCollisionBodyType type_;
 		  entity::Entity entity_;
@@ -107,12 +100,9 @@ namespace lambda
       ReactPhysicsWorld();
       ~ReactPhysicsWorld();
       
-	  virtual void initialize(
-				platform::DebugRenderer* debug_renderer,
-				world::IWorld* world
-      );
+	  virtual void initialize(scene::Scene& scene);
 	  virtual void deinitialize() override;
-	  virtual void render() override;
+	  virtual void render(scene::Scene& scene) override;
 	  virtual void update(const double& time_step) override;
 
 	  virtual Vector<Manifold> raycast(
@@ -131,10 +121,7 @@ namespace lambda
 	  double getTimeStep() const;
 
     private:
-      foundation::SharedPointer<components::RigidBodySystem> 
-        rigid_body_system_;
-      
-			world::IWorld* world_;
+			scene::Scene* scene_;
 			ReactPhysicVisualizer physics_visualizer_;
 			MyEventListener* event_listener_;
 

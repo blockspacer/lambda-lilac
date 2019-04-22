@@ -81,8 +81,7 @@ namespace lambda
 			virtual void update(const double& delta_time) = 0;
 			virtual void startFrame() = 0;
 			virtual void endFrame(bool display = true) = 0;
-			virtual void draw() = 0;
-			virtual void drawInstanced(const Vector<glm::mat4>& matrices) = 0;
+			virtual void draw(uint32_t instance_count = 1ul) = 0;
 
 			virtual void setRasterizerState(
 				const RasterizerState& rasterizer_state

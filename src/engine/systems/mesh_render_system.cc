@@ -104,6 +104,16 @@ namespace lambda
 					0u,
 					Vector<unsigned char>{ 255u, 0u, 0u, 255u }
 				);
+
+				scene.mesh_render.default_emissive = asset::TextureManager::getInstance()->create(
+					Name("__default_emissive__"),
+					1u, 1u, 1u,
+					TextureFormat::kR8G8B8A8,
+					0u,
+					Vector<unsigned char>{ 255u, 255u, 255u, 255u }
+				);
+
+				scene.mesh_render.static_zone_manager = foundation::Memory::construct<utilities::ZoneManager>();
 			}
 			void deinitialize(scene::Scene& scene)
 			{
@@ -115,9 +125,12 @@ namespace lambda
 					scene.mesh_render.remove(entity);
 				collectGarbage(scene);
 
-				scene.mesh_render.default_albedo = nullptr;
-				scene.mesh_render.default_normal = nullptr;
-				scene.mesh_render.default_dmra = nullptr;
+				foundation::Memory::destruct(scene.mesh_render.static_zone_manager);
+
+				scene.mesh_render.default_albedo   = nullptr;
+				scene.mesh_render.default_normal   = nullptr;
+				scene.mesh_render.default_dmra     = nullptr;
+				scene.mesh_render.default_emissive = nullptr;
 			}
 			void setMesh(const entity::Entity& entity, asset::VioletMeshHandle mesh, scene::Scene& scene)
 			{
@@ -143,9 +156,17 @@ namespace lambda
 			{
 				scene.mesh_render.get(entity).roughness = roughness;
 			}
+			void setEmissiveness(const entity::Entity& entity, const glm::vec3& emissiveness, scene::Scene& scene)
+			{
+				scene.mesh_render.get(entity).emissiveness = emissiveness;
+			}
 			void setDMRATexture(const entity::Entity& entity, asset::VioletTextureHandle texture, scene::Scene& scene)
 			{
 				scene.mesh_render.get(entity).dmra_texture = texture ? texture : scene.mesh_render.default_dmra;
+			}
+			void setEmissiveTexture(const entity::Entity& entity, asset::VioletTextureHandle texture, scene::Scene& scene)
+			{
+				scene.mesh_render.get(entity).emissive_texture = texture ? texture : scene.mesh_render.default_emissive;
 			}
 			asset::VioletMeshHandle getMesh(const entity::Entity& entity, scene::Scene& scene)
 			{
@@ -167,6 +188,10 @@ namespace lambda
 			{
 				return scene.mesh_render.get(entity).dmra_texture;
 			}
+			asset::VioletTextureHandle getEmissiveTexture(const entity::Entity& entity, scene::Scene& scene)
+			{
+				return scene.mesh_render.get(entity).emissive_texture;
+			}
 			float getMetallicness(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.mesh_render.get(entity).metallicness;
@@ -175,14 +200,19 @@ namespace lambda
 			{
 				return scene.mesh_render.get(entity).roughness;
 			}
+			glm::vec3 getEmissiveness(const entity::Entity& entity, scene::Scene& scene)
+			{
+				return scene.mesh_render.get(entity).emissiveness;
+			}
 			void attachMesh(const entity::Entity& entity, asset::VioletMeshHandle mesh, scene::Scene& scene)
 			{
 				// Get all textures.
 				Vector<asset::VioletTextureHandle> textures = mesh->getAttachedTextures();
 				const glm::uvec3 texture_count = mesh->getAttachedTextureCount();
-				size_t alb_offset = 0u;
-				size_t nor_offset = texture_count.x;
-				size_t mrt_offset = nor_offset + texture_count.y;
+				size_t alb_offset  = 0u;
+				size_t nor_offset  = texture_count.x;
+				size_t dmra_offset = nor_offset + texture_count.y;
+				size_t emi_offset  = dmra_offset + texture_count.z;
 
 				// Prepare all of the entities.
 				Vector<entity::Entity> entities(mesh->getSubMeshes().size());
@@ -223,6 +253,7 @@ namespace lambda
 						mesh_render.setSubMesh((uint32_t)i);
 						mesh_render.setMetallicness(sub_mesh.io.metallic);
 						mesh_render.setRoughness(sub_mesh.io.roughness);
+						mesh_render.setEmissiveness(sub_mesh.io.emissiveness);
 
 						// Textures
 						if (sub_mesh.io.tex_alb != -1)
@@ -235,10 +266,15 @@ namespace lambda
 							assert(sub_mesh.offsets[asset::MeshElements::kPositions].count > 0);
 							mesh_render.setNormalTexture(textures.at(nor_offset + sub_mesh.io.tex_nor));
 						}
-						if (sub_mesh.io.tex_mrt != -1)
+						if (sub_mesh.io.tex_dmra != -1)
 						{
 							assert(sub_mesh.offsets[asset::MeshElements::kPositions].count > 0);
-							mesh_render.setDMRATexture(textures.at(mrt_offset + sub_mesh.io.tex_mrt));
+							mesh_render.setDMRATexture(textures.at(dmra_offset + sub_mesh.io.tex_dmra));
+						}
+						if (sub_mesh.io.tex_emi != -1)
+						{
+							assert(sub_mesh.offsets[asset::MeshElements::kPositions].count > 0);
+							mesh_render.setEmissiveTexture(textures.at(emi_offset + sub_mesh.io.tex_emi));
 						}
 					}
 				}
@@ -275,14 +311,17 @@ namespace lambda
 
 
 				utilities::Renderable* renderable = foundation::Memory::construct<utilities::Renderable>();
-				renderable->entity = entity;
-				renderable->model_matrix = TransformSystem::getWorld(entity, scene);
-				renderable->mesh = data.mesh;
-				renderable->sub_mesh = data.sub_mesh;
-				renderable->albedo_texture = data.albedo_texture;
-				renderable->normal_texture = data.normal_texture;
-				renderable->dmra_texture = data.dmra_texture;
-				renderable->metallicness = data.metallicness;
+				renderable->entity           = entity;
+				renderable->model_matrix     = TransformSystem::getWorld(entity, scene);
+				renderable->mesh             = data.mesh;
+				renderable->sub_mesh         = data.sub_mesh;
+				renderable->albedo_texture   = data.albedo_texture;
+				renderable->normal_texture   = data.normal_texture;
+				renderable->dmra_texture     = data.dmra_texture;
+				renderable->emissive_texture = data.emissive_texture;
+				renderable->metallicness     = data.metallicness;
+				renderable->roughness        = data.roughness;
+				renderable->emissiveness     = data.emissiveness;
 
 				const asset::SubMesh& sub_mesh = renderable->mesh->getSubMeshes().at(renderable->sub_mesh);
 
@@ -301,7 +340,7 @@ namespace lambda
 				renderable->center = (renderable->min + renderable->max) * 0.5f;
 				renderable->radius = glm::length(renderable->center - renderable->max);
 
-				scene.mesh_render.static_zone_manager.addToken(
+				scene.mesh_render.static_zone_manager->addToken(
 					glm::vec2(renderable->min.x, renderable->min.z),
 					glm::vec2(renderable->max.x, renderable->max.z),
 					utilities::Token(entity, renderable)
@@ -324,14 +363,14 @@ namespace lambda
 					}
 				}
 
-				scene.mesh_render.static_zone_manager.removeToken(utilities::Token(entity, nullptr));
+				scene.mesh_render.static_zone_manager->removeToken(utilities::Token(entity, nullptr));
 
 				scene.mesh_render.dynamic_renderables.push_back(entity);
 			}
 
 			void createRenderList(utilities::Culler& culler, const utilities::Frustum& frustum, scene::Scene& scene)
 			{
-				culler.cullStatics(scene.mesh_render.static_zone_manager, frustum);
+				culler.cullStatics(*scene.mesh_render.static_zone_manager, frustum);
 				culler.cullDynamics(scene, frustum);
 			}
 
@@ -477,9 +516,10 @@ namespace lambda
 
 				Data& d = data[idx];
 
-				d.albedo_texture = default_albedo;
-				d.normal_texture = default_normal;
-				d.dmra_texture = default_dmra;
+				d.albedo_texture   = default_albedo;
+				d.normal_texture   = default_normal;
+				d.dmra_texture     = default_dmra;
+				d.emissive_texture = default_emissive;
 
 				return d;
 			}
@@ -513,8 +553,10 @@ namespace lambda
 				albedo_texture = other.albedo_texture;
 				normal_texture = other.normal_texture;
 				dmra_texture = other.dmra_texture;
+				emissive_texture = other.emissive_texture;
 				metallicness = other.metallicness;
 				roughness = other.roughness;
+				emissiveness = other.emissiveness;
 				visible = other.visible;
 				cast_shadows = other.cast_shadows;
 				entity = other.entity;
@@ -527,8 +569,10 @@ namespace lambda
 				albedo_texture = other.albedo_texture;
 				normal_texture = other.normal_texture;
 				dmra_texture = other.dmra_texture;
+				emissive_texture = other.emissive_texture;
 				metallicness = other.metallicness;
 				roughness = other.roughness;
+				emissiveness = other.emissiveness;
 				visible = other.visible;
 				cast_shadows = other.cast_shadows;
 				entity = other.entity;
@@ -586,6 +630,18 @@ namespace lambda
 		{
 			return MeshRenderSystem::getAlbedoTexture(entity_, *scene_);
 		}
+		glm::vec3 MeshRenderComponent::getEmissiveness() const
+		{
+			return MeshRenderSystem::getEmissiveness(entity_, *scene_);
+		}
+		void MeshRenderComponent::setEmissiveness(const glm::vec3& emissiveness)
+		{
+			MeshRenderSystem::setEmissiveness(entity_, emissiveness, *scene_);
+		}
+		void MeshRenderComponent::setAlbedoTexture(asset::VioletTextureHandle texture)
+		{
+			MeshRenderSystem::setAlbedoTexture(entity_, texture, *scene_);
+		}
 		void MeshRenderComponent::setNormalTexture(asset::VioletTextureHandle texture)
 		{
 			MeshRenderSystem::setNormalTexture(entity_, texture, *scene_);
@@ -602,9 +658,13 @@ namespace lambda
 		{
 			return MeshRenderSystem::getDMRATexture(entity_, *scene_);
 		}
-		void MeshRenderComponent::setAlbedoTexture(asset::VioletTextureHandle texture)
+		void MeshRenderComponent::setEmissiveTexture(asset::VioletTextureHandle texture)
 		{
-			MeshRenderSystem::setAlbedoTexture(entity_, texture, *scene_);
+			MeshRenderSystem::setEmissiveTexture(entity_, texture, *scene_);
+		}
+		asset::VioletTextureHandle MeshRenderComponent::getEmissiveTexture() const
+		{
+			return MeshRenderSystem::getEmissiveTexture(entity_, *scene_);
 		}
 		void MeshRenderComponent::attachMesh(asset::VioletMeshHandle mesh)
 		{

@@ -64,6 +64,7 @@ class PostProcessor {
     PostProcess.addRenderTarget("position_temp",       1.0, TextureFormat.R32G32B32A32)
     PostProcess.addRenderTarget("normal",              1.0, TextureFormat.R8G8B8A8)
     PostProcess.addRenderTarget("metallic_roughness",  1.0, TextureFormat.R8G8B8A8)
+    PostProcess.addRenderTarget("emissiveness",        1.0, TextureFormat.R16G16B16A16)
     PostProcess.addRenderTarget("depth_buffer",        1.0, TextureFormat.D32)
     PostProcess.addRenderTarget("post_process_buffer", 1.0, TextureFormat.R16G16B16A16)
     PostProcess.addRenderTarget("post_process_temp",   1.0, TextureFormat.R16G16B16A16)
@@ -72,14 +73,15 @@ class PostProcessor {
     
     // Add and generate the environment maps.
     PostProcess.addRenderTarget("brdf_lut", Texture.load("resources/textures/lighting/ibl_brdf_lut.png"))
-    PostProcess.addRenderTarget("environment_map", Texture.load("resources/textures/hdr/Serpentine_Valley_3k.hdr"))
+    PostProcess.addRenderTarget("environment_map", Texture.load("resources/textures/hdr/fireplace_1k.hdr"))
     PostProcess.irradianceConvolution("environment_map", "irradiance_map")
     PostProcess.hammerhead("environment_map", "prefiltered")
 
     // Create all passes.
     copyAlbedoToPostProcessBuffer()
     shadowMapping(
-      ini_reader["Lighting", "Enabled"]
+      ini_reader["Lighting", "Enabled"],
+      ini_reader["Lighting", "ModifyCount"]
     )
     ssao(
       ini_reader["SSAO", "Strength"], 
@@ -129,13 +131,12 @@ class PostProcessor {
     PostProcess.addShaderPass("copy_albedo_to_post_process_buffer", Shader.load("resources/shaders/copy.fx"), [ "albedo" ], [ _post_process_output ])
   }
 
-  shadowMapping(enabled) {
+  shadowMapping(enabled, modifyCount) {
     if (!enabled) return
 
     // Get all shared shaders.
     var generate    = "resources/shaders/shadow_mapping/generate.fx"
     var modify      = "resources/shaders/shadow_mapping/blur_7x1.fx"
-    var modifyCount = 2
     var apply       = "resources/shaders/shadow_mapping/shadow_mapping.fx"
     var shadowType  = "ESM"
 
@@ -207,7 +208,7 @@ class PostProcessor {
 
     // Bloom extract.
     var shader_extract = Shader.load("resources/shaders/bloom_extract.fx")
-    PostProcess.addShaderPass("bloom_extract", shader_extract, [ _post_process_output ], [ _bloom_output ])
+    PostProcess.addShaderPass("bloom_extract", shader_extract, [ _post_process_output, "emissiveness" ], [ _bloom_output ])
 
     // Bloom blur horizontal.
     var shader_blur_x  = Shader.load("resources/shaders/blur_7x1.fx|HORIZONTAL")

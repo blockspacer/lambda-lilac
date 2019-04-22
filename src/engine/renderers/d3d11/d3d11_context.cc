@@ -375,6 +375,13 @@ namespace lambda
 		}
 
 		///////////////////////////////////////////////////////////////////////////
+		D3D11Context::D3D11Context()
+			: render_scale_(1.0f)
+			, vsync_(false)
+		{
+		}
+
+		///////////////////////////////////////////////////////////////////////////
 		D3D11Context::~D3D11Context()
 		{
 		}
@@ -545,7 +552,7 @@ namespace lambda
 			asset_manager_.setD3D11Context(this);
 
 			resize();
-			setVSync(context_.vsync);
+			setVSync(vsync_);
 		}
 
 		///////////////////////////////////////////////////////////////////////////
@@ -657,9 +664,8 @@ namespace lambda
 
 			// Handle markers.
 #if GPU_TIMERS
-			while (context_.context->GetData(timer_disjoint_.Get(), NULL, 0, 0)
-				== S_FALSE)
-				Sleep(1);
+			while (context_.context->GetData(timer_disjoint_.Get(), NULL, 0, 0) == S_FALSE)
+				std::this_thread::sleep_for(std::chrono::microseconds(1));
 
 			D3D11_QUERY_DATA_TIMESTAMP_DISJOINT timestamp_disjoint;
 			context_.context->GetData(timer_disjoint_.Get(), &timestamp_disjoint,
@@ -705,42 +711,105 @@ namespace lambda
 		}
 
     ///////////////////////////////////////////////////////////////////////////
-    void D3D11Context::draw()
+    void D3D11Context::draw(uint32_t instance_count)
     {
-      draw(nullptr);
-    }
-    
-    ///////////////////////////////////////////////////////////////////////////
-    void D3D11Context::drawInstanced(const Vector<glm::mat4>& matrices)
-    {
-      D3D11_BUFFER_DESC instance_buffer_desc;
-      D3D11_SUBRESOURCE_DATA instance_data;
-      ID3D11Buffer* instance_buffer = nullptr;
+			LMB_ASSERT(override_scene_, "D3D11 CONTEXT: Tried to render outside of the flush thread");
 
-	    // set up the description of the instance buffer.
-      instance_buffer_desc.Usage               = D3D11_USAGE_DEFAULT;
-      instance_buffer_desc.ByteWidth           = 
-        sizeof(matrices.at(0u)) * (UINT)matrices.size();
-      instance_buffer_desc.BindFlags           = D3D11_BIND_VERTEX_BUFFER;
-      instance_buffer_desc.CPUAccessFlags      = 0;
-      instance_buffer_desc.MiscFlags           = 0;
-      instance_buffer_desc.StructureByteStride = 0;
+			D3D11Shader* shader = dx_state_.shader;
+			D3D11Mesh*   mesh = dx_state_.mesh;
 
-	    // Give the subresource structure a pointer to the instance data.
-      instance_data.pSysMem          = matrices.data();
-      instance_data.SysMemPitch      = 0;
-      instance_data.SysMemSlicePitch = 0;
+			LMB_ASSERT(shader, "D3D11 CONTEXT: There was no valid shader bound");
+			LMB_ASSERT(mesh, "D3D11 CONTEXT: There was no valid mesh bound");
 
-	    // Create the instance buffer.
-	    context_.device->CreateBuffer(
-        &instance_buffer_desc,
-        &instance_data,
-        &instance_buffer
-      );
+			if (isDirty(DirtyStates::kShader))
+			{
+				shader->bind();
+			}
 
-      draw(instance_buffer);
+			if (isDirty(DirtyStates::kViewports))
+			{
+				getD3D11Context()->RSSetViewports(state_.num_viewports, dx_state_.viewports);
+			}
 
-      instance_buffer->Release();
+			if (isDirty(DirtyStates::kScissorRects))
+			{
+				getD3D11Context()->RSSetScissorRects(state_.num_scissor_rects, dx_state_.scissor_rects);
+			}
+
+			if (isDirty(DirtyStates::kRenderTargets))
+			{
+				getD3D11Context()->OMSetRenderTargets(state_.num_render_targets, dx_state_.render_targets, dx_state_.depth_target);
+			}
+
+			// TODO (Hilze): Add support for isDirty here. Should probably have a dirty state per stage.
+			if (isDirty(DirtyStates::kTextures))
+			{
+				for (uint16_t i = 0; i < 16 && state_.dirty_textures != 0; ++i)
+				{
+					if ((state_.dirty_textures & (1 << i)))
+					{
+						getD3D11Context()->PSSetShaderResources(i, 1, &dx_state_.textures[i]);
+						state_.dirty_textures &= ~(1 << i);
+					}
+				}
+			}
+
+			if (shader)
+			{
+				for (const auto& buffer : shader->getBuffers())
+				{
+					bool changed = (state_.dirty_constant_buffers[(int)buffer.stage] & (1 << buffer.slot)) ? true : false;
+
+					if (!changed && (state_.constant_buffers[buffer.slot] && ((D3D11RenderBuffer*)state_.constant_buffers[buffer.slot])->getChanged()))
+					{
+						((D3D11RenderBuffer*)state_.constant_buffers[buffer.slot])->setChanged(false);
+						changed = true;
+					}
+
+					if (changed)
+					{
+						state_.dirty_constant_buffers[(int)buffer.stage] &= ~(1 << buffer.slot);
+
+						switch (buffer.stage)
+						{
+						case ShaderStages::kVertex:
+							getD3D11Context()->VSSetConstantBuffers(
+								(UINT)buffer.slot,
+								1u,
+								&dx_state_.constant_buffers[buffer.slot]
+							);
+							break;
+						case ShaderStages::kPixel:
+							getD3D11Context()->PSSetConstantBuffers(
+								(UINT)buffer.slot,
+								1u,
+								&dx_state_.constant_buffers[buffer.slot]
+							);
+							break;
+						case ShaderStages::kGeometry:
+							getD3D11Context()->GSSetConstantBuffers(
+								(UINT)buffer.slot,
+								1u,
+								&dx_state_.constant_buffers[buffer.slot]
+							);
+							break;
+						}
+					}
+				}
+			}
+
+			if (isDirty(DirtyStates::kMesh) || isDirty(DirtyStates::kShader))
+			{
+				state_manager_.bindTopology(state_.mesh->getTopology());
+
+				Vector<uint32_t> stages = shader->getStages();
+				mesh->bind(stages, state_.mesh, state_.sub_mesh);
+				state_.mesh->updated();
+			}
+
+			mesh->draw(state_.mesh, state_.sub_mesh, instance_count);
+
+			cleanAll();
     }
    
     ///////////////////////////////////////////////////////////////////////////
@@ -1122,8 +1191,8 @@ namespace lambda
 		{
 			LMB_ASSERT(override_scene_, "D3D11 CONTEXT: Tried to render outside of the flush thread");
 
-			if (texture == state_.textures[slot])
-				return;
+			//if (texture == state_.textures[slot])
+			//	return;
 
 			LMB_ASSERT(slot < MAX_TEXTURE_COUNT, "D3D11 CONTEXT: Tried to bind a texture out of range");
 
@@ -1377,13 +1446,13 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     void D3D11Context::setVSync(bool vsync)
     {
-      context_.vsync = vsync;
+			vsync_ = vsync;
     }
 
     ///////////////////////////////////////////////////////////////////////////
     bool D3D11Context::getVSync() const
     {
-      return context_.vsync;
+      return vsync_;
     }
 
 	///////////////////////////////////////////////////////////////////////////
@@ -1434,108 +1503,6 @@ namespace lambda
 
 			D3D11RenderTexture* tex = asset_manager_.getTexture(texture);
 			return tex->getTexture()->getDSV(layer, mip_map);
-		}
-
-    ///////////////////////////////////////////////////////////////////////////
-		void D3D11Context::draw(ID3D11Buffer* buffer)
-		{
-			LMB_ASSERT(override_scene_, "D3D11 CONTEXT: Tried to render outside of the flush thread");
-
-			D3D11Shader* shader = dx_state_.shader;
-			D3D11Mesh*   mesh = dx_state_.mesh;
-
-			LMB_ASSERT(shader, "D3D11 CONTEXT: There was no valid shader bound");
-			LMB_ASSERT(mesh, "D3D11 CONTEXT: There was no valid mesh bound");
-
-			if (isDirty(DirtyStates::kShader))
-			{
-				shader->bind();
-			}
-
-			if (isDirty(DirtyStates::kViewports))
-			{
-				getD3D11Context()->RSSetViewports(state_.num_viewports, dx_state_.viewports);
-			}
-
-			if (isDirty(DirtyStates::kScissorRects))
-			{
-				getD3D11Context()->RSSetScissorRects(state_.num_scissor_rects, dx_state_.scissor_rects);
-			}
-
-			if (isDirty(DirtyStates::kRenderTargets))
-			{
-				getD3D11Context()->OMSetRenderTargets(state_.num_render_targets, dx_state_.render_targets, dx_state_.depth_target);
-			}
-
-			// TODO (Hilze): Add support for isDirty here. Should probably have a dirty state per stage.
-			if (isDirty(DirtyStates::kTextures))
-			{
-				for (uint16_t i = 0; i < 16 && state_.dirty_textures != 0; ++i)
-				{
-					if ((state_.dirty_textures & (1 << i)))
-					{
-						getD3D11Context()->PSSetShaderResources(i, 1, &dx_state_.textures[i]);
-						state_.dirty_textures &= ~(1 << i);
-					}
-				}
-			}
-
-			if (shader)
-			{
-				for (const auto& buffer : shader->getBuffers())
-				{
-					bool changed = (state_.dirty_constant_buffers[(int)buffer.stage] & (1 << buffer.slot)) ? true : false;
-
-					if (!changed && (state_.constant_buffers[buffer.slot] && ((D3D11RenderBuffer*)state_.constant_buffers[buffer.slot])->getChanged()))
-					{
-						((D3D11RenderBuffer*)state_.constant_buffers[buffer.slot])->setChanged(false);
-						changed = true;
-					}
-
-					if (changed)
-					{
-						state_.dirty_constant_buffers[(int)buffer.stage] &= ~(1 << buffer.slot);
-					
-						switch (buffer.stage)
-						{
-						case ShaderStages::kVertex:
-							getD3D11Context()->VSSetConstantBuffers(
-								(UINT)buffer.slot,
-								1u,
-								&dx_state_.constant_buffers[buffer.slot]
-							);
-							break;
-						case ShaderStages::kPixel:
-							getD3D11Context()->PSSetConstantBuffers(
-								(UINT)buffer.slot,
-								1u,
-								&dx_state_.constant_buffers[buffer.slot]
-							);
-							break;
-						case ShaderStages::kGeometry:
-							getD3D11Context()->GSSetConstantBuffers(
-								(UINT)buffer.slot,
-								1u,
-								&dx_state_.constant_buffers[buffer.slot]
-							);
-							break;
-						}
-					}
-				}
-			}
-
-			if (isDirty(DirtyStates::kMesh) || isDirty(DirtyStates::kShader))
-			{
-				state_manager_.bindTopology(state_.mesh->getTopology());
-
-				Vector<uint32_t> stages = shader->getStages();
-				mesh->bind(stages, state_.mesh, state_.sub_mesh);
-				state_.mesh->updated();
-			}
-			
-			mesh->draw(state_.mesh, state_.sub_mesh);
-
-			cleanAll();
 		}
 
 		scene::Scene* D3D11Context::getScene() const
@@ -1613,7 +1580,7 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     void D3D11Context::present()
     {
-      context_.swap_chain->Present(context_.vsync, DXGI_PRESENT_DO_NOT_WAIT);
+      context_.swap_chain->Present(vsync_, 0);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -1680,6 +1647,7 @@ namespace lambda
       auto it = textures_.find(texture);
       if (it != textures_.end())
       {
+				foundation::Info("Released texture with hash \"" + toString(texture) + "\"\n");
         platform::IRenderTexture* tex = it->second.t;
 				context_->freeRenderTexture(tex);
         textures_.erase(it);
@@ -1722,7 +1690,8 @@ namespace lambda
       auto it = meshes_.find(mesh);
       if (it != meshes_.end())
       {
-        foundation::Memory::destruct(it->second.t);
+				foundation::Info("Released mesh with hash \"" + toString(mesh) + "\"\n");
+				foundation::Memory::destruct(it->second.t);
         meshes_.erase(it);
       }
     }
@@ -1763,6 +1732,7 @@ namespace lambda
 			auto it = shaders_.find(shader);
 			if (it != shaders_.end())
 			{
+				foundation::Info("Released shader with hash \"" + toString(shader) + "\"\n");
 				D3D11Shader* shad = it->second.t;
 				foundation::Memory::destruct(shad);
 				shaders_.erase(it);
@@ -1780,6 +1750,8 @@ namespace lambda
     void D3D11Context::D3D11AssetManager::deleteNotReffedAssets(
       const float& dt)
     {
+			return; // TODO (Hilze): Remove this asap.
+
       // Textures.
       {
         Vector<uint64_t> marked_for_delete;

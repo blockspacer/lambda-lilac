@@ -1,8 +1,8 @@
 #include "common.fxh"
 #include "tbn.fxh"
 
-#define VIOLET_PARALLAX_MAPPING 0
-#define NORMAL_MAPPING 0
+#define VIOLET_PARALLAX_MAPPING 1
+#define NORMAL_MAPPING 1
 #define VIOLET_GRID_ALBEDO 0
 #define VIOLET_DYNAMIC_GRID_SIZE 1
 
@@ -22,35 +22,40 @@ struct VSOutput
   float4 hPosition : H_POSITION;
   float4 colour    : COLOUR;
   float2 tex       : TEX_COORD;
+  float2 mr        : METALLIC_ROUGHNESS;
+  float3 emissive  : EMISSIVENESS;
+  float3 normal    : NORMAL;
 #if NORMAL_MAPPING
   float3x3 tbn     : TBN;
 #endif
-  float3 normal    : NORMAL;
 };
 
-VSOutput VS(VSInput vIn)
+VSOutput VS(VSInput vIn, uint instanceID : SV_InstanceID)
 {
   VSOutput vOut;
-  vOut.hPosition = mul(model_matrix, float4(vIn.position, 1.0f));
+  vOut.hPosition = mul(model_matrix[instanceID], float4(vIn.position, 1.0f));
   vOut.position  = mul(view_projection_matrix, vOut.hPosition);
   vOut.colour    = float4(1.0f, 1.0f, 1.0f, 1.0f);
   vOut.tex       = vIn.tex;
+  vOut.mr        = metallic_roughness[instanceID].xy;
+  vOut.emissive  = emissiveness[instanceID].xyz;
 
 #if NORMAL_MAPPING
   float3 bitangent = cross(vIn.tangent, vIn.normal);
-  float3 N = normalize(mul((float3x3)model_matrix, vIn.normal));
-  float3 B = normalize(mul((float3x3)model_matrix, bitangent));
-  float3 T = normalize(mul((float3x3)model_matrix, vIn.tangent));
+  float3 N = normalize(mul((float3x3)model_matrix[instanceID], vIn.normal));
+  float3 B = normalize(mul((float3x3)model_matrix[instanceID], bitangent));
+  float3 T = normalize(mul((float3x3)model_matrix[instanceID], vIn.tangent));
   vOut.tbn = float3x3(T, B, N);
 #endif
-  vOut.normal = normalize(mul((float3x3)model_matrix, vIn.normal));
+  vOut.normal = normalize(mul((float3x3)model_matrix[instanceID], vIn.normal));
 
   return vOut;
 }
 
-Make_Texture2D(tex_albedo, 0);
-Make_Texture2D(tex_normal, 1);
-Make_Texture2D(tex_dmra, 2); // Displacement - Metallicness - Roughness - Ambient Occlusion
+Make_Texture2D(tex_albedo,   0);
+Make_Texture2D(tex_normal,   1);
+Make_Texture2D(tex_dmra,     2); // Displacement - Metallicness - Roughness - Ambient Occlusion
+Make_Texture2D(tex_emissive, 3);
 
 struct PSOutput
 {
@@ -58,6 +63,7 @@ struct PSOutput
   float4 position : SV_Target1;
   float4 normal   : SV_Target2;
   float4 mra      : SV_Target3; // Metallic - Roughness - Ambient Occlusion.
+  float4 emissive : SV_Target4;
 };
 
 #if VIOLET_PARALLAX_MAPPING
@@ -133,7 +139,7 @@ PSOutput PS(VSOutput pIn)
   float el = sin(pl.x) * sin(pl.y) * sin(pl.z);
   float es = sin(ps.x) * sin(ps.y) * sin(ps.z);
 
-	pOut.albedo.rgb = lerp(lerp(0.4, 0.5, when_ge(es, 0.0f)), lerp(0.9, 1.0, when_ge(es, 0.0f)), when_ge(el, 0.0f));
+	pOut.albedo.rgb = lerp(lerp(0.4f, 0.5f, when_ge(es, 0.0f)), lerp(0.9f, 1.0f, when_ge(es, 0.0f)), when_ge(el, 0.0f));
 #endif
 
 #if NORMAL_MAPPING
@@ -143,10 +149,11 @@ PSOutput PS(VSOutput pIn)
   float3 N = normalize(pIn.normal);
 #endif
 
-  float3 mra    = tex_dmra.Sample(SamLinearWarp, pIn.tex).gba * float3(metallic_roughness, 1.0f);
+  float3 mra    = tex_dmra.Sample(SamLinearWarp, pIn.tex).gba * float3(pIn.mr, 1.0f);
   pOut.position = float4(pIn.hPosition.xyz, 1.0f);
   pOut.normal   = float4(N * 0.5f + 0.5f, 1.0f);
   pOut.mra      = float4(mra, 1.0f);
+  pOut.emissive = float4(tex_emissive.Sample(SamLinearWarp, pIn.tex).rgb * pIn.emissive, 1.0f);
 
   return pOut;
 }

@@ -88,7 +88,7 @@ class FreeLookCamera is MonoBehaviour {
     collider.makeCapsuleCollider()
     collider.layers = PhysicsLayers.General
 
-    var output_opaque = [ "albedo", "position", "normal", "metallic_roughness", "depth_buffer" ]
+    var output_opaque = [ "albedo", "position", "normal", "metallic_roughness", "emissiveness", "depth_buffer" ]
     var deferred_shader_opaque = Shader.load("resources/shaders/default_opaque.fx")
     _camera.addShaderPass("deferred_shader_opaque", deferred_shader_opaque, [], output_opaque)
 

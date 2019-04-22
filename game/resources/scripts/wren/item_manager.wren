@@ -52,6 +52,20 @@ class ItemManager is MonoBehaviour {
     _meshes.add(Mesh.generate("cube"))
     _meshes.add(Mesh.generate("sphere"))
     _meshes.add(Mesh.load("resources/gltf/torch/torch.gltf"))
+
+    _total_time = 0.0
+    _multi_moving = GameObject.new()
+
+    _multi_moving.name                    = "multi_moving"
+    _multi_moving.transform.worldPosition = Vec3.new(0.0, 10.0, 0.0)
+    var light = _multi_moving.addComponent(Light)
+    light.type = LightTypes.Point
+
+    light.lightColour = Vec3.new(255, 200, 200) / 255
+    light.lightIntensity = 2.5
+    light.depth = 50.0
+    light.shadowType = ShadowTypes.GenerateOnce
+    light.shadowMapSizePx = 256.0
   }
 
   cube(position, scale) {
@@ -61,11 +75,11 @@ class ItemManager is MonoBehaviour {
     c.transform.worldScale    = scale
     c.transform.worldPosition = position
 
-    c.addComponent(MeshRender).mesh    = _meshes[0]
-    c.getComponent(MeshRender).subMesh = 0
-    c.getComponent(MeshRender).albedo  = Texture.load("resources/textures/wood/FloorMahogany_alb.jpg")
-    c.getComponent(MeshRender).normal  = Texture.load("resources/textures/wood/FloorMahogany_nrm.jpg")
-    c.getComponent(MeshRender).DMRA    = Texture.load("resources/textures/wood/FloorMahogany_dmra.png")
+    c.addComponent(MeshRender).mesh     = _meshes[0]
+    c.getComponent(MeshRender).subMesh  = 0
+    c.getComponent(MeshRender).albedo   = Texture.load("resources/textures/wood/FloorMahogany_alb.jpg")
+    c.getComponent(MeshRender).normal   = Texture.load("resources/textures/wood/FloorMahogany_nrm.jpg")
+    c.getComponent(MeshRender).DMRA     = Texture.load("resources/textures/wood/FloorMahogany_dmra.png")
     
     var collider  = c.addComponent(Collider)
     var rigidBody = c.addComponent(RigidBody)

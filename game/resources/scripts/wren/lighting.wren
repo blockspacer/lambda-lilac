@@ -28,7 +28,7 @@ import "resources/scripts/wren/ini" for Ini
 class Lighting {
   construct new() {
     //createSun()
-    createReflectiveShadowMap()
+    //createReflectiveShadowMap()
     //createFlashLight()
   }
 

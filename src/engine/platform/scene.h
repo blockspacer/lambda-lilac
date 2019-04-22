@@ -52,6 +52,7 @@ namespace lambda
 			platform::IWindow*         window    = nullptr;
 			gui::GUI*                  gui       = nullptr;
 			Vector<IRenderAction*>     render_actions;
+			double                     fixed_time_step;
 		};
 
 		///////////////////////////////////////////////////////////////////////////

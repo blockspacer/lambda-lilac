@@ -96,8 +96,8 @@ namespace lambda
           {
             const glm::mat4 world = components::TransformSystem::getWorld(data->entity, scene);
 
-            const glm::vec3 sm_min = world * glm::vec4(sub_mesh.min, 1.0f);
-            const glm::vec3 sm_max = world * glm::vec4(sub_mesh.max, 1.0f);
+            const glm::vec3 sm_min = world * glm::vec4(sub_mesh.min * 2.0f, 1.0f);
+            const glm::vec3 sm_max = world * glm::vec4(sub_mesh.max * 2.0f, 1.0f);
 
             cull_data.aabb.min = glm::vec3(
               std::fminf(sm_min.x, sm_max.x),
@@ -114,25 +114,20 @@ namespace lambda
           frustum.Contains(&cull_data, 1u, cull_type);
           if (cull_data.visible)
           {
-            Renderable* renderable = 
-              (Renderable*)foundation::GetFrameHeap()->alloc(
-                sizeof(Renderable)
-            );
-            memset(renderable, 0u, sizeof(Renderable));
-            renderable->entity = data->entity;
-            renderable->mesh = data->mesh;
-            renderable->sub_mesh = data->sub_mesh;
-            renderable->albedo_texture = data->albedo_texture;
-			renderable->normal_texture = data->normal_texture;
-			renderable->dmra_texture = data->dmra_texture;
-			renderable->metallicness = data->metallicness;
-            renderable->roughness = data->roughness;
-            renderable->model_matrix = components::TransformSystem::getWorld(data->entity, scene);
+            Renderable* renderable = foundation::GetFrameHeap()->construct<Renderable>();
+            renderable->entity           = data->entity;
+            renderable->mesh             = data->mesh;
+            renderable->sub_mesh         = data->sub_mesh;
+            renderable->albedo_texture   = data->albedo_texture;
+						renderable->normal_texture   = data->normal_texture;
+						renderable->dmra_texture     = data->dmra_texture;
+						renderable->emissive_texture = data->emissive_texture;
+						renderable->metallicness     = data->metallicness;
+            renderable->roughness        = data->roughness;
+            renderable->emissiveness     = data->emissiveness;
+            renderable->model_matrix     = components::TransformSystem::getWorld(data->entity, scene);
             
-            LinkedNode* node = (LinkedNode*)foundation::GetFrameHeap()->alloc(
-              sizeof(LinkedNode)
-            );
-            memset(node, 0u, sizeof(LinkedNode));
+						LinkedNode* node = foundation::GetFrameHeap()->construct<LinkedNode>();
             node_it->next  = node;
             node->data     = renderable;
             node->previous = node_it;
@@ -145,7 +140,7 @@ namespace lambda
     
     ////////////////////////////////////////////////////////////////////////////
     void Culler::cullStatics(
-      const ZoneManager& zone_manager, 
+      ZoneManager& zone_manager, 
       const Frustum& frustum)
     {
       static_.data = nullptr;
@@ -158,24 +153,22 @@ namespace lambda
         Renderable* data = (Renderable*)token.getUserData();
         if (data->mesh && frustum.ContainsAABB(data->min, data->max))
         {
-          Renderable* renderable = 
-            (Renderable*)foundation::GetFrameHeap()->alloc(sizeof(Renderable));
-          memset(renderable, 0u, sizeof(Renderable));
-          renderable->entity = data->entity;
-          renderable->mesh = data->mesh;
-          renderable->sub_mesh = data->sub_mesh;
-          renderable->albedo_texture = data->albedo_texture;
-          renderable->normal_texture = data->normal_texture;
-          renderable->dmra_texture = data->dmra_texture;
-          renderable->metallicness = data->metallicness;
-          renderable->roughness = data->roughness;
-          renderable->model_matrix = data->model_matrix;
-
-          LinkedNode* node = 
-            (LinkedNode*)foundation::GetFrameHeap()->alloc(sizeof(LinkedNode));
-          memset(node, 0u, sizeof(LinkedNode));
-          node_it->next = node;
-          node->data = renderable;
+          Renderable* renderable = foundation::GetFrameHeap()->construct<Renderable>();
+          renderable->entity           = data->entity;
+          renderable->mesh             = data->mesh;
+          renderable->sub_mesh         = data->sub_mesh;
+          renderable->albedo_texture   = data->albedo_texture;
+					renderable->normal_texture   = data->normal_texture;
+					renderable->dmra_texture     = data->dmra_texture;
+					renderable->emissive_texture = data->emissive_texture;
+					renderable->metallicness     = data->metallicness;
+          renderable->roughness        = data->roughness;
+          renderable->emissiveness     = data->emissiveness;
+          renderable->model_matrix     = data->model_matrix;
+            
+					LinkedNode* node = foundation::GetFrameHeap()->construct<LinkedNode>();
+          node_it->next  = node;
+          node->data     = renderable;
           node->previous = node_it;
           node_it = node;
         }

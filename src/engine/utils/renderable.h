@@ -16,9 +16,11 @@ namespace lambda
       uint32_t sub_mesh = 0u;
       asset::VioletTextureHandle albedo_texture;
       asset::VioletTextureHandle normal_texture;
-      asset::VioletTextureHandle dmra_texture;
-      float metallicness = 1.0f;
-      float roughness = 1.0f;
+			asset::VioletTextureHandle dmra_texture;
+			asset::VioletTextureHandle emissive_texture;
+      float metallicness = 0.0f;
+			float roughness    = 1.0f;
+			glm::vec3 emissiveness;
       glm::vec3 min;
       glm::vec3 max;
       glm::vec3 center;

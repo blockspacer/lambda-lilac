@@ -52,13 +52,21 @@ namespace lambda
 
 				return ref > 0;
 			}
-			static Name& getName(const size_t& hash)
+			static Name getName(const size_t& hash)
 			{
 				g_mutex.lock();
 				LMB_ASSERT(g_valid, "AssetHandle not valid anymore");
 				Name& name = g_names[hash];
 				g_mutex.unlock();
 				return name;
+			}
+			static void tyToSetName(const size_t& hash, const Name& name)
+			{
+				g_mutex.lock();
+				LMB_ASSERT(g_valid, "AssetHandle not valid anymore");
+				if (g_names.find(hash) == g_names.end())
+					g_names[hash] = name;
+				g_mutex.unlock();
 			}
 			static void releaseAll()
 			{
@@ -101,7 +109,7 @@ namespace lambda
 			{
 				if (hash_)
 				{
-					VioletRefHandler<T>::getName(hash_) = name;
+					VioletRefHandler<T>::tyToSetName(hash_, name);
 					VioletRefHandler<T>::incRef(hash_);
 				}
 			}
@@ -109,7 +117,8 @@ namespace lambda
 				: data_(other.data_)
 				, hash_(other.hash_)
 			{
-				VioletRefHandler<T>::incRef(hash_);
+				if (hash_)
+					VioletRefHandler<T>::incRef(hash_);
 			}
 			~VioletHandle()
 			{
@@ -125,7 +134,8 @@ namespace lambda
 				data_ = other.data_;
 				hash_ = other.hash_;
 
-				VioletRefHandler<T>::incRef(hash_);
+				if (hash_)
+					VioletRefHandler<T>::incRef(hash_);
 			}
 			void operator=(const std::nullptr_t& /*null*/)
 			{
@@ -188,8 +198,10 @@ namespace lambda
 
 			void release()
 			{
-				if (!VioletRefHandler<T>::decRef(hash_))
+				Name name = VioletRefHandler<T>::getName(hash_);
+				if (hash_ && !VioletRefHandler<T>::decRef(hash_))
 				{
+					foundation::Info("Released \"" + name.getName() + "\"\n");
 					T::release(data_, hash_);
 					data_ = nullptr;
 					hash_ = 0ull;

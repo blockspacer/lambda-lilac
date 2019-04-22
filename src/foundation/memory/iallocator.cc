@@ -28,7 +28,7 @@ namespace lambda
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     IAllocator::~IAllocator()
     {
-#ifdef VIOLET_OPEN_ALLOCATIONS
+#if VIOLET_OPEN_ALLOCATIONS
       assert(open_allocations_ == 0 && allocated_ == 0);
 #endif
     }
@@ -36,7 +36,7 @@ namespace lambda
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	void* IAllocator::Allocate(size_t size, size_t align)
 	{
-#ifdef VIOLET_BUFFER_OVERFLOW
+#if VIOLET_BUFFER_OVERFLOW
 		// TODO (Hilze): Fix this. Very serious issue!
 		if (allocated_ + size > max_size_)
 		{

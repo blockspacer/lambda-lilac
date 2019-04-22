@@ -20,6 +20,15 @@
 #undef max
 #endif
 
+#define USE_MT 1
+#define USE_SEPARATE_CONSTRUCT 0
+#define USE_RENDERABLES 1
+
+#if !USE_MT
+#undef USE_SEPARATE_CONSTRUCT
+#define USE_SEPARATE_CONSTRUCT 0
+#endif
+
 namespace lambda
 {
 	namespace scene
@@ -31,6 +40,7 @@ namespace lambda
 			components::RigidBodySystem::initialize(scene);
 			components::WaveSourceSystem::initialize(scene);
 			components::LightSystem::initialize(scene);
+			scene.debug_renderer.Initialize(scene);
 		}
 		void sceneUpdate(const float& delta_time, scene::Scene& scene)
 		{
@@ -44,6 +54,33 @@ namespace lambda
 			components::RigidBodySystem::fixedUpdate(delta_time, scene);
 			components::MonoBehaviourSystem::fixedUpdate(delta_time, scene);
 		}
+
+#if USE_RENDERABLES
+		struct SceneRenderable
+		{
+			~SceneRenderable()
+			{
+				mesh     = nullptr;
+				sub_mesh = 0ul;
+				albedo   = nullptr;
+				normal   = nullptr;
+				dmra     = nullptr;
+				emissive = nullptr;
+			}
+
+			glm::mat4x4* mm;
+			glm::vec4* mr;
+			glm::vec4* em;
+			uint32_t model_count = 0ul;
+			uint32_t model_size = 0ul;
+			asset::VioletMeshHandle mesh;
+			uint32_t sub_mesh;
+			asset::VioletTextureHandle albedo;
+			asset::VioletTextureHandle normal;
+			asset::VioletTextureHandle dmra;
+			asset::VioletTextureHandle emissive;
+		};
+#endif
 
 		struct SceneShaderPass
 		{
@@ -69,9 +106,13 @@ namespace lambda
 			glm::vec3 position;
 			float near;
 			float far;
+#if USE_RENDERABLES
+			Vector<SceneRenderable*> renderables;
+#else
 			Vector<utilities::Renderable*> opaque;
 			Vector<utilities::Renderable*> alpha;
-			Vector<SceneShaderPass>        shader_passes;
+#endif
+			Vector<SceneShaderPass>  shader_passes;
 
 			void operator=(const CameraBatch& other)
 			{
@@ -80,9 +121,13 @@ namespace lambda
 				position      = other.position;
 				near          = other.near;
 				far           = other.far;
+				shader_passes = other.shader_passes;
+#if USE_RENDERABLES
+				renderables   = other.renderables;
+#else
 				opaque        = other.opaque;
 				alpha         = other.alpha;
-				shader_passes = other.shader_passes;
+#endif
 			}
 		};
 
@@ -97,8 +142,12 @@ namespace lambda
 				glm::mat4x4 view_projection;
 				glm::vec3   direction;
 
+#if USE_RENDERABLES
+				Vector<SceneRenderable*>  renderables;
+#else
 				Vector<utilities::Renderable*> opaque;
 				Vector<utilities::Renderable*> alpha;
+#endif
 
 				SceneShaderPass           generate;
 				Vector<SceneShaderPass>   modify;
@@ -107,8 +156,12 @@ namespace lambda
 				{
 					view_projection = other.view_projection;
 					direction       = other.direction;
+#if USE_RENDERABLES
+					renderables     = other.renderables;
+#else
 					opaque          = other.opaque;
 					alpha           = other.alpha;
+#endif
 					generate        = other.generate;
 					modify          = other.modify;
 				}
@@ -142,31 +195,97 @@ namespace lambda
 			}
 		};
 
-		void renderMeshes(platform::IRenderer* renderer, const Vector<utilities::Renderable*>& opaque, const Vector<utilities::Renderable*>& alpha, bool is_rh)
+#if USE_RENDERABLES
+		void convertRenderableList(const Vector<utilities::Renderable*>& u_renderables, Vector<SceneRenderable*>& s_renderables)
+		{
+			for (const utilities::Renderable* renderable : u_renderables)
+			{
+				bool found = false;
+				for (auto s_renderable : s_renderables)
+				{
+					if (s_renderable->mesh   == renderable->mesh &&
+						s_renderable->sub_mesh == renderable->sub_mesh &&
+						s_renderable->albedo   == renderable->albedo_texture &&
+						s_renderable->normal   == renderable->normal_texture &&
+						s_renderable->dmra     == renderable->dmra_texture &&
+						s_renderable->emissive == renderable->emissive_texture)
+					{
+						if (s_renderable->model_count + 1ul > s_renderable->model_size)
+						{
+							uint32_t new_model_size = s_renderable->model_size + 8ul;
+							s_renderable->mm = (glm::mat4x4*)foundation::GetFrameHeap()->realloc(
+								s_renderable->mm,
+								sizeof(glm::mat4x4) * s_renderable->model_size,
+								sizeof(glm::mat4x4) * new_model_size
+							);
+							s_renderable->mr = (glm::vec4*)foundation::GetFrameHeap()->realloc(
+								s_renderable->mr,
+								sizeof(glm::vec4) * s_renderable->model_size,
+								sizeof(glm::vec4) * new_model_size
+							);
+							s_renderable->em = (glm::vec4*)foundation::GetFrameHeap()->realloc(
+								s_renderable->em,
+								sizeof(glm::vec4) * s_renderable->model_size,
+								sizeof(glm::vec4) * new_model_size
+							);
+							s_renderable->model_size = new_model_size;
+						}
+						s_renderable->mm[s_renderable->model_count]   = renderable->model_matrix;
+						s_renderable->mr[s_renderable->model_count]   = glm::vec4(renderable->metallicness, renderable->roughness, 0.0f, 0.0f);
+						s_renderable->em[s_renderable->model_count++] = glm::vec4(renderable->emissiveness.x, renderable->emissiveness.y, renderable->emissiveness.z, 0.0f);
+						found = true;
+						break;
+					}
+				}
+
+				if (!found)
+				{
+					SceneRenderable* s_renderable = foundation::GetFrameHeap()->construct<SceneRenderable>();
+					s_renderable->mesh     = renderable->mesh;
+					s_renderable->sub_mesh = renderable->sub_mesh;
+					s_renderable->albedo   = renderable->albedo_texture;
+					s_renderable->normal   = renderable->normal_texture;
+					s_renderable->dmra     = renderable->dmra_texture;
+					s_renderable->emissive = renderable->emissive_texture;
+					s_renderable->model_count = 0ul;
+					s_renderable->model_size  = 8ul;
+					s_renderable->mm = (glm::mat4x4*)foundation::GetFrameHeap()->alloc(sizeof(glm::mat4x4) * s_renderable->model_size);
+					s_renderable->mr = (glm::vec4*)foundation::GetFrameHeap()->alloc(sizeof(glm::vec4) * s_renderable->model_size);
+					s_renderable->em = (glm::vec4*)foundation::GetFrameHeap()->alloc(sizeof(glm::vec4) * s_renderable->model_size);
+					
+					if (renderable->emissiveness.x != 0.0f || renderable->emissiveness.y != 0.0f || renderable->emissiveness.z != 0.0f)
+						int xxx = 0;
+					
+					s_renderable->mm[s_renderable->model_count]   = renderable->model_matrix;
+					s_renderable->mr[s_renderable->model_count]   = glm::vec4(renderable->metallicness, renderable->roughness, 0.0, 0.0f);
+					s_renderable->em[s_renderable->model_count++] = glm::vec4(renderable->emissiveness.x, renderable->emissiveness.y, renderable->emissiveness.z, 0.0f);
+					s_renderables.push_back(s_renderable);
+				}
+			}
+		}
+
+		void renderMeshes(platform::IRenderer* renderer, const Vector<SceneRenderable*>& renderables, bool is_rh)
 		{
 			struct CBData
 			{
-				glm::mat4x4 mm;
-				glm::vec2 mr;
+				glm::mat4x4 mm[64];
+				glm::vec4 mr[64];
+				glm::vec4 em[64];
 			} data;
 
 			platform::IRenderBuffer* cb = renderer->allocRenderBuffer(sizeof(data), platform::IRenderBuffer::kFlagConstant | platform::IRenderBuffer::kFlagTransient | platform::IRenderBuffer::kFlagDynamic, &data);
 			renderer->setConstantBuffer(cb, cbPerMeshIdx);
 
-			// -------------------------RENDER-STATIC-OPAQUE-------------------------
-			renderer->setBlendState(platform::BlendState::Default());
-			for (const utilities::Renderable* renderable : opaque)
+			renderer->setBlendState(platform::BlendState::Alpha());
+			for (SceneRenderable* renderable : renderables)
 			{
-				data = { renderable->model_matrix, glm::vec2(renderable->metallicness, renderable->roughness) };
-				memcpy(cb->lock(), &data, sizeof(data));
-				cb->unlock();
-
 				renderer->setMesh(renderable->mesh);
 				renderer->setSubMesh(renderable->sub_mesh);
 
-				renderer->setTexture(renderable->albedo_texture, 0);
-				renderer->setTexture(renderable->normal_texture, 1);
-				renderer->setTexture(renderable->dmra_texture, 2);
+				renderer->setTexture(renderable->albedo,   0);
+				renderer->setTexture(renderable->normal,   1);
+				renderer->setTexture(renderable->dmra,     2);
+				renderer->setTexture(renderable->emissive, 3);
 
 				auto sub_mesh = renderable->mesh->getSubMeshes().at(renderable->sub_mesh);
 				// TODO (Hilze): Implement.
@@ -180,32 +299,71 @@ namespace lambda
 						renderer->setRasterizerState(platform::RasterizerState::SolidBack());
 				}
 
-				renderer->draw();
+				uint32_t offset = 0u;
+				while (offset < renderable->model_count)
+				{
+					uint32_t count = std::min(renderable->model_count - offset, 64u);
+					memcpy(data.mm, renderable->mm + offset, count * sizeof(glm::mat4x4));
+					memcpy(data.mr, renderable->mr + offset, count * sizeof(glm::vec4));
+					memcpy(data.em, renderable->em + offset, count * sizeof(glm::vec4));
+					memcpy(cb->lock(), &data, sizeof(data));
+					cb->unlock();
+
+					renderer->draw(count);
+					offset += 64;
+				}
+
+				foundation::GetFrameHeap()->deconstruct(renderable);
 			}
-			// -------------------------RENDER-STATIC-ALPHA-------------------------
-			renderer->setBlendState(platform::BlendState::Alpha());
-			for (const utilities::Renderable* renderable : alpha)
+		}
+#else
+		void renderMeshes(platform::IRenderer* renderer, const Vector<utilities::Renderable*>& renderables, bool is_rh)
+		{
+			struct CBData
 			{
-				data = { renderable->model_matrix, glm::vec2(renderable->metallicness, renderable->roughness) };
+				glm::mat4x4 mm[64];
+				glm::vec4 mr[64];
+				glm::vec4 em[64];
+			} data;
+
+			platform::IRenderBuffer* cb = renderer->allocRenderBuffer(sizeof(data), platform::IRenderBuffer::kFlagConstant | platform::IRenderBuffer::kFlagTransient | platform::IRenderBuffer::kFlagDynamic, &data);
+			renderer->setConstantBuffer(cb, cbPerMeshIdx);
+
+			renderer->setBlendState(platform::BlendState::Alpha());
+			for (utilities::Renderable* renderable : renderables)
+			{
+				glm::vec4 mr(renderable->metallicness, renderable->roughness, 0.0f, 0.0f);
+				glm::vec4 em(renderable->emissiveness.x, renderable->emissiveness.y, renderable->emissiveness.z, 0.0f);
+				memcpy(data.mm, &renderable->model_matrix, sizeof(glm::mat4x4));
+				memcpy(data.mr, &mr, sizeof(glm::vec4));
+				memcpy(data.em, &em, sizeof(glm::vec4));
 				memcpy(cb->lock(), &data, sizeof(data));
 				cb->unlock();
 
 				renderer->setMesh(renderable->mesh);
 				renderer->setSubMesh(renderable->sub_mesh);
-				renderer->setTexture(renderable->albedo_texture, 0);
-				renderer->setTexture(renderable->normal_texture, 1);
-				renderer->setTexture(renderable->dmra_texture, 2);
+
+				renderer->setTexture(renderable->albedo_texture,   0);
+				renderer->setTexture(renderable->normal_texture,   1);
+				renderer->setTexture(renderable->dmra_texture,     2);
+				renderer->setTexture(renderable->emissive_texture, 3);
 
 				auto sub_mesh = renderable->mesh->getSubMeshes().at(renderable->sub_mesh);
 				// TODO (Hilze): Implement.
 				if (sub_mesh.io.double_sided == true || (sub_mesh.io.tex_alb >= 0 && renderable->mesh->getAttachedTextures().at(sub_mesh.io.tex_alb)->getLayer(0u).containsAlpha()))
 					renderer->setRasterizerState(platform::RasterizerState::SolidNone());
 				else
-					renderer->setRasterizerState(platform::RasterizerState::SolidFront());
+				{
+					if (is_rh)
+						renderer->setRasterizerState(platform::RasterizerState::SolidFront());
+					else
+						renderer->setRasterizerState(platform::RasterizerState::SolidBack());
+				}
 
-				renderer->draw();
+				renderer->draw(1);
 			}
 		}
+#endif
 
 		CameraBatch constructCamera(Scene& scene, entity::Entity entity)
 		{
@@ -241,7 +399,15 @@ namespace lambda
 			components::MeshRenderSystem::createRenderList(culler, frustum, scene);
 			auto statics  = culler.getStatics();
 			auto dynamics = culler.getDynamics();
+#if USE_RENDERABLES
+			Vector<utilities::Renderable*> opaque;
+			Vector<utilities::Renderable*> alpha;
+			components::MeshRenderSystem::createSortedRenderList(&statics, &dynamics, opaque, alpha, scene);
+			convertRenderableList(opaque, camera_batch.renderables);
+			convertRenderableList(alpha, camera_batch.renderables);
+#else
 			components::MeshRenderSystem::createSortedRenderList(&statics, &dynamics, camera_batch.opaque, camera_batch.alpha, scene);
+#endif
 			for (const auto& shader_pass : camera.shader_passes)
 			{
 				SceneShaderPass sp;
@@ -289,9 +455,18 @@ namespace lambda
 			// Draw all passes.
 			for (uint32_t i = 0u; i < camera_batch.shader_passes.size(); ++i)
 			{
-				renderer->setDepthStencilState(platform::DepthStencilState::Default());
+				if (i == camera_batch.shader_passes.size() - 1ul)
+					renderer->setDepthStencilState(platform::DepthStencilState::Default());
+				else
+					renderer->setDepthStencilState(platform::DepthStencilState::Equal());
+
 				renderer->bindShaderPass(platform::ShaderPass(Name(""), camera_batch.shader_passes[i].shader, camera_batch.shader_passes[i].input, camera_batch.shader_passes[i].output));
-				renderMeshes(renderer, camera_batch.opaque, camera_batch.alpha, true);
+#if USE_RENDERABLES
+				renderMeshes(renderer, camera_batch.renderables, true);
+#else
+				renderMeshes(renderer, camera_batch.opaque, true);
+				renderMeshes(renderer, camera_batch.alpha, true);
+#endif
 			}
 
 			renderer->popMarker();
@@ -301,6 +476,11 @@ namespace lambda
 			renderer->setDepthStencilState(platform::DepthStencilState::Default());
 		}
 
+		static Map<size_t, asset::VioletShaderHandle>  g_lightShaders;
+		static Map<size_t, asset::VioletTextureHandle> g_lightTextures;
+
+		static Map<entity::Entity, void*> g_generatedOnce;
+
 		LightBatch constructDirectional(entity::Entity entity, Scene& scene)
 		{
 			LightBatch light_batch;
@@ -309,6 +489,9 @@ namespace lambda
 			light_batch.is_rh = true;
 
 			auto& data = scene.light.get(entity);
+
+			if (data.shadow_type == components::ShadowType::kGenerateOnce)
+				data.shadow_type = (g_generatedOnce[entity] == data.depth_target[0].getTexture().get()) ? components::ShadowType::kGenerated : components::ShadowType::kGenerateOnce;
 
 			const auto transform = components::TransformSystem::getComponent(entity, scene);
 			const glm::vec3 forward = glm::normalize(transform.getWorldForward());
@@ -323,7 +506,7 @@ namespace lambda
 				shadow_maps.push_back(scene.light.default_shadow_map);
 			
 			// Setup camera.
-			if (update)
+			//if (update)
 			{
 				// Set everything up.
 				float light_depth = data.depth.back();
@@ -368,7 +551,10 @@ namespace lambda
 			if (update && data.shadow_type != components::ShadowType::kNone)
 			{
 				if (data.shadow_type == components::ShadowType::kGenerateOnce)
+				{
+					g_generatedOnce[entity] = data.depth_target[0].getTexture().get();
 					data.shadow_type = components::ShadowType::kGenerated;
+				}
 
 				const platform::RenderTarget depth_map = data.depth_target.at(0u);
 				Vector<platform::RenderTarget> output = shadow_maps;
@@ -378,9 +564,16 @@ namespace lambda
 					light_batch.clear_queue_texture.push_back(shadow_map);
 				light_batch.clear_queue_depth.push_back(depth_map);
 
-				light_batch_face.generate.shader = asset::ShaderManager::getInstance()->get(scene.light.shader_generate + shader_type);
+				Name shader_name(scene.light.shader_generate + shader_type);
+				if (g_lightShaders.find(shader_name.getHash()) == g_lightShaders.end())
+					g_lightShaders[shader_name.getHash()] = asset::ShaderManager::getInstance()->get(shader_name);
+				light_batch_face.generate.shader = g_lightShaders[shader_name.getHash()];
+
 				light_batch_face.generate.input  = {};
 				light_batch_face.generate.output = output;
+				
+				for (const auto& o : output)
+					g_lightTextures[o.getTexture().getHash()] = o.getTexture();
 
 				// Handle frustum culling.
 				if (data.shadow_type == components::ShadowType::kDynamic)
@@ -394,7 +587,15 @@ namespace lambda
 				components::MeshRenderSystem::createRenderList(data.culler.back(), frustum, scene);
 				auto statics = data.culler.back().getStatics();
 				auto dynamics = data.culler.back().getDynamics();
+#if USE_RENDERABLES
+				Vector<utilities::Renderable*> opaque;
+				Vector<utilities::Renderable*> alpha;
+				components::MeshRenderSystem::createSortedRenderList(&statics, &dynamics, opaque, alpha, scene);
+				convertRenderableList(opaque, light_batch_face.renderables);
+				convertRenderableList(alpha, light_batch_face.renderables);
+#else
 				components::MeshRenderSystem::createSortedRenderList(&statics, &dynamics, light_batch_face.opaque, light_batch_face.alpha, scene);
+#endif
 
 				String config = "__temp_target_" + toString(shadow_maps.at(0u).getTexture()->getLayer(0).getWidth()) + "_" + toString(shadow_maps.at(0u).getTexture()->getLayer(0).getHeight()) + "__";
 				asset::VioletTextureHandle temp = asset::TextureManager::getInstance()->create(Name(config),
@@ -408,6 +609,8 @@ namespace lambda
 
 				platform::RenderTarget rt_input = shadow_maps.at(0u);
 				platform::RenderTarget rt_output(config, temp);
+				g_lightTextures[rt_input.getTexture().getHash()] = rt_input.getTexture();
+				g_lightTextures[rt_output.getTexture().getHash()] = rt_output.getTexture();
 
 				// Draw all modify shaders.
 				for (uint32_t i = 0; i < scene.light.shader_modify_count; ++i)
@@ -415,14 +618,24 @@ namespace lambda
 					SceneShaderPass modify;
 					modify.input  = { rt_input };
 					modify.output = { rt_output };
-					modify.shader = asset::ShaderManager::getInstance()->get(scene.light.shader_modify + shadow_type + "HORIZONTAL");
+					
+					Name shader_name(scene.light.shader_modify + shadow_type + "HORIZONTAL");
+					if (g_lightShaders.find(shader_name.getHash()) == g_lightShaders.end())
+						g_lightShaders[shader_name.getHash()] = asset::ShaderManager::getInstance()->get(shader_name);
+					modify.shader = g_lightShaders[shader_name.getHash()];
+
 					light_batch_face.modify.push_back(modify);
 					platform::RenderTarget rt_temp = rt_input;
 					rt_input = rt_output;
 					rt_output = rt_temp;
 					modify.input = { rt_input };
 					modify.output = { rt_output };
-					modify.shader = asset::ShaderManager::getInstance()->get(scene.light.shader_modify + shadow_type + "VERTICAL");
+					
+					shader_name = Name(scene.light.shader_modify + shadow_type + "VERTICAL");
+					if (g_lightShaders.find(shader_name.getHash()) == g_lightShaders.end())
+						g_lightShaders[shader_name.getHash()] = asset::ShaderManager::getInstance()->get(shader_name);
+					modify.shader = g_lightShaders[shader_name.getHash()];
+
 					light_batch_face.modify.push_back(modify);
 					rt_temp = rt_input;
 					rt_input = rt_output;
@@ -441,8 +654,11 @@ namespace lambda
 			if (shadow_maps.size() > 1u)
 				input.insert(input.end(), shadow_maps.begin() + 1u, shadow_maps.end());
 
-			
-			light_batch.publish.shader = asset::ShaderManager::getInstance()->get(scene.light.shader_publish + shader_type);
+			Name shader_name(scene.light.shader_publish + shader_type);
+			if (g_lightShaders.find(shader_name.getHash()) == g_lightShaders.end())
+				g_lightShaders[shader_name.getHash()] = asset::ShaderManager::getInstance()->get(shader_name);
+			light_batch.publish.shader = g_lightShaders[shader_name.getHash()];
+
 			light_batch.publish.input  = input;
 			light_batch.publish.output = { scene.post_process_manager->getTarget(Name("light_map")) };
 
@@ -458,6 +674,9 @@ namespace lambda
 			light_batch.is_rh = false;
 
 			auto& data = scene.light.get(entity);
+
+			if (data.shadow_type == components::ShadowType::kGenerateOnce)
+				data.shadow_type = (g_generatedOnce[entity] == data.depth_target[0].getTexture().get()) ? components::ShadowType::kGenerated : components::ShadowType::kGenerateOnce;
 
 			const auto transform = components::TransformSystem::getComponent(entity, scene);
 
@@ -486,7 +705,7 @@ namespace lambda
 				data.dynamic_index = 0u;
 
 			// Setup camera.
-			if (update)
+			//if (update)
 			{
 				for (uint32_t i = 0; i < 6; ++i)
 				{
@@ -527,20 +746,31 @@ namespace lambda
 				bool statics_only = (data.shadow_type == components::ShadowType::kGenerateOnce);
 
 				if (data.shadow_type == components::ShadowType::kGenerateOnce)
+				{
+					g_generatedOnce[entity] = data.depth_target[0].getTexture().get();
 					data.shadow_type = components::ShadowType::kGenerated;
+				}
 
 				// Clear the shadow map.
 				platform::RenderTarget depth_map = data.depth_target.at(0u);
 				light_batch.clear_queue_texture.push_back(shadow_map);
 				light_batch.clear_queue_depth.push_back(depth_map);
 
+				g_lightTextures[depth_map.getTexture().getHash()]  = depth_map.getTexture();
+				g_lightTextures[shadow_map.getTexture().getHash()] = shadow_map.getTexture();
+
 				for (uint32_t i = 0; i < 6; ++i)
 				{
 					// Render to the shadow map.
 					shadow_map.setLayer(i);
 					depth_map.setLayer(i);
-					light_batch_faces[i].generate.shader = asset::ShaderManager::getInstance()->get(scene.light.shader_generate + shader_type);
-					light_batch_faces[i].generate.input  = {};
+
+					Name shader_name(scene.light.shader_generate + shader_type);
+					if (g_lightShaders.find(shader_name.getHash()) == g_lightShaders.end())
+						g_lightShaders[shader_name.getHash()] = asset::ShaderManager::getInstance()->get(shader_name);
+					light_batch_faces[i].generate.shader = g_lightShaders[shader_name.getHash()];
+
+					light_batch_faces[i].generate.input = {};
 					light_batch_faces[i].generate.output = { shadow_map, depth_map };
 
 					// Handle frustum culling.
@@ -556,23 +786,114 @@ namespace lambda
 					{
 						components::MeshRenderSystem::createRenderList(data.culler.back(), frustum, scene);
 						auto statics = data.culler.back().getStatics();
-						auto dynamics = data.culler.back().getDynamics();
+#if USE_RENDERABLES
+						Vector<utilities::Renderable*> opaque;
+						Vector<utilities::Renderable*> alpha;
+						components::MeshRenderSystem::createSortedRenderList(&statics, nullptr, opaque, alpha, scene);
+						convertRenderableList(opaque, light_batch_faces[i].renderables);
+						convertRenderableList(alpha, light_batch_faces[i].renderables);
+#else
 						components::MeshRenderSystem::createSortedRenderList(&statics, nullptr, light_batch_faces[i].opaque, light_batch_faces[i].alpha, scene);
+#endif
 					}
 					else
 					{
 						components::MeshRenderSystem::createRenderList(data.culler.back(), frustum, scene);
 						auto statics = data.culler.back().getStatics();
 						auto dynamics = data.culler.back().getDynamics();
+#if USE_RENDERABLES
+						Vector<utilities::Renderable*> opaque;
+						Vector<utilities::Renderable*> alpha;
+						components::MeshRenderSystem::createSortedRenderList(&statics, &dynamics, opaque, alpha, scene);
+						convertRenderableList(opaque, light_batch_faces[i].renderables);
+						convertRenderableList(alpha, light_batch_faces[i].renderables);
+#else
 						components::MeshRenderSystem::createSortedRenderList(&statics, &dynamics, light_batch_faces[i].opaque, light_batch_faces[i].alpha, scene);
+#endif
+					}
+
+					String config1 = "__temp_target_cube1_" + toString(shadow_map.getTexture()->getLayer(0).getWidth()) + "_" + toString(shadow_map.getTexture()->getLayer(0).getHeight()) + "__";
+					asset::VioletTextureHandle temp1 = asset::TextureManager::getInstance()->create(Name(config1),
+						shadow_map.getTexture()->getLayer(0).getWidth(),
+						shadow_map.getTexture()->getLayer(0).getHeight(),
+						1,
+						shadow_map.getTexture()->getLayer(0).getFormat(),
+						shadow_map.getTexture()->getLayer(0).getFlags()
+					);
+					temp1->setKeepInMemory(true);
+
+					String config2 = "__temp_target_cube2_" + toString(shadow_map.getTexture()->getLayer(0).getWidth()) + "_" + toString(shadow_map.getTexture()->getLayer(0).getHeight()) + "__";
+					asset::VioletTextureHandle temp2 = asset::TextureManager::getInstance()->create(Name(config2),
+						shadow_map.getTexture()->getLayer(0).getWidth(),
+						shadow_map.getTexture()->getLayer(0).getHeight(),
+						1,
+						shadow_map.getTexture()->getLayer(0).getFormat(),
+						shadow_map.getTexture()->getLayer(0).getFlags()
+					);
+					temp2->setKeepInMemory(true);
+
+					platform::RenderTarget rt_input = shadow_map;
+					platform::RenderTarget rt_temp1(config1, temp1);
+					platform::RenderTarget rt_temp2(config2, temp2);
+					platform::RenderTarget rt_output = rt_temp1;
+					rt_input.setLayer(i);
+					g_lightTextures[rt_input.getTexture().getHash()] = rt_input.getTexture();
+					g_lightTextures[rt_temp1.getTexture().getHash()] = rt_temp1.getTexture();
+					g_lightTextures[rt_temp2.getTexture().getHash()] = rt_temp2.getTexture();
+
+					// Draw all modify shaders.
+					for (uint32_t j = 0; j < scene.light.shader_modify_count; ++j)
+					{
+						SceneShaderPass modify;
+						modify.input = { rt_input };
+						modify.output = { rt_output };
+
+						Name shader_name(scene.light.shader_modify + shadow_type + "HORIZONTAL" + (rt_input.getTexture() == shadow_map.getTexture() ? "_CUBE" : ""));
+						if (g_lightShaders.find(shader_name.getHash()) == g_lightShaders.end())
+							g_lightShaders[shader_name.getHash()] = asset::ShaderManager::getInstance()->get(shader_name);
+						modify.shader = g_lightShaders[shader_name.getHash()];
+
+						light_batch_faces[i].modify.push_back(modify);
+						
+						rt_input  = rt_output;
+						rt_output = rt_output.getTexture() == rt_temp1.getTexture() ? rt_temp2 : rt_temp1;
+
+						modify.input = { rt_input };
+						modify.output = { rt_output };
+
+						shader_name = Name(scene.light.shader_modify + shadow_type + "VERTICAL");
+						if (g_lightShaders.find(shader_name.getHash()) == g_lightShaders.end())
+							g_lightShaders[shader_name.getHash()] = asset::ShaderManager::getInstance()->get(shader_name);
+						modify.shader = g_lightShaders[shader_name.getHash()];
+
+						light_batch_faces[i].modify.push_back(modify);
+						auto rt_temp = rt_input;
+						rt_input = rt_output;
+						rt_output = rt_temp;
+					}
+
+					if (scene.light.shader_modify_count > 0)
+					{
+						SceneShaderPass modify;
+						modify.input = { rt_output };
+						modify.output = { shadow_map };
+						shader_name = Name(scene.light.shader_modify + "|CUBE");
+						if (g_lightShaders.find(shader_name.getHash()) == g_lightShaders.end())
+							g_lightShaders[shader_name.getHash()] = asset::ShaderManager::getInstance()->get(shader_name);
+						modify.shader = g_lightShaders[shader_name.getHash()];
+						light_batch_faces[i].modify.push_back(modify);
 					}
 				}
 
 				shadow_map.setLayer(-1);
 				depth_map.setLayer(-1);
 			}
-			
-			light_batch.publish.shader = asset::ShaderManager::getInstance()->get(scene.light.shader_publish + shader_type);
+
+			Name shader_name(scene.light.shader_publish + shader_type);
+			if (g_lightShaders.find(shader_name.getHash()) == g_lightShaders.end())
+				g_lightShaders[shader_name.getHash()] = asset::ShaderManager::getInstance()->get(shader_name);
+			light_batch.publish.shader = g_lightShaders[shader_name.getHash()];
+
 			light_batch.publish.input  = {
 				shadow_map,
 				platform::RenderTarget(Name("texture"), data.texture),
@@ -633,6 +954,9 @@ namespace lambda
 				}
 			}
 
+			for (auto& it : g_lightShaders)
+				it.second->setKeepInMemory(true);
+
 			return light_batches;
 		}
 
@@ -673,14 +997,17 @@ namespace lambda
 
 				const auto& light_batch = light_batches[i];
 
+				renderer->pushMarker("Clear");
 				for (const auto& to_clear : light_batch.clear_queue_depth)
 					renderer->clearRenderTarget(to_clear.getTexture(), glm::vec4(1.0f));
 
 				for (const auto& to_clear : light_batch.clear_queue_texture)
 					renderer->clearRenderTarget(to_clear.getTexture(), glm::vec4(FLT_MAX));
+				renderer->popMarker();
 
-				for (const auto& face : light_batch.faces)
+				for (uint8_t f = 0u; f < light_batch.faces.size(); ++f)
 				{
+					const auto& face = light_batch.faces[f];
 					data = {
 						face.view_projection,
 						light_batch.position,
@@ -694,13 +1021,23 @@ namespace lambda
 					memcpy(cb->lock(), &data, sizeof(data));
 					cb->unlock();
 
+					renderer->setUserData(glm::vec4(f, 0.0f, 0.0f, 0.0f), 0);
+
 					// Generate shadow maps.
 					if (face.generate.shader)
 					{
+						renderer->pushMarker("Generate");
 						renderer->bindShaderPass(platform::ShaderPass(Name(""), face.generate.shader, face.generate.input, face.generate.output));
 
-						renderMeshes(renderer, face.opaque, face.alpha, light_batch.is_rh);
+#if USE_RENDERABLES
+						renderMeshes(renderer, face.renderables, light_batch.is_rh);
+#else
+						renderMeshes(renderer, face.alpha, light_batch.is_rh);
+						renderMeshes(renderer, face.opaque, light_batch.is_rh);
+#endif
+						renderer->popMarker();
 
+						renderer->pushMarker("Modify");
 						// Set up the post processing passes.
 						renderer->setMesh(light_batch.full_screen_mesh);
 						renderer->setSubMesh(0u);
@@ -713,9 +1050,11 @@ namespace lambda
 							renderer->bindShaderPass(platform::ShaderPass(Name(""), modify.shader, modify.input, modify.output));
 							renderer->draw();
 						}
+						renderer->popMarker();
 					}
 				}
 
+				renderer->pushMarker("Publish");
 				// Render lights to the light map.
 				// Set up the post processing passes.
 				renderer->setMesh(light_batch.full_screen_mesh);
@@ -738,6 +1077,7 @@ namespace lambda
 				));
 				renderer->draw();
 				renderer->setBlendState(platform::BlendState::Alpha());
+				renderer->popMarker();
 
 				renderer->popMarker();
 			}
@@ -755,57 +1095,6 @@ namespace lambda
 			CameraBatch camera_batch;
 			Vector<LightBatch> light_batches;
 		};
-
-#define USE_MT 1
-
-		RenderData* k_flush_data = nullptr;
-		RenderData* k_next_flush_data = nullptr;
-
-		///////////////////////////////////////////////////////////////////////////
-		void flush(scene::Scene& scene, const CameraBatch& camera_batch, const Vector<LightBatch>& light_batches)
-		{
-			scene.renderer->setOverrideScene(&scene);
-			scene.renderer->startFrame();
-
-			renderCamera(scene.renderer, camera_batch);
-			renderLight(scene.renderer, *scene.post_process_manager, light_batches.data(), (uint32_t)light_batches.size());
-
-			scene.gui->render(scene);
-
-			for (auto render_action : scene.render_actions)
-			{
-				render_action->execute(scene);
-				render_action->~IRenderAction();
-			}
-
-			scene.renderer->endFrame();
-			scene.renderer->setOverrideScene(nullptr);
-		}
-
-#if USE_MT
-		std::atomic<bool> k_can_read = false;
-		std::atomic<bool> k_can_write = true;
-		std::atomic<bool> k_keep_alive = true;
-		std::thread k_thread;
-
-		///////////////////////////////////////////////////////////////////////////
-		void flushLoop()
-		{
-			while (k_keep_alive)
-			{
-				while (!k_can_read)
-					Sleep(0);
-				k_can_read = false;
-
-				scene::Scene       scene         = eastl::move(k_flush_data->scene);
-				CameraBatch        camera_batch  = eastl::move(k_flush_data->camera_batch);
-				Vector<LightBatch> light_batches = eastl::move(k_flush_data->light_batches);
-				k_can_write = true;
-
-				flush(scene, camera_batch, light_batches);
-			}
-		}
-#endif
 
 		struct RenderAction_PostProcess : public scene::IRenderAction
 		{
@@ -894,7 +1183,29 @@ namespace lambda
 			virtual ~RenderAction_CopyToScreen() override {};
 		};
 
-		void sceneConstructRender(scene::Scene& scene)
+		///////////////////////////////////////////////////////////////////////////
+		void flush(scene::Scene& scene, const CameraBatch& camera_batch, const Vector<LightBatch>& light_batches)
+		{
+			scene.renderer->setOverrideScene(&scene);
+			scene.renderer->startFrame();
+
+			renderCamera(scene.renderer, camera_batch);
+			renderLight(scene.renderer, *scene.post_process_manager, light_batches.data(), (uint32_t)light_batches.size());
+
+			scene.gui->render(scene);
+
+			for (auto render_action : scene.render_actions)
+			{
+				render_action->execute(scene);
+				render_action->~IRenderAction();
+			}
+
+			scene.renderer->endFrame();
+			scene.renderer->setOverrideScene(nullptr);
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		void construct(scene::Scene& scene, CameraBatch& camera_batch, Vector<LightBatch>& light_batches)
 		{
 			//Add all render actions.
 			Vector<IRenderAction*> render_actions;
@@ -903,20 +1214,187 @@ namespace lambda
 			render_actions.push_back(foundation::GetFrameHeap()->construct<RenderAction_DebugRenderer>());
 			render_actions.push_back(foundation::GetFrameHeap()->construct<RenderAction_CopyToScreen>());
 			render_actions.insert(render_actions.end(), scene.render_actions.begin(), scene.render_actions.end());
+			scene.render_actions = eastl::move(render_actions);
 
+			camera_batch  = constructCamera(scene, scene.camera.main_camera);
+			light_batches = constructLight(camera_batch, scene);
+		}
+
+		struct Thread
+		{
+			std::atomic<bool> can_read   = false;
+			std::atomic<bool> can_write  = true;
+			std::atomic<bool> keep_alive = true;
+			std::thread thread;
+
+			RenderData* curr_used_data = nullptr;
+			RenderData* queued_data    = nullptr;
+		};
+
+		Thread k_flush;
+
+#if USE_MT
+		std::mutex k_flush_mutex;
+		RenderData* k_flush_data = nullptr;
+#if USE_SEPARATE_CONSTRUCT
+		std::mutex k_construct_mutex;
+		RenderData* k_construct_data = nullptr;
+		Thread k_construct;
+#endif
+
+		///////////////////////////////////////////////////////////////////////////
+#if USE_SEPARATE_CONSTRUCT
+		void constructLoop()
+		{
+			while (k_construct.keep_alive)
+			{
+				bool can_get = false;
+				do
+				{
+					k_construct_mutex.lock();
+					can_get = k_construct_data != nullptr;
+					k_construct_mutex.unlock();
+					if (!can_get)
+						std::this_thread::sleep_for(std::chrono::microseconds(1));
+				} while (!can_get);
+
+				k_construct_mutex.lock();
+				scene::Scene scene = eastl::move(k_construct_data->scene);
+				k_construct_data = nullptr;
+				k_construct_mutex.unlock();
+
+				// Construct the render scene.
+				if (!k_flush.queued_data)
+					k_flush.queued_data = foundation::Memory::construct<RenderData>();
+
+				construct(scene, k_flush.queued_data->camera_batch, k_flush.queued_data->light_batches);
+				k_flush.queued_data->scene.renderer                 = scene.renderer;
+				k_flush.queued_data->scene.post_process_manager     = scene.post_process_manager;
+				k_flush.queued_data->scene.window                   = scene.window;
+				k_flush.queued_data->scene.gui                      = scene.gui;
+				k_flush.queued_data->scene.render_actions           = scene.render_actions;
+				k_flush.queued_data->scene.rigid_body.physics_world = scene.rigid_body.physics_world;
+				k_flush.queued_data->scene.debug_renderer           = scene.debug_renderer;
+
+				bool can_set = false;
+				do
+				{
+					k_flush_mutex.lock();
+					can_set = k_flush_data == nullptr;
+					k_flush_mutex.unlock();
+					if (!can_set)
+						std::this_thread::sleep_for(std::chrono::microseconds(1));
+				} while (!can_set);
+
+				k_flush_mutex.lock();
+				k_flush_data = k_flush.queued_data;
+				auto temp              = k_flush.curr_used_data;
+				k_flush.curr_used_data = k_flush.queued_data;
+				k_flush.queued_data    = temp;
+				k_flush_mutex.unlock();
+			}
+		}
+#endif
+
+		///////////////////////////////////////////////////////////////////////////
+		void flushLoop()
+		{
+			while (k_flush.keep_alive)
+			{
+				bool can_get = false;
+				do
+				{
+					k_flush_mutex.lock();
+					can_get = k_flush_data != nullptr;
+					k_flush_mutex.unlock();
+					if (!can_get)
+						std::this_thread::sleep_for(std::chrono::microseconds(1));
+				} while (!can_get);
+
+				k_flush_mutex.lock();
+				scene::Scene       scene         = eastl::move(k_flush_data->scene);
+				CameraBatch        camera_batch  = eastl::move(k_flush_data->camera_batch);
+				Vector<LightBatch> light_batches = eastl::move(k_flush_data->light_batches);
+				k_flush_data = nullptr;
+				k_flush_mutex.unlock();
+
+				flush(scene, camera_batch, light_batches);
+			}
+		}
+#endif
+
+		void sceneConstructRender(scene::Scene& scene)
+		{
+#if USE_SEPARATE_CONSTRUCT
 			// Create new.
-			if (!k_next_flush_data)
-				k_next_flush_data = foundation::Memory::construct<RenderData>();
+			if (!k_construct.queued_data)
+				k_construct.queued_data = foundation::Memory::construct<RenderData>();
 
-			k_next_flush_data->camera_batch  = constructCamera(scene, scene.camera.main_camera);
-			k_next_flush_data->light_batches = constructLight(k_next_flush_data->camera_batch, scene);
+			k_construct.queued_data->scene.camera                   = scene.camera;
+			k_construct.queued_data->scene.transform                = scene.transform;
+			k_construct.queued_data->scene.mesh_render              = scene.mesh_render;
+			k_construct.queued_data->scene.light                    = scene.light;
+			k_construct.queued_data->scene.renderer                 = scene.renderer;
+			k_construct.queued_data->scene.post_process_manager     = scene.post_process_manager;
+			k_construct.queued_data->scene.window                   = scene.window;
+			k_construct.queued_data->scene.gui                      = scene.gui;
+			k_construct.queued_data->scene.render_actions           = scene.render_actions;
+			k_construct.queued_data->scene.rigid_body.physics_world = scene.rigid_body.physics_world;
+			k_construct.queued_data->scene.debug_renderer           = scene.debug_renderer;
 
-			k_next_flush_data->scene.renderer                 = scene.renderer;
-			k_next_flush_data->scene.post_process_manager     = scene.post_process_manager;
-			k_next_flush_data->scene.window                   = scene.window;
-			k_next_flush_data->scene.gui                      = scene.gui;
-			k_next_flush_data->scene.render_actions           = render_actions;
-			k_next_flush_data->scene.rigid_body.physics_world = scene.rigid_body.physics_world;
+			bool can_set = false;
+			do
+			{
+				k_construct_mutex.lock();
+				can_set = k_construct_data == nullptr;
+				k_construct_mutex.unlock();
+				if (!can_set)
+					std::this_thread::sleep_for(std::chrono::microseconds(1));
+			} while (!can_set);
+
+			k_construct_mutex.lock();
+			k_construct_data = k_construct.queued_data;
+			auto temp = k_construct.curr_used_data;
+			k_construct.curr_used_data = k_construct.queued_data;
+			k_construct.queued_data = temp;
+			k_construct_mutex.unlock();
+#else
+			// Create new.
+			if (!k_flush.queued_data)
+				k_flush.queued_data = foundation::Memory::construct<RenderData>();
+
+			construct(scene, k_flush.queued_data->camera_batch, k_flush.queued_data->light_batches);
+			k_flush.queued_data->scene.renderer                 = scene.renderer;
+			k_flush.queued_data->scene.post_process_manager     = scene.post_process_manager;
+			k_flush.queued_data->scene.window                   = scene.window;
+			k_flush.queued_data->scene.gui                      = scene.gui;
+			k_flush.queued_data->scene.render_actions           = scene.render_actions;
+			k_flush.queued_data->scene.rigid_body.physics_world = scene.rigid_body.physics_world;
+			k_flush.queued_data->scene.debug_renderer           = scene.debug_renderer;
+
+#if USE_MT
+			bool can_set = false;
+			do
+			{
+				k_flush_mutex.lock();
+				can_set = k_flush_data == nullptr;
+				k_flush_mutex.unlock();
+				if (!can_set)
+					std::this_thread::sleep_for(std::chrono::microseconds(1));
+			} while (!can_set);
+
+			k_flush_mutex.lock();
+			k_flush_data = k_flush.queued_data;
+			auto temp = k_flush.curr_used_data;
+			k_flush.curr_used_data = k_flush.queued_data;
+			k_flush.queued_data = temp;
+			k_flush_mutex.unlock();
+#endif
+#endif
+
+#if !USE_MT
+			flush(k_flush.queued_data->scene, k_flush.queued_data->camera_batch, k_flush.queued_data->light_batches);
+#endif
 
 			scene.render_actions.clear();
 			scene.debug_renderer.Clear();
@@ -925,26 +1403,27 @@ namespace lambda
 		void sceneOnRender(scene::Scene& scene)
 		{
 #if USE_MT
-			if (!k_thread.joinable())
+#if USE_SEPARATE_CONSTRUCT
+			if (!k_construct.thread.joinable())
 			{
-				k_thread = std::thread(flushLoop);
+				k_construct.thread = std::thread(constructLoop);
 #if VIOLET_WIN32
-				SetThreadPriority(k_thread.native_handle(), THREAD_PRIORITY_HIGHEST);
-				SetThreadPriorityBoost(k_thread.native_handle(), TRUE);
-				//SetThreadDescription(k_thread.native_handle(), L"Flush Thread");
+				SetThreadPriority(k_construct.thread.native_handle(), THREAD_PRIORITY_TIME_CRITICAL);
+				SetThreadPriorityBoost(k_construct.thread.native_handle(), TRUE);
+				SetThreadDescription(k_construct.thread.native_handle(), L"Construct Thread");
 #endif
 			}
+#endif
 
-			while (!k_can_write)
-				Sleep(0);
-			k_can_write = false;
-
-			auto temp = k_flush_data;
-			k_flush_data = k_next_flush_data;
-			k_next_flush_data = temp;
-			k_can_read = true;
-#else
-			flush(k_next_flush_data->scene, k_next_flush_data->camera_batch, k_next_flush_data->light_batches);
+			if (!k_flush.thread.joinable())
+			{
+				k_flush.thread = std::thread(flushLoop);
+#if VIOLET_WIN32
+				SetThreadPriority(k_flush.thread.native_handle(), THREAD_PRIORITY_TIME_CRITICAL);
+				SetThreadPriorityBoost(k_flush.thread.native_handle(), TRUE);
+				SetThreadDescription(k_flush.thread.native_handle(), L"Flush Thread");
+#endif
+			}
 #endif
 		}
 		void sceneCollectGarbage(scene::Scene& scene)
@@ -963,15 +1442,20 @@ namespace lambda
 		void sceneDeinitialize(scene::Scene& scene)
 		{
 #if USE_MT
-			k_can_read = true;
-			k_keep_alive = false;
-			k_thread.join();
+			k_flush.can_read = true;
+			k_flush.keep_alive = false;
+			k_flush.thread.join();
+#if USE_SEPARATE_CONSTRUCT
+			k_construct.can_read = true;
+			k_construct.keep_alive = false;
+			k_construct.thread.join();
+#endif
 #endif
 
-			foundation::Memory::destruct(k_flush_data);
+			/*foundation::Memory::destruct(k_flush_data);
 			k_flush_data = nullptr;
 			foundation::Memory::destruct(k_next_flush_data);
-			k_next_flush_data = nullptr;
+			k_next_flush_data = nullptr;*/
 			
 			components::ColliderSystem::deinitialize(scene);
 			components::RigidBodySystem::deinitialize(scene);

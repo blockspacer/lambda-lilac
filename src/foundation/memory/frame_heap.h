@@ -16,6 +16,12 @@ namespace lambda
 			~FrameHeap();
       void update();
       void* alloc(uint32_t size);
+			void* realloc(void* prev, uint32_t prev_size, uint32_t new_size);
+			template<typename T>
+			inline void deconstruct(T* t)
+			{
+				t->~T();
+			}
       template<typename T>
       inline T* construct()
       {

@@ -1,6 +1,7 @@
 #pragma once
 #include <containers/containers.h>
 #include <glm/vec2.hpp>
+#include <mutex>
 
 namespace lambda
 {
@@ -48,10 +49,11 @@ namespace lambda
     {
     public:
       ZoneManager();
-      void addToken(glm::vec2 min, glm::vec2 max, Token token);
+			void operator=(const ZoneManager& other) = delete;
+			void addToken(glm::vec2 min, glm::vec2 max, Token token);
       void removeToken(Token token);
-      Vector<Token> getTokens(glm::vec2 min, glm::vec2 max) const;
-      Vector<Token> getTokens(const utilities::Frustum& frustum) const;
+      Vector<Token> getTokens(glm::vec2 min, glm::vec2 max);
+      Vector<Token> getTokens(const utilities::Frustum& frustum);
 
     private:
       Zone& getZone(int16_t x, int16_t y);
@@ -59,7 +61,8 @@ namespace lambda
       uint32_t hash(int16_t x, int16_t y) const;
 
     private:
-      glm::vec2 zone_size_;
+			std::mutex mutex_;
+			glm::vec2 zone_size_;
       glm::vec2 half_zone_size_;
       Map<uint32_t, uint32_t> hash_to_zone_;
       Vector<Zone> zones_;

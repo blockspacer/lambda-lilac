@@ -97,7 +97,9 @@ namespace lambda
       {
         for (int16_t x = (int16_t)min.x; x < (int16_t)max.x; ++x)
         {
+					mutex_.lock();
           getZone(x, y).addToken(token);
+					mutex_.unlock();
         }
       }
     }
@@ -107,12 +109,14 @@ namespace lambda
     {
       for (auto& zone : zones_)
       {
-        zone.removeToken(token);
+				mutex_.lock();
+				zone.removeToken(token);
+				mutex_.unlock();
       }
     }
     
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    Vector<Token> ZoneManager::getTokens(glm::vec2 min, glm::vec2 max) const
+    Vector<Token> ZoneManager::getTokens(glm::vec2 min, glm::vec2 max)
     {
       Vector<Token> tokens;
 
@@ -123,7 +127,9 @@ namespace lambda
       {
         for (int16_t x = (int16_t)min.x; x < (int16_t)max.x; ++x)
         {
-          const Vector<Token>& t = getZone(x, y).getTokens();
+					mutex_.lock();
+					const Vector<Token>& t = getZone(x, y).getTokens();
+					mutex_.unlock();
           tokens.insert(tokens.end(), t.begin(), t.end());
         }
       }
@@ -135,7 +141,7 @@ namespace lambda
     }
     
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    Vector<Token> ZoneManager::getTokens(const utilities::Frustum& frustum) const
+    Vector<Token> ZoneManager::getTokens(const utilities::Frustum& frustum)
     {
       const glm::vec2 min = glm::floor(glm::vec2(frustum.getMin().x, frustum.getMin().z) / zone_size_);
       const glm::vec2 max = glm::ceil(glm::vec2(frustum.getMax().x, frustum.getMax().z) / zone_size_);
@@ -145,7 +151,8 @@ namespace lambda
       {
         for (int16_t x = (int16_t)min.x; x < (int16_t)max.x; ++x)
         {
-          const Zone& zone = getZone(x, y);
+					mutex_.lock();
+					const Zone& zone = getZone(x, y);
           const glm::vec2 center = zone.getCenter();
 
           const glm::vec3 min = glm::vec3(center.x - half_zone_size_.x, -1000000.0f, center.y - half_zone_size_.y);
@@ -167,7 +174,8 @@ namespace lambda
             const Vector<Token>& t = zone.getTokens();
             tokens.insert(tokens.end(), t.begin(), t.end());
           }
-        }
+					mutex_.unlock();
+				}
       }
 
       std::sort(tokens.begin(), tokens.end());

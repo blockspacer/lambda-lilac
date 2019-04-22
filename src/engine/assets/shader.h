@@ -30,7 +30,8 @@ namespace lambda
 			static void release(Shader* shader, const size_t& hash);
 
 		protected:
-			VioletShader getVioletShader() const { return shader_; }
+			VioletShader& getVioletShader() { return shader_; }
+			const VioletShader& getVioletShader() const { return shader_; }
 			friend class ShaderManager;
 
 		private:
@@ -50,8 +51,12 @@ namespace lambda
 			VioletShaderHandle get(uint64_t hash);
 			void destroy(Shader* shader, const size_t& hash);
 			Array<Array<Vector<char>, VIOLET_LANG_COUNT>, (int)ShaderStages::kCount>
-			getData(const VioletShaderHandle& Shader);
+			getData(VioletShaderHandle Shader);
 
+			VioletShaderHandle getFromCache(Name name);
+			VioletShaderHandle getFromCache(size_t hash);
+			bool hasInCache(Name name);
+			bool hasInCache(size_t hash);
 
 		public:
 			static ShaderManager* getInstance();
@@ -67,6 +72,7 @@ namespace lambda
 			platform::IRenderer* renderer_;
 
 			UnorderedMap<uint64_t, Shader*> shader_cache_;
+			std::mutex mutex_;
 		};
 	}
 }

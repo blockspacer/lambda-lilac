@@ -41,7 +41,7 @@ namespace lambda
       , gs_(nullptr)
       , il_(nullptr)
     {
-		auto data = asset::ShaderManager::getInstance()->getData(shader);
+			auto data = asset::ShaderManager::getInstance()->getData(shader);
 
 			ID3D10Blob* vs_blob = compile(
 				shader->getFilePath(),

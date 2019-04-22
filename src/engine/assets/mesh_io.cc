@@ -187,10 +187,12 @@ namespace lambda
         sm.io.scale        = m.scale;
         sm.io.tex_alb      = m.tex_alb;
         sm.io.tex_nor      = m.tex_nor;
-        sm.io.tex_mrt      = m.tex_mrt;
+        sm.io.tex_dmra     = m.tex_dmra;
+        sm.io.tex_emi      = m.tex_emi;
         sm.io.double_sided = m.double_sided;
         sm.io.metallic     = m.metallic;
         sm.io.roughness    = m.roughness;
+        sm.io.emissiveness = m.emissiveness;
         sm.io.colour       = m.colour;
 
         if (m.pos >= 0) sm.offsets[asset::MeshElements::kPositions] = asset::SubMesh::Offset{
@@ -243,6 +245,7 @@ namespace lambda
 			textures.insert(textures.end(), mesh.data.tex_alb.begin(),  mesh.data.tex_alb.end());
 			textures.insert(textures.end(), mesh.data.tex_nrm.begin(),  mesh.data.tex_nrm.end());
 			textures.insert(textures.end(), mesh.data.tex_dmra.begin(), mesh.data.tex_dmra.end());
+			textures.insert(textures.end(), mesh.data.tex_emi.begin(),  mesh.data.tex_emi.end());
 
       asset::Mesh m;
       m.set(asset::MeshElements::kPositions, eastl::move(pos));
@@ -255,10 +258,11 @@ namespace lambda
       m.set(asset::MeshElements::kIndices,   eastl::move(idx));
       m.setSubMeshes(eastl::move(sub_meshes));
       m.setAttachedTextures(eastl::move(textures));
-      m.setAttachedTextureCount(glm::uvec3(
+      m.setAttachedTextureCount(glm::uvec4(
         mesh.data.tex_alb.size(),
         mesh.data.tex_nrm.size(),
-        mesh.data.tex_dmra.size()
+        mesh.data.tex_dmra.size(),
+				mesh.data.tex_emi.size()
       ));
 
       return m;
@@ -401,7 +405,8 @@ namespace lambda
       Vector<int> idx;
       Vector<int> tex_alb;
       Vector<int> tex_nor;
-      Vector<int> tex_mrt;
+			Vector<int> tex_dmra;
+			Vector<int> tex_emi;
     };
     struct AccessorMemoryConverter
     {
@@ -415,7 +420,8 @@ namespace lambda
       UnorderedMap<int, int> wei;
       UnorderedMap<int, int> tex_alb;
       UnorderedMap<int, int> tex_nor;
-      UnorderedMap<int, int> tex_mrt;
+			UnorderedMap<int, int> tex_dmra;
+			UnorderedMap<int, int> tex_emi;
     };
 
     size_t getElementType(int type, int component_type)
@@ -655,7 +661,8 @@ namespace lambda
       eraseIf(memory.wei, -1);
       eraseIf(memory.tex_alb, -1);
       eraseIf(memory.tex_nor, -1);
-      eraseIf(memory.tex_mrt, -1);
+			eraseIf(memory.tex_dmra, -1);
+			eraseIf(memory.tex_emi, -1);
 
       // Get the used accessors.
       getData(model, memory.pos, converted_mesh.data.pos);
@@ -668,7 +675,8 @@ namespace lambda
       getDataIdx(model, memory.idx, converted_mesh.data.idx);
       getTexture(base_path, model, memory.tex_alb, converted_mesh.data.tex_alb);
       getTexture(base_path, model, memory.tex_nor, converted_mesh.data.tex_nrm);
-      getTexture(base_path, model, memory.tex_mrt, converted_mesh.data.tex_dmra);
+			getTexture(base_path, model, memory.tex_dmra, converted_mesh.data.tex_dmra);
+			getTexture(base_path, model, memory.tex_emi, converted_mesh.data.tex_emi);
 
       auto convert = [](const Vector<int>& v, UnorderedMap<int, int>& m) { m.insert(eastl::make_pair(-1, -1)); for (int i = 0; i < (int)v.size(); ++i) { m.insert(eastl::make_pair(v.at(i), i)); } };
       convert(memory.pos, converter.pos);
@@ -681,7 +689,8 @@ namespace lambda
       convert(memory.idx, converter.idx);
       convert(memory.tex_alb, converter.tex_alb);
       convert(memory.tex_nor, converter.tex_nor);
-      convert(memory.tex_mrt, converter.tex_mrt);
+			convert(memory.tex_dmra, converter.tex_dmra);
+			convert(memory.tex_emi, converter.tex_emi);
 
       converted_mesh.meshes.push_back(MeshIO::SubMesh());
       for (tinygltf::Scene scene : model.scenes)
@@ -747,7 +756,7 @@ namespace lambda
 
         MeshIO::TextureInfo tex_alb;
         MeshIO::TextureInfo tex_nor;
-        MeshIO::TextureInfo tex_mrt;
+        MeshIO::TextureInfo tex_dmra;
 
         for (unsigned int i = 0; i < material->GetTextureCount(aiTextureType_DIFFUSE); ++i)
         {
@@ -943,7 +952,7 @@ namespace lambda
 						LMB_ASSERT(false, "BPP is neither 3 or 4");
 					
 					static int s_index = 0;
-					handle = asset::TextureManager::getInstance()->create(Name("__mesh_io_" + toString(s_index) + "__"), tex);
+					handle = asset::TextureManager::getInstance()->create(Name("__mesh_io_" + toString(s_index++) + "__"), tex);
 				}
 				else
 				{
@@ -1024,18 +1033,26 @@ namespace lambda
             if (true == containsRaw(material.additionalValues, "normalTexture", param)) {
               sub_mesh.tex_nor = converter.tex_nor.at((int)param.json_double_value.at("index"));
             }
-            if (true == containsRaw(material.values, "metallicRoughnessTexture", param)) {
-              sub_mesh.tex_mrt = converter.tex_mrt.at((int)param.json_double_value.at("index"));
-            }
+						if (true == containsRaw(material.values, "metallicRoughnessTexture", param)) {
+							sub_mesh.tex_dmra = converter.tex_dmra.at((int)param.json_double_value.at("index"));
+						}
+						if (true == containsRaw(material.values, "emissiveTexture", param)) {
+							sub_mesh.tex_emi = converter.tex_emi.at((int)param.json_double_value.at("index"));
+						}
             if (true == containsRaw(material.values, "doubleSided", param)) {
               sub_mesh.double_sided = param.bool_value;
             }
             if (true == containsRaw(material.values, "metallicFactor", param)) {
               sub_mesh.metallic = param.number_array.empty() ? 0.0f : (float)param.number_array.at(0);
             }
-            if (true == containsRaw(material.values, "roughnessFactor", param)) {
-              sub_mesh.roughness = param.number_array.empty() ? 0.0f : (float)param.number_array.at(0);
-            }
+						if (true == containsRaw(material.values, "roughnessFactor", param)) {
+							sub_mesh.roughness = param.number_array.empty() ? 0.0f : (float)param.number_array.at(0);
+						}
+						if (true == containsRaw(material.values, "emissiveFactor", param)) {
+							sub_mesh.emissiveness = param.number_array.empty() ? glm::vec3() : glm::vec3(
+								param.number_array.at(0), param.number_array.at(1), param.number_array.at(2)
+							);
+						}
             if (true == containsRaw(material.values, "baseColorFactor", param)) {
               sub_mesh.colour = param.number_array.empty() ? glm::vec4(0.0f) : glm::vec4(
                 (float)param.number_array.at(0), (float)param.number_array.at(1),
@@ -1086,9 +1103,12 @@ namespace lambda
             if (true == containsRaw(model.materials[primitive.material].additionalValues, "normalTexture", param)) {
               insert(memory.tex_nor, (int)param.json_double_value.at("index"));
             }
-            if (true == containsRaw(model.materials[primitive.material].values, "metallicRoughnessTexture", param)) {
-              insert(memory.tex_mrt, (int)param.json_double_value.at("index"));
-            }
+						if (true == containsRaw(model.materials[primitive.material].values, "metallicRoughnessTexture", param)) {
+							insert(memory.tex_dmra, (int)param.json_double_value.at("index"));
+						}
+						if (true == containsRaw(model.materials[primitive.material].values, "emissiveTexture", param)) {
+							insert(memory.tex_emi, (int)param.json_double_value.at("index"));
+						}
           }
         }
       }

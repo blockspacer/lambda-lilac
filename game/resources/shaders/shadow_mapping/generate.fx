@@ -38,10 +38,10 @@ struct VSOutput
   float2 tex       : TEX_COORD;
 };
 
-VSOutput VS(VSInput vIn)
+VSOutput VS(VSInput vIn, uint instanceID : SV_InstanceID)
 {
   VSOutput vOut;
-  vOut.hPosition   = mul(model_matrix, float4(vIn.position, 1.0f));
+  vOut.hPosition   = mul(model_matrix[instanceID], float4(vIn.position, 1.0f));
   vOut.position    = mul(light_view_projection_matrix, vOut.hPosition);
   vOut.tex         = vIn.tex;
   return vOut;
@@ -61,7 +61,7 @@ float4 PS(VSOutput pIn) : SV_Target0
 
 #if LIGHT_POINT || LIGHT_SPOT
   float3 position = pIn.hPosition.xyz;
-  float depth = length(position - camera_position);
+  float depth = length(position - light_position);
 #elif LIGHT_DIRECTIONAL
   float depth = pIn.position.z * light_far;
 #else

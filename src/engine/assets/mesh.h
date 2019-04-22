@@ -85,13 +85,15 @@ namespace lambda
 				glm::quat rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
 				glm::vec3 scale = glm::vec3(1.0f);
 				// Textures.
-				int       tex_alb = -1;
-				int       tex_nor = -1;
-				int       tex_mrt = -1;
+				int       tex_alb  = -1;
+				int       tex_nor  = -1;
+				int       tex_dmra = -1;
+				int       tex_emi  = -1;
 				// Additional information.
 				bool      double_sided = false;
-				float     metallic = 0.0f;
+				float     metallic  = 0.0f;
 				float     roughness = 1.0f;
+				glm::vec3 emissiveness;
 				glm::vec4 colour = glm::vec4(1.0f);
 			} io;
 
@@ -164,8 +166,11 @@ namespace lambda
 			Mesh(const Mesh& mesh);
 			~Mesh();
 
+			// Has
+			bool has(const uint32_t& hash) const;
 			// Get
-			Buffer get(const uint32_t& hash);
+			//Buffer get(const uint32_t& hash);
+			const Buffer& get(const uint32_t& hash) const;
 			template<typename T>
 			Vector<T> get(const uint32_t& hash);
 			template<typename T>
@@ -189,8 +194,8 @@ namespace lambda
 			// Textures
 			void setAttachedTextures(const Vector<VioletTextureHandle>& textures);
 			const Vector<VioletTextureHandle>& getAttachedTextures() const;
-			void setAttachedTextureCount(const glm::uvec3& texture_count);
-			const glm::uvec3& getAttachedTextureCount() const;
+			void setAttachedTextureCount(const glm::uvec4& texture_count);
+			const glm::uvec4& getAttachedTextureCount() const;
 			// Creators
 			static Mesh createPoint();
 			static Mesh createQuad(const glm::vec2& min = glm::vec2(-1.0f), const glm::vec2& max = glm::vec2(1.0f));
@@ -210,7 +215,7 @@ namespace lambda
 			UnorderedMap<uint32_t, bool> changed_;
 
 			Vector<VioletTextureHandle> textures_;
-			glm::uvec3 texture_count_;
+			glm::uvec4 texture_count_;
 
 			Vector<SubMesh> sub_meshes_;
 			Topology topology_ = Topology::kTriangles;

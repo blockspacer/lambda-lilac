@@ -44,13 +44,15 @@ namespace lambda
         int joi = -1;
         int wei = -1;
         // Textures.
-        int tex_alb = -1;
-        int tex_nor = -1;
-        int tex_mrt = -1;
+        int tex_alb  = -1;
+        int tex_nor  = -1;
+				int tex_dmra = -1;
+				int tex_emi  = -1;
         // Additional information.
         bool double_sided = false;
         float metallic = 0.0f;
-        float roughness = 1.0f;
+				float roughness = 1.0f;
+				glm::vec3 emissiveness = glm::vec3(0.0f);
         glm::vec4 colour = glm::vec4(1.0f);
       };
       struct MeshData
@@ -66,6 +68,7 @@ namespace lambda
 				Vector<asset::VioletTextureHandle> tex_alb;
 				Vector<asset::VioletTextureHandle> tex_nrm;
 				Vector<asset::VioletTextureHandle> tex_dmra;
+				Vector<asset::VioletTextureHandle> tex_emi;
       };
       struct Mesh
       {

@@ -42,6 +42,7 @@ Make_SamplerState(SamAnisotrophicWarp, 14);
 #define cbPerLightIdx 4
 #define cbDynamicResolutionIdx 5
 #define cbGuiIdx 6
+#define kPerMeshCount 64
 
 Make_CBuffer(cbUserData, cbUserDataIdx)
 {
@@ -70,8 +71,9 @@ Make_CBuffer(cbPerCamera, cbPerCameraIdx)
 
 Make_CBuffer(cbPerMesh, cbPerMeshIdx)
 {
-  float4x4 model_matrix;
-  float2 metallic_roughness;
+  float4x4 model_matrix[kPerMeshCount];
+  float4   metallic_roughness[kPerMeshCount];
+  float4   emissiveness[kPerMeshCount];
 };
 
 Make_CBuffer(cbPerLight, cbPerLightIdx)

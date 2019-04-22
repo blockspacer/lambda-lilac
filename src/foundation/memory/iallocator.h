@@ -5,7 +5,7 @@
 
 #define VIOLET_DEBUG_MEMORY 0
 #define VIOLET_OPEN_ALLOCATIONS 1
-#define VIOLET_BUFFER_OVERFLOW 1
+#define VIOLET_BUFFER_OVERFLOW 0
 
 namespace lambda
 {

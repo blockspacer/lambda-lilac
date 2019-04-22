@@ -71,22 +71,22 @@ namespace lambda
 
 		///////////////////////////////////////////////////////////////////////////
 		ReactCollisionBody::ReactCollisionBody(
+			scene::Scene& scene,
 			reactphysics3d::DynamicsWorld* dynamics_world,
-			world::IWorld* world,
 			ReactPhysicsWorld* physics_world,
 			entity::Entity entity)
 			: body_(nullptr)
 			, dynamics_world_(dynamics_world)
 			, physics_world_(physics_world)
-			, world_(world)
+			, scene_(scene)
 			, type_(ReactCollisionBodyType::kNone)
 			, entity_(entity)
 			, velocity_constraints_(0)
 			, angular_constraints_(0)
 		{
 			reactphysics3d::Transform transform(
-				toRp(world_->getScene().getSystem<components::TransformSystem>()->getWorldTranslation(entity_) * VIOLET_PHYSICS_SCALE),
-				toRp(world_->getScene().getSystem<components::TransformSystem>()->getWorldRotation(entity_))
+				toRp(components::TransformSystem::getWorldTranslation(entity_, scene_) * VIOLET_PHYSICS_SCALE),
+				toRp(components::TransformSystem::getWorldRotation(entity_, scene_))
 			);
 			body_ = dynamics_world_->createRigidBody(transform);
 			body_->setUserData(foundation::Memory::construct<entity::Entity>(entity_));
@@ -258,7 +258,7 @@ namespace lambda
 		void ReactCollisionBody::makeBoxCollider()
 		{
 			setShape(foundation::Memory::construct<reactphysics3d::BoxShape>(
-				toRp(world_->getScene().getSystem<components::TransformSystem>()->getWorldScale(entity_) * 0.5f * VIOLET_PHYSICS_SCALE))
+				toRp(components::TransformSystem::getWorldScale(entity_, scene_) * 0.5f * VIOLET_PHYSICS_SCALE))
 			);
 		}
 
@@ -266,7 +266,7 @@ namespace lambda
 		void ReactCollisionBody::makeSphereCollider()
 		{
 			setShape(foundation::Memory::construct<reactphysics3d::SphereShape>(
-				reactphysics3d::decimal(world_->getScene().getSystem<components::TransformSystem>()->getWorldScale(entity_).x * 0.5f * VIOLET_PHYSICS_SCALE))
+				reactphysics3d::decimal(components::TransformSystem::getWorldScale(entity_, scene_).x * 0.5f * VIOLET_PHYSICS_SCALE))
 			);
 		}
 
@@ -274,8 +274,8 @@ namespace lambda
 		void ReactCollisionBody::makeCapsuleCollider()
 		{
 			setShape(foundation::Memory::construct<reactphysics3d::CapsuleShape>(
-				reactphysics3d::decimal(world_->getScene().getSystem<components::TransformSystem>()->getWorldScale(entity_).x * 0.5f * VIOLET_PHYSICS_SCALE),
-				reactphysics3d::decimal(world_->getScene().getSystem<components::TransformSystem>()->getWorldScale(entity_).y * 0.5f * VIOLET_PHYSICS_SCALE))
+				reactphysics3d::decimal(components::TransformSystem::getWorldScale(entity_, scene_).x * 0.5f * VIOLET_PHYSICS_SCALE),
+				reactphysics3d::decimal(components::TransformSystem::getWorldScale(entity_, scene_).y * 0.5f * VIOLET_PHYSICS_SCALE))
 			);
 		}
 		
@@ -299,11 +299,10 @@ namespace lambda
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-#pragma optimize("", off)
-		void ReactCollisionBody::makeMeshCollider(asset::MeshHandle mesh, uint32_t sub_mesh_id)
+		void ReactCollisionBody::makeMeshCollider(asset::VioletMeshHandle mesh, uint32_t sub_mesh_id)
 		{
 			// Get the indices.
-			glm::vec3 scale = world_->getScene().getSystem<components::TransformSystem>()->getWorldScale(entity_);
+			glm::vec3 scale = components::TransformSystem::getWorldScale(entity_, scene_);
 			asset::SubMesh sub_mesh = mesh->getSubMeshes().at(sub_mesh_id);
 			auto index_offset = sub_mesh.offsets[asset::MeshElements::kIndices];
 			auto vertex_offset = sub_mesh.offsets[asset::MeshElements::kPositions];
@@ -506,12 +505,10 @@ namespace lambda
 		};
 
     ///////////////////////////////////////////////////////////////////////////
-    void ReactPhysicsWorld::initialize(
-      platform::DebugRenderer* debug_renderer, 
-	  world::IWorld* world)
+    void ReactPhysicsWorld::initialize(scene::Scene& scene)
     {
-			world_ = world;
-			physics_visualizer_.initialize(debug_renderer, false);
+			scene_ = &scene;
+			physics_visualizer_.initialize(&scene_->debug_renderer, false);
 #if defined(_DEBUG) || defined(DEBUG)
 			physics_visualizer_.setDrawEnabled(true);
 #endif
@@ -544,7 +541,7 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
-		void ReactPhysicsWorld::render()
+		void ReactPhysicsWorld::render(scene::Scene& scene)
 		{
 		}
 
@@ -568,8 +565,8 @@ namespace lambda
 					continue;
 
 				entity::Entity entity = rb->getEntity();
-				glm::vec3 position = world_->getScene().getSystem<components::TransformSystem>()->getWorldTranslation(entity) * VIOLET_PHYSICS_SCALE;
-				glm::quat rotation = world_->getScene().getSystem<components::TransformSystem>()->getWorldRotation(entity);
+				glm::vec3 position = components::TransformSystem::getWorldTranslation(entity, *scene_) * VIOLET_PHYSICS_SCALE;
+				glm::quat rotation = components::TransformSystem::getWorldRotation(entity, *scene_);
 
 				if (rb->getVelocityConstraints() || rb->getAngularConstraints())
 				{
@@ -641,8 +638,8 @@ namespace lambda
 					rb->getBody()->setTransform(transform);
 					rb->setAngularVelocity(com_ang);
 				}
-				world_->getScene().getSystem<components::TransformSystem>()->setWorldTranslation(entity, toGlm(transform.getPosition()) * VIOLET_INV_PHYSICS_SCALE);
-				world_->getScene().getSystem<components::TransformSystem>()->setWorldRotation(entity, toGlm(transform.getOrientation()));
+				components::TransformSystem::setWorldTranslation(entity, toGlm(transform.getPosition()) * VIOLET_INV_PHYSICS_SCALE, *scene_);
+				components::TransformSystem::setWorldRotation(entity, toGlm(transform.getOrientation()), *scene_);
 			}
 
 			Vector<Manifold> new_collisions;
@@ -650,14 +647,12 @@ namespace lambda
 			Vector<Manifold> end_collisions;
 			event_listener_->endFrame(new_collisions, stay_collisions, end_collisions);
 
-			components::MonoBehaviourSystem* mono_behaviour_system = world_->getScene().getSystem<components::MonoBehaviourSystem>().get();
-
 			for (const Manifold& manifold : new_collisions)
-				mono_behaviour_system->onCollisionEnter(manifold.lhs, manifold.rhs, manifold.contacts[0].normal * manifold.contacts[0].depth);
+				components::MonoBehaviourSystem::onCollisionEnter(manifold.lhs, manifold.rhs, manifold.contacts[0].normal * manifold.contacts[0].depth, *scene_);
 			//for (const Manifold& manifold : stay_collisions)
-			//	mono_behaviour_system->onCollisionStay(manifold.lhs, manifold.rhs, manifold.contacts[0].normal * manifold.contacts[0].depth);
+			//	components::MonoBehaviourSystem::onCollisionStay(manifold.lhs, manifold.rhs, manifold.contacts[0].normal * manifold.contacts[0].depth, *scene_);
 			for (const Manifold& manifold : end_collisions)
-				mono_behaviour_system->onCollisionExit(manifold.lhs, manifold.rhs, manifold.contacts[0].normal * manifold.contacts[0].depth);
+				components::MonoBehaviourSystem::onCollisionExit(manifold.lhs, manifold.rhs, manifold.contacts[0].normal * manifold.contacts[0].depth, *scene_);
 		}
 
 		///////////////////////////////////////////////////////////////////////////
@@ -699,8 +694,8 @@ namespace lambda
 	ICollisionBody* ReactPhysicsWorld::createCollisionBody(entity::Entity entity)
 	{
 		ReactCollisionBody* rb = foundation::Memory::construct<ReactCollisionBody>(
+			*scene_,
 			dynamics_world_,
-			world_,
 			this,
 			entity
 		);

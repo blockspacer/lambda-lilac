@@ -2321,6 +2321,13 @@ foreign class MeshRender {
     foreign makeDynamic()
     foreign makeDynamicRecursive()
 
+		foreign metallicnessFactor
+		foreign metallicnessFactor=(metallicnessFactor)
+		foreign roughnessFactor
+		foreign roughnessFactor=(roughnessFactor)
+		foreign emissivenessFactor
+		foreign emissivenessFactor=(emissivenessFactor)
+
     foreign mesh
     foreign mesh=(mesh)
     foreign subMesh
@@ -2331,6 +2338,8 @@ foreign class MeshRender {
     foreign normal=(normal)
     foreign DMRA
     foreign DMRA=(dmra)
+    foreign emissive
+    foreign emissive=(emissive)
 }
 )";
         char* data = (char*)WREN_ALLOC(str.size() + 1u);
@@ -2430,18 +2439,53 @@ foreign class MeshRender {
         if (strcmp(signature, "mesh") == 0) return [](WrenVM* vm) {
           Mesh::make(vm, GetForeign<MeshRenderHandle>(vm)->handle.getMesh());
         };
-        if (strcmp(signature, "subMesh=(_)") == 0) return [](WrenVM* vm) {
-          GetForeign<MeshRenderHandle>(vm)->handle.setSubMesh(
-            (uint32_t)wrenGetSlotDouble(vm, 1)
-          );
-        };
-        if (strcmp(signature, "subMesh") == 0) return [](WrenVM* vm) {
-          wrenSetSlotDouble(
-            vm, 
-            0, 
-            (double)GetForeign<MeshRenderHandle>(vm)->handle.getSubMesh()
-          );
-        };
+				if (strcmp(signature, "subMesh=(_)") == 0) return [](WrenVM* vm) {
+					GetForeign<MeshRenderHandle>(vm)->handle.setSubMesh(
+						(uint32_t)wrenGetSlotDouble(vm, 1)
+					);
+				};
+				if (strcmp(signature, "subMesh") == 0) return [](WrenVM* vm) {
+					wrenSetSlotDouble(
+						vm,
+						0,
+						(double)GetForeign<MeshRenderHandle>(vm)->handle.getSubMesh()
+					);
+				};
+				if (strcmp(signature, "metallicnessFactor=(_)") == 0) return [](WrenVM* vm) {
+					GetForeign<MeshRenderHandle>(vm)->handle.setMetallicness(
+						(float)wrenGetSlotDouble(vm, 1)
+					);
+				};
+				if (strcmp(signature, "metallicnessFactor") == 0) return [](WrenVM* vm) {
+					wrenSetSlotDouble(
+						vm,
+						0,
+						(double)GetForeign<MeshRenderHandle>(vm)->handle.getMetallicness()
+					);
+				};
+				if (strcmp(signature, "roughnessFactor=(_)") == 0) return [](WrenVM* vm) {
+					GetForeign<MeshRenderHandle>(vm)->handle.setRoughness(
+						(float)wrenGetSlotDouble(vm, 1)
+					);
+				};
+				if (strcmp(signature, "roughnessFactor") == 0) return [](WrenVM* vm) {
+					wrenSetSlotDouble(
+						vm,
+						0,
+						(double)GetForeign<MeshRenderHandle>(vm)->handle.getRoughness()
+					);
+				};
+				if (strcmp(signature, "emissivenessFactor=(_)") == 0) return [](WrenVM* vm) {
+					GetForeign<MeshRenderHandle>(vm)->handle.setEmissiveness(
+						*GetForeign<glm::vec3>(vm, 1)
+					);
+				};
+				if (strcmp(signature, "emissivenessFactor") == 0) return [](WrenVM* vm) {
+					Vec3::make(
+						vm,
+						GetForeign<MeshRenderHandle>(vm)->handle.getEmissiveness()
+					);
+				};
         if (strcmp(signature, "albedo=(_)") == 0) return [](WrenVM* vm) {
           GetForeign<MeshRenderHandle>(vm)->handle.setAlbedoTexture(
             *GetForeign<asset::VioletTextureHandle>(vm, 1)
@@ -2464,21 +2508,36 @@ foreign class MeshRender {
             GetForeign<MeshRenderHandle>(vm)->handle.getNormalTexture()
           );
         };
-        if (strcmp(signature, "DMRA=(_)") == 0) 
-          return [](WrenVM* vm) {
-          GetForeign<MeshRenderHandle>(vm)->handle.setDMRATexture(
-            *GetForeign<asset::VioletTextureHandle>(vm, 1)
-          );
-        };
-        if (strcmp(signature, "DMRA") == 0) 
-          return [](WrenVM* vm) {
-          Texture::make(
-            vm, 
-            GetForeign<MeshRenderHandle>(
-              vm
-              )->handle.getDMRATexture()
-          );
-        };
+				if (strcmp(signature, "DMRA=(_)") == 0)
+					return [](WrenVM* vm) {
+					GetForeign<MeshRenderHandle>(vm)->handle.setDMRATexture(
+						*GetForeign<asset::VioletTextureHandle>(vm, 1)
+					);
+				};
+				if (strcmp(signature, "DMRA") == 0)
+					return [](WrenVM* vm) {
+					Texture::make(
+						vm,
+						GetForeign<MeshRenderHandle>(
+							vm
+							)->handle.getDMRATexture()
+					);
+				};
+				if (strcmp(signature, "emissive=(_)") == 0)
+					return [](WrenVM* vm) {
+					GetForeign<MeshRenderHandle>(vm)->handle.setEmissiveTexture(
+						*GetForeign<asset::VioletTextureHandle>(vm, 1)
+					);
+				};
+				if (strcmp(signature, "emissive") == 0)
+					return [](WrenVM* vm) {
+					Texture::make(
+						vm,
+						GetForeign<MeshRenderHandle>(
+							vm
+							)->handle.getEmissiveTexture()
+					);
+				};
         if (strcmp(signature, "makeStatic()") == 0) return [](WrenVM* vm) {
           components::MeshRenderSystem::makeStatic(GetForeign<MeshRenderHandle>(vm)->handle.entity(), *g_scene);
         };
@@ -3327,7 +3386,7 @@ class ShadowTypes {
         };
         if (strcmp(signature, "shadowType=(_)") == 0) return [](WrenVM* vm) {
           components::ShadowType shadow_type;
-          switch ((uint32_t)wrenGetSlotDouble(vm, 1))
+					switch ((uint32_t)wrenGetSlotDouble(vm, 1))
           {
           case 0:
             shadow_type = components::ShadowType::kNone;
@@ -4218,7 +4277,7 @@ class Math {
 ///// time.wren ///////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 class Time {
-    static fixedDeltaTime { 0.01666666666 }
+    foreign static fixedDeltaTime
     foreign static deltaTime
 }
 )";
@@ -4228,6 +4287,9 @@ class Time {
 		}
 		WrenForeignMethodFn Bind(const char* signature)
 		{
+			if (strcmp(signature, "fixedDeltaTime") == 0) return [](WrenVM* vm) {
+				wrenSetSlotDouble(vm, 0, g_world->getScene().fixed_time_step);
+			};
 			if (strcmp(signature, "deltaTime") == 0) return [](WrenVM* vm) {
 				wrenSetSlotDouble(vm, 0, g_world->getDeltaTime());
 			};

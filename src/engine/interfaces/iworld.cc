@@ -18,6 +18,7 @@ namespace lambda
 			scene_.renderer  = renderer;
 			scene_.gui       = &gui_;
 			scene_.post_process_manager = &post_process_manager_;
+			scene_.fixed_time_step = 1.0 / 60.0;
 
 			asset::TextureManager::setRenderer(scene_.renderer);
 			asset::ShaderManager::setRenderer(scene_.renderer);
@@ -46,9 +47,8 @@ namespace lambda
 
 			scene_.debug_renderer.Initialize(scene_);
 			
-			const double time_step = 1.0 / 60.0;
 			double time_step_remainer = 0.0;
-
+			
 			while (scene_.window->isOpen())
 			{
 				handleWindowMessages();
@@ -70,22 +70,20 @@ namespace lambda
 				static unsigned char max_step_count_count = 8u;
 				unsigned char time_step_count = 0u;
 				time_step_remainer += delta_time_;
-				while (time_step_remainer >= time_step &&
+				while (time_step_remainer >= scene_.fixed_time_step &&
 					time_step_count++ < max_step_count_count)
 				{
 					fixedUpdate();
-					time_step_remainer -= time_step;
+					time_step_remainer -= scene_.fixed_time_step;
 
-					scripting_->executeFunction("Game::FixedUpdate", { scripting::ScriptValue((float)time_step) });
+					scripting_->executeFunction("Game::FixedUpdate", { scripting::ScriptValue((float)scene_.fixed_time_step) });
 
-					scene::sceneFixedUpdate((float)time_step, scene_);
+					scene::sceneFixedUpdate((float)scene_.fixed_time_step, scene_);
 
 					scene::sceneCollectGarbage(scene_);
 				}
-				if (time_step_remainer >= time_step)
-				{
-					time_step_remainer -= std::floor(time_step_remainer / time_step) * time_step;
-				}
+				if (time_step_remainer >= scene_.fixed_time_step)
+					time_step_remainer -= std::floor(time_step_remainer / scene_.fixed_time_step) * scene_.fixed_time_step;
 				profiler_.endTimer("FixedUpdate");
 
 				update(delta_time_);

@@ -69,7 +69,11 @@ namespace lambda
 			tris_.positions.resize(0u);
 			tris_.colours.resize(0u);
 
-			scene.renderer->bindShaderPass(shader_pass_);
+			scene.renderer->bindShaderPass(ShaderPass(Name("debug"), 
+				asset::ShaderManager::getInstance()->get(Name("resources/shaders/debug.fx")), 
+				{}, 
+				{ scene.post_process_manager->getTarget(scene.post_process_manager->getFinalTarget()) }
+			));
 			scene.renderer->setSubMesh(0u);
 
 			// Lines.
@@ -92,11 +96,11 @@ namespace lambda
 			tris_.mesh = asset::MeshManager::getInstance()->create(Name("debug_mesh_tris"));
 			tris_.mesh->setTopology(asset::Topology::kTriangles);
 
-			shader_pass_ = ShaderPass(Name("debug"), shader, {}, {
+			/*shader_pass_ = ShaderPass(Name("debug"), shader, {}, {
 				scene.post_process_manager->getTarget(
 					scene.post_process_manager->getFinalTarget()
 				)
-			});
+			});*/
 		}
 
 		void DebugRenderer::Deinitialize()

@@ -26,7 +26,7 @@ namespace lambda
 				asset::VioletMeshHandle mesh,
         const uint32_t& sub_mesh_idx
       );
-      void draw(asset::VioletMeshHandle mesh, const uint32_t& sub_mesh_idx);
+      void draw(asset::VioletMeshHandle mesh, const uint32_t& sub_mesh_idx, const uint32_t& instance_count);
 
     private:
       void update(

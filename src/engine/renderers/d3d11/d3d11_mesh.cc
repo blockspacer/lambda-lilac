@@ -33,20 +33,24 @@ namespace lambda
 
       asset::SubMesh& sub_mesh = mesh->getSubMeshes().at(sub_mesh_idx);
 
-      auto size = mesh->get(asset::MeshElements::kPositions).count;
+			const asset::Mesh::Buffer& temp_positions = mesh->get(asset::MeshElements::kPositions);
+			auto size = temp_positions.size;
 
-			for(const auto& stage : stages)
-      {
-        D3D11RenderBuffer*& d3d11_buffer = buffer_[stage];
-        const asset::Mesh::Buffer& mesh_buffer = mesh->get(stage);
-        if (d3d11_buffer == nullptr || mesh->changed(stage))
-          update(mesh_buffer, d3d11_buffer, true);
-        buffers.push_back(
-          d3d11_buffer ? d3d11_buffer->getBuffer() : nullptr
-        );
-        strides.push_back((UINT)sub_mesh.offsets[stage].stride);
-        offsets.push_back((UINT)sub_mesh.offsets[stage].offset);
-      }
+			for (const auto& stage : stages)
+			{
+				if (mesh->has(stage))
+				{
+					D3D11RenderBuffer*& d3d11_buffer = buffer_[stage];
+					const asset::Mesh::Buffer& mesh_buffer = mesh->get(stage);
+					if (d3d11_buffer == nullptr || mesh->changed(stage))
+						update(mesh_buffer, d3d11_buffer, true);
+					buffers.push_back(
+						d3d11_buffer ? d3d11_buffer->getBuffer() : nullptr
+					);
+					strides.push_back((UINT)sub_mesh.offsets[stage].stride);
+					offsets.push_back((UINT)sub_mesh.offsets[stage].offset);
+				}
+			}
 
       context_->getD3D11Context()->IASetVertexBuffers(
         0,
@@ -56,38 +60,40 @@ namespace lambda
         offsets.data()
       );
 
-      const asset::Mesh::Buffer& indices = 
-        mesh->get(asset::MeshElements::kIndices);
-      if (indices.count > 0u)
-      {
-        if (buffer_[asset::MeshElements::kIndices] == nullptr || 
-          mesh->changed(asset::MeshElements::kIndices))
-          update(indices, buffer_.at(asset::MeshElements::kIndices), false);
-        
-        DXGI_FORMAT format = DXGI_FORMAT::DXGI_FORMAT_R32_UINT;
-        switch (indices.size)
-        {
-        case sizeof(uint16_t) :
-          format = DXGI_FORMAT::DXGI_FORMAT_R16_UINT;
-          break;
-        case sizeof(uint32_t) :
-          format = DXGI_FORMAT::DXGI_FORMAT_R32_UINT;
-          break;
-        default:
-          foundation::Error("Mesh: Unknown index size: " + 
-            toString(indices.size) + "\n");
-          break;
-        }
-        context_->getD3D11Context()->IASetIndexBuffer(
-          buffer_.at(asset::MeshElements::kIndices)->getBuffer(),
-          format,
-          (UINT)sub_mesh.offsets[asset::MeshElements::kIndices].offset
-        );
-      }
+			if (mesh->has(asset::MeshElements::kIndices))
+			{
+				const asset::Mesh::Buffer& indices = mesh->get(asset::MeshElements::kIndices);
+				if (indices.count > 0u)
+				{
+					if (buffer_[asset::MeshElements::kIndices] == nullptr ||
+						mesh->changed(asset::MeshElements::kIndices))
+						update(indices, buffer_.at(asset::MeshElements::kIndices), false);
+
+					DXGI_FORMAT format = DXGI_FORMAT::DXGI_FORMAT_R32_UINT;
+					switch (indices.size)
+					{
+					case sizeof(uint16_t) :
+						format = DXGI_FORMAT::DXGI_FORMAT_R16_UINT;
+						break;
+					case sizeof(uint32_t) :
+						format = DXGI_FORMAT::DXGI_FORMAT_R32_UINT;
+						break;
+					default:
+						foundation::Error("Mesh: Unknown index size: " +
+							toString(indices.size) + "\n");
+						break;
+					}
+					context_->getD3D11Context()->IASetIndexBuffer(
+						buffer_.at(asset::MeshElements::kIndices)->getBuffer(),
+						format,
+						(UINT)sub_mesh.offsets[asset::MeshElements::kIndices].offset
+					);
+				}
+			}
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    void D3D11Mesh::draw(asset::VioletMeshHandle mesh, const uint32_t& sub_mesh_idx)
+    void D3D11Mesh::draw(asset::VioletMeshHandle mesh, const uint32_t& sub_mesh_idx, const uint32_t& instance_count)
     {
       asset::SubMesh& sub_mesh = mesh->getSubMeshes().at(sub_mesh_idx);
      
@@ -96,15 +102,19 @@ namespace lambda
       {
         const asset::SubMesh::Offset& idx = 
           sub_mesh.offsets[asset::MeshElements::kIndices];
-        context_->getD3D11Context()->DrawIndexed(
+        context_->getD3D11Context()->DrawIndexedInstanced(
           (UINT)idx.count, 
-          (UINT)sub_mesh.index_offset, 
-          (INT)sub_mesh.vertex_offset
+          (UINT)instance_count,
+					(UINT)sub_mesh.index_offset, 
+          (INT)sub_mesh.vertex_offset,
+					0					
         );
       }
       else
-        context_->getD3D11Context()->Draw(
+        context_->getD3D11Context()->DrawInstanced(
           (UINT)sub_mesh.offsets[asset::MeshElements::kPositions].count,
+					(UINT)instance_count,
+					0,
           0
         );
     }

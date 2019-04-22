@@ -37,12 +37,16 @@ namespace lambda
 			float getMetallicness() const;
 			void setRoughness(const float& roughness);
 			float getRoughness() const;
+			void setEmissiveness(const glm::vec3& emissiveness);
+			glm::vec3 getEmissiveness() const;
 			void setAlbedoTexture(asset::VioletTextureHandle texture);
 			asset::VioletTextureHandle getAlbedoTexture() const;
 			void setNormalTexture(asset::VioletTextureHandle texture);
 			asset::VioletTextureHandle getNormalTexture() const;
 			void setDMRATexture(asset::VioletTextureHandle texture);
 			asset::VioletTextureHandle getDMRATexture() const;
+			void setEmissiveTexture(asset::VioletTextureHandle texture);
+			asset::VioletTextureHandle getEmissiveTexture() const;
 			void attachMesh(asset::VioletMeshHandle mesh);
 			bool getVisible() const;
 			void setVisible(const bool& visible);
@@ -66,11 +70,13 @@ namespace lambda
 				asset::VioletTextureHandle albedo_texture;
 				asset::VioletTextureHandle normal_texture;
 				asset::VioletTextureHandle dmra_texture;
-				float metallicness = 1.0f;
-				float roughness = 1.0f;
-				bool visible = true;
-				bool cast_shadows = true;
-				bool valid = true;
+				asset::VioletTextureHandle emissive_texture;
+				float metallicness = 0.0f;
+				float roughness    = 1.0f;
+				glm::vec3 emissiveness = glm::vec3(0.0f, 0.0f, 0.0f);
+				bool visible       = true;
+				bool cast_shadows  = true;
+				bool valid         = true;
 
 				entity::Entity entity;
 			};
@@ -90,11 +96,12 @@ namespace lambda
 
 				Vector<entity::Entity>         dynamic_renderables;
 				Vector<utilities::Renderable*> static_renderables;
-				utilities::ZoneManager         static_zone_manager;
+				utilities::ZoneManager*        static_zone_manager;
 
 				asset::VioletTextureHandle default_albedo;
 				asset::VioletTextureHandle default_normal;
 				asset::VioletTextureHandle default_dmra;
+				asset::VioletTextureHandle default_emissive;
 			};
 
 			MeshRenderComponent addComponent(const entity::Entity& entity, scene::Scene& scene);
@@ -111,15 +118,19 @@ namespace lambda
 			void setAlbedoTexture(const entity::Entity& entity, asset::VioletTextureHandle texture, scene::Scene& scene);
 			void setNormalTexture(const entity::Entity& entity, asset::VioletTextureHandle texture, scene::Scene& scene);
 			void setDMRATexture(const entity::Entity& entity, asset::VioletTextureHandle texture, scene::Scene& scene);
+			void setEmissiveTexture(const entity::Entity& entity, asset::VioletTextureHandle texture, scene::Scene& scene);
 			void setMetallicness(const entity::Entity& entity, const float& metallicness, scene::Scene& scene);
 			void setRoughness(const entity::Entity& entity, const float& roughness, scene::Scene& scene);
+			void setEmissiveness(const entity::Entity& entity, const glm::vec3& emissiveness, scene::Scene& scene);
 			asset::VioletMeshHandle getMesh(const entity::Entity& entity, scene::Scene& scene);
 			uint32_t getSubMesh(const entity::Entity& entity, scene::Scene& scene);
 			asset::VioletTextureHandle getAlbedoTexture(const entity::Entity& entity, scene::Scene& scene);
 			asset::VioletTextureHandle getNormalTexture(const entity::Entity& entity, scene::Scene& scene);
 			asset::VioletTextureHandle getDMRATexture(const entity::Entity& entity, scene::Scene& scene);
+			asset::VioletTextureHandle getEmissiveTexture(const entity::Entity& entity, scene::Scene& scene);
 			float getMetallicness(const entity::Entity& entity, scene::Scene& scene);
 			float getRoughness(const entity::Entity& entity, scene::Scene& scene);
+			glm::vec3 getEmissiveness(const entity::Entity& entity, scene::Scene& scene);
 			void attachMesh(const entity::Entity& entity, asset::VioletMeshHandle mesh, scene::Scene& scene);
 			bool getVisible(const entity::Entity& entity, scene::Scene& scene);
 			void setVisible(const entity::Entity& entity, const bool& visible, scene::Scene& scene);

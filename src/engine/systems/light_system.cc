@@ -149,6 +149,7 @@ namespace lambda
 
 			void onRender(scene::Scene& scene)
 			{
+				LMB_ASSERT(false, "");
 				scene.renderer->beginTimer("Lighting");
       
 				// Prepare the light buffer.

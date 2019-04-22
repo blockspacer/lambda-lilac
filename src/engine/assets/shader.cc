@@ -165,11 +165,40 @@ namespace lambda
 
 		///////////////////////////////////////////////////////////////////////////
 		Array<Array<Vector<char>, VIOLET_LANG_COUNT>, (int)ShaderStages::kCount>
-			ShaderManager::getData(const VioletShaderHandle& Shader)
+			ShaderManager::getData(VioletShaderHandle Shader)
 		{
-			VioletShader s = Shader->getVioletShader();
+			VioletShader& s = Shader->getVioletShader();
 			getManager().getBlobs(s);
 			return s.blobs;
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		VioletShaderHandle ShaderManager::getFromCache(Name name)
+		{
+			auto it = shader_cache_.find(name.getHash());
+			LMB_ASSERT(it != shader_cache_.end(), "Could not find shader %s in cache", name.getName().c_str());
+			return VioletShaderHandle(it->second, name);
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		VioletShaderHandle ShaderManager::getFromCache(size_t hash)
+		{
+			auto it = shader_cache_.find(hash);
+			LMB_ASSERT(it != shader_cache_.end(), "Could not find shader with hash %llu in cache", hash);
+			return VioletShaderHandle(it->second, Name("shader with unknown origin"));
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		bool ShaderManager::hasInCache(Name name)
+		{
+			return hasInCache(name.getHash());
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		bool ShaderManager::hasInCache(size_t hash)
+		{
+			auto it = shader_cache_.find(hash);
+			return it != shader_cache_.end();
 		}
 
 		///////////////////////////////////////////////////////////////////////////
