@@ -47,7 +47,6 @@ namespace lambda
 		  //, input_format_(VK_NULL_HANDLE)
 	  {
 		  auto data = asset::ShaderManager::getInstance()->getData(shader);
-		  Vector<VkPipelineShaderStageCreateInfo> shader_stages;
 
 		  if (!data[(int)ShaderStages::kVertex][VIOLET_SPIRV].empty())
 		  {
@@ -61,7 +60,7 @@ namespace lambda
 					"VS",
 					VK_SHADER_STAGE_VERTEX_BIT))
 				{
-					shader_stages.push_back(shader_stage);
+					shader_stages_.push_back(shader_stage);
 				}
 		  }
 
@@ -77,7 +76,7 @@ namespace lambda
 					"PS",
 					VK_SHADER_STAGE_FRAGMENT_BIT))
 				{
-					shader_stages.push_back(shader_stage);
+					shader_stages_.push_back(shader_stage);
 				}
 		  }
 
@@ -93,7 +92,7 @@ namespace lambda
 					"GS",
 					VK_SHADER_STAGE_GEOMETRY_BIT))
 				{
-					shader_stages.push_back(shader_stage);
+					shader_stages_.push_back(shader_stage);
 				}
 		  }
 
@@ -149,7 +148,7 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
-	Vector<uint32_t> VulkanShader::getStages() const
+		Vector<uint32_t> VulkanShader::getStages() const
     {
       return stages_;
     }
@@ -175,6 +174,12 @@ namespace lambda
 		uint32_t VulkanShader::getNumRenderTargets()
 		{
 			return num_render_targets_;
+		}
+
+		///////////////////////////////////////////////////////////////////////////
+		const Vector<VkPipelineShaderStageCreateInfo>& VulkanShader::getShaderStages()
+		{
+			return shader_stages_;
 		}
 
 		///////////////////////////////////////////////////////////////////////////

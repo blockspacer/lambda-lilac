@@ -98,8 +98,10 @@ namespace lambda
 		vkDestroySwapchainKHR(device_, swapchain_, allocator_);
 		vkDestroyDevice(device_, allocator_);
 		vkDestroySurfaceKHR(instance_, surface_, allocator_);
+#if VIOLET_DEBUG
 		PFN_vkDestroyDebugUtilsMessengerEXT destroyDebugUtilsMessengerEXT = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance_, "vkDestroyDebugUtilsMessengerEXT");
 		destroyDebugUtilsMessengerEXT(instance_, debug_messenger_, allocator_);
+#endif
 		vkDestroyInstance(instance_, allocator_);
 	}
 

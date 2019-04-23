@@ -22,8 +22,9 @@ namespace lambda
 
 	  Vector<VulkanReflectionInfo> getTextures();
 	  Vector<VulkanReflectionInfo> getSamplers();
-      Vector<VulkanReflectionInfo> getBuffers();
+    Vector<VulkanReflectionInfo> getBuffers();
 	  uint32_t getNumRenderTargets();
+		const Vector<VkPipelineShaderStageCreateInfo>& getShaderStages();
 
 	  void reflect();
 
@@ -40,6 +41,7 @@ namespace lambda
 	  Vector<VulkanReflectionInfo> samplers_;
       Vector<VulkanReflectionInfo> buffers_;
 	  uint32_t num_render_targets_;
+		Vector<VkPipelineShaderStageCreateInfo> shader_stages_;
 
 	  VulkanRenderer* renderer_;
 	  //VezVertexInputFormat input_format_;

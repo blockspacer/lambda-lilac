@@ -20,7 +20,7 @@
 #undef max
 #endif
 
-#define USE_MT 1
+#define USE_MT 0
 #define USE_SEPARATE_CONSTRUCT 0
 #define USE_RENDERABLES 1
 
