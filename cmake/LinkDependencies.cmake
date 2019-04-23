@@ -76,7 +76,7 @@ function(LinkDependencies)
   # ///////////////////////////////////////////////////////////////
   IF(${VIOLET_CONFIG_ENGINE})
     IF(${VIOLET_RENDERER} STREQUAL "Vulkan")
-	    SET(USE_VEZ TRUE)
+	    #SET(USE_VEZ TRUE)
     ENDIF()
 
     IF(${VIOLET_ASSET_ASSIMP})

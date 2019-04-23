@@ -114,8 +114,12 @@ SET(NoRendererSources
 )
 SET(VulkanRendererSources
   "renderers/vulkan/vulkan.h"
+  "renderers/vulkan/vulkan_device_manager.h"
+  "renderers/vulkan/vulkan_device_manager.cc"
   "renderers/vulkan/vulkan_mesh.h"
   "renderers/vulkan/vulkan_mesh.cc"
+  "renderers/vulkan/vulkan_pipeline_state_manager.h"
+  "renderers/vulkan/vulkan_pipeline_state_manager.cc"
   "renderers/vulkan/vulkan_renderer.h"
   "renderers/vulkan/vulkan_renderer.cc"
   "renderers/vulkan/vulkan_shader.h"
@@ -493,18 +497,10 @@ IF(${VIOLET_RENDERER} STREQUAL "D3D11")
 	TARGET_COMPILE_DEFINITIONS(lambda-engine PRIVATE VIOLET_RENDERER_D3D11)
 ENDIF()
 IF(${VIOLET_RENDERER} STREQUAL "Vulkan")
-	TARGET_COMPILE_DEFINITIONS(lambda-engine PRIVATE VIOLET_RENDERER_VULKAN)
-	TARGET_LINK_LIBRARIES(lambda-engine PUBLIC VEZ)
-  
-  IF(VIOLET_WIN32)
-  
-      #COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/V-EZ/Bin/x86_64/VEZ_Debug.dll ${CMAKE_BINARY_DIR}/bin/Debug/VEZ_Debug.dll
-      #COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/V-EZ/Bin/x86_64/VEZ_MinSizeRel.dll ${CMAKE_BINARY_DIR}/bin/MinSizeRel/VEZ_MinSizeRel.dll
-      #COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/V-EZ/Bin/x86_64/VEZ_Release.dll ${CMAKE_BINARY_DIR}/bin/Release/VEZ_Release.dll
-    #ADD_CUSTOM_COMMAND(TARGET lambda-engine POST_BUILD
-    #  COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/V-EZ/Bin/x86_64/VEZ_RelWithDebugInfo.dll ${CMAKE_BINARY_DIR}/bin/RelWithDebInfo/VEZ_RelWithDebugInfo.dll)
+  TARGET_COMPILE_DEFINITIONS(lambda-engine PRIVATE VIOLET_RENDERER_VULKAN)
+  TARGET_INCLUDE_DIRECTORIES(lambda-engine PRIVATE $ENV{VULKAN_SDK}/Include)
+	TARGET_LINK_LIBRARIES(lambda-engine PUBLIC $ENV{VULKAN_SDK}/Lib/vulkan-1.lib)
   ENDIF()
-ENDIF()
 IF(${VIOLET_RENDERER} STREQUAL "Metal")
   TARGET_LINK_LIBRARIES(lambda-engine PUBLIC "-framework Metal -framework MetalKit -framework Cocoa -framework AudioToolbox -framework CoreFoundation -framework AppKit -framework QuartzCore")
 	TARGET_COMPILE_DEFINITIONS(lambda-engine PRIVATE VIOLET_RENDERER_METAL)

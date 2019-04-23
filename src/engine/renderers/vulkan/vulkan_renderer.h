@@ -2,6 +2,7 @@
 #include "interfaces/irenderer.h"
 #include "vulkan.h"
 #include "vulkan_state_manager.h"
+#include "vulkan_device_manager.h"
 
 namespace lambda
 {
@@ -147,13 +148,6 @@ namespace lambda
 		  bool recording;
 	  };
 
-	  struct VulkanFramebuffer
-	  {
-		  Framebuffer    alloc;
-		  VezFramebuffer framebuffer;
-		  Vector<VezAttachmentReference> attachment_references;
-	  };
-
     ///////////////////////////////////////////////////////////////////////////
     class VulkanRenderer : public platform::IRenderer
     {
@@ -193,8 +187,7 @@ namespace lambda
       /////////////////////////////////////////////////////////////////////////
       ///// Deferred Calls ////////////////////////////////////////////////////
       /////////////////////////////////////////////////////////////////////////
-      virtual void draw() override;
-      virtual void drawInstanced(const Vector<glm::mat4>& matrices) override;
+      virtual void draw(uint32_t instance_count) override;
 
       virtual void setRasterizerState(
         const platform::RasterizerState& rasterizer_state
@@ -290,13 +283,7 @@ namespace lambda
 	  scene::Scene* scene_;
 	  scene::Scene* override_scene_;
 
-	  VkInstance instance_;
-	  VkPhysicalDevice physical_device_;
-	  VkSurfaceKHR surface_;
-	  VkDevice device_;
-	  VezSwapchain swapchain_;
-
-	  VkQueue graphics_queue_;
+	  VulkanDeviceManager device_manager_;
 	  VulkanCommandBuffer command_buffer_;
 
 	  enum class DirtyState : uint32_t
@@ -345,8 +332,6 @@ namespace lambda
 		  VkImageView render_targets[8];
 		  VkImageView depth_target;
 
-		  VulkanFramebuffer* framebuffer;
-
 		  VkRect2D scissor_rects[8];
 		  VkViewport viewports[8];
 
@@ -388,11 +373,9 @@ namespace lambda
 		  VulkanShader* getShader(asset::VioletShaderHandle handle);
 		  VulkanRenderTexture* getTexture(asset::VioletTextureHandle handle);
 		  VulkanMesh* getMesh(asset::VioletMeshHandle handle);
-		  VulkanFramebuffer* getFramebuffer(const Framebuffer& framebuffer);
 		  void removeShader(asset::VioletShaderHandle handle);
 		  void removeTexture(asset::VioletTextureHandle handle);
 		  void removeMesh(asset::VioletMeshHandle handle);
-		  void removeFramebuffer(const Framebuffer& framebuffer);
 		  void removeShader(size_t handle);
 		  void removeTexture(size_t handle);
 		  void removeMesh(size_t handle);
@@ -402,7 +385,6 @@ namespace lambda
 		  UnorderedMap<size_t, Entry<VulkanShader*>> shaders;
 		  UnorderedMap<size_t, Entry<VulkanRenderTexture*>> textures;
 		  UnorderedMap<size_t, Entry<VulkanMesh*>> meshes;
-		  UnorderedMap<Framebuffer, Entry<VulkanFramebuffer*>> framebuffers;
 		  VulkanRenderer* renderer;
 	  } memory_;
 

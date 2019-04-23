@@ -300,7 +300,7 @@ namespace lambda
 		target_descs[VIOLET_DXIL].version   = nullptr;
 		target_descs[VIOLET_SPIRV].language = ShaderConductor::ShadingLanguage::SpirV;
 		target_descs[VIOLET_SPIRV].version  = nullptr;
-		target_descs[VIOLET_METAL].language = ShaderConductor::ShadingLanguage::Msl;
+		target_descs[VIOLET_METAL].language = ShaderConductor::ShadingLanguage::Msl_macOS;
 		target_descs[VIOLET_METAL].version  = nullptr;
 		target_descs[VIOLET_HLSL].language  = ShaderConductor::ShadingLanguage::Hlsl;
 		target_descs[VIOLET_HLSL].version   = "50";

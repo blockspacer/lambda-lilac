@@ -42,8 +42,7 @@ namespace lambda
 	  uint32_t num_render_targets_;
 
 	  VulkanRenderer* renderer_;
-	  VezPipeline pipeline_;
-	  VezVertexInputFormat input_format_;
+	  //VezVertexInputFormat input_format_;
 	};
   }
 }

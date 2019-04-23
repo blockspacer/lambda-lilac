@@ -15,13 +15,13 @@ namespace lambda
 
 	struct VulkanRasterizationState
 	{
-      VezRasterizationState rasterization;
+      //VezRasterizationState rasterization;
 	};
 
     struct VulkanColorBlendState
     {
-      VezColorBlendState blend_state;
-      VezColorBlendAttachmentState attachments[8];
+      //VezColorBlendState blend_state;
+	  //VezColorBlendAttachmentState attachments[8];
     };
 
 	struct VulkanSampler
@@ -31,12 +31,12 @@ namespace lambda
     
 	struct VulkanPipelineDepthStencilState
 	{
-      VezPipelineDepthStencilState depth_stencil;
+      //VezPipelineDepthStencilState depth_stencil;
 	};
 
     struct VulkanInputAssemblyState
     {
-      VezInputAssemblyState input_assembly;
+      //VezInputAssemblyState input_assembly;
     };
 
     ///////////////////////////////////////////////////////////////////////////

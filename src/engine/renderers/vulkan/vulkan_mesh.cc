@@ -46,12 +46,12 @@ namespace lambda
 
 			if (!buffers.empty())
 			{
-				vezCmdBindVertexBuffers(
+				/*vezCmdBindVertexBuffers(
 					0,
 					(uint32_t)buffers.size(),
 					buffers.data(),
 					offsets.data()
-				);
+				);*/
 			}
 
 			const asset::Mesh::Buffer& indices =
@@ -76,11 +76,11 @@ namespace lambda
 						toString(indices.size) + "\n");
 					break;
 				}
-				vezCmdBindIndexBuffer(
+				/*vezCmdBindIndexBuffer(
 					buffer_.at(asset::MeshElements::kIndices)->getBuffer(), 
 					sub_mesh.offsets[asset::MeshElements::kIndices].offset, 
 					index_type
-				);
+				);*/
 			}
 		}
 
@@ -94,21 +94,21 @@ namespace lambda
 			{
 				const asset::SubMesh::Offset& idx =
 					sub_mesh.offsets[asset::MeshElements::kIndices];
-				vezCmdDrawIndexed(
-					(uint32_t)idx.count, 
-					1, 
-					(uint32_t)sub_mesh.index_offset, 
-					(uint32_t)sub_mesh.vertex_offset, 
+				/*vezCmdDrawIndexed(
+					(uint32_t)idx.count,
+					1,
+					(uint32_t)sub_mesh.index_offset,
+					(uint32_t)sub_mesh.vertex_offset,
 					0
-				);
+				);*/
 			}
 			else
-				vezCmdDraw(
+				/*vezCmdDraw(
 					(uint32_t)sub_mesh.offsets[asset::MeshElements::kPositions].count,
 					1,
 					0,
 					0
-				);
+				)*/;
 		}
 
 		///////////////////////////////////////////////////////////////////////////

@@ -1410,7 +1410,7 @@ namespace lambda
 #if VIOLET_WIN32
 				SetThreadPriority(k_construct.thread.native_handle(), THREAD_PRIORITY_TIME_CRITICAL);
 				SetThreadPriorityBoost(k_construct.thread.native_handle(), TRUE);
-				SetThreadDescription(k_construct.thread.native_handle(), L"Construct Thread");
+				//SetThreadDescription(k_construct.thread.native_handle(), L"Construct Thread");
 #endif
 			}
 #endif
@@ -1421,7 +1421,7 @@ namespace lambda
 #if VIOLET_WIN32
 				SetThreadPriority(k_flush.thread.native_handle(), THREAD_PRIORITY_TIME_CRITICAL);
 				SetThreadPriorityBoost(k_flush.thread.native_handle(), TRUE);
-				SetThreadDescription(k_flush.thread.native_handle(), L"Flush Thread");
+				//SetThreadDescription(k_flush.thread.native_handle(), L"Flush Thread");
 #endif
 			}
 #endif
