@@ -6,6 +6,7 @@ namespace lambda
 {
   namespace linux
   {
+    ///////////////////////////////////////////////////////////////////////////
     const char* vkErrorCode(const VkResult& result)
 	{
       switch(result)
@@ -89,6 +90,7 @@ namespace lambda
 		createSwapchain(window);
 	}
 
+	///////////////////////////////////////////////////////////////////////////
 	void VulkanDeviceManager::deinitialize()
 	{
 		for (const auto& view : swapchain_image_views_)
@@ -105,6 +107,7 @@ namespace lambda
 		vkDestroyInstance(instance_, allocator_);
 	}
 
+	///////////////////////////////////////////////////////////////////////////
 	void VulkanDeviceManager::initializeLayers()
 	{
 		instance_layers_ = { "VK_LAYER_LUNARG_standard_validation" };
@@ -125,6 +128,7 @@ namespace lambda
 		device_extensions_ = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 	}
 
+	///////////////////////////////////////////////////////////////////////////
 	void VulkanDeviceManager::validateInstance()
 	{
 		VkResult result;
@@ -173,6 +177,7 @@ namespace lambda
 		}
 	}
 
+	///////////////////////////////////////////////////////////////////////////
 	void VulkanDeviceManager::createInstance()
 	{
 		VkApplicationInfo application_info {};
@@ -196,6 +201,7 @@ namespace lambda
 		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Failed to create instance | %s", vkErrorCode(result));
 	}
 
+	///////////////////////////////////////////////////////////////////////////
 	void VulkanDeviceManager::createDebug()
 	{
 #if VIOLET_DEBUG
@@ -223,6 +229,7 @@ namespace lambda
 #endif
 	}
 
+	///////////////////////////////////////////////////////////////////////////
 	void VulkanDeviceManager::getPhysicalDevice()
 	{
 		uint32_t physical_device_count;
@@ -247,6 +254,7 @@ namespace lambda
 		LMB_ASSERT(physical_device_ != VK_NULL_HANDLE, "VULKAN: Could not find physical device");
 	}
 
+	///////////////////////////////////////////////////////////////////////////
 	void VulkanDeviceManager::createSurface(platform::IWindow* window)
 	{
 #if VIOLET_WIN32
@@ -263,6 +271,7 @@ namespace lambda
 #endif
 	}
 
+	///////////////////////////////////////////////////////////////////////////
 	void VulkanDeviceManager::findQueues()
 	{
 		uint32_t queue_family_count;
@@ -292,6 +301,7 @@ namespace lambda
 		LMB_ASSERT(compute_queue_family_ != UINT32_MAX, "VULKAN: Could not find a valid compute queue family");
 	}
 
+	///////////////////////////////////////////////////////////////////////////
 	void VulkanDeviceManager::validateDevice()
 	{
 		VkResult result;
@@ -343,6 +353,7 @@ namespace lambda
 		}
 	}
 
+	///////////////////////////////////////////////////////////////////////////
 	void VulkanDeviceManager::createDevice()
 	{
 		float queue_priority = 1.0f;
@@ -380,6 +391,7 @@ namespace lambda
 		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not create device | %s", vkErrorCode(result));
 	}
 
+	///////////////////////////////////////////////////////////////////////////
 	void VulkanDeviceManager::getQueues()
 	{
 		LMB_ASSERT(graphics_queue_family_ != UINT32_MAX, "VULKAN: Could not find a valid graphics queue family");
@@ -390,6 +402,7 @@ namespace lambda
 		vkGetDeviceQueue(device_, compute_queue_family_,  0, &compute_queue_);
 	}
 
+	///////////////////////////////////////////////////////////////////////////
 	void VulkanDeviceManager::createSwapchain(platform::IWindow* window)
 	{
 		VkResult result;

@@ -3,6 +3,7 @@
 #include "vulkan.h"
 #include "vulkan_state_manager.h"
 #include "vulkan_device_manager.h"
+#include "vulkan_pipeline_state_manager.h"
 
 namespace lambda
 {
@@ -284,6 +285,7 @@ namespace lambda
 	  scene::Scene* override_scene_;
 
 	  VulkanDeviceManager device_manager_;
+	  VulkanPipelineStateManager pipeline_state_manager_;
 	  VulkanCommandBuffer command_buffer_;
 
 	  enum class DirtyState : uint32_t

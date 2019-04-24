@@ -165,7 +165,7 @@ namespace lambda
 		default_texture_ = asset::TextureManager::getInstance()->create(
 			Name("__default_render_texture__"),
 			1u, 1u, 1u, TextureFormat::kR8G8B8A8,
-			kTextureFlagIsRenderTarget, // TODO (Hilze): Remove!
+			kTextureFlagIsRenderTarget,
 			Vector<char>(4, 255)
 		);
 	}
@@ -180,9 +180,23 @@ namespace lambda
 	void VulkanRenderer::setWindow(platform::IWindow* window)
 	{
 		device_manager_.initialize(window);
+		pipeline_state_manager_.initialize(&device_manager_);
 
-		memory_.getShader(full_screen_quad_.shader);
-		
+		VulkanWrapperImage wrapper_image;
+		wrapper_image.format = device_manager_.getSwapchainFormat();
+		wrapper_image.image  = device_manager_.getSwapchainImage(0);
+		wrapper_image.layout = VK_IMAGE_LAYOUT_UNDEFINED;
+		wrapper_image.view   = device_manager_.getSwapchainImageView(0);
+		pipeline_state_manager_.setBlendState(platform::BlendState::Default());
+		pipeline_state_manager_.setRasterizer(platform::RasterizerState::SolidNone());
+		pipeline_state_manager_.setRenderTargets({ &wrapper_image });
+		pipeline_state_manager_.setShader(memory_.getShader(full_screen_quad_.shader));
+		pipeline_state_manager_.setTopology(asset::Topology::kTriangles);
+		pipeline_state_manager_.bindPipeline();
+		pipeline_state_manager_.bindPipeline();
+		pipeline_state_manager_.setTopology(asset::Topology::kLines);
+		pipeline_state_manager_.bindPipeline();
+
 		createCommandBuffer();
 
 		// Set VSync.
@@ -191,15 +205,15 @@ namespace lambda
 		state_manager_.initialize(this);
 		resize();
 
-		setSamplerState(platform::SamplerState::PointClamp(), 6u);
-		setSamplerState(platform::SamplerState::LinearClamp(), 7u);
-		setSamplerState(platform::SamplerState::AnisotrophicClamp(), 8u);
-		setSamplerState(platform::SamplerState::PointBorder(), 9u);
-		setSamplerState(platform::SamplerState::LinearBorder(), 10u);
+		setSamplerState(platform::SamplerState::PointClamp(),         6u);
+		setSamplerState(platform::SamplerState::LinearClamp(),        7u);
+		setSamplerState(platform::SamplerState::AnisotrophicClamp(),  8u);
+		setSamplerState(platform::SamplerState::PointBorder(),        9u);
+		setSamplerState(platform::SamplerState::LinearBorder(),       10u);
 		setSamplerState(platform::SamplerState::AnisotrophicBorder(), 11u);
-		setSamplerState(platform::SamplerState::PointWrap(), 12u);
-		setSamplerState(platform::SamplerState::LinearWrap(), 13u);
-		setSamplerState(platform::SamplerState::AnisotrophicWrap(), 14u);
+		setSamplerState(platform::SamplerState::PointWrap(),          12u);
+		setSamplerState(platform::SamplerState::LinearWrap(),         13u);
+		setSamplerState(platform::SamplerState::AnisotrophicWrap(),   14u);
 
 		for (uint32_t i = 0; i < 16; ++i)
 			setTexture(default_texture_, i);
