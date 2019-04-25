@@ -1,15 +1,6 @@
 [STRENGTH1|STRENGTH2|STRENGTH3|STRENGTH4|STRENGTH5]
 #include "common.fxh"
 
-// Make_CBuffer(cbUser, cbUserIdx)
-// {
-//   float bias          = 0.025f;
-//   float sample_radius = 0.0025f;
-// };
-static const float bias          = 0.025f;
-static const float sample_radius = 0.0025f;
-
-
 #if TYPE == STRENGTH1 || TYPE == DEFAULT
 static const float kStrength = 1.0f;
 #elif TYPE == STRENGTH2
@@ -105,20 +96,20 @@ VSOutput VS(uint id: SV_VertexID)
 }
 
 Make_Texture2D(tex_position, 0);
-Make_Texture2D(tex_normal, 1);
-Make_Texture2D(tex_random, 2);
-Make_Texture2D(tex_depth, 3);
+Make_Texture2D(tex_normal,   1);
+Make_Texture2D(tex_random,   2);
+Make_Texture2D(tex_depth,    3);
 
-static const float kSurfaceEpsilon = 0.025f;
-static const float kOcclusionRadius = 0.125f;
+static const float kSurfaceEpsilon     = 0.025f;
+static const float kOcclusionRadius    = 0.125f;
 static const float kOcclusionFadeStart = 0.2f;
-static const float kOcclusionFadeEnd = 1.0f;
+static const float kOcclusionFadeEnd   = 1.0f;
 
 static const float4x4 kProjTex = float4x4(
-  0.5f, 0.0f, 0.0f, 0.0f,
+  0.5f,  0.0f, 0.0f, 0.0f,
   0.0f, -0.5f, 0.0f, 0.0f,
-  0.0f, 0.0f, 1.0f, 0.0f,
-  0.5f, 0.5f, 0.0f, 1.0f
+  0.0f,  0.0f, 1.0f, 0.0f,
+  0.5f,  0.5f, 0.0f, 1.0f
 );
 
 // Determines how much the sample point q occludes the point p as a function

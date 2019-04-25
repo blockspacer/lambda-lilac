@@ -5,6 +5,7 @@
 #define NORMAL_MAPPING 1
 #define VIOLET_GRID_ALBEDO 0
 #define VIOLET_DYNAMIC_GRID_SIZE 1
+#define VIOLET_DISPLACEMENT 1
 
 struct VSInput
 {
@@ -114,6 +115,7 @@ float2 parallaxMapping(float2 tex, float3 eye)
 }
 #endif
 
+[earlydepthstencil]
 PSOutput PS(VSOutput pIn)
 {
 #if VIOLET_PARALLAX_MAPPING
@@ -149,11 +151,16 @@ PSOutput PS(VSOutput pIn)
   float3 N = normalize(pIn.normal);
 #endif
 
-  float3 mra    = tex_dmra.Sample(SamLinearWarp, pIn.tex).gba * float3(pIn.mr, 1.0f);
+  const float4 dmra = tex_dmra.Sample(SamLinearWarp, pIn.tex);
+  const float3 mra    = dmra.gba * float3(pIn.mr, 1.0f);
   pOut.position = float4(pIn.hPosition.xyz, 1.0f);
   pOut.normal   = float4(N * 0.5f + 0.5f, 1.0f);
   pOut.mra      = float4(mra, 1.0f);
   pOut.emissive = float4(tex_emissive.Sample(SamLinearWarp, pIn.tex).rgb * pIn.emissive, 1.0f);
+
+#if VIOLET_DISPLACEMENT
+  pOut.position.xyz += pIn.normal * dmra.r * height_scale * 2.5f;
+#endif
 
   return pOut;
 }

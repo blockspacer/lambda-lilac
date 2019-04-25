@@ -34,7 +34,7 @@ namespace lambda
 	  const Vector<VioletShaderResource>& getSamplers();
 
     private:
-      void reflectInputLayout(ID3D10Blob* blob, ID3D11Device* device);
+			void reflectInputLayout(ID3D10Blob* blob, Vector<VioletShaderResource::Input> inputs, ID3D11Device* device);
 
     private:
       ID3D11VertexShader*   vs_;

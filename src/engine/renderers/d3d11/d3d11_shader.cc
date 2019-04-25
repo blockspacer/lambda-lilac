@@ -23,16 +23,17 @@ namespace lambda
 
 			LMB_ASSERT((source.size() > 3 && (source[0] == 'D' && source[1] == 'X' && source[2] == 'B' && source[3] == 'C')), "D3D11SHADER: Shader was invalid");
 
-			ID3D10Blob* blob;
-			HRESULT res = D3DCreateBlob(source.size(), &blob);
-			LMB_ASSERT(res == S_OK, "[SHADER] Failed to create blob!");
+			ID3D10Blob* blob = nullptr;
+			HRESULT result = D3DCreateBlob(source.size(), &blob);
+			LMB_ASSERT(SUCCEEDED(result), "[SHADER] Failed to create blob!");
 			memcpy(blob->GetBufferPointer(), source.data(), source.size());
 
 			return blob;
 		}
 
     ///////////////////////////////////////////////////////////////////////////
-    D3D11Shader::D3D11Shader(
+#pragma optimize ("", off)
+		D3D11Shader::D3D11Shader(
       asset::VioletShaderHandle shader,
       D3D11Context* context)
       : context_(context)
@@ -41,67 +42,7 @@ namespace lambda
       , gs_(nullptr)
       , il_(nullptr)
     {
-			auto data = asset::ShaderManager::getInstance()->getData(shader);
-
-			ID3D10Blob* vs_blob = compile(
-				shader->getFilePath(),
-				data[(int)ShaderStages::kVertex][VIOLET_HLSL],
-				"VS",
-				"vs_5_0"
-			);
-			ID3D10Blob* ps_blob = compile(
-				shader->getFilePath(),
-				data[(int)ShaderStages::kPixel][VIOLET_HLSL],
-				"PS",
-				"ps_5_0"
-			);
-			ID3D10Blob* gs_blob = compile(
-				shader->getFilePath(),
-				data[(int)ShaderStages::kGeometry][VIOLET_HLSL],
-				"GS",
-				"gs_5_0"
-			);
-
-			if (vs_blob)
-			{
-				if (FAILED(context_->getD3D11Device()->CreateVertexShader(
-					vs_blob->GetBufferPointer(),
-					vs_blob->GetBufferSize(),
-					NULL,
-					&vs_
-				)))
-					vs_ = nullptr;
-
-				if (vs_)
-					reflectInputLayout(vs_blob, context_->getD3D11Device());
-				if (vs_blob) vs_blob->Release();
-			}
-
-			if (ps_blob)
-			{
-				if (FAILED(context_->getD3D11Device()->CreatePixelShader(
-					ps_blob->GetBufferPointer(),
-					ps_blob->GetBufferSize(),
-					NULL,
-					&ps_
-				)))
-					ps_ = nullptr;
-
-				if (ps_blob) ps_blob->Release();
-			}
-
-			if (gs_blob)
-			{
-				if (FAILED(context_->getD3D11Device()->CreateGeometryShader(
-					gs_blob->GetBufferPointer(),
-					gs_blob->GetBufferSize(),
-					NULL,
-					&gs_
-				)))
-					gs_ = nullptr;
-
-				if (gs_blob) gs_blob->Release();
-			}
+			Vector<VioletShaderResource::Input> reflection_inputs;
 
 			for (uint32_t i = 0; i < (uint32_t)ShaderStages::kCount; ++i)
 			{
@@ -114,12 +55,44 @@ namespace lambda
 						break;
 					case VioletShaderResourceType::kSampler:
 						samplers_.push_back(resource);
-						break; 
+						break;
 					case VioletShaderResourceType::kTexture:
 						textures_.push_back(resource);
 						break;
+					case VioletShaderResourceType::kVertexInput:
+						reflection_inputs = resource.inputs;
+						break;
 					}
 				}
+			}
+
+			auto data = asset::ShaderManager::getInstance()->getData(shader);
+
+			ID3D10Blob* vs_blob = compile(shader->getFilePath(), data[(int)ShaderStages::kVertex][VIOLET_HLSL],   "VS", "vs_5_0");
+			ID3D10Blob* ps_blob = compile(shader->getFilePath(), data[(int)ShaderStages::kPixel][VIOLET_HLSL],    "PS", "ps_5_0");
+			ID3D10Blob* gs_blob = compile(shader->getFilePath(), data[(int)ShaderStages::kGeometry][VIOLET_HLSL], "GS", "gs_5_0");
+
+			HRESULT result = S_OK;
+
+			if (vs_blob)
+			{
+				result = context_->getD3D11Device()->CreateVertexShader(vs_blob->GetBufferPointer(), vs_blob->GetBufferSize(), NULL, &vs_);
+				LMB_ASSERT(SUCCEEDED(result), "D3D11 SHADER: Could not create vertex shader");
+				reflectInputLayout(vs_blob, reflection_inputs, context_->getD3D11Device());
+				vs_blob->Release();
+			}
+			if (ps_blob)
+			{
+				result = context_->getD3D11Device()->CreatePixelShader(ps_blob->GetBufferPointer(), ps_blob->GetBufferSize(), NULL, &ps_);
+				LMB_ASSERT(SUCCEEDED(result), "D3D11 SHADER: Could not create vertex shader");
+				ps_blob->Release();
+			}
+
+			if (gs_blob)
+			{
+				result = context_->getD3D11Device()->CreateGeometryShader(gs_blob->GetBufferPointer(), gs_blob->GetBufferSize(), NULL, &gs_);
+				LMB_ASSERT(SUCCEEDED(result), "D3D11 SHADER: Could not create vertex shader");
+				gs_blob->Release();
 			}
     }
     
@@ -187,138 +160,88 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    void D3D11Shader::reflectInputLayout(
-      ID3D10Blob* blob, 
-      ID3D11Device* device)
-    {
-      ID3D11ShaderReflection* reflection = nullptr;
-      if (FAILED(D3DReflect(
-        blob->GetBufferPointer(), 
-        blob->GetBufferSize(), 
-        IID_PPV_ARGS(&reflection)
-      )))
-      {
-        MessageBox(NULL, "Failed to do shader reflection!", "Shader", 0);
-        return;
-      }
+#pragma optimize ("", off)
+		void D3D11Shader::reflectInputLayout(ID3D10Blob* blob, Vector<VioletShaderResource::Input> inputs, ID3D11Device* device)
+		{
+			//! Input layout.
+			int idx = 0;
+			int offset = 0;
+			int inl = 0;
 
-      D3D11_SHADER_DESC shader_description{};
-      reflection->GetDesc(&shader_description);
+			Vector<D3D11_INPUT_ELEMENT_DESC> input_layout;
+			for (const VioletShaderResource::Input& input : inputs)
+			{
+				if (input.name.find("SV_") != String::npos)
+					continue;
 
-      //! Input layout.
-      int idx    = 0;
-      int offset = 0;
-      int inl    = 0;
+				D3D11_INPUT_ELEMENT_DESC element;
+				element.SemanticName = input.name.c_str();
+				String semantic = input.name;
 
-      Vector<D3D11_INPUT_ELEMENT_DESC> input_layout;
-      for (uint32_t i = 0; i < shader_description.InputParameters; ++i)
-      {
-        D3D11_SIGNATURE_PARAMETER_DESC parameter;
-        reflection->GetInputParameterDesc(i,&parameter);
+				// Inlining
+				if (semantic.find("inl_") != String::npos)
+				{
+					semantic = semantic.substr(strlen("inl_"));
+					element.InputSlot = idx;
+					inl++;
+				}
+				else
+				{
+					if (inl == 0)
+					{
+						element.InputSlot = idx++;
+					}
+					else
+					{
+						element.InputSlot = ++idx;
+					}
+					offset = 0;
+				}
 
-        D3D11_INPUT_ELEMENT_DESC element;
-        element.SemanticName = parameter.SemanticName;
+				if (semantic.find("use_me_") != String::npos)
+					semantic = semantic.substr(strlen("use_me_"));
 
-				String semantic = element.SemanticName;
+				element.SemanticIndex = input.semantic_index;
+				element.AlignedByteOffset = offset;
+				element.InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+				element.InstanceDataStepRate = 0;
 
-        // Inlining
-        if (semantic.find("inl_") != String::npos)
-        {
-          semantic = semantic.substr(strlen("inl_"));
-          element.InputSlot = idx;
-          inl++;
-        }
-        else
-        {
-          if (inl == 0)
-          {
-            element.InputSlot = idx++;
-          }
-          else
-          {
-            element.InputSlot = ++idx;
-          }
-          offset = 0;
-        }
-
-        if (semantic.find("use_me_") != String::npos)
-          semantic = semantic.substr(strlen("use_me_"));
-
-		element.SemanticIndex = parameter.SemanticIndex;
-		element.AlignedByteOffset = offset;
-		element.InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-		element.InstanceDataStepRate = 0;
-
-        // Instancing
-        if (String(element.SemanticName).find("instance_") != String::npos)
-        {
+				// Instancing
+				if (String(element.SemanticName).find("instance_") != String::npos)
+				{
 					semantic = semantic.substr(strlen("instance_"));
-          element.InputSlotClass = D3D11_INPUT_PER_INSTANCE_DATA;
-          element.InstanceDataStepRate = 1;
-        }
+					element.InputSlotClass = D3D11_INPUT_PER_INSTANCE_DATA;
+					element.InstanceDataStepRate = 1;
+				}
 
 				if (inl <= 1)
 					stages_.push_back(constexprHash(semantic));
-			
-				if (parameter.Mask == 1)
-        {
-          if (parameter.ComponentType == D3D_REGISTER_COMPONENT_UINT32)  
-            element.Format = DXGI_FORMAT_R32_UINT;
-          else if (parameter.ComponentType == D3D_REGISTER_COMPONENT_SINT32)  
-            element.Format = DXGI_FORMAT_R32_SINT;
-          else if (parameter.ComponentType == D3D_REGISTER_COMPONENT_FLOAT32) 
-            element.Format = DXGI_FORMAT_R32_FLOAT;
-        }
-        else if (parameter.Mask <= 3)
-        {
-          if (parameter.ComponentType == D3D_REGISTER_COMPONENT_UINT32)  
-            element.Format = DXGI_FORMAT_R32G32_UINT;
-          else if (parameter.ComponentType == D3D_REGISTER_COMPONENT_SINT32)  
-            element.Format = DXGI_FORMAT_R32G32_SINT;
-          else if (parameter.ComponentType == D3D_REGISTER_COMPONENT_FLOAT32) 
-            element.Format = DXGI_FORMAT_R32G32_FLOAT;
-        }
-        else if (parameter.Mask <= 7)
-        {
-          if (parameter.ComponentType == D3D_REGISTER_COMPONENT_UINT32)  
-            element.Format = DXGI_FORMAT_R32G32B32_UINT;
-          else if (parameter.ComponentType == D3D_REGISTER_COMPONENT_SINT32)  
-            element.Format = DXGI_FORMAT_R32G32B32_SINT;
-          else if (parameter.ComponentType == D3D_REGISTER_COMPONENT_FLOAT32) 
-            element.Format = DXGI_FORMAT_R32G32B32_FLOAT;
-        }
-        else if (parameter.Mask <= 15)
-        {
-          if (parameter.ComponentType == D3D_REGISTER_COMPONENT_UINT32)  
-            element.Format = DXGI_FORMAT_R32G32B32A32_UINT;
-          else if (parameter.ComponentType == D3D_REGISTER_COMPONENT_SINT32)  
-            element.Format = DXGI_FORMAT_R32G32B32A32_SINT;
-          else if (parameter.ComponentType == D3D_REGISTER_COMPONENT_FLOAT32) 
-            element.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-        }
-        
-        offset += sizeFromFormat(element.Format);
 
-        input_layout.push_back(element);
-      }
+				switch (input.type)
+				{
+				case VioletShaderComponentType::kUint1:  element.Format = DXGI_FORMAT_R32_SINT; break;
+				case VioletShaderComponentType::kInt1:   element.Format = DXGI_FORMAT_R32_UINT; break;
+				case VioletShaderComponentType::kFloat1: element.Format = DXGI_FORMAT_R32_FLOAT; break;
+				case VioletShaderComponentType::kUint2:  element.Format = DXGI_FORMAT_R32G32_SINT; break;
+				case VioletShaderComponentType::kInt2:   element.Format = DXGI_FORMAT_R32G32_UINT; break;
+				case VioletShaderComponentType::kFloat2: element.Format = DXGI_FORMAT_R32G32_FLOAT; break;
+				case VioletShaderComponentType::kUint3:  element.Format = DXGI_FORMAT_R32G32B32_SINT; break;
+				case VioletShaderComponentType::kInt3:   element.Format = DXGI_FORMAT_R32G32B32_UINT; break;
+				case VioletShaderComponentType::kFloat3: element.Format = DXGI_FORMAT_R32G32B32_FLOAT; break;
+				case VioletShaderComponentType::kUint4:  element.Format = DXGI_FORMAT_R32G32B32A32_SINT; break;
+				case VioletShaderComponentType::kInt4:   element.Format = DXGI_FORMAT_R32G32B32A32_UINT; break;
+				case VioletShaderComponentType::kFloat4: element.Format = DXGI_FORMAT_R32G32B32A32_FLOAT; break;
+				}
 
-      ID3D11InputLayout* input_layout_ptr;
+				offset += sizeFromFormat(element.Format);
+				input_layout.push_back(element);
+			}
 
-      if (FAILED(device->CreateInputLayout(
-        input_layout.data(),
-        (UINT)input_layout.size(),
-        blob->GetBufferPointer(),
-        blob->GetBufferSize(),
-      &input_layout_ptr
-      )))
-      {
-        LMB_ASSERT(false, "D3D11Shader: Failed to create input layout!");
-        return;
-      }
-
-      il_ = input_layout_ptr;
-
-      reflection->Release();
-    }
+			if (!input_layout.empty())
+			{
+				HRESULT result = device->CreateInputLayout(input_layout.data(), (UINT)input_layout.size(), blob->GetBufferPointer(), blob->GetBufferSize(), &il_);
+				LMB_ASSERT(SUCCEEDED(result), "D3D11Shader: Failed to create input layout");
+			}
+		}
   }
 }

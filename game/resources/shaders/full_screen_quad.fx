@@ -20,6 +20,6 @@ Make_Texture2D(tex_to_screen, 0);
 
 float4 PS(VSOutput pIn) : SV_TARGET0
 {
-  return float4(pIn.tex, 0.0f, 1.0f);
-  //return tex_to_screen.Sample(SamPointClamp, pIn.tex * copy_resolution_scale);
+  //return float4(pIn.tex, 0.0f, 1.0f);
+  return tex_to_screen.Sample(SamPointClamp, pIn.tex * copy_resolution_scale);
 }

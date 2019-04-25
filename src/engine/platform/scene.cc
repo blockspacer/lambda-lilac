@@ -1216,8 +1216,8 @@ namespace lambda
 			render_actions.insert(render_actions.end(), scene.render_actions.begin(), scene.render_actions.end());
 			scene.render_actions = eastl::move(render_actions);
 
-			//camera_batch  = constructCamera(scene, scene.camera.main_camera);
-			//light_batches = constructLight(camera_batch, scene);
+			camera_batch  = constructCamera(scene, scene.camera.main_camera);
+			light_batches = constructLight(camera_batch, scene);
 		}
 
 		struct Thread

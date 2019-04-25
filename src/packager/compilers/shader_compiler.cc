@@ -161,6 +161,7 @@ bool compileHLSL(lambda::String file, lambda::String source, lambda::String perm
 		if (stage[0] == 'v' || stage[0] == 'V')
 		{
 			lambda::VioletShaderResource vertex_input;
+			vertex_input.type = lambda::VioletShaderResourceType::kVertexInput;
 
 			for (uint32_t i = 0; i < desc.InputParameters; ++i)
 			{

@@ -183,6 +183,7 @@ namespace lambda
 	}
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#pragma optimize("", off)
 	VioletShader VioletShaderManager::JSonToShaderHeader(Vector<char> data)
 	{
 		rapidjson::Document doc;
@@ -236,7 +237,7 @@ namespace lambda
 				uint32_t num_items  = (uint32_t)std::stoul(indices[idx++].c_str());
 				uint32_t num_inputs = (uint32_t)std::stoul(indices[idx++].c_str());
 
-				while (idx < num_items)
+				for (uint32_t i = 0; i < num_items; ++i)
 				{
 					VioletShaderResource::Item item;
 					item.name   = indices[idx++];
@@ -245,7 +246,7 @@ namespace lambda
 					resource.items.push_back(item);
 				}
 				
-				while (idx < num_inputs)
+				for (uint32_t i = 0; i < num_inputs; ++i)
 				{
 					VioletShaderResource::Input input;
 					input.name   = indices[idx++];
