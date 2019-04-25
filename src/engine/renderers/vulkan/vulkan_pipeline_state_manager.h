@@ -131,9 +131,11 @@ namespace lambda
 			void setShader(VulkanShader* shader);
 			void setRasterizer(platform::RasterizerState rasterizer);
 			void setBlendState(platform::BlendState blend_state);
-			void bindPipeline();
 			void setRenderTargets(const Vector<VulkanWrapperImage*>& render_targets);
 			void setTopology(const asset::Topology& topology);
+			void bindPipeline();
+			void endRenderPass();
+			void beginRenderPass();
 
 		private:
 			VulkanDeviceManager* device_manager_;
@@ -158,6 +160,7 @@ namespace lambda
 				Vector<VulkanWrapperImage*> render_targets;
 			} state_;
 
+			VkDescriptorSetLayout descriptor_set_layout_;
 
 			struct Memory
 			{
@@ -176,10 +179,14 @@ namespace lambda
 			struct VkState
 			{
 				memory::Pipeline pipeline;
+				memory::Framebuffer framebuffer;
+				memory::RenderPass render_pass;
 
 				// Bound.
 				VkPipeline bound_pipeline;
+				VkRenderPass bound_render_pass;
 				VkFramebuffer bound_framebuffer;
+				bool in_render_pass;
 
 				uint32_t dirty;
 			} vk_state_;

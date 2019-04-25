@@ -88,6 +88,9 @@ namespace lambda
 		createDevice();
 		getQueues();
 		createSwapchain(window);
+		createCommandPool();
+		createCommandBuffers();
+		createSemaphores();
 	}
 
 	///////////////////////////////////////////////////////////////////////////
@@ -105,6 +108,64 @@ namespace lambda
 		destroyDebugUtilsMessengerEXT(instance_, debug_messenger_, allocator_);
 #endif
 		vkDestroyInstance(instance_, allocator_);
+	}
+	
+	///////////////////////////////////////////////////////////////////////////
+	void VulkanDeviceManager::beginFrame()
+	{
+		vkWaitForFences(device_, 1, &in_flight_fences_[current_frame_], VK_TRUE, UINT64_MAX);
+		vkResetFences(device_, 1, &in_flight_fences_[current_frame_]);
+
+		VkCommandBufferBeginInfo command_buffer_begin_info{};
+		command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		command_buffer_begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+		VkResult result;
+		result = vkBeginCommandBuffer(command_buffers_[current_frame_], &command_buffer_begin_info);
+		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: could not begin command buffer | %s", vkErrorCode(result));
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+#pragma optimize ("", off)
+	void VulkanDeviceManager::endFrame()
+	{
+		VkResult result;
+		result = vkEndCommandBuffer(command_buffers_[current_frame_]);
+		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: could not end command buffer | %s", vkErrorCode(result));
+
+		uint32_t image_index;
+		result = vkAcquireNextImageKHR(device_, swapchain_, UINT64_MAX, image_available_semaphore_[current_frame_], VK_NULL_HANDLE, &image_index);		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: could not acquire nex image KHR | %s", vkErrorCode(result));
+
+		VkSemaphore wait_semaphores[]   = { image_available_semaphore_[current_frame_] };
+		VkSemaphore signal_semaphores[] = { render_finished_semaphore_[current_frame_] };
+		VkPipelineStageFlags wait_stages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+		VkSubmitInfo submit_info{};
+		submit_info.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submit_info.waitSemaphoreCount   = 1;
+		submit_info.pWaitSemaphores      = wait_semaphores;
+		submit_info.pWaitDstStageMask    = wait_stages;
+		submit_info.signalSemaphoreCount = 1;
+		submit_info.pSignalSemaphores    = signal_semaphores;		submit_info.commandBufferCount   = 1;
+		submit_info.pCommandBuffers      = &command_buffers_[current_frame_];
+
+		result = vkQueueSubmit(graphics_queue_, 1, &submit_info, in_flight_fences_[current_frame_]);
+		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: could not submit queue | %s", vkErrorCode(result));
+		VkSwapchainKHR swapchains[] = { swapchain_ };
+		VkPresentInfoKHR present_info{};
+		present_info.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+		present_info.waitSemaphoreCount = 1;
+		present_info.pWaitSemaphores    = signal_semaphores;		present_info.swapchainCount     = 1;
+		present_info.pSwapchains        = swapchains;
+		present_info.pImageIndices      = &image_index;
+		present_info.pResults           = nullptr;
+
+		result = vkQueuePresentKHR(present_queue_, &present_info);
+		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: could not present queue KHR | %s", vkErrorCode(result));
+
+		result = vkQueueWaitIdle(present_queue_);
+		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: could not wait queue idle | %s", vkErrorCode(result));
+	
+		current_frame_ = (current_frame_ + 1) % command_buffers_.size();
 	}
 
 	///////////////////////////////////////////////////////////////////////////
@@ -531,6 +592,56 @@ namespace lambda
 
 			result = vkCreateImageView(device_, &image_view_create_info, allocator_, &swapchain_image_views_[i]);
 			LMB_ASSERT(result == VK_SUCCESS, "VULKAN: could not create image view | %s", vkErrorCode(result));
+		}
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	void VulkanDeviceManager::createCommandPool()
+	{
+		VkCommandPoolCreateInfo command_pool_create_info{};
+		command_pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		command_pool_create_info.queueFamilyIndex = graphics_queue_family_;
+
+		VkResult result;
+		result = vkCreateCommandPool(device_, &command_pool_create_info, allocator_, &command_pool_);
+		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: could not create command pool | %s", vkErrorCode(result));
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	void VulkanDeviceManager::createCommandBuffers()
+	{
+		command_buffers_.resize(swapchain_images_.size());
+		VkCommandBufferAllocateInfo command_buffer_allocate_info{};
+		command_buffer_allocate_info.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		command_buffer_allocate_info.commandBufferCount = (uint32_t)command_buffers_.size();
+		command_buffer_allocate_info.commandPool        = command_pool_;
+		command_buffer_allocate_info.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+
+		VkResult result;
+		result = vkAllocateCommandBuffers(device_, &command_buffer_allocate_info, command_buffers_.data());
+		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: could not allocate command buffers | %s", vkErrorCode(result));
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	void VulkanDeviceManager::createSemaphores()
+	{
+		VkSemaphoreCreateInfo semaphore_create_info{};
+		semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+		VkFenceCreateInfo fence_create_info{};
+		fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;		VkResult result;
+
+		image_available_semaphore_.resize(command_buffers_.size());
+		render_finished_semaphore_.resize(command_buffers_.size());
+		in_flight_fences_.resize(command_buffers_.size());
+		for (uint32_t i = 0; i < command_buffers_.size(); ++i)
+		{
+			result = vkCreateSemaphore(device_, &semaphore_create_info, allocator_, &image_available_semaphore_[i]);
+			LMB_ASSERT(result == VK_SUCCESS, "VULKAN: could not create semaphore | %s", vkErrorCode(result));
+			result = vkCreateSemaphore(device_, &semaphore_create_info, allocator_, &render_finished_semaphore_[i]);
+			LMB_ASSERT(result == VK_SUCCESS, "VULKAN: could not create semaphore | %s", vkErrorCode(result));
+			result = vkCreateFence(device_, &fence_create_info, allocator_, &in_flight_fences_[i]);
+			LMB_ASSERT(result == VK_SUCCESS, "VULKAN: could not create fence | %s", vkErrorCode(result));
 		}
 	}
   }

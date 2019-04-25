@@ -182,21 +182,6 @@ namespace lambda
 		device_manager_.initialize(window);
 		pipeline_state_manager_.initialize(&device_manager_);
 
-		VulkanWrapperImage wrapper_image;
-		wrapper_image.format = device_manager_.getSwapchainFormat();
-		wrapper_image.image  = device_manager_.getSwapchainImage(0);
-		wrapper_image.layout = VK_IMAGE_LAYOUT_UNDEFINED;
-		wrapper_image.view   = device_manager_.getSwapchainImageView(0);
-		pipeline_state_manager_.setBlendState(platform::BlendState::Default());
-		pipeline_state_manager_.setRasterizer(platform::RasterizerState::SolidNone());
-		pipeline_state_manager_.setRenderTargets({ &wrapper_image });
-		pipeline_state_manager_.setShader(memory_.getShader(full_screen_quad_.shader));
-		pipeline_state_manager_.setTopology(asset::Topology::kTriangles);
-		pipeline_state_manager_.bindPipeline();
-		pipeline_state_manager_.bindPipeline();
-		pipeline_state_manager_.setTopology(asset::Topology::kLines);
-		pipeline_state_manager_.bindPipeline();
-
 		createCommandBuffer();
 
 		// Set VSync.
@@ -248,6 +233,44 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     void VulkanRenderer::startFrame()
     {
+		{
+			device_manager_.beginFrame();
+
+			VulkanWrapperImage wrapper_image;
+			wrapper_image.format = device_manager_.getSwapchainFormat();
+			wrapper_image.image = device_manager_.getSwapchainImage();
+			wrapper_image.layout = VK_IMAGE_LAYOUT_UNDEFINED;
+			wrapper_image.view = device_manager_.getSwapchainImageView();
+			wrapper_image.width = getScene()->window->getSize().x;
+			wrapper_image.height = getScene()->window->getSize().y;
+
+			pipeline_state_manager_.setBlendState(platform::BlendState::Default());
+			pipeline_state_manager_.setRasterizer(platform::RasterizerState::SolidNone());
+			pipeline_state_manager_.setRenderTargets({ &wrapper_image });
+			setShader(full_screen_quad_.shader);
+			pipeline_state_manager_.setTopology(asset::Topology::kTriangles);
+			pipeline_state_manager_.bindPipeline();
+
+			VkViewport viewport;
+			viewport.width = (float)wrapper_image.width;
+			viewport.height = (float)wrapper_image.height;
+			viewport.minDepth = 0.0f;
+			viewport.maxDepth = 1.0f;
+			viewport.x = 0;
+			viewport.y = 0;
+			vkCmdSetViewport(device_manager_.getCommandBuffer(), 0, 1, &viewport);
+			VkRect2D scissor;
+			scissor.extent.width = wrapper_image.width;
+			scissor.extent.height = wrapper_image.height;
+			scissor.offset.x = 0;
+			scissor.offset.y = 0;
+			vkCmdSetScissor(device_manager_.getCommandBuffer(), 0, 1, &scissor);
+			vkCmdDraw(device_manager_.getCommandBuffer(), 6, 1, 0, 0);
+
+			pipeline_state_manager_.endRenderPass();
+			device_manager_.endFrame();
+		}
+
 		command_buffer_.tryBegin();
 
 		// Clear everything.
@@ -277,7 +300,7 @@ namespace lambda
 		memset(&vk_state_, 0, sizeof(vk_state_));
 		invalidateAll();
 
-		if (!cbs_.drs) cbs_.drs = (VulkanRenderBuffer*)allocRenderBuffer(sizeof(float), platform::IRenderBuffer::kFlagConstant | platform::IRenderBuffer::kFlagDynamic, nullptr);
+		/*if (!cbs_.drs) cbs_.drs = (VulkanRenderBuffer*)allocRenderBuffer(sizeof(float), platform::IRenderBuffer::kFlagConstant | platform::IRenderBuffer::kFlagDynamic, nullptr);
 		float drs_data[] = { dynamic_resolution_scale_ };
 		memcpy(cbs_.drs->lock(), drs_data, sizeof(drs_data));
 		cbs_.drs->unlock();
@@ -287,7 +310,7 @@ namespace lambda
 		float per_frame_data[] = { screen_size_.x, screen_size_.y, delta_time_, total_time_ };
 		memcpy(cbs_.per_frame->lock(), per_frame_data, sizeof(per_frame_data));
 		cbs_.per_frame->unlock();
-		setConstantBuffer(cbs_.per_frame, cbPerFrameIdx);
+		setConstantBuffer(cbs_.per_frame, cbPerFrameIdx);*/
 	}
    
     ///////////////////////////////////////////////////////////////////////////
@@ -431,13 +454,13 @@ namespace lambda
     void VulkanRenderer::setRasterizerState(
       const platform::RasterizerState& rasterizer_state)
     {
-		state_manager_.bindRasterizerState(rasterizer_state);
-    }
+		pipeline_state_manager_.setRasterizer(rasterizer_state);
+	}
 
     ///////////////////////////////////////////////////////////////////////////
     void VulkanRenderer::setBlendState(const platform::BlendState& blend_state)
     {
-		state_manager_.bindBlendState(blend_state);
+		pipeline_state_manager_.setBlendState(blend_state);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -458,31 +481,31 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     void VulkanRenderer::generateMipMaps(const asset::VioletTextureHandle& texture)
     {
-		if (!texture)
+		/*if (!texture)
 			return;
 
 		VulkanRenderTexture* t = memory_.getTexture(texture);
 		if (t)
-			t->getTexture()->generateMips();
+			t->getTexture()->generateMips();*/
     }
     
     ///////////////////////////////////////////////////////////////////////////
     void VulkanRenderer::copyToScreen(const asset::VioletTextureHandle& texture)
     {
-		VulkanRenderTexture* src_texture = memory_.getTexture(texture);
+		/*VulkanRenderTexture* src_texture = memory_.getTexture(texture);
 
 		copy(
 			src_texture->getTexture()->getTexture(),
 			glm::uvec2(src_texture->getWidth(), src_texture->getHeight()),
 			backbuffer_,
 			glm::uvec2(backbuffer_width_, backbuffer_height_)
-		);
+		);*/
 	}
 
 	///////////////////////////////////////////////////////////////////////////
 	void VulkanRenderer::copyToTexture(const asset::VioletTextureHandle& src, const asset::VioletTextureHandle& dst)
 	{
-		VulkanRenderTexture* src_texture = memory_.getTexture(src);
+		/*VulkanRenderTexture* src_texture = memory_.getTexture(src);
 		VulkanRenderTexture* dst_texture = memory_.getTexture(dst);
 
 		copy(
@@ -490,117 +513,117 @@ namespace lambda
 			glm::uvec2(src_texture->getWidth(), src_texture->getHeight()),
 			dst_texture->getTexture()->getTexture(),
 			glm::uvec2(dst_texture->getWidth(), dst_texture->getHeight())
-		);
+		);*/
 	}
     
     ///////////////////////////////////////////////////////////////////////////
     void VulkanRenderer::bindShaderPass(const platform::ShaderPass& shader_pass)
     {
-		setShader(shader_pass.getShader());
+		//setShader(shader_pass.getShader());
 
-		for (uint32_t i = 0; i < shader_pass.getInputs().size(); ++i)
-		{
-			LMB_ASSERT(false == shader_pass.getInputs()[i].isBackBuffer(), "VULKAN: Cannot bind back buffer as input");
-			setTexture(shader_pass.getInputs()[i].getTexture(), i);
-		}
-
-
-		// Outputs.
-		Vector<VkImageView> rtvs;
-		VkImageView dsv = VK_NULL_HANDLE;
-		Vector<glm::vec4> viewports;
-		Vector<glm::vec4> scissor_rects;
-
-		for (auto& output : shader_pass.getOutputs())
-		{
-			if (output.isBackBuffer())
-			{
-				// TODO (Hilze): Support.
-				viewports.push_back({
-					0.0f,
-					0.0f,
-					(float)backbuffer_width_,
-					(float)backbuffer_height_
-				});
-				rtvs.push_back(backbuffer_view_);
-				scissor_rects.push_back({
-					0.0f,
-					0.0f,
-					(float)backbuffer_width_,
-					(float)backbuffer_height_
-				});
-			}
-			else if (output.getTexture()->getLayer(0u).getFormat() == TextureFormat::kR24G8 ||
-				output.getTexture()->getLayer(0u).getFormat() == TextureFormat::kD32)
-			{
-				auto t = memory_.getTexture(output.getTexture())->getTexture();
-				dsv = t->getSubView(output.getLayer(), output.getMipMap());
-			}
-			else
-			{
-				for (const auto& input : shader_pass.getInputs())
-					LMB_ASSERT(input.getName() != output.getName(), "ERR");
-
-				auto t = memory_.getTexture(output.getTexture())->getTexture();
-				rtvs.push_back(t->getSubView(output.getLayer(), output.getMipMap()));
-
-				viewports.push_back({
-					0.0f,
-					0.0f,
-					(float)std::max(1u, output.getTexture()->getLayer(0u).getWidth() >> output.getMipMap()),
-					(float)std::max(1u, output.getTexture()->getLayer(0u).getHeight() >> output.getMipMap())
-				});
-
-				if (output.getTexture()->getLayer(0u).getFlags() &
-					kTextureFlagDynamicScale)
-					viewports.back() *= dynamic_resolution_scale_;
-
-				scissor_rects.push_back({
-					0u,
-					0u,
-					(LONG)viewports.back().z,
-					(LONG)viewports.back().w
-				});
-			}
-		}
-
-		if (viewports.empty() && dsv)
-		{
-			viewports.push_back({
-				0.0f,
-				0.0f,
-				(float)(
-					shader_pass.getOutputs()[0u].getTexture()->getLayer(0u).getWidth()
-					>> shader_pass.getOutputs()[0u].getMipMap()),
-					(float)(
-						shader_pass.getOutputs()[0u].getTexture()->getLayer(0u).getHeight()
-						>> shader_pass.getOutputs()[0u].getMipMap())
-			});
-
-			if (shader_pass.getOutputs()[0u].getTexture()->getLayer(0u).getFlags()
-				& kTextureFlagDynamicScale)
-				viewports.back() *= dynamic_resolution_scale_;
-
-			scissor_rects.push_back({
-				0u,
-				0u,
-				(LONG)viewports.back().z,
-				(LONG)viewports.back().w
-			});
-		}
-
-		// Shader.
-		setScissorRects(scissor_rects);
-		setViewports(viewports);
+		//for (uint32_t i = 0; i < shader_pass.getInputs().size(); ++i)
+		//{
+		//	LMB_ASSERT(false == shader_pass.getInputs()[i].isBackBuffer(), "VULKAN: Cannot bind back buffer as input");
+		//	setTexture(shader_pass.getInputs()[i].getTexture(), i);
+		//}
 
 
-		state_.rt_width  = (uint32_t)viewports[0].z;
-		state_.rt_height = (uint32_t)viewports[0].w;
+		//// Outputs.
+		//Vector<VkImageView> rtvs;
+		//VkImageView dsv = VK_NULL_HANDLE;
+		//Vector<glm::vec4> viewports;
+		//Vector<glm::vec4> scissor_rects;
 
-		memcpy(vk_state_.render_targets, rtvs.data(), rtvs.size() * sizeof(VkImageView));
-		vk_state_.depth_target = dsv;
-		
-		makeDirty(DirtyState::kRenderTargets);
+		//for (auto& output : shader_pass.getOutputs())
+		//{
+		//	if (output.isBackBuffer())
+		//	{
+		//		// TODO (Hilze): Support.
+		//		viewports.push_back({
+		//			0.0f,
+		//			0.0f,
+		//			(float)backbuffer_width_,
+		//			(float)backbuffer_height_
+		//		});
+		//		rtvs.push_back(backbuffer_view_);
+		//		scissor_rects.push_back({
+		//			0.0f,
+		//			0.0f,
+		//			(float)backbuffer_width_,
+		//			(float)backbuffer_height_
+		//		});
+		//	}
+		//	else if (output.getTexture()->getLayer(0u).getFormat() == TextureFormat::kR24G8 ||
+		//		output.getTexture()->getLayer(0u).getFormat() == TextureFormat::kD32)
+		//	{
+		//		auto t = memory_.getTexture(output.getTexture())->getTexture();
+		//		dsv = t->getSubView(output.getLayer(), output.getMipMap());
+		//	}
+		//	else
+		//	{
+		//		for (const auto& input : shader_pass.getInputs())
+		//			LMB_ASSERT(input.getName() != output.getName(), "ERR");
+
+		//		auto t = memory_.getTexture(output.getTexture())->getTexture();
+		//		rtvs.push_back(t->getSubView(output.getLayer(), output.getMipMap()));
+
+		//		viewports.push_back({
+		//			0.0f,
+		//			0.0f,
+		//			(float)std::max(1u, output.getTexture()->getLayer(0u).getWidth() >> output.getMipMap()),
+		//			(float)std::max(1u, output.getTexture()->getLayer(0u).getHeight() >> output.getMipMap())
+		//		});
+
+		//		if (output.getTexture()->getLayer(0u).getFlags() &
+		//			kTextureFlagDynamicScale)
+		//			viewports.back() *= dynamic_resolution_scale_;
+
+		//		scissor_rects.push_back({
+		//			0u,
+		//			0u,
+		//			(LONG)viewports.back().z,
+		//			(LONG)viewports.back().w
+		//		});
+		//	}
+		//}
+
+		//if (viewports.empty() && dsv)
+		//{
+		//	viewports.push_back({
+		//		0.0f,
+		//		0.0f,
+		//		(float)(
+		//			shader_pass.getOutputs()[0u].getTexture()->getLayer(0u).getWidth()
+		//			>> shader_pass.getOutputs()[0u].getMipMap()),
+		//			(float)(
+		//				shader_pass.getOutputs()[0u].getTexture()->getLayer(0u).getHeight()
+		//				>> shader_pass.getOutputs()[0u].getMipMap())
+		//	});
+
+		//	if (shader_pass.getOutputs()[0u].getTexture()->getLayer(0u).getFlags()
+		//		& kTextureFlagDynamicScale)
+		//		viewports.back() *= dynamic_resolution_scale_;
+
+		//	scissor_rects.push_back({
+		//		0u,
+		//		0u,
+		//		(LONG)viewports.back().z,
+		//		(LONG)viewports.back().w
+		//	});
+		//}
+
+		//// Shader.
+		//setScissorRects(scissor_rects);
+		//setViewports(viewports);
+
+
+		//state_.rt_width  = (uint32_t)viewports[0].z;
+		//state_.rt_height = (uint32_t)viewports[0].w;
+
+		//memcpy(vk_state_.render_targets, rtvs.data(), rtvs.size() * sizeof(VkImageView));
+		//vk_state_.depth_target = dsv;
+		//
+		//makeDirty(DirtyState::kRenderTargets);
 	}
     
     ///////////////////////////////////////////////////////////////////////////
@@ -749,12 +772,7 @@ namespace lambda
       if (!shader)
         return;
 
-	  if (shader != state_.shader)
-	  {
-        makeDirty(DirtyState::kShader);
-		state_.shader    = shader;
-		vk_state_.shader = memory_.getShader(shader);
-	  }
+	  pipeline_state_manager_.setShader(memory_.getShader(shader));
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -762,7 +780,7 @@ namespace lambda
       asset::VioletTextureHandle texture, 
       uint8_t slot)
     {
-	  if (texture != state_.textures[slot])
+	  /*if (texture != state_.textures[slot])
 	  {
 		if (slot == 0)
 		{
@@ -776,13 +794,13 @@ namespace lambda
         makeDirty(DirtyState::kTextures);
         state_.textures[slot]    = texture;
 		vk_state_.textures[slot] = memory_.getTexture(texture ? texture : default_texture_)->getTexture()->getMainView();
-	  }
+	  }*/
     }
 
 	///////////////////////////////////////////////////////////////////////////
 	void VulkanRenderer::setConstantBuffer(platform::IRenderBuffer* constant_buffer, uint8_t slot)
 	{
-		if (state_.constant_buffers[slot] == constant_buffer)
+		/*if (state_.constant_buffers[slot] == constant_buffer)
 			return;
 
 		state_.constant_buffers[slot] = constant_buffer;
@@ -790,13 +808,13 @@ namespace lambda
 		makeDirty(DirtyState::kConstantBuffers);
 
 		for (int i = 0; i < (int)ShaderStages::kCount; ++i)
-			state_.dirty_constant_buffers[i] |= 1ull << slot;
+			state_.dirty_constant_buffers[i] |= 1ull << slot;*/
 	}
 
 	///////////////////////////////////////////////////////////////////////////
 	void VulkanRenderer::setUserData(glm::vec4 user_data, uint8_t slot)
 	{
-		if (cbs_.user_data[slot] != user_data)
+		/*if (cbs_.user_data[slot] != user_data)
 		{
 			cbs_.user_data[slot] = user_data;
 
@@ -807,13 +825,13 @@ namespace lambda
 			cbs_.cb_user_data->unlock();
 
 			setConstantBuffer(cbs_.cb_user_data, cbUserDataIdx);
-		}
+		}*/
 	}
 
 	///////////////////////////////////////////////////////////////////////////
 	void VulkanRenderer::setRenderTargets(Vector<asset::VioletTextureHandle> render_targets, asset::VioletTextureHandle depth_buffer)
 	{
-		bool equal = false;
+		/*bool equal = false;
 		for (uint32_t i = 0; i < render_targets.size(); ++i)
 			if (render_targets[i] != state_.render_targets[i])
 				equal = false;
@@ -846,7 +864,7 @@ namespace lambda
 			}
 			
 			makeDirty(DirtyState::kRenderTargets);
-		}
+		}*/
 	}
 
 	///////////////////////////////////////////////////////////////////////////

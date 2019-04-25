@@ -153,6 +153,31 @@ namespace lambda
 		{
 			device_manager_ = device_manager;
 			invalidateAll();
+
+			memset(&vk_state_, 0, sizeof(vk_state_));
+			
+			auto makeDescriptor = [](uint32_t binding, uint32_t count, VkDescriptorType type, VkShaderStageFlags stage_flags) {
+				VkDescriptorSetLayoutBinding descriptor_set_binding{};
+				descriptor_set_binding.binding         = binding;
+				descriptor_set_binding.descriptorCount = count;
+				descriptor_set_binding.descriptorType  = type;
+				descriptor_set_binding.stageFlags      = stage_flags;
+				return descriptor_set_binding;
+			};
+
+			VkDescriptorSetLayoutBinding bindings[3];
+			bindings[0] = makeDescriptor(0,   14, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS);
+			bindings[1] = makeDescriptor(100, 14, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,  VK_SHADER_STAGE_ALL_GRAPHICS);
+			bindings[2] = makeDescriptor(200, 14, VK_DESCRIPTOR_TYPE_SAMPLER,        VK_SHADER_STAGE_ALL_GRAPHICS);
+
+			VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info{};
+			descriptor_set_layout_create_info.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+			descriptor_set_layout_create_info.bindingCount = sizeof(bindings) / sizeof(bindings[0]);
+			descriptor_set_layout_create_info.pBindings    = bindings;
+
+			VkResult result;
+			result = vkCreateDescriptorSetLayout(device_manager_->getDevice(), &descriptor_set_layout_create_info, device_manager_->getAllocator(), &descriptor_set_layout_);
+			LMB_ASSERT(result == VK_SUCCESS, "VULKAN: could not create descriptor set layout | %s", vkErrorCode(result));
 		}
 
 		///////////////////////////////////////////////////////////////////////////
@@ -220,13 +245,6 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		void VulkanPipelineStateManager::bindPipeline()
 		{
-			if (isDirty(kDirtyStateRenderTargets))
-			{
-				memory::RenderPass render_pass{};
-				render_pass.render_targets = state_.render_targets;
-				vk_state_.pipeline.render_pass = memory_.getRenderPass(render_pass, device_manager_->getDevice(), device_manager_->getAllocator());
-			}
-
 			if (isDirty(kDirtyStateRasterizer))
 			{
 				switch (state_.rasterizer.getCullMode())
@@ -351,45 +369,72 @@ namespace lambda
 				vk_state_.pipeline.multisample.minSampleShading      = 1.0f;
 				vk_state_.pipeline.multisample.pSampleMask           = nullptr;
 				vk_state_.pipeline.multisample.alphaToCoverageEnable = VK_FALSE;
-				vk_state_.pipeline.multisample .alphaToOneEnable     = VK_FALSE;
+				vk_state_.pipeline.multisample.alphaToOneEnable      = VK_FALSE;
 			}
 
 			// TODO (Hilze): Add constant buffer support here.
 			if (isDirty(kDirtyStateShader))
 			{
 				memory::PipelineLayout pipeline_layout{};
+				pipeline_layout.descriptor_set_layouts.push_back(descriptor_set_layout_);
 				vk_state_.pipeline.pipeline_layout = memory_.getPipelineLayout(pipeline_layout, device_manager_->getDevice(), device_manager_->getAllocator());
-
-
-				VkPipelineVertexInputStateCreateInfo vertex_input_state{};
-				vertex_input_state.sType                           = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-				vertex_input_state.vertexBindingDescriptionCount   = 0;
-				vertex_input_state.pVertexBindingDescriptions      = nullptr;
-				vertex_input_state.vertexAttributeDescriptionCount = 0;
-				vertex_input_state.pVertexAttributeDescriptions    = nullptr;
-
-				vk_state_.pipeline.shader_stages = state_.shader->getShaderStages();
+				vk_state_.pipeline.shader_stages   = state_.shader->getShaderStages();
 			}
 
 			if (vk_state_.dirty)
 			{
+				// Update render pass.
+				vk_state_.render_pass.render_targets = state_.render_targets;
+				vk_state_.bound_render_pass = memory_.getRenderPass(vk_state_.render_pass, device_manager_->getDevice(), device_manager_->getAllocator());
+
 				// Update pipeline.
-				memory_.getPipeline(vk_state_.pipeline, device_manager_->getDevice(), device_manager_->getAllocator());
+				vk_state_.pipeline.render_pass = vk_state_.bound_render_pass;
+				vk_state_.bound_pipeline = memory_.getPipeline(vk_state_.pipeline, device_manager_->getDevice(), device_manager_->getAllocator());
 
 				// Update framebuffer.
-				memory::Framebuffer framebuffer{};
 				for (uint32_t i = 0; i < state_.render_targets.size(); ++i)
 				{
 					if (i == 0)
 					{
-						framebuffer.width  = state_.render_targets[i]->width;
-						framebuffer.height = state_.render_targets[i]->height;
+						vk_state_.framebuffer.width  = state_.render_targets[i]->width;
+						vk_state_.framebuffer.height = state_.render_targets[i]->height;
 					}
-					framebuffer.views.push_back(state_.render_targets[i]->view);
+					vk_state_.framebuffer.views.push_back(state_.render_targets[i]->view);
 				}
 
-				framebuffer.render_pass = vk_state_.pipeline.render_pass;
-				vk_state_.bound_framebuffer = memory_.getFramebuffer(framebuffer, device_manager_->getDevice(), device_manager_->getAllocator());
+				vk_state_.framebuffer.render_pass = vk_state_.pipeline.render_pass;
+				vk_state_.bound_framebuffer = memory_.getFramebuffer(vk_state_.framebuffer, device_manager_->getDevice(), device_manager_->getAllocator());
+
+
+				endRenderPass();
+				beginRenderPass();
+				vkCmdBindPipeline(device_manager_->getCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, vk_state_.bound_pipeline);
+			}
+		}
+
+		void VulkanPipelineStateManager::endRenderPass()
+		{
+			if (vk_state_.in_render_pass)
+			{
+				vkCmdEndRenderPass(device_manager_->getCommandBuffer());
+				vk_state_.in_render_pass = false;
+			}
+		}
+
+		void VulkanPipelineStateManager::beginRenderPass()
+		{
+			if (!vk_state_.in_render_pass)
+			{
+				VkClearValue clear_colour = { 0.0f, 0.0f, 0.0f, 1.0f };
+				VkRenderPassBeginInfo render_pass_begin_info{};
+				render_pass_begin_info.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+				render_pass_begin_info.renderPass        = vk_state_.bound_render_pass;
+				render_pass_begin_info.framebuffer       = vk_state_.bound_framebuffer;
+				render_pass_begin_info.renderArea.offset = { 0, 0 };
+				render_pass_begin_info.renderArea.extent = { vk_state_.framebuffer.width, vk_state_.framebuffer.height };				render_pass_begin_info.clearValueCount   = 1;
+				render_pass_begin_info.pClearValues      = &clear_colour;
+
+				vkCmdBeginRenderPass(device_manager_->getCommandBuffer(), &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 			}
 		}
 
@@ -432,12 +477,22 @@ namespace lambda
 				subpass.colorAttachmentCount = (uint32_t)colour_attachment_references.size();
 				subpass.pColorAttachments    = colour_attachment_references.data();
 
+				VkSubpassDependency subpass_dependency{};
+				subpass_dependency.srcSubpass    = VK_SUBPASS_EXTERNAL;
+				subpass_dependency.dstSubpass    = 0;
+				subpass_dependency.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+				subpass_dependency.srcAccessMask = 0;
+				subpass_dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+				subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
 				VkRenderPassCreateInfo render_pass_create_info{};
 				render_pass_create_info.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 				render_pass_create_info.attachmentCount = (uint32_t)colour_attachments.size();
 				render_pass_create_info.pAttachments    = colour_attachments.data();
 				render_pass_create_info.subpassCount    = 1;
 				render_pass_create_info.pSubpasses      = &subpass;
+				render_pass_create_info.dependencyCount = 1;
+				render_pass_create_info.pDependencies   = &subpass_dependency;
 
 				VkResult result;
 				VkRenderPass render_pass;
@@ -498,6 +553,8 @@ namespace lambda
 
 			return it->second;
 		}
+
+#pragma optimize ("", off)
 		VkPipeline VulkanPipelineStateManager::Memory::getPipeline(const memory::Pipeline& pipeline, VkDevice device, VkAllocationCallbacks* allocator)
 		{
 			auto it = pipelines.find(pipeline);
