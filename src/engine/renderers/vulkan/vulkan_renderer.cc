@@ -238,10 +238,10 @@ namespace lambda
 
 			VulkanWrapperImage wrapper_image;
 			wrapper_image.format = device_manager_.getSwapchainFormat();
-			wrapper_image.image = device_manager_.getSwapchainImage();
+			wrapper_image.image  = device_manager_.getSwapchainImage();
 			wrapper_image.layout = VK_IMAGE_LAYOUT_UNDEFINED;
-			wrapper_image.view = device_manager_.getSwapchainImageView();
-			wrapper_image.width = getScene()->window->getSize().x;
+			wrapper_image.view   = device_manager_.getSwapchainImageView();
+			wrapper_image.width  = getScene()->window->getSize().x;
 			wrapper_image.height = getScene()->window->getSize().y;
 
 			pipeline_state_manager_.setBlendState(platform::BlendState::Default());

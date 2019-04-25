@@ -192,7 +192,10 @@ namespace lambda
   {
      String f = FixFilePath(file);
 
-     return s_base_dir_ + f;
+	 if (f.find(s_base_dir_) != String::npos)
+		 return f;
+	 else
+		 return s_base_dir_ + f;
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -262,12 +265,8 @@ namespace lambda
                              const char* header,
                              const size_t& header_size)
   {
-    FILE* fp;
-#if VIOLET_OSX
-    fp = std::fopen(FullFilePath(file).c_str(), "wb");
-#else
-    fp = fopen(FullFilePath(file).c_str(), "wb");
-#endif
+	  String full_file_path = FullFilePath(file);
+    FILE* fp = fopen(full_file_path.c_str(), "wb");
     if (fp == NULL)
     {
       String errorMessage = "Package: Could not open file: " + file + ".\n";
@@ -279,9 +278,9 @@ namespace lambda
     fwrite(data, data_size, 1u, fp);
     fseek(fp, 0, SEEK_SET);
     fwrite(header, header_size, 1u, fp);
-    fclose(fp);
-	foundation::Memory::deallocate(nullHeader);
 	k_mutex.unlock();
+	fclose(fp);
+	foundation::Memory::deallocate(nullHeader);
   }
 
 #ifdef VIOLET_WIN32

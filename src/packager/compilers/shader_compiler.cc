@@ -6,6 +6,7 @@
 
 #if VIOLET_SHADER_CONDUCTOR
 #include <ShaderConductor/ShaderConductor.hpp>
+#include <d3d12.h>
 
 static lambda::String kFilePath;
 static lambda::String kFailedMsg = "";
@@ -46,7 +47,6 @@ public:
 
 	lambda::UnorderedMap<lambda::String, LPCVOID> datas_;
 
-#pragma optimize ("", off)
 	// Inherited via ID3DInclude
 	STDMETHOD(Open)(
 		THIS_ D3D_INCLUDE_TYPE IncludeType,
@@ -155,12 +155,72 @@ bool compileHLSL(lambda::String file, lambda::String source, lambda::String perm
 
 		resources.clear();
 		D3D11_SHADER_DESC desc{};
-		reflector->GetDesc(&desc);
+		result = reflector->GetDesc(&desc);
+		LMB_ASSERT(SUCCEEDED(result), "SHADER COMPILER: Could not get shader reflection desc");
+
+		if (stage[0] == 'v' || stage[0] == 'V')
+		{
+			lambda::VioletShaderResource vertex_input;
+
+			for (uint32_t i = 0; i < desc.InputParameters; ++i)
+			{
+				D3D11_SIGNATURE_PARAMETER_DESC parameter_desc;
+				result = reflector->GetInputParameterDesc(i, &parameter_desc);
+				LMB_ASSERT(SUCCEEDED(result), "SHADER COMPILER: Could not get shader input parameter desc");
+
+				lambda::VioletShaderResource::Input input;
+				input.name           = parameter_desc.SemanticName;
+				input.semantic_index = parameter_desc.SemanticIndex;
+				input.reg            = parameter_desc.Register;
+
+				if (parameter_desc.Mask == 1)
+				{
+					if (parameter_desc.ComponentType == D3D_REGISTER_COMPONENT_UINT32)
+						input.type = lambda::VioletShaderComponentType::kUint1;
+					else if (parameter_desc.ComponentType == D3D_REGISTER_COMPONENT_SINT32)
+						input.type = lambda::VioletShaderComponentType::kInt1;
+					else if (parameter_desc.ComponentType == D3D_REGISTER_COMPONENT_FLOAT32)
+						input.type = lambda::VioletShaderComponentType::kFloat1;
+				}
+				else if (parameter_desc.Mask <= 3)
+				{
+					if (parameter_desc.ComponentType == D3D_REGISTER_COMPONENT_UINT32)
+						input.type = lambda::VioletShaderComponentType::kUint2;
+					else if (parameter_desc.ComponentType == D3D_REGISTER_COMPONENT_SINT32)
+						input.type = lambda::VioletShaderComponentType::kInt2;
+					else if (parameter_desc.ComponentType == D3D_REGISTER_COMPONENT_FLOAT32)
+						input.type = lambda::VioletShaderComponentType::kFloat2;
+				}
+				else if (parameter_desc.Mask <= 7)
+				{
+					if (parameter_desc.ComponentType == D3D_REGISTER_COMPONENT_UINT32)
+						input.type = lambda::VioletShaderComponentType::kUint3;
+					else if (parameter_desc.ComponentType == D3D_REGISTER_COMPONENT_SINT32)
+						input.type = lambda::VioletShaderComponentType::kInt3;
+					else if (parameter_desc.ComponentType == D3D_REGISTER_COMPONENT_FLOAT32)
+						input.type = lambda::VioletShaderComponentType::kFloat3;
+				}
+				else if (parameter_desc.Mask <= 15)
+				{
+					if (parameter_desc.ComponentType == D3D_REGISTER_COMPONENT_UINT32)
+						input.type = lambda::VioletShaderComponentType::kUint4;
+					else if (parameter_desc.ComponentType == D3D_REGISTER_COMPONENT_SINT32)
+						input.type = lambda::VioletShaderComponentType::kInt4;
+					else if (parameter_desc.ComponentType == D3D_REGISTER_COMPONENT_FLOAT32)
+						input.type = lambda::VioletShaderComponentType::kFloat4;
+				}
+
+				vertex_input.inputs.push_back(input);
+			}
+			resources.push_back(vertex_input);
+		}
+
 		for (uint32_t i = 0; i < desc.BoundResources; ++i)
 		{
 			D3D11_SHADER_INPUT_BIND_DESC bind_desc{};
-			reflector->GetResourceBindingDesc(i, &bind_desc);
-			
+			result = reflector->GetResourceBindingDesc(i, &bind_desc);
+			LMB_ASSERT(SUCCEEDED(result), "SHADER COMPILER: Could not get shader resource binding desc");
+
 			lambda::VioletShaderResource resource;
 			resource.slot = bind_desc.BindPoint;
 			resource.name = bind_desc.Name;

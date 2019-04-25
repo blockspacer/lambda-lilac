@@ -157,8 +157,12 @@ namespace lambda
 					str += ",";
 				str += resource.name + "|" + toString((uint32_t)resource.type) + "|" + toString((uint32_t)resource.stage) + "|" + toString((uint32_t)resource.slot) + "|" + toString(resource.size);
 
+				str += "|" + toString(resource.items.size()) + "|" + toString(resource.inputs.size());
+
 				for (const auto& item : resource.items)
 					str += "|" + item.name + "|" + toString(item.offset) + "|" + toString(item.size);
+				for (const auto& input : resource.inputs)
+					str += "|" + input.name + "|" + toString(input.reg) + "|" + toString(input.semantic_index) + "|" + toString((uint32_t)input.type);
 			}
 
 			rapidjson::Value stage(rapidjson::Type::kStringType);
@@ -228,15 +232,27 @@ namespace lambda
 				resource.type  = (VioletShaderResourceType)std::stoul(indices[idx++].c_str());
 				resource.stage = (ShaderStages)std::stoul(indices[idx++].c_str());
 				resource.slot  = (uint8_t)std::stoul(indices[idx++].c_str());
-				resource.size  = (uint32_t)std::stoul(indices[idx++].c_str());
+				resource.size = (uint32_t)std::stoul(indices[idx++].c_str());
+				uint32_t num_items  = (uint32_t)std::stoul(indices[idx++].c_str());
+				uint32_t num_inputs = (uint32_t)std::stoul(indices[idx++].c_str());
 
-				while (idx < indices.size())
+				while (idx < num_items)
 				{
 					VioletShaderResource::Item item;
 					item.name   = indices[idx++];
 					item.offset = (uint32_t)std::stoul(indices[idx++].c_str());
 					item.size   = (uint32_t)std::stoul(indices[idx++].c_str());
 					resource.items.push_back(item);
+				}
+				
+				while (idx < num_inputs)
+				{
+					VioletShaderResource::Input input;
+					input.name   = indices[idx++];
+					input.reg = (uint32_t)std::stoul(indices[idx++].c_str());
+					input.semantic_index = (uint32_t)std::stoul(indices[idx++].c_str());
+					input.type = (VioletShaderComponentType)std::stoul(indices[idx++].c_str());
+					resource.inputs.push_back(input);
 				}
 
 				program.resources[stage_int].push_back(resource);

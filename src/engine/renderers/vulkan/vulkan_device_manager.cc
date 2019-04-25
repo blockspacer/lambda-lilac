@@ -136,8 +136,8 @@ namespace lambda
 		uint32_t image_index;
 		result = vkAcquireNextImageKHR(device_, swapchain_, UINT64_MAX, image_available_semaphore_[current_frame_], VK_NULL_HANDLE, &image_index);		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: could not acquire nex image KHR | %s", vkErrorCode(result));
 
-		VkSemaphore wait_semaphores[]   = { image_available_semaphore_[current_frame_] };
-		VkSemaphore signal_semaphores[] = { render_finished_semaphore_[current_frame_] };
+		VkSemaphore wait_semaphores[]      = { image_available_semaphore_[current_frame_] };
+		VkSemaphore signal_semaphores[]    = { render_finished_semaphore_[current_frame_] };
 		VkPipelineStageFlags wait_stages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 		VkSubmitInfo submit_info{};
 		submit_info.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;

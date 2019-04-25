@@ -15,7 +15,25 @@ namespace lambda
 	{
 		kTexture,
 		kSampler,
-		kConstantBuffer
+		kConstantBuffer,
+		kVertexInput,
+	};
+
+	enum class VioletShaderComponentType : uint8_t
+	{
+		kUnkown,
+		kFloat1,
+		kFloat2,
+		kFloat3,
+		kFloat4,
+		kInt1,
+		kInt2,
+		kInt3,
+		kInt4,
+		kUint1,
+		kUint2,
+		kUint3,
+		kUint4,
 	};
 
 	struct VioletShaderResource
@@ -32,7 +50,15 @@ namespace lambda
 			uint32_t size;
 			uint32_t offset;
 		};
+		struct Input
+		{
+			String name;
+			uint32_t semantic_index;
+			uint32_t reg;
+			VioletShaderComponentType type;
+		};
 		Vector<Item> items;
+		Vector<Input> inputs;
 	};
 
 	struct VioletShader
