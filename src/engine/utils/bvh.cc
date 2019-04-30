@@ -1,6 +1,7 @@
 #include "bvh.h"
 #include "../platform/debug_renderer.h"
 #include <memory/frame_heap.h>
+#include <glm/gtx/norm.hpp>
 
 namespace lambda
 {
@@ -249,8 +250,8 @@ namespace lambda
 			}
 			else
 			{
-				float left_length  = glm::length(p->child_left->aabb.combine(node->aabb).size);
-				float right_length = glm::length(p->child_right->aabb.combine(node->aabb).size);
+				float left_length  = glm::length2(p->child_left->aabb.combine(node->aabb).size);
+				float right_length = glm::length2(p->child_right->aabb.combine(node->aabb).size);
 				
 				if (left_length < right_length)
 					insert(node, p->child_left);
@@ -264,39 +265,85 @@ namespace lambda
 	void BaseBVH::draw(platform::DebugRenderer* renderer) const
 	{
 		if (base_node_)
-			drawNode(base_node_, glm::vec2(0.0f), 0.0f, renderer);
+			drawNode(base_node_, 0, true, renderer);
 	}
 
 	///////////////////////////////////////////////////////////////////////////
-	void BaseBVH::drawNode(BVHNode* node, size_t depth, platform::DebugRenderer* renderer) const
+	void BaseBVH::drawNode(BVHNode* node, size_t depth, bool only_draw_leaf_nodes, platform::DebugRenderer* renderer) const
 	{
 		BVHNode* n = node;
 
-		renderer->DrawLine(platform::DebugLine(
-			glm::vec3(n->aabb.bl.x, depth / 100.0f, n->aabb.bl.y),
-			glm::vec3(n->aabb.bl.x, depth / 100.0f, n->aabb.tr.y),
-			kColors[depth % kColorCount]
-		));
-		renderer->DrawLine(platform::DebugLine(
-			glm::vec3(n->aabb.bl.x, depth / 100.0f, n->aabb.tr.y),
-			glm::vec3(n->aabb.tr.x, depth / 100.0f, n->aabb.tr.y),
-			kColors[depth % kColorCount]
-		));
-		renderer->DrawLine(platform::DebugLine(
-			glm::vec3(n->aabb.tr.x, depth / 100.0f, n->aabb.tr.y),
-			glm::vec3(n->aabb.tr.x, depth / 100.0f, n->aabb.bl.y),
-			kColors[depth % kColorCount]
-		));
-		renderer->DrawLine(platform::DebugLine(
-			glm::vec3(n->aabb.tr.x, depth / 100.0f, n->aabb.bl.y),
-			glm::vec3(n->aabb.bl.x, depth / 100.0f, n->aabb.bl.y),
-			kColors[depth % kColorCount]
-		));
+		if (!only_draw_leaf_nodes || n->is_leaf)
+		{
+			renderer->DrawLine(platform::DebugLine(
+				glm::vec3(n->aabb.bl.x, n->aabb.bl.y, n->aabb.bl.z),
+				glm::vec3(n->aabb.bl.x, n->aabb.bl.y, n->aabb.tr.z),
+				kColors[depth % kColorCount]
+			));
+			renderer->DrawLine(platform::DebugLine(
+				glm::vec3(n->aabb.bl.x, n->aabb.bl.y, n->aabb.tr.z),
+				glm::vec3(n->aabb.tr.x, n->aabb.bl.y, n->aabb.tr.z),
+				kColors[depth % kColorCount]
+			));
+			renderer->DrawLine(platform::DebugLine(
+				glm::vec3(n->aabb.tr.x, n->aabb.bl.y, n->aabb.tr.z),
+				glm::vec3(n->aabb.tr.x, n->aabb.bl.y, n->aabb.bl.z),
+				kColors[depth % kColorCount]
+			));
+			renderer->DrawLine(platform::DebugLine(
+				glm::vec3(n->aabb.tr.x, n->aabb.bl.y, n->aabb.bl.z),
+				glm::vec3(n->aabb.bl.x, n->aabb.bl.y, n->aabb.bl.z),
+				kColors[depth % kColorCount]
+			));
+
+
+			renderer->DrawLine(platform::DebugLine(
+				glm::vec3(n->aabb.bl.x, n->aabb.tr.y, n->aabb.bl.z),
+				glm::vec3(n->aabb.bl.x, n->aabb.tr.y, n->aabb.tr.z),
+				kColors[depth % kColorCount]
+			));
+			renderer->DrawLine(platform::DebugLine(
+				glm::vec3(n->aabb.bl.x, n->aabb.tr.y, n->aabb.tr.z),
+				glm::vec3(n->aabb.tr.x, n->aabb.tr.y, n->aabb.tr.z),
+				kColors[depth % kColorCount]
+			));
+			renderer->DrawLine(platform::DebugLine(
+				glm::vec3(n->aabb.tr.x, n->aabb.tr.y, n->aabb.tr.z),
+				glm::vec3(n->aabb.tr.x, n->aabb.tr.y, n->aabb.bl.z),
+				kColors[depth % kColorCount]
+			));
+			renderer->DrawLine(platform::DebugLine(
+				glm::vec3(n->aabb.tr.x, n->aabb.tr.y, n->aabb.bl.y),
+				glm::vec3(n->aabb.bl.x, n->aabb.tr.y, n->aabb.bl.y),
+				kColors[depth % kColorCount]
+			));
+
+			renderer->DrawLine(platform::DebugLine(
+				glm::vec3(n->aabb.bl.x, n->aabb.tr.y, n->aabb.bl.z),
+				glm::vec3(n->aabb.bl.x, n->aabb.bl.y, n->aabb.bl.z),
+				kColors[depth % kColorCount]
+			));
+			renderer->DrawLine(platform::DebugLine(
+				glm::vec3(n->aabb.bl.x, n->aabb.tr.y, n->aabb.tr.z),
+				glm::vec3(n->aabb.bl.x, n->aabb.bl.y, n->aabb.tr.z),
+				kColors[depth % kColorCount]
+			));
+			renderer->DrawLine(platform::DebugLine(
+				glm::vec3(n->aabb.tr.x, n->aabb.tr.y, n->aabb.tr.z),
+				glm::vec3(n->aabb.tr.x, n->aabb.bl.y, n->aabb.tr.z),
+				kColors[depth % kColorCount]
+			));
+			renderer->DrawLine(platform::DebugLine(
+				glm::vec3(n->aabb.tr.x, n->aabb.tr.y, n->aabb.bl.y),
+				glm::vec3(n->aabb.tr.x, n->aabb.bl.y, n->aabb.bl.y),
+				kColors[depth % kColorCount]
+			));
+		}
 
 		if (n->child_left)
-			drawNode(n->child_left, depth + 1, renderer);
+			drawNode(n->child_left, depth + 1, only_draw_leaf_nodes, renderer);
 		if (n->child_right)
-			drawNode(n->child_right, depth + 1, renderer);
+			drawNode(n->child_right, depth + 1, only_draw_leaf_nodes, renderer);
 	}
 
 	///////////////////////////////////////////////////////////////////////////
@@ -435,7 +482,7 @@ namespace lambda
 	}
 
 	///////////////////////////////////////////////////////////////////////////
-	BVHAABB::BVHAABB(const glm::vec2& bl, const glm::vec2& tr)
+	BVHAABB::BVHAABB(const glm::vec3& bl, const glm::vec3& tr)
 		: bl(bl)
 		, tr(tr)
 		, center((bl + tr) * 0.5f)
@@ -458,13 +505,12 @@ namespace lambda
 		return BVHAABB(glm::min(bl, other.bl), glm::max(tr, other.tr));
 	}
 
-#pragma optimize ("", off)
 	///////////////////////////////////////////////////////////////////////////
 	bool BVHAABB::intersects(const BVHAABB& other) const
 	{
-		glm::vec2 abs_center = glm::abs(center - other.center);
-		glm::vec2 half_size  = (size + other.size) * 0.5f;
-		return abs_center.x < half_size.x && abs_center.y < half_size.y;
+		glm::vec3 abs_center = glm::abs(center - other.center);
+		glm::vec3 half_size  = (size + other.size) * 0.5f;
+		return abs_center.x < half_size.x && abs_center.y < half_size.y && abs_center.z < half_size.z;
 	}
   }
 }

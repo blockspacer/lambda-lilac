@@ -181,10 +181,7 @@ namespace lambda
 					renderable->center = (renderable->min + renderable->max) * 0.5f;
 					renderable->radius = glm::length(renderable->center - renderable->max);
 
-					scene.mesh_render.dynamic_bvh->add(renderable->entity, renderable, {
-						glm::vec2(renderable->min.x, renderable->min.z),
-						glm::vec2(renderable->max.x, renderable->max.z)
-					});
+					scene.mesh_render.dynamic_bvh->add(renderable->entity, renderable, utilities::BVHAABB(renderable->min, renderable->max));
 				}
 			}
 			void setMesh(const entity::Entity& entity, asset::VioletMeshHandle mesh, scene::Scene& scene)
@@ -402,11 +399,7 @@ namespace lambda
 				renderable->center = (renderable->min + renderable->max) * 0.5f;
 				renderable->radius = glm::length(renderable->center - renderable->max);
 
-				scene.mesh_render.static_bvh->add(entity, renderable, {
-					glm::vec2(renderable->min.x, renderable->min.z),
-					glm::vec2(renderable->max.x, renderable->max.z)
-				});
-
+				scene.mesh_render.static_bvh->add(entity, renderable, utilities::BVHAABB(renderable->min, renderable->max));
 				scene.mesh_render.static_renderables.push_back(renderable);
 			}
 			void makeDynamic(const entity::Entity& entity, scene::Scene& scene)

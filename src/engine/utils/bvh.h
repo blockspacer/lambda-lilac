@@ -1,6 +1,7 @@
 #pragma once
 #include <containers/containers.h>
 #include <glm/vec2.hpp>
+#include <glm/vec3.hpp>
 #include <mutex>
 #include <systems/entity.h>
 
@@ -15,14 +16,14 @@ namespace lambda
 	  struct BVHAABB
 	  {
 		  BVHAABB();
-		  BVHAABB(const glm::vec2& bl, const glm::vec2& tr);
+		  BVHAABB(const glm::vec3& bl, const glm::vec3& tr);
 		  BVHAABB(const BVHAABB& other);
 
-		  glm::vec2 bl; // Bottom left;
-		  glm::vec2 tr; // Top Right.
+		  glm::vec3 bl; // Bottom left;
+		  glm::vec3 tr; // Top Right.
 
-		  glm::vec2 center;
-		  glm::vec2 size;
+		  glm::vec3 center;
+		  glm::vec3 size;
 		  BVHAABB combine(const BVHAABB& other) const;
 		  bool intersects(const BVHAABB& other) const;
 	  };
@@ -62,7 +63,7 @@ namespace lambda
 
 		  virtual BVHNode* privateCreate() = 0;
 		  void insert(BVHNode* node, BVHNode* parent);
-		  void drawNode(BVHNode* node, size_t depth, platform::DebugRenderer* renderer) const;
+		  void drawNode(BVHNode* node, size_t depth, bool only_draw_leaf_nodes, platform::DebugRenderer* renderer) const;
 		  void drawNode(BVHNode* node, glm::vec2 prev, float child, platform::DebugRenderer* renderer) const;
 
 	  protected:
