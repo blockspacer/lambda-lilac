@@ -20,6 +20,7 @@ struct ID3DUserDefinedAnnotation;
 
 #define MAX_TEXTURE_COUNT 16u
 #define MAX_CONSTANT_BUFFER_COUNT 16u
+#define MAX_USER_DATA_COUNT 16u
 
 namespace lambda
 {
@@ -75,6 +76,7 @@ namespace lambda
 			uint32_t flags_;
 			uint32_t size_;
 			bool     changed_;
+			bool     locked_;
 		};
 
 		///////////////////////////////////////////////////////////////////////////
@@ -335,7 +337,7 @@ namespace lambda
 				D3D11RenderBuffer* per_texture  = nullptr;
 				D3D11RenderBuffer* drs          = nullptr;
 				D3D11RenderBuffer* cb_user_data = nullptr;
-				glm::vec4 user_data[16];
+				glm::vec4 user_data[MAX_USER_DATA_COUNT];
 			} cbs_;
 
 #if GPU_MARKERS

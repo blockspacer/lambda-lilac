@@ -31,26 +31,37 @@ namespace lambda
 			, buffer_(buffer)
 			, context_(context)
 			, changed_(true)
+			, locked_(false)
 		{
 		}
 
 		///////////////////////////////////////////////////////////////////////////
 		void* D3D11RenderBuffer::lock()
 		{
-			LMB_ASSERT(flags_ & kFlagDynamic, "TODO (Hilze): Fill in");
+			LMB_ASSERT(flags_ & kFlagDynamic, "D3D11 CONTEXT: Tried to lock lock a non dynamic render buffer");
+			LMB_ASSERT(!locked_, "D3D11 CONTEXT: Tried to lock a locked render buffer");
+			locked_ = true;
 
-			changed_ = true;
+			LMB_ASSERT(context_, "D3D11 CONTEXT: No context was specified");
+
+			HRESULT result;
 			D3D11_MAPPED_SUBRESOURCE resource;
-			context_->getD3D11Context()->Map(buffer_, 0u, D3D11_MAP_WRITE_DISCARD, 0u, &resource);
+			result = context_->getD3D11Context()->Map(buffer_, 0u, D3D11_MAP_WRITE_DISCARD, 0u, &resource);
+			LMB_ASSERT(SUCCEEDED(result), "D3D11 CONTEXT: Could not map render buffer | %llu", result);
 			return resource.pData;
 		}
 
 		///////////////////////////////////////////////////////////////////////////
 		void D3D11RenderBuffer::unlock()
 		{
-			LMB_ASSERT(flags_ & kFlagDynamic, "TODO (Hilze): Fill in");
+			LMB_ASSERT(flags_ & kFlagDynamic, "D3D11 CONTEXT: Tried to lock unlock a non dynamic render buffer");
+			LMB_ASSERT(locked_, "D3D11 CONTEXT: Tried to unlock a not locked render buffer");
+			locked_ = false;
+
+			LMB_ASSERT(context_, "D3D11 CONTEXT: No context was specified");
 
 			context_->getD3D11Context()->Unmap(buffer_, 0u);
+			changed_ = true;
 		}
 
 		///////////////////////////////////////////////////////////////////////////
@@ -68,6 +79,7 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		ID3D11Buffer* D3D11RenderBuffer::getBuffer() const
 		{
+			LMB_ASSERT(!locked_, "D3D11 CONTEXT: Tried to get the platform buffer of a locked render buffer");
 			return buffer_;
 		}
 
@@ -109,14 +121,18 @@ namespace lambda
 		{
 			//LMB_ASSERT(flags_ & IRenderTexture::kFlagDynamic, "TODO (Hilze): Fill in");
 
+			LMB_ASSERT(context_, "D3D11 CONTEXT: No context was specified");
+
+			HRESULT result;
 			D3D11_MAPPED_SUBRESOURCE resource;
-			context_->getD3D11Context()->Map(
+			result = context_->getD3D11Context()->Map(
 				texture_->getTexture(),
 				level,
 				D3D11_MAP_WRITE_DISCARD,
 				0u,
 				&resource
 			);
+			LMB_ASSERT(SUCCEEDED(result), "D3D11 CONTEXT: Could not map render texture | %llu", result);
 
 			return resource.pData;
 		}
@@ -124,6 +140,8 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		void D3D11RenderTexture::unlock(uint32_t level)
 		{
+			LMB_ASSERT(context_, "D3D11 CONTEXT: No context was specified");
+
 			//LMB_ASSERT(flags_ & IRenderTexture::kFlagDynamic, "TODO (Hilze): Fill in");
 
 			context_->getD3D11Context()->Unmap(texture_->getTexture(), level);
@@ -192,6 +210,8 @@ namespace lambda
 			const bool is_constant =
 				(flags & platform::IRenderBuffer::kFlagConstant) ? true : false;
 
+			LMB_ASSERT(is_vertex || is_index || is_constant, "D3D11 CONTEXT: Tried to create a buffer of unknown type");
+
 			if (is_constant)
 				size = (size + 15) / 16 * 16;
 
@@ -210,6 +230,8 @@ namespace lambda
 
 			D3D11_SUBRESOURCE_DATA subresource{};
 			subresource.pSysMem = data;
+			
+			LMB_ASSERT(context_.device, "D3D11 CONTEXT: No device was specified");
 
 			ID3D11Buffer* buffer;
 			context_.device->CreateBuffer(
@@ -241,8 +263,7 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		void D3D11Context::freeRenderBuffer(platform::IRenderBuffer*& buffer)
 		{
-			// TODO (Hilze): Revert this check.
-			//LMB_ASSERT(override_scene_, "D3D11 CONTEXT: Tried to render outside of the flush thread");
+			LMB_ASSERT(override_scene_, "D3D11 CONTEXT: Tried to render outside of the flush thread");
 
 			const bool is_vertex =
 				(buffer->getFlags() & platform::IRenderBuffer::kFlagVertex)
@@ -253,6 +274,8 @@ namespace lambda
 			const bool is_constant =
 				(buffer->getFlags() & platform::IRenderBuffer::kFlagConstant)
 				? true : false;
+			
+			LMB_ASSERT(is_vertex || is_index || is_constant, "D3D11 CONTEXT: Tried to free a buffer of unknown type");
 
 			if (is_vertex)
 				memory_stats_.vertex -= buffer->getSize();
@@ -270,17 +293,7 @@ namespace lambda
 		platform::IRenderTexture* D3D11Context::allocRenderTexture(
 			asset::VioletTextureHandle texture)
 		{
-			// TODO (Hilze): Revert this check.
-			//LMB_ASSERT(override_scene_, "D3D11 CONTEXT: Tried to render outside of the flush thread");
-
-			//const bool generate_mips = 
-			//  (texture->getLayer(0u).getFlags() & kTextureFlagMipMaps) 
-			//    ? true : false;
-			//const uint32_t mip_count = 
-			//  generate_mips ? 
-			//    ((uint32_t)floorf(std::log2f(std::fminf(
-			//      (float)texture->getLayer(0u).getWidth(), 
-			//      (float)texture->getLayer(0u).getHeight())) + 1.0f)) : 1u;
+			LMB_ASSERT(override_scene_, "D3D11 CONTEXT: Tried to render outside of the flush thread");
 
 			D3D11RenderTexture* d3d11_texture =
 				foundation::Memory::construct<D3D11RenderTexture>(
@@ -331,8 +344,7 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		void D3D11Context::freeRenderTexture(platform::IRenderTexture*& texture)
 		{
-			// TODO (Hilze): Revert this check.
-			//LMB_ASSERT(override_scene_, "D3D11 CONTEXT: Tried to render outside of the flush thread");
+			LMB_ASSERT(override_scene_, "D3D11 CONTEXT: Tried to render outside of the flush thread");
 
 			uint32_t size = 0u;
 			for (uint32_t i = 0u; i < texture->getDepth(); ++i)
@@ -363,6 +375,7 @@ namespace lambda
 		ID3D11DeviceContext* D3D11Context::getD3D11Context() const
 		{
 			LMB_ASSERT(override_scene_, "D3D11 CONTEXT: Tried to render outside of the flush thread");
+			LMB_ASSERT(context_.context.Get(), "D3D11 CONTEXT: No context was specified");
 			return context_.context.Get();
 		}
 
@@ -370,7 +383,7 @@ namespace lambda
 		ID3D11Device* D3D11Context::getD3D11Device() const
 		{
 			LMB_ASSERT(override_scene_, "D3D11 CONTEXT: Tried to render outside of the flush thread");
-
+			LMB_ASSERT(context_.device.Get(), "D3D11 CONTEXT: No device was specified");
 			return context_.device.Get();
 		}
 
@@ -389,6 +402,8 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		void D3D11Context::setWindow(platform::IWindow* window)
 		{
+			LMB_ASSERT(window, "D3D11 CONTEXT: No window was specified");
+
 			memset(&state_, 0, sizeof(state_));
 			state_.sub_mesh = UINT32_MAX;
 			memset(&dx_state_, 0, sizeof(dx_state_));
@@ -510,20 +525,15 @@ namespace lambda
 
 					if (SUCCEEDED(result))
 					{
-						foundation::Info("Renderer: Using feature level " +
+						foundation::Info("D3D11 CONTEXT: Using feature level " +
 							toString(supported_level) + "\n");
-						foundation::Info("Renderer: Using driver type " +
+						foundation::Info("D3D11 CONTEXT: Using driver type " +
 							toString(i) + "\n");
 						break;
 					}
 				}
 
-				if (FAILED(result))
-				{
-					MessageBoxA((HWND)window->getWindow(),
-						"CreateDeviceAndSwapChain failed!", "Graphics Error", 0);
-					return;
-				}
+				LMB_ASSERT(SUCCEEDED(result), "D3D11 CONTEXT: Could not create device and swapchain | %llu", result);
 			}
 
 #if GPU_MARKERS
@@ -531,12 +541,7 @@ namespace lambda
 				IID_PPV_ARGS(user_defined_annotation_.ReleaseAndGetAddressOf())
 			);
 
-			if (FAILED(result))
-			{
-				MessageBoxA((HWND)window->getWindow(),
-					"QueryInterface failed!", "Graphics Error", 0);
-				return;
-			}
+			LMB_ASSERT(SUCCEEDED(result), "D3D11 CONTEXT: Could not get user defined annotations | %llu", result);
 #endif
 
 #if GPU_TIMERS
@@ -714,6 +719,7 @@ namespace lambda
     void D3D11Context::draw(uint32_t instance_count)
     {
 			LMB_ASSERT(override_scene_, "D3D11 CONTEXT: Tried to render outside of the flush thread");
+			LMB_ASSERT(instance_count, "D3D11 CONTEXT: Tried to render zero instances");
 
 			D3D11Shader* shader = dx_state_.shader;
 			D3D11Mesh*   mesh = dx_state_.mesh;
@@ -965,7 +971,7 @@ namespace lambda
 	  for (uint32_t i = 0; i < shader_pass.getInputs().size(); ++i)
       {
         auto& input = shader_pass.getInputs().at(i);
-        LMB_ASSERT(!input.isBackBuffer(), "TODO (Hilze): Fill in");
+        LMB_ASSERT(!input.isBackBuffer(), "D3D11 CONTEXT: Tried to bind the backbuffer as input");
         setTexture(input.getTexture(), i);
       }
 
@@ -1060,8 +1066,7 @@ namespace lambda
       asset::VioletTextureHandle texture, 
       const glm::vec4& colour)
     {
-			// TODO (Hilze): Revert this check.
-			//LMB_ASSERT(override_scene_, "D3D11 CONTEXT: Tried to render outside of the flush thread");
+			LMB_ASSERT(override_scene_, "D3D11 CONTEXT: Tried to render outside of the flush thread");
 
       if (!texture)
         return;
@@ -1096,6 +1101,7 @@ namespace lambda
 		void D3D11Context::setScissorRects(const Vector<glm::vec4>& rects)
 		{
 			LMB_ASSERT(override_scene_, "D3D11 CONTEXT: Tried to render outside of the flush thread");
+			LMB_ASSERT(rects.size(), "D3D11 CONTEXT: Tried to set zero scissor rects");
 
 			bool is_dirty = rects.size() != state_.num_scissor_rects;
 
@@ -1122,6 +1128,7 @@ namespace lambda
 		void D3D11Context::setViewports(const Vector<glm::vec4>& rects)
 		{
 			LMB_ASSERT(override_scene_, "D3D11 CONTEXT: Tried to render outside of the flush thread");
+			LMB_ASSERT(rects.size(), "D3D11 CONTEXT: Tried to set zero viewports");
 
 			bool is_dirty = rects.size() != state_.num_viewports;
 
@@ -1214,6 +1221,8 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		void D3D11Context::setConstantBuffer(platform::IRenderBuffer* constant_buffer, uint8_t slot)
 		{
+			LMB_ASSERT(slot < MAX_CONSTANT_BUFFER_COUNT, "D3D11 CONTEXT: Tried to bind a constant buffer outside of range");
+
 			if (state_.constant_buffers[slot] == constant_buffer)
 				return;
 
@@ -1228,6 +1237,8 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		void D3D11Context::setUserData(glm::vec4 user_data, uint8_t slot)
 		{
+			LMB_ASSERT(slot < MAX_USER_DATA_COUNT, "D3D11 CONTEXT: Tried to bind user data outside of range");
+
 			if (cbs_.user_data[slot] != user_data)
 			{
 				cbs_.user_data[slot] = user_data;
@@ -1291,7 +1302,8 @@ namespace lambda
     void D3D11Context::pushMarker(const String& name)
     {
 #if GPU_MARKERS
-      std::wstring wname(name.begin(), name.end());
+		LMB_ASSERT(name.size(), "D3D11 CONTEXT: Tried to push marker with empty name");
+		std::wstring wname(name.begin(), name.end());
       user_defined_annotation_->BeginEvent(wname.c_str());
 #endif
     }
@@ -1300,7 +1312,8 @@ namespace lambda
     void D3D11Context::setMarker(const String& name)
     {
 #if GPU_MARKERS
-      std::wstring wname(name.begin(), name.end());
+		LMB_ASSERT(name.size(), "D3D11 CONTEXT: Tried to set marker with empty name");
+		std::wstring wname(name.begin(), name.end());
       user_defined_annotation_->SetMarker(wname.c_str());
 #endif
     }
@@ -1317,7 +1330,8 @@ namespace lambda
     void D3D11Context::beginTimer(const String& name)
     {
 #if GPU_TIMERS
-      if (gpu_timers_.find(name) == gpu_timers_.end())
+		LMB_ASSERT(name.size(), "D3D11 CONTEXT: Tried to begin timer with empty name");
+		if (gpu_timers_.find(name) == gpu_timers_.end())
       {
         D3D11TimestampQuery query;
 
@@ -1355,7 +1369,8 @@ namespace lambda
     void D3D11Context::endTimer(const String& name)
     {
 #if GPU_TIMERS
-      if (gpu_timers_.find(name) == gpu_timers_.end())
+		LMB_ASSERT(name.size(), "D3D11 CONTEXT: Tried to end timer with empty name");
+		if (gpu_timers_.find(name) == gpu_timers_.end())
       {
         D3D11TimestampQuery query;
 
@@ -1392,7 +1407,8 @@ namespace lambda
     uint64_t D3D11Context::getTimerMicroSeconds(const String& name)
     {
 #if GPU_TIMERS
-      if (gpu_timers_.find(name) == gpu_timers_.end())
+		LMB_ASSERT(name.size(), "D3D11 CONTEXT: Tried to get timer with empty name");
+		if (gpu_timers_.find(name) == gpu_timers_.end())
       {
         D3D11TimestampQuery query;
 
@@ -1430,7 +1446,8 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     void D3D11Context::setRenderScale(const float& render_scale)
     {
-      if (render_scale != render_scale_)
+		LMB_ASSERT(render_scale > 0 && render_scale < 2, "D3D11 CONTEXT: Tried to set invalid render scale | %f", render_scale);
+		if (render_scale != render_scale_)
       {
         render_scale_ = render_scale;
         resize();
@@ -1458,18 +1475,21 @@ namespace lambda
 	///////////////////////////////////////////////////////////////////////////
 	void D3D11Context::destroyTexture(const size_t& hash)
 	{
+		LMB_ASSERT(hash, "D3D11 CONTEXT: Tried to destroy invalid texture");
 		asset_manager_.removeTexture(hash);
 	}
 
 	///////////////////////////////////////////////////////////////////////////
 	void D3D11Context::destroyShader(const size_t& hash)
 	{
+		LMB_ASSERT(hash, "D3D11 CONTEXT: Tried to destroy invalid shader");
 		asset_manager_.removeShader(hash);
 	}
 
 	///////////////////////////////////////////////////////////////////////////
 	void D3D11Context::destroyMesh(const size_t& hash)
 	{
+		LMB_ASSERT(hash, "D3D11 CONTEXT: Tried to destroy invalid mesh");
 		asset_manager_.removeMesh(hash);
 	}
     
@@ -1479,8 +1499,7 @@ namespace lambda
       int layer,
       int mip_map)
     {
-			// TODO (Hilze): Revert this check.
-			//LMB_ASSERT(override_scene_, "D3D11 CONTEXT: Tried to render outside of the flush thread");
+			LMB_ASSERT(override_scene_, "D3D11 CONTEXT: Tried to render outside of the flush thread");
 
       if (!texture)
         return nullptr;
@@ -1495,8 +1514,7 @@ namespace lambda
 			int layer,
 			int mip_map)
 		{
-			// TODO (Hilze): Revert this check.
-			//LMB_ASSERT(override_scene_, "D3D11 CONTEXT: Tried to render outside of the flush thread");
+			LMB_ASSERT(override_scene_, "D3D11 CONTEXT: Tried to render outside of the flush thread");
 
 			if (!texture)
 				return nullptr;
@@ -1532,12 +1550,14 @@ namespace lambda
 				0
 			);
 
+			HRESULT result;
 			ID3D11Texture2D* back_buffer;
-			HRESULT result = context_.swap_chain->GetBuffer(
+			result = context_.swap_chain->GetBuffer(
 				0,
 				__uuidof(ID3D11Texture2D),
 				(void**)&back_buffer
 			);
+			LMB_ASSERT(SUCCEEDED(result), "D3D11 CONTEXT: Could not get swapchain buffer | %llu", result);
 
 			D3D11_TEXTURE2D_DESC tex_desc{};
 			back_buffer->GetDesc(&tex_desc);
@@ -1546,24 +1566,13 @@ namespace lambda
 			screen_size_.x = (float)width;
 			screen_size_.y = (float)height;
 
-			if (FAILED(result))
-			{
-				MessageBoxA((HWND)getScene()->window->getWindow(),
-					"GetBackBuffer failed!", "Graphics Error", 0);
-				return;
-			}
-
 			result = context_.device->CreateRenderTargetView(
 				back_buffer,
 				NULL,
 				context_.backbuffer.ReleaseAndGetAddressOf()
 			);
-			if (FAILED(result))
-			{
-				MessageBoxA((HWND)getScene()->window->getWindow(),
-					"CreateRenderTargetView failed!", "Graphics Error", 0);
-				return;
-			}
+
+			LMB_ASSERT(SUCCEEDED(result), "D3D11 CONTEXT: Could not create render target view | %llu", result);
 			back_buffer->Release();
 
 			default_.viewport.x = 0.0f;
@@ -1580,8 +1589,10 @@ namespace lambda
     ///////////////////////////////////////////////////////////////////////////
     void D3D11Context::present()
     {
-      context_.swap_chain->Present(vsync_, 0);
-    }
+      HRESULT result;
+      result = context_.swap_chain->Present(vsync_, 0);
+	  LMB_ASSERT(SUCCEEDED(result), "D3D11 CONTEXT: Could not present | %llu", result);
+	}
 
     ///////////////////////////////////////////////////////////////////////////
     D3D11Context::D3D11AssetManager::~D3D11AssetManager()
