@@ -91,6 +91,36 @@ namespace lambda
         write(data, (const char*)&mesh, sizeof(MeshIO::SubMesh));
       }
     }
+    void writeHeader(Vector<char>& data, const Vector<asset::VioletTextureHandle>& alb, const Vector<asset::VioletTextureHandle>& nrm, const Vector<asset::VioletTextureHandle>& dmra, const Vector<asset::VioletTextureHandle>& emi)
+    {
+      MeshIO::Format::TextureHeader header;
+	  header.alb_count  = alb.size();
+	  header.nrm_count  = nrm.size();
+	  header.dmra_count = dmra.size();
+	  header.emi_count  = emi.size();
+      write(data, header);
+	  
+      for (const asset::VioletTextureHandle& texture : alb)
+      {
+        String name = texture.getName().getName();
+        write(data, name.c_str(), name.size());
+      }
+      for (const asset::VioletTextureHandle& texture : nrm)
+      {
+        String name = texture.getName().getName();
+        write(data, name.c_str(), name.size());
+      }
+      for (const asset::VioletTextureHandle& texture : dmra)
+      {
+        String name = texture.getName().getName();
+        write(data, name.c_str(), name.size());
+      }
+      for (const asset::VioletTextureHandle& texture : emi)
+      {
+        String name = texture.getName().getName();
+        write(data, name.c_str(), name.size());
+      }
+    }
     void startWriting(Vector<char>& data)
     {
       write(data, MeshIO::Format::kInvalidHeader, 3);
@@ -112,7 +142,8 @@ namespace lambda
       writeHeader(data, mesh.data.tex);
       writeHeader(data, mesh.data.joi);
       writeHeader(data, mesh.data.wei);
-      writeHeader(data, mesh.data.idx);
+	  writeHeader(data, mesh.data.idx);
+	  writeHeader(data, mesh.data.tex_alb, mesh.data.tex_nrm, mesh.data.tex_dmra, mesh.data.tex_emi);
       writeHeader(data, mesh.meshes);
 
       finalizeWriting(data);
@@ -281,6 +312,7 @@ namespace lambda
       eastl::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
       String full_path = FileSystem::FullFilePath(path);
 
+#if VIOLET_ALLOW_GLTF
       if (extension == "gltf" || extension == "glb")
       {
 #if defined USE_ASSIMP and defined VIOLET_ASSET_ASSIMP
@@ -290,6 +322,7 @@ namespace lambda
 #endif
       }
       else
+#endif
       {
 		  Mesh mesh;
 		  loadMeshCustom(path, mesh);
@@ -348,6 +381,47 @@ namespace lambda
         meshes.push_back(mesh);
       }
     }
+    void readHeader(const Vector<char>& data, size_t& offset, Vector<asset::VioletTextureHandle>& alb, Vector<asset::VioletTextureHandle>& nrm, Vector<asset::VioletTextureHandle>& dmra, Vector<asset::VioletTextureHandle>& emi)
+    {
+      MeshIO::Format::TextureHeader header;
+      read(data, offset, header);
+
+	  for (size_t i = 0; i < header.alb_count; ++i)
+	  {
+		  size_t size;
+		  read(data, offset, size);
+		  String name(size, '\0');
+		  read(data, offset, (char*)name.c_str(), name.size());
+		  alb.push_back(asset::TextureManager::getInstance()->get(Name(name)));
+	  }
+
+	  for (size_t i = 0; i < header.nrm_count; ++i)
+	  {
+		  size_t size;
+		  read(data, offset, size);
+		  String name(size, '\0');
+		  read(data, offset, (char*)name.c_str(), name.size());
+		  nrm.push_back(asset::TextureManager::getInstance()->get(Name(name)));
+	  }
+
+	  for (size_t i = 0; i < header.dmra_count; ++i)
+	  {
+		  size_t size;
+		  read(data, offset, size);
+		  String name(size, '\0');
+		  read(data, offset, (char*)name.c_str(), name.size());
+		  dmra.push_back(asset::TextureManager::getInstance()->get(Name(name)));
+	  }
+
+	  for (size_t i = 0; i < header.emi_count; ++i)
+	  {
+		  size_t size;
+		  read(data, offset, size);
+		  String name(size, '\0');
+		  read(data, offset, (char*)name.c_str(), name.size());
+		  emi.push_back(asset::TextureManager::getInstance()->get(Name(name)));
+	  }
+    }
 
     bool validateFile(const Vector<char>& data, size_t& offset)
     {
@@ -381,7 +455,8 @@ namespace lambda
       readHeader(data, offset, mesh.data.joi);
       readHeader(data, offset, mesh.data.wei);
       readHeader(data, offset, mesh.data.idx);
-      readHeader(data, offset, mesh.meshes);
+	  readHeader(data, offset, mesh.data.tex_alb, mesh.data.tex_nrm, mesh.data.tex_dmra, mesh.data.tex_emi);
+	  readHeader(data, offset, mesh.meshes);
 
       return true;
     }
@@ -974,9 +1049,9 @@ namespace lambda
         //glm::mat4 m = glm::make_mat4(node.matrix.data());
         lambda::utilities::decomposeMatrix(
           glm::make_mat4(node.matrix.data()),
-          mesh.scale,
-          mesh.rotation,
-          mesh.translation
+          &mesh.scale,
+          &mesh.rotation,
+          &mesh.translation
         );
         glm::mat4 model_mat = glm::translate(glm::mat4(1.0f), mesh.translation);
         model_mat = model_mat * glm::mat4_cast(mesh.rotation);

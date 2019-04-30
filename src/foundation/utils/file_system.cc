@@ -31,7 +31,7 @@ namespace lambda
     if (!fp)
     {
 		k_mutex.unlock();
-      foundation::Error("FileSystem: Could not open file: " + path + ".\n");
+      foundation::Error("FILE SYSTEM: Could not open file for read: " + path + ".\n");
       return nullptr;
     }
 	k_mutex.unlock();
@@ -55,7 +55,7 @@ namespace lambda
 	  k_mutex.lock();
     if (!file)
     {
-      LMB_ASSERT(false, "FileSystem: Tried to use an empty file.\n");
+      LMB_ASSERT(false, "FILE SYSTEM: Tried to use an empty file.\n");
       return "";
     }
     fseek(file, 0, SEEK_END);
@@ -64,7 +64,7 @@ namespace lambda
     {
 		k_mutex.unlock();
       fclose(file);
-      LMB_ASSERT(false, "FileSystem: Tried to use an empty file.\n");
+      LMB_ASSERT(false, "FILE SYSTEM: Tried to use an empty file.\n");
       return "";
     }
 
@@ -81,7 +81,7 @@ namespace lambda
       {
         if (buffer[i] != header[i])
         {
-          foundation::Error("FileSystem: Header mismatch!");
+          foundation::Error("FILE SYSTEM: Header mismatch!");
 		  k_mutex.unlock();
 		  return "";
         }
@@ -112,7 +112,7 @@ namespace lambda
 	  k_mutex.lock();
 	  if (!file)
     {
-      LMB_ASSERT(false, "FileSystem: Tried to use an empty file.\n");
+      LMB_ASSERT(false, "FILE SYSTEM: Tried to use an empty file.\n");
       return Vector<char>();
     }
     fseek(file , 0, SEEK_END);
@@ -121,7 +121,7 @@ namespace lambda
     {
 		k_mutex.unlock();
 		fclose(file);
-      LMB_ASSERT(false, "FileSystem: Tried to use an empty file.\n");
+      LMB_ASSERT(false, "FILE SYSTEM: Tried to use an empty file.\n");
       return Vector<char>();
     }
 
@@ -138,7 +138,7 @@ namespace lambda
       {
         if (buffer[i] != header[i])
         {
-          foundation::Error("FileSystem: Header mismatch!");
+          foundation::Error("FILE SYSTEM: Header mismatch!");
 		  k_mutex.unlock();
 		  return Vector<char>();
         }
@@ -184,6 +184,7 @@ namespace lambda
   //////////////////////////////////////////////////////////////////////////////
   String FileSystem::GetBaseDir()
   {
+	LMB_ASSERT(s_base_dir_, "FILE SYSTEM: Base dir was not set!");
     return s_base_dir_;
   }
 
@@ -250,6 +251,17 @@ namespace lambda
 		return f;
 	}
 
+	String FileSystem::FileName(const String& file)
+	{
+		String f = FixFilePath(file);
+		f = f.substr(0, f.size() - GetExtension(f).size() - 1);
+
+		if (f.find('/') == String::npos)
+			return f;
+		else
+			return f.substr(f.find_last_of('/') + 1);
+	}
+
   //////////////////////////////////////////////////////////////////////////////
   void FileSystem::WriteFile(const String& file,
                              const Vector<char>& data,
@@ -269,7 +281,7 @@ namespace lambda
     FILE* fp = fopen(full_file_path.c_str(), "wb");
     if (fp == NULL)
     {
-      String errorMessage = "Package: Could not open file: " + file + ".\n";
+      String errorMessage = "FILE SYSTEM: Could not open file for write: " + file + ".\n";
       LMB_ASSERT(false, errorMessage.c_str());
     }
 	k_mutex.lock();

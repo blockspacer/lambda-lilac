@@ -3,7 +3,7 @@
 #include "assets/mesh.h"
 #include "interfaces/iwindow.h"
 #include "assets/mesh_io.h"
-#include "utils/zone_manager.h"
+#include "utils/bvh.h"
 
 namespace lambda
 {
@@ -94,9 +94,10 @@ namespace lambda
 				void  remove(const entity::Entity& entity);
 				bool  has(const entity::Entity& entity);
 
-				Vector<entity::Entity>         dynamic_renderables;
+				Vector<utilities::Renderable*> dynamic_renderables;
 				Vector<utilities::Renderable*> static_renderables;
-				utilities::ZoneManager*        static_zone_manager;
+				utilities::BVH*                static_bvh;
+				utilities::TransientBVH*       dynamic_bvh;
 
 				asset::VioletTextureHandle default_albedo;
 				asset::VioletTextureHandle default_normal;
@@ -109,9 +110,10 @@ namespace lambda
 			bool hasComponent(const entity::Entity& entity, scene::Scene& scene);
 			void removeComponent(const entity::Entity& entity, scene::Scene& scene);
 
-			void  collectGarbage(scene::Scene& scene);
-			void  initialize(scene::Scene& scene);
-			void  deinitialize(scene::Scene& scene);
+			void collectGarbage(scene::Scene& scene);
+			void initialize(scene::Scene& scene);
+			void deinitialize(scene::Scene& scene);
+			void updateDynamicsBvh(scene::Scene& scene);
 
 			void setMesh(const entity::Entity& entity, asset::VioletMeshHandle mesh, scene::Scene& scene);
 			void setSubMesh(const entity::Entity& entity, const uint32_t& sub_mesh, scene::Scene& scene);
@@ -140,7 +142,7 @@ namespace lambda
 			void makeDynamic(const entity::Entity& entity, scene::Scene& scene);
 
 			void createRenderList(utilities::Culler& culler, const utilities::Frustum& frustum, scene::Scene& scene);
-			void createSortedRenderList(utilities::LinkedNode* statics, utilities::LinkedNode* dynamics, Vector<utilities::Renderable*>& opaque, Vector<utilities::Renderable*>& alpha, scene::Scene& scene);
+			void createSortedRenderList(utilities::LinkedNode* linked_node, Vector<utilities::Renderable*>& opaque, Vector<utilities::Renderable*>& alpha, scene::Scene& scene);
 			void renderAll(utilities::Culler& culler, const utilities::Frustum& frustum, scene::Scene& scene, bool is_rh = true);
 			void renderAll(utilities::LinkedNode* statics, utilities::LinkedNode* dynamics, scene::Scene& scene, bool is_rh = true);
 			void renderAll(const Vector<utilities::Renderable*>& opaque, const Vector<utilities::Renderable*>& alpha, scene::Scene& scene, bool is_rh = true);

@@ -4,6 +4,7 @@
 #include <compilers/texture_compiler.h>
 #include <compilers/wave_compiler.h>
 #include <compilers/shader_compiler.h>
+#include <compilers/mesh_compiler.h>
 #include <thread>
 #include <stb_image.h>
 #include <stb_image_write.h>
@@ -352,7 +353,8 @@ void removeFile(
 	const lambda::String& file, 
 	lambda::VioletTextureCompiler texture_compiler, 
 	lambda::VioletWaveCompiler wave_compiler,
-	lambda::VioletShaderCompiler shader_compiler)
+	lambda::VioletShaderCompiler shader_compiler,
+	lambda::VioletMeshCompiler mesh_compiler)
 {
   lambda::String extension = lambda::FileSystem::GetExtension(file);
   if (extension == "png" || extension == "jpg" || extension == "jpeg" || extension == "hdr")
@@ -360,16 +362,21 @@ void removeFile(
     texture_compiler.RemoveTexture(texture_compiler.GetHash(file));
     lambda::foundation::Info("[TEX] " + file + " removed!\n");
   }
-	else if (extension == "wav")
-	{
-		wave_compiler.RemoveWave(wave_compiler.GetHash(file));
-		lambda::foundation::Info("[WAV] " + file + " removed!\n");
-	}
-	else if (extension == "fx")
-	{
-		shader_compiler.RemoveShader(shader_compiler.GetHash(file));
-		lambda::foundation::Info("[SHA] " + file + " removed!\n");
-	}
+  else if (extension == "wav")
+  {
+    wave_compiler.RemoveWave(wave_compiler.GetHash(file));
+	lambda::foundation::Info("[WAV] " + file + " removed!\n");
+  }
+  else if (extension == "fx")
+  {
+    shader_compiler.RemoveShader(shader_compiler.GetHash(file));
+	lambda::foundation::Info("[SHA] " + file + " removed!\n");
+  }
+  else if (extension == "gltf" || extension == "glb")
+  {
+    mesh_compiler.RemoveMesh(mesh_compiler.GetHash(file));
+	lambda::foundation::Info("[MSH] " + file + " removed!\n");
+  }
   else if (extension == "fxh")
     Warning("[SHA] " + file + " removed!\n");
   else if (extension == "as")
@@ -489,7 +496,8 @@ bool updateFile(
 	const lambda::String& file, 
 	lambda::VioletTextureCompiler texture_compiler, 
 	lambda::VioletWaveCompiler wave_compiler,
-	lambda::VioletShaderCompiler shader_compiler)
+	lambda::VioletShaderCompiler shader_compiler,
+	lambda::VioletMeshCompiler mesh_compiler)
 {
   lambda::String extension = lambda::FileSystem::GetExtension(file);
   if (extension == "png" || extension == "jpg" || extension == "jpeg" || extension == "hdr")
@@ -555,6 +563,26 @@ bool updateFile(
 	  return false;
     }
   }
+  else if (extension == "gltf" || extension == "glb")
+  {
+    lambda::foundation::Info("[MSH] " + file + "\n");
+    lambda::foundation::Info("\tCompiling...\n");
+    
+    lambda::MeshCompileInfo compile_info{};
+    compile_info.file = file;
+    if (mesh_compiler.Compile(compile_info))
+    {
+      lambda::foundation::Info("\tCompiled!\n");
+	  mesh_compiler.Save();
+      lambda::foundation::Info("\tSaved!\n");
+	  return true;
+	}
+    else
+    {
+      lambda::foundation::Info("\tCompilation failed!\n");
+	  return false;
+    }
+  }
   else if (extension == "fxh")
     Warning("[SHA]" + file + " changed!\n");
   else if (extension == "as")
@@ -585,6 +613,7 @@ int main(int argc, char** argv)
   lambda::VioletTextureCompiler texture_compiler;
   lambda::VioletWaveCompiler wave_compiler;
   lambda::VioletShaderCompiler shader_compiler;
+  lambda::VioletMeshCompiler mesh_compiler;
 
   while (true)
   {
@@ -611,7 +640,7 @@ int main(int argc, char** argv)
 
       // Update the file.
       if (time_stamp_manager.hasFileChanged(file))
-        if (updateFile(file, texture_compiler, wave_compiler, shader_compiler))
+        if (updateFile(file, texture_compiler, wave_compiler, shader_compiler, mesh_compiler))
 		  time_stamp_manager.updateTimeStap(file);
     }
 
@@ -619,7 +648,7 @@ int main(int argc, char** argv)
     for (const lambda::String& file : previous_files)
     {
       time_stamp_manager.removeFile(file);
-      removeFile(file, texture_compiler, wave_compiler, shader_compiler);
+      removeFile(file, texture_compiler, wave_compiler, shader_compiler, mesh_compiler);
     }
 
     // Sleep if we should.

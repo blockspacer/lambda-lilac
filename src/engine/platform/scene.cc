@@ -10,6 +10,8 @@
 #include "platform/rasterizer_state.h"
 #include <gui/gui.h>
 #include <memory/frame_heap.h>
+#include <algorithm>
+#include <utils/decompose_matrix.h>
 
 #if VIOLET_WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -20,7 +22,7 @@
 #undef max
 #endif
 
-#define USE_MT 0
+#define USE_MT 1
 #define USE_SEPARATE_CONSTRUCT 0
 #define USE_RENDERABLES 1
 
@@ -58,15 +60,7 @@ namespace lambda
 #if USE_RENDERABLES
 		struct SceneRenderable
 		{
-			~SceneRenderable()
-			{
-				mesh     = nullptr;
-				sub_mesh = 0ul;
-				albedo   = nullptr;
-				normal   = nullptr;
-				dmra     = nullptr;
-				emissive = nullptr;
-			}
+			~SceneRenderable() {}
 
 			glm::mat4x4* mm;
 			glm::vec4* mr;
@@ -375,12 +369,10 @@ namespace lambda
 
 			// Bind Camera.
 			{
-				auto transform = components::TransformSystem::getComponent(entity, scene);
-
 				camera_batch.near       = camera.near_plane.asMeter();
 				camera_batch.far        = camera.far_plane.asMeter();
-				camera_batch.view       = glm::inverse(transform.getWorld());
-				camera_batch.position   = transform.getWorldTranslation();
+				camera_batch.view       = glm::inverse(camera.world_matrix);
+				utilities::decomposeMatrix(camera.world_matrix, nullptr, nullptr, &camera_batch.position);
 				camera_batch.projection = glm::perspective(
 					camera.fov.asRad(),
 					(float)scene.window->getSize().x / (float)scene.window->getSize().y,
@@ -402,11 +394,13 @@ namespace lambda
 #if USE_RENDERABLES
 			Vector<utilities::Renderable*> opaque;
 			Vector<utilities::Renderable*> alpha;
-			components::MeshRenderSystem::createSortedRenderList(&statics, &dynamics, opaque, alpha, scene);
+			components::MeshRenderSystem::createSortedRenderList(&statics,  opaque, alpha, scene);
+			components::MeshRenderSystem::createSortedRenderList(&dynamics, opaque, alpha, scene);
 			convertRenderableList(opaque, camera_batch.renderables);
 			convertRenderableList(alpha, camera_batch.renderables);
 #else
-			components::MeshRenderSystem::createSortedRenderList(&statics, &dynamics, camera_batch.opaque, camera_batch.alpha, scene);
+			components::MeshRenderSystem::createSortedRenderList(&statics,  camera_batch.opaque, camera_batch.alpha, scene);
+			components::MeshRenderSystem::createSortedRenderList(&dynamics, camera_batch.opaque, camera_batch.alpha, scene);
 #endif
 			for (const auto& shader_pass : camera.shader_passes)
 			{
@@ -493,8 +487,7 @@ namespace lambda
 			if (data.shadow_type == components::ShadowType::kGenerateOnce)
 				data.shadow_type = (g_generatedOnce[entity] == data.depth_target[0].getTexture().get()) ? components::ShadowType::kGenerated : components::ShadowType::kGenerateOnce;
 
-			const auto transform = components::TransformSystem::getComponent(entity, scene);
-			const glm::vec3 forward = glm::normalize(transform.getWorldForward());
+			const glm::vec3 forward = ((glm::mat3x3)data.world_matrix) * glm::vec3(0.0f, 0.0f, -1.0f);
 
 			const bool update = (data.shadow_type == components::ShadowType::kDynamic) ? (++data.dynamic_index >= data.dynamic_frequency) : (data.shadow_type != components::ShadowType::kGenerated);
 
@@ -511,7 +504,8 @@ namespace lambda
 				// Set everything up.
 				float light_depth = data.depth.back();
 				float smh_size = data.size * 0.5f;
-				glm::vec3 translation = transform.getWorldTranslation();
+				glm::vec3 translation;
+				utilities::decomposeMatrix(data.world_matrix, nullptr, nullptr, &translation);
 
 				// Remove shimmering
 				{
@@ -590,11 +584,13 @@ namespace lambda
 #if USE_RENDERABLES
 				Vector<utilities::Renderable*> opaque;
 				Vector<utilities::Renderable*> alpha;
-				components::MeshRenderSystem::createSortedRenderList(&statics, &dynamics, opaque, alpha, scene);
+				components::MeshRenderSystem::createSortedRenderList(&statics, opaque, alpha, scene);
+				components::MeshRenderSystem::createSortedRenderList(&dynamics, opaque, alpha, scene);
 				convertRenderableList(opaque, light_batch_face.renderables);
 				convertRenderableList(alpha, light_batch_face.renderables);
 #else
-				components::MeshRenderSystem::createSortedRenderList(&statics, &dynamics, light_batch_face.opaque, light_batch_face.alpha, scene);
+				components::MeshRenderSystem::createSortedRenderList(&statics, light_batch_face.opaque, light_batch_face.alpha, scene);
+				components::MeshRenderSystem::createSortedRenderList(&dynamics, light_batch_face.opaque, light_batch_face.alpha, scene);
 #endif
 
 				String config = "__temp_target_" + toString(shadow_maps.at(0u).getTexture()->getLayer(0).getWidth()) + "_" + toString(shadow_maps.at(0u).getTexture()->getLayer(0).getHeight()) + "__";
@@ -678,8 +674,6 @@ namespace lambda
 			if (data.shadow_type == components::ShadowType::kGenerateOnce)
 				data.shadow_type = (g_generatedOnce[entity] == data.depth_target[0].getTexture().get()) ? components::ShadowType::kGenerated : components::ShadowType::kGenerateOnce;
 
-			const auto transform = components::TransformSystem::getComponent(entity, scene);
-
 			static const glm::vec3 g_forwards[6u] = {
 				glm::vec3(1.0f, 0.0f, 0.0f),
 				glm::vec3(-1.0f, 0.0f, 0.0f),
@@ -710,7 +704,8 @@ namespace lambda
 				for (uint32_t i = 0; i < 6; ++i)
 				{
 					// Set everything up.
-					glm::vec3 translation = transform.getWorldTranslation();
+					glm::vec3 translation;
+					utilities::decomposeMatrix(data.world_matrix, nullptr, nullptr, &translation);
 
 					auto view_size = data.view.size();
 					auto view_position_size = data.view_position.size();
@@ -789,11 +784,11 @@ namespace lambda
 #if USE_RENDERABLES
 						Vector<utilities::Renderable*> opaque;
 						Vector<utilities::Renderable*> alpha;
-						components::MeshRenderSystem::createSortedRenderList(&statics, nullptr, opaque, alpha, scene);
+						components::MeshRenderSystem::createSortedRenderList(&statics, opaque, alpha, scene);
 						convertRenderableList(opaque, light_batch_faces[i].renderables);
 						convertRenderableList(alpha, light_batch_faces[i].renderables);
 #else
-						components::MeshRenderSystem::createSortedRenderList(&statics, nullptr, light_batch_faces[i].opaque, light_batch_faces[i].alpha, scene);
+						components::MeshRenderSystem::createSortedRenderList(&statics, light_batch_faces[i].opaque, light_batch_faces[i].alpha, scene);
 #endif
 					}
 					else
@@ -804,11 +799,13 @@ namespace lambda
 #if USE_RENDERABLES
 						Vector<utilities::Renderable*> opaque;
 						Vector<utilities::Renderable*> alpha;
-						components::MeshRenderSystem::createSortedRenderList(&statics, &dynamics, opaque, alpha, scene);
+						components::MeshRenderSystem::createSortedRenderList(&statics, opaque, alpha, scene);
+						components::MeshRenderSystem::createSortedRenderList(&dynamics, opaque, alpha, scene);
 						convertRenderableList(opaque, light_batch_faces[i].renderables);
 						convertRenderableList(alpha, light_batch_faces[i].renderables);
 #else
-						components::MeshRenderSystem::createSortedRenderList(&statics, &dynamics, light_batch_faces[i].opaque, light_batch_faces[i].alpha, scene);
+						components::MeshRenderSystem::createSortedRenderList(&statics, light_batch_faces[i].opaque, light_batch_faces[i].alpha, scene);
+						components::MeshRenderSystem::createSortedRenderList(&dynamics, light_batch_faces[i].opaque, light_batch_faces[i].alpha, scene);
 #endif
 					}
 
@@ -926,7 +923,8 @@ namespace lambda
 					{
 					case components::LightType::kPoint:
 					{
-						glm::vec3 position = components::TransformSystem::getWorldTranslation(data.entity, scene);
+						glm::vec3 position;
+						utilities::decomposeMatrix(data.world_matrix, nullptr, nullptr, &position);
 						float radius = data.depth.back();
 						if (!frustum.ContainsSphere(position, radius))
 							enabled = false;
@@ -1144,6 +1142,21 @@ namespace lambda
 			virtual ~RenderAction_DebugRenderer() override {};
 		};
 
+		struct RenderAction_MeshRenderDebug : public scene::IRenderAction
+		{
+			virtual void execute(scene::Scene& scene) override
+			{
+				scene.renderer->beginTimer("Mesh Renderer Debug");
+				scene.renderer->pushMarker("Mesh Renderer Debug");
+				scene.mesh_render.static_bvh->draw(&scene.debug_renderer);
+				scene.mesh_render.dynamic_bvh->draw(&scene.debug_renderer);
+				scene.renderer->popMarker();
+				scene.renderer->endTimer("Mesh Renderer Debug");
+			}
+
+			virtual ~RenderAction_MeshRenderDebug() override {};
+		};
+
 		struct RenderAction_RigidBodyRenderer : public scene::IRenderAction
 		{
 			virtual void execute(scene::Scene& scene) override
@@ -1211,6 +1224,7 @@ namespace lambda
 			Vector<IRenderAction*> render_actions;
 			render_actions.push_back(foundation::GetFrameHeap()->construct<RenderAction_PostProcess>());
 			render_actions.push_back(foundation::GetFrameHeap()->construct<RenderAction_RigidBodyRenderer>());
+			//render_actions.push_back(foundation::GetFrameHeap()->construct<RenderAction_MeshRenderDebug>());
 			render_actions.push_back(foundation::GetFrameHeap()->construct<RenderAction_DebugRenderer>());
 			render_actions.push_back(foundation::GetFrameHeap()->construct<RenderAction_CopyToScreen>());
 			render_actions.insert(render_actions.end(), scene.render_actions.begin(), scene.render_actions.end());
@@ -1325,14 +1339,16 @@ namespace lambda
 
 		void sceneConstructRender(scene::Scene& scene)
 		{
+			components::MeshRenderSystem::updateDynamicsBvh(scene);
+			components::LightSystem::updateLightTransforms(scene);
+			components::CameraSystem::updateCameraTransforms(scene);
+
 #if USE_SEPARATE_CONSTRUCT
 			// Create new.
 			if (!k_construct.queued_data)
 				k_construct.queued_data = foundation::Memory::construct<RenderData>();
 
 			k_construct.queued_data->scene.camera                   = scene.camera;
-			k_construct.queued_data->scene.transform                = scene.transform;
-			k_construct.queued_data->scene.mesh_render              = scene.mesh_render;
 			k_construct.queued_data->scene.light                    = scene.light;
 			k_construct.queued_data->scene.renderer                 = scene.renderer;
 			k_construct.queued_data->scene.post_process_manager     = scene.post_process_manager;
@@ -1341,6 +1357,8 @@ namespace lambda
 			k_construct.queued_data->scene.render_actions           = scene.render_actions;
 			k_construct.queued_data->scene.rigid_body.physics_world = scene.rigid_body.physics_world;
 			k_construct.queued_data->scene.debug_renderer           = scene.debug_renderer;
+			k_construct.queued_data->scene.mesh_render.static_bvh   = scene.mesh_render.static_bvh;
+			k_construct.queued_data->scene.mesh_render.dynamic_bvh  = scene.mesh_render.dynamic_bvh;
 
 			bool can_set = false;
 			do
@@ -1371,6 +1389,8 @@ namespace lambda
 			k_flush.queued_data->scene.render_actions           = scene.render_actions;
 			k_flush.queued_data->scene.rigid_body.physics_world = scene.rigid_body.physics_world;
 			k_flush.queued_data->scene.debug_renderer           = scene.debug_renderer;
+			k_flush.queued_data->scene.mesh_render.static_bvh   = scene.mesh_render.static_bvh;
+			k_flush.queued_data->scene.mesh_render.dynamic_bvh  = scene.mesh_render.dynamic_bvh;
 
 #if USE_MT
 			bool can_set = false;

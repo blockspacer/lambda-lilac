@@ -1,6 +1,7 @@
 #pragma once
 #include "vulkan.h"
 #include <containers/containers.h>
+#include <vk_mem_alloc.h>
 
 #define VIOLET_USE_GPU_MARKERS 0
 
@@ -35,6 +36,7 @@ namespace lambda
 	  VkQueue          getPresentQueue()             const { return present_queue_; }
 	  VkQueue          getComputeQueue()             const { return compute_queue_; }
 	  VkCommandBuffer  getCommandBuffer()            const { return command_buffers_[current_frame_]; }
+	  VmaAllocator     getVmaAllocator()             const { return vma_allocator_; }
 
 	  void beginFrame();
 	  void endFrame();
@@ -54,6 +56,7 @@ namespace lambda
 	  void createCommandPool();
 	  void createCommandBuffers();
 	  void createSemaphores();
+	  void createVmaAllocator();
 
 	private:
 	  uint32_t current_frame_ = 0ul;
@@ -85,10 +88,11 @@ namespace lambda
 	  VkQueue  compute_queue_;
 
 	  VkCommandPool command_pool_;
-	  Vector<VkCommandBuffer> command_buffers_;
-
+	  Vector<VkCommandBuffer> command_buffers_;
+	  VmaAllocator vma_allocator_;
 #if VIOLET_DEBUG
 	  VkDebugUtilsMessengerEXT debug_messenger_;
+	  VkDebugReportCallbackEXT debug_report_callback_;
 #endif
 	};
   }

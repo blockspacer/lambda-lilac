@@ -2,6 +2,9 @@
 #include <utils/console.h>
 #include <interfaces/iwindow.h>
 
+#define VMA_IMPLEMENTATION
+#include <vk_mem_alloc.h>
+
 namespace lambda
 {
   namespace linux
@@ -72,6 +75,34 @@ namespace lambda
 
 		return VK_FALSE;
 	}
+
+	VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback2(
+		VkDebugReportFlagsEXT                       flags,
+		VkDebugReportObjectTypeEXT                  objectType,
+		uint64_t                                    object,
+		size_t                                      location,
+		int32_t                                     messageCode,
+		const char*                                 pLayerPrefix,
+		const char*                                 pMessage,
+		void*                                       pUserData)
+	{
+		VkDebugUtilsMessageTypeFlagsEXT message_type;
+		VkDebugUtilsMessageSeverityFlagBitsEXT message_severity;
+
+		switch (flags)
+		{
+		case VkDebugReportFlagBitsEXT::VK_DEBUG_REPORT_DEBUG_BIT_EXT:       message_severity = VkDebugUtilsMessageSeverityFlagBitsEXT::VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT; break;
+		case VkDebugReportFlagBitsEXT::VK_DEBUG_REPORT_ERROR_BIT_EXT:       message_severity = VkDebugUtilsMessageSeverityFlagBitsEXT::VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT; break;
+		case VkDebugReportFlagBitsEXT::VK_DEBUG_REPORT_INFORMATION_BIT_EXT: message_severity = VkDebugUtilsMessageSeverityFlagBitsEXT::VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT; break;
+		case VkDebugReportFlagBitsEXT::VK_DEBUG_REPORT_WARNING_BIT_EXT:     message_severity = VkDebugUtilsMessageSeverityFlagBitsEXT::VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT; break;
+		}
+
+		message_type = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT;
+
+		VkDebugUtilsMessengerCallbackDataEXT callback_data{};
+		callback_data.pMessage = pMessage;
+		return debugCallback(message_severity, message_type, &callback_data, pUserData);
+	}
 #endif
 
     ///////////////////////////////////////////////////////////////////////////
@@ -91,6 +122,7 @@ namespace lambda
 		createCommandPool();
 		createCommandBuffers();
 		createSemaphores();
+		createVmaAllocator();
 	}
 
 	///////////////////////////////////////////////////////////////////////////
@@ -176,7 +208,7 @@ namespace lambda
 
 #if VIOLET_DEBUG
 		instance_extensions_.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-		instance_extensions_.push_back("VK_EXT_debug_report");
+		instance_extensions_.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
 		//instance_layers_.push_back("VK_LAYER_RENDERDOC_Capture");
 #endif
 
@@ -283,8 +315,22 @@ namespace lambda
 		debug_utils_messenger_create_info.pUserData = nullptr;
 
 		PFN_vkCreateDebugUtilsMessengerEXT createDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance_, "vkCreateDebugUtilsMessengerEXT");
+		PFN_vkCreateDebugReportCallbackEXT createDebugReportCallbackEXT = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(instance_, "vkCreateDebugReportCallbackEXT");
+		
+		VkDebugReportCallbackCreateInfoEXT debug_report_callback_create_info{};
+		debug_report_callback_create_info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
+		debug_report_callback_create_info.flags =
+			VK_DEBUG_REPORT_DEBUG_BIT_EXT |
+			VK_DEBUG_REPORT_ERROR_BIT_EXT |
+			VK_DEBUG_REPORT_INFORMATION_BIT_EXT |
+			VK_DEBUG_REPORT_WARNING_BIT_EXT |
+			0;
+		debug_report_callback_create_info.pfnCallback = debugCallback2;
 		
 		VkResult result;
+		result = createDebugReportCallbackEXT(instance_, &debug_report_callback_create_info, allocator_, &debug_report_callback_);
+		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Failed to create debug report callback | %s", vkErrorCode(result));
+
 		result = createDebugUtilsMessengerEXT(instance_, &debug_utils_messenger_create_info, VK_NULL_HANDLE, &debug_messenger_);
 		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Failed to create debug utils messenger | %s", vkErrorCode(result));
 #endif
@@ -643,6 +689,16 @@ namespace lambda
 			result = vkCreateFence(device_, &fence_create_info, allocator_, &in_flight_fences_[i]);
 			LMB_ASSERT(result == VK_SUCCESS, "VULKAN: could not create fence | %s", vkErrorCode(result));
 		}
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	void VulkanDeviceManager::createVmaAllocator()
+	{
+		VmaAllocatorCreateInfo allocator_create_info{};
+		allocator_create_info.physicalDevice = physical_device_;
+		allocator_create_info.device         = device_;
+
+		vmaCreateAllocator(&allocator_create_info, &vma_allocator_);
 	}
   }
 }

@@ -64,6 +64,12 @@ namespace lambda
 	  class VulkanRenderer;
 	  class VulkanMesh;
 
+	  struct VulkanAlloc
+	  {
+		  VmaAllocation allocation;
+		  VkBuffer      buffer;
+	  };
+
 	  ///////////////////////////////////////////////////////////////////////////
 	  class VulkanRenderBuffer : public platform::IRenderBuffer
 	  {
@@ -71,20 +77,22 @@ namespace lambda
 		  VulkanRenderBuffer(
 			  uint32_t size,
 			  uint32_t flags,
-			  VkBuffer buffer,
+			  VulkanAlloc allocation,
 			  VulkanRenderer* renderer
 		  );
 		  virtual void*    lock()   override;
 		  virtual void     unlock() override;
-		  virtual uint32_t getFlags()   const override;
-		  virtual uint32_t getSize()    const override;
-		  size_t           getGPUSize() const;
-		  VkBuffer         getBuffer()  const;
+		  virtual uint32_t getFlags()      const override;
+		  virtual uint32_t getSize()       const override;
+		  size_t           getGPUSize()    const;
+		  VkBuffer         getBuffer()     const;
+		  VmaAllocation    getAllocation() const;
 
 	  private:
 		  void* data_;
 		  VulkanRenderer* renderer_;
-		  VkBuffer buffer_;
+		  VulkanAlloc allocation_;
+		  VulkanAlloc staging_;
 		  uint32_t flags_;
 		  uint32_t size_;
 		  size_t   gpu_size_;
@@ -261,6 +269,7 @@ namespace lambda
 
 	  VkDevice getDevice() const;
 	  VkCommandBuffer getCommandBuffer() const;
+	  VulkanDeviceManager& getDeviceManager();
 
     protected:
 	  virtual void destroyTexture(const size_t& hash) override;

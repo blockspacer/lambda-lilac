@@ -6,7 +6,8 @@ namespace lambda
   namespace utilities
   {
     class Frustum;
-    class ZoneManager;
+	class ZoneManager;
+	class BVH;
     
     ///////////////////////////////////////////////////////////////////////////
     struct LinkedNode
@@ -25,11 +26,8 @@ namespace lambda
       void setShouldCull(const bool& should_cull);
       void setCullShadowCasters(const bool& cull_shadow_casters);
       void setCullFrequency(const uint8_t& cull_frequency);
-      void cullDynamics(scene::Scene& scene, const Frustum& frustum);
-      void cullStatics(
-        ZoneManager& zone_manager, 
-        const Frustum& frustum
-      );
+	  void cullDynamics(const BaseBVH& bvh, const Frustum& frustum);
+	  void cullStatics(const BaseBVH& bvh, const Frustum& frustum);
       LinkedNode getDynamics() const { return dynamic_; }
       LinkedNode getStatics()  const { return static_; }
 

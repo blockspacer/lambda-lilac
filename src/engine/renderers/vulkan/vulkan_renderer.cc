@@ -16,40 +16,42 @@ namespace lambda
 	///////////////////////////////////////////////////////////////////////////
 	platform::IRenderBuffer* VulkanRenderer::allocRenderBuffer(uint32_t size, uint32_t flags, void* data)
 	{
-		const bool is_dynamic   = 
-        (flags & platform::IRenderBuffer::kFlagDynamic)   ? true : false;
-      const bool is_staging   = 
-        (flags & platform::IRenderBuffer::kFlagStaging)   ? true : false;
-      const bool is_immutable = 
-        (flags & platform::IRenderBuffer::kFlagImmutable) ? true : false;
-      const bool is_vertex    = 
-        (flags & platform::IRenderBuffer::kFlagVertex)    ? true : false;
-      const bool is_index     = 
-        (flags & platform::IRenderBuffer::kFlagIndex)     ? true : false;
-      const bool is_constant  = 
-        (flags & platform::IRenderBuffer::kFlagConstant)  ? true : false;
-/*
-	  VezMemoryFlags mem_flags;
-	  VezBufferCreateInfo buffer_create_info{};
+		const bool is_dynamic = (flags & platform::IRenderBuffer::kFlagDynamic)   ? true : false;
+      const bool is_staging   = (flags & platform::IRenderBuffer::kFlagStaging)   ? true : false;
+      const bool is_immutable = (flags & platform::IRenderBuffer::kFlagImmutable) ? true : false;
+      const bool is_vertex    = (flags & platform::IRenderBuffer::kFlagVertex)    ? true : false;
+      const bool is_index     = (flags & platform::IRenderBuffer::kFlagIndex)     ? true : false;
+      const bool is_constant  = (flags & platform::IRenderBuffer::kFlagConstant)  ? true : false;
 
+	  VkBufferCreateInfo buffer_create_info{};
+	  VmaAllocationCreateInfo allocation_create_info{};
+	  VulkanAlloc allocation{};
+
+	  allocation_create_info.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+
+	  buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 	  buffer_create_info.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-		  (is_vertex ? VK_BUFFER_USAGE_VERTEX_BUFFER_BIT :
-		  (is_index ? VK_BUFFER_USAGE_INDEX_BUFFER_BIT :
+		  (is_vertex   ? VK_BUFFER_USAGE_VERTEX_BUFFER_BIT :
+		  (is_index    ? VK_BUFFER_USAGE_INDEX_BUFFER_BIT :
 		  (is_constant ? VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT : 0u)));
-	  mem_flags = is_dynamic ? VEZ_MEMORY_CPU_TO_GPU :
-		  (is_staging ? VEZ_MEMORY_CPU_TO_GPU : VEZ_MEMORY_GPU_ONLY);
-	  buffer_create_info.pQueueFamilyIndices;
-	  buffer_create_info.queueFamilyIndexCount;
-	  buffer_create_info.size = size;
 
-	  VkBufferUsageFlagBits::VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-	  VkBuffer buffer = VK_NULL_HANDLE;
-	  VkResult result;
-	  result = vezCreateBuffer(device_, mem_flags, &buffer_create_info, &buffer);
-	  LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not create buffer | %s", vkErrorCode(result));
-	  
+	  allocation_create_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
+	  VkResult result = vmaCreateBuffer(device_manager_.getVmaAllocator(), &buffer_create_info, &allocation_create_info, &allocation.buffer, &allocation.allocation, nullptr);
+	  LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not create vma buffer | %s", vkErrorCode(result));
+
+	  VulkanRenderBuffer* render_buffer = foundation::Memory::construct<VulkanRenderBuffer>(
+        size, 
+        flags, 
+        allocation, 
+		this
+      );
+
 	  if (data)
-		vezBufferSubData(device_, buffer, 0, size, data);
+	  {
+		  memcpy(render_buffer->lock(), data, size);
+		  render_buffer->unlock();
+	  }
 
       if (is_vertex)
         memory_stats_.vertex   += size;
@@ -58,13 +60,7 @@ namespace lambda
       if (is_constant)
         memory_stats_.constant += size;
 
-      return foundation::Memory::construct<VulkanRenderBuffer>(
-        size, 
-        flags, 
-        buffer, 
-		this
-      );*/
-	  return nullptr;
+	  return render_buffer;
 	}
 
 	///////////////////////////////////////////////////////////////////////////
@@ -87,8 +83,8 @@ namespace lambda
 		if (is_constant)
 			memory_stats_.constant -= ((VulkanRenderBuffer*)buffer)->getGPUSize();
 
-		//vezDestroyBuffer(device_, ((VulkanRenderBuffer*)buffer)->getBuffer());
-		//foundation::Memory::destruct(buffer);
+		vmaDestroyBuffer(device_manager_.getVmaAllocator(), ((VulkanRenderBuffer*)buffer)->getBuffer(), ((VulkanRenderBuffer*)buffer)->getAllocation());
+		foundation::Memory::destruct(buffer);
 		buffer = nullptr;
 	}
 
@@ -954,6 +950,12 @@ namespace lambda
 		return command_buffer_.getActiveCommandBuffer();
 	}
 
+	///////////////////////////////////////////////////////////////////////////
+	VulkanDeviceManager& VulkanRenderer::getDeviceManager()
+	{
+		return device_manager_;
+	}
+
     ///////////////////////////////////////////////////////////////////////////
     void VulkanRenderer::setRenderScale(const float& render_scale)
     {
@@ -1054,15 +1056,15 @@ namespace lambda
     }
 
 	///////////////////////////////////////////////////////////////////////////
-	VulkanRenderBuffer::VulkanRenderBuffer(uint32_t size, uint32_t flags, VkBuffer buffer, VulkanRenderer* renderer)
+	VulkanRenderBuffer::VulkanRenderBuffer(uint32_t size, uint32_t flags, VulkanAlloc allocation, VulkanRenderer* renderer)
 		: data_(nullptr)
 		, size_(size)
 		, flags_(flags)
-		, buffer_(buffer)
+		, allocation_(allocation)
 		, renderer_(renderer)
 	{
 		VkMemoryRequirements memory_requirements;
-		vkGetBufferMemoryRequirements(renderer_->getDevice(), buffer_, &memory_requirements);
+		vkGetBufferMemoryRequirements(renderer_->getDevice(), allocation_.buffer, &memory_requirements);
 		gpu_size_ = (size_t)memory_requirements.size;
 	}
 
@@ -1070,7 +1072,10 @@ namespace lambda
 	void* VulkanRenderBuffer::lock()
 	{
 		LMB_ASSERT(!data_, "VULKAN: Buffer was already locked");
-		data_ = foundation::Memory::allocate(size_);
+		
+		VkResult result;
+		result = vmaMapMemory(renderer_->getDeviceManager().getVmaAllocator(), allocation_.allocation, &data_);
+		LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not map vma buffer | %s", vkErrorCode(result));
 		return data_;
 	}
 
@@ -1078,10 +1083,8 @@ namespace lambda
 	void VulkanRenderBuffer::unlock()
 	{
 		LMB_ASSERT(data_, "VULKAN: Buffer was not locked");
-		//VkResult result;
-		//result = vezBufferSubData(renderer_->getDevice(), buffer_, 0, size_, data_);
-		//LMB_ASSERT(result == VK_SUCCESS, "VULKAN: Could not update buffer data | %s", vkErrorCode(result));
-		foundation::Memory::deallocate(data_);
+
+		vmaUnmapMemory(renderer_->getDeviceManager().getVmaAllocator(), allocation_.allocation);
 		data_ = nullptr;
 	}
 
@@ -1106,7 +1109,13 @@ namespace lambda
 	///////////////////////////////////////////////////////////////////////////
 	VkBuffer VulkanRenderBuffer::getBuffer() const
 	{
-		return buffer_;
+		return allocation_.buffer;
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	VmaAllocation VulkanRenderBuffer::getAllocation() const
+	{
+		return allocation_.allocation;
 	}
 
 	///////////////////////////////////////////////////////////////////////////

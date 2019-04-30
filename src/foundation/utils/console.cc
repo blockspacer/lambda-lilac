@@ -53,7 +53,7 @@ namespace lambda
         break;
       }
 
-#if LOG_TO_FILE == 1
+#if LOG_TO_FILE
       LogToFile(msg);
 #endif
 

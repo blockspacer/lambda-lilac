@@ -16,6 +16,7 @@
 #include "utils/renderable.h"
 #include <platform/scene.h>
 #include <interfaces/irenderer.h>
+#include <memory/frame_heap.h>
 
 namespace lambda
 {
@@ -30,7 +31,9 @@ namespace lambda
 
 				scene.mesh_render.add(entity);
 
-				scene.mesh_render.dynamic_renderables.push_back(entity);
+				utilities::Renderable* renderable = foundation::Memory::construct<utilities::Renderable>();
+				renderable->entity = entity;
+				scene.mesh_render.dynamic_renderables.push_back(renderable);
 
 				return MeshRenderComponent(entity, scene);
 			}
@@ -56,14 +59,20 @@ namespace lambda
 						const auto& it = scene.mesh_render.entity_to_data.find(entity);
 						if (it != scene.mesh_render.entity_to_data.end())
 						{
-							auto dit = eastl::find(scene.mesh_render.dynamic_renderables.begin(), scene.mesh_render.dynamic_renderables.end(), entity);
+							auto dit = eastl::find_if(
+								scene.mesh_render.dynamic_renderables.begin(), scene.mesh_render.dynamic_renderables.end(),
+								[&entity](const utilities::Renderable* x) { return x->entity == entity; });
 							if (dit != scene.mesh_render.dynamic_renderables.end())
+							{
+								foundation::Memory::destruct(*dit);
 								scene.mesh_render.dynamic_renderables.erase(dit);
+							}
 							auto sit = eastl::find_if(
 								scene.mesh_render.static_renderables.begin(), scene.mesh_render.static_renderables.end(),
 								[&entity](const utilities::Renderable* x) { return x->entity == entity; });
 							if (sit != scene.mesh_render.static_renderables.end())
 							{
+								scene.mesh_render.static_bvh->remove(entity);
 								foundation::Memory::destruct(*sit);
 								scene.mesh_render.static_renderables.erase(sit);
 							}
@@ -113,7 +122,8 @@ namespace lambda
 					Vector<unsigned char>{ 255u, 255u, 255u, 255u }
 				);
 
-				scene.mesh_render.static_zone_manager = foundation::Memory::construct<utilities::ZoneManager>();
+				scene.mesh_render.static_bvh = foundation::Memory::construct<utilities::BVH>();
+				scene.mesh_render.dynamic_bvh = foundation::Memory::construct<utilities::TransientBVH>();
 			}
 			void deinitialize(scene::Scene& scene)
 			{
@@ -125,12 +135,57 @@ namespace lambda
 					scene.mesh_render.remove(entity);
 				collectGarbage(scene);
 
-				foundation::Memory::destruct(scene.mesh_render.static_zone_manager);
+				scene.mesh_render.static_bvh->clear();
+				scene.mesh_render.dynamic_bvh->clear();
+				foundation::Memory::destruct(scene.mesh_render.static_bvh);
+				foundation::Memory::destruct(scene.mesh_render.dynamic_bvh);
 
 				scene.mesh_render.default_albedo   = nullptr;
 				scene.mesh_render.default_normal   = nullptr;
 				scene.mesh_render.default_dmra     = nullptr;
 				scene.mesh_render.default_emissive = nullptr;
+			}
+			void updateDynamicsBvh(scene::Scene& scene)
+			{
+				scene.mesh_render.dynamic_bvh->clear();
+
+				for (utilities::Renderable* renderable : scene.mesh_render.dynamic_renderables)
+				{
+					auto& data = scene.mesh_render.get(renderable->entity);
+					
+					renderable->mesh             = data.mesh;
+					renderable->sub_mesh         = data.sub_mesh;
+					renderable->albedo_texture   = data.albedo_texture;
+					renderable->normal_texture   = data.normal_texture;
+					renderable->dmra_texture     = data.dmra_texture;
+					renderable->emissive_texture = data.emissive_texture;
+					renderable->metallicness     = data.metallicness;
+					renderable->roughness        = data.roughness;
+					renderable->emissiveness     = data.emissiveness;
+					renderable->model_matrix     = components::TransformSystem::getWorld(data.entity, scene);
+
+					const asset::SubMesh& sub_mesh = renderable->mesh->getSubMeshes().at(renderable->sub_mesh);
+
+					const glm::vec3 min = renderable->model_matrix * glm::vec4(sub_mesh.min, 1.0f);
+					const glm::vec3 max = renderable->model_matrix * glm::vec4(sub_mesh.max, 1.0f);
+					renderable->min = glm::vec3(
+						std::fminf(min.x, max.x),
+						std::fminf(min.y, max.y),
+						std::fminf(min.z, max.z)
+					);
+					renderable->max = glm::vec3(
+						std::fmaxf(min.x, max.x),
+						std::fmaxf(min.y, max.y),
+						std::fmaxf(min.z, max.z)
+					);
+					renderable->center = (renderable->min + renderable->max) * 0.5f;
+					renderable->radius = glm::length(renderable->center - renderable->max);
+
+					scene.mesh_render.dynamic_bvh->add(renderable->entity, renderable, {
+						glm::vec2(renderable->min.x, renderable->min.z),
+						glm::vec2(renderable->max.x, renderable->max.z)
+					});
+				}
 			}
 			void setMesh(const entity::Entity& entity, asset::VioletMeshHandle mesh, scene::Scene& scene)
 			{
@@ -301,16 +356,23 @@ namespace lambda
 					if (data->entity == entity)
 						return;
 
-				auto it = eastl::find(scene.mesh_render.dynamic_renderables.begin(), scene.mesh_render.dynamic_renderables.end(), entity);
+				utilities::Renderable* renderable = nullptr;
+				auto it = eastl::find_if(
+					scene.mesh_render.dynamic_renderables.begin(), scene.mesh_render.dynamic_renderables.end(),
+					[&entity](const utilities::Renderable* x) { return x->entity == entity; });
 				if (it != scene.mesh_render.dynamic_renderables.end())
+				{
+					renderable = *it;
 					scene.mesh_render.dynamic_renderables.erase(it);
+				}
+
+				LMB_ASSERT(renderable, "MESH RENDER: Could not find dynamic renderable with entity: %llu", entity);
 
 				const Data& data = scene.mesh_render.get(entity);
 				if (!data.mesh)
 					return;
 
 
-				utilities::Renderable* renderable = foundation::Memory::construct<utilities::Renderable>();
 				renderable->entity           = entity;
 				renderable->model_matrix     = TransformSystem::getWorld(entity, scene);
 				renderable->mesh             = data.mesh;
@@ -340,45 +402,48 @@ namespace lambda
 				renderable->center = (renderable->min + renderable->max) * 0.5f;
 				renderable->radius = glm::length(renderable->center - renderable->max);
 
-				scene.mesh_render.static_zone_manager->addToken(
+				scene.mesh_render.static_bvh->add(entity, renderable, {
 					glm::vec2(renderable->min.x, renderable->min.z),
-					glm::vec2(renderable->max.x, renderable->max.z),
-					utilities::Token(entity, renderable)
-				);
+					glm::vec2(renderable->max.x, renderable->max.z)
+				});
+
 				scene.mesh_render.static_renderables.push_back(renderable);
 			}
 			void makeDynamic(const entity::Entity& entity, scene::Scene& scene)
 			{
-				for (const auto& data : scene.mesh_render.dynamic_renderables)
-					if (data == entity)
+				for (utilities::Renderable* renderable : scene.mesh_render.dynamic_renderables)
+					if (renderable->entity == entity)
 						return;
+
+				utilities::Renderable* renderable = nullptr;
 
 				for (uint32_t i = 0u; i < scene.mesh_render.static_renderables.size(); ++i)
 				{
 					if (scene.mesh_render.static_renderables.at(i)->entity == entity)
 					{
-						foundation::Memory::destruct(scene.mesh_render.static_renderables.at(i));
+						renderable = scene.mesh_render.static_renderables.at(i);
 						scene.mesh_render.static_renderables.erase(scene.mesh_render.static_renderables.begin() + i);
 						break;
 					}
 				}
 
-				scene.mesh_render.static_zone_manager->removeToken(utilities::Token(entity, nullptr));
+				LMB_ASSERT(renderable, "MESH RENDER: Could not find static renderable with entity: %llu", entity);
 
-				scene.mesh_render.dynamic_renderables.push_back(entity);
+				scene.mesh_render.static_bvh->remove(entity);
+				scene.mesh_render.dynamic_renderables.push_back(renderable);
 			}
 
 			void createRenderList(utilities::Culler& culler, const utilities::Frustum& frustum, scene::Scene& scene)
 			{
-				culler.cullStatics(*scene.mesh_render.static_zone_manager, frustum);
-				culler.cullDynamics(scene, frustum);
+				culler.cullStatics(*scene.mesh_render.static_bvh, frustum);
+				culler.cullDynamics(*scene.mesh_render.dynamic_bvh, frustum);
 			}
 
-			void createSortedRenderList(utilities::LinkedNode* statics, utilities::LinkedNode* dynamics, Vector<utilities::Renderable*>& opaque, Vector<utilities::Renderable*>& alpha, scene::Scene& scene)
+			void createSortedRenderList(utilities::LinkedNode* linked_node, Vector<utilities::Renderable*>& opaque, Vector<utilities::Renderable*>& alpha, scene::Scene& scene)
 			{
-				if (statics)
+				if (linked_node)
 				{
-					for (utilities::LinkedNode* node = statics->next; node != nullptr; node = node->next)
+					for (utilities::LinkedNode* node = linked_node->next; node != nullptr; node = node->next)
 					{
 						utilities::Renderable* renderable = (utilities::Renderable*)node->data;
 						// TODO (Hilze): Implement.
@@ -386,23 +451,6 @@ namespace lambda
 							alpha.push_back(renderable);
 						else
 							opaque.push_back(renderable);
-					}
-				}
-
-				if (dynamics)
-				{
-					for (utilities::LinkedNode* node = dynamics->next; node != nullptr; node = node->next)
-					{
-						utilities::Renderable* renderable = (utilities::Renderable*)node->data;
-						// TODO (Hilze): Implement.
-						if (renderable->albedo_texture && renderable->albedo_texture->getLayer(0u).containsAlpha())
-						{
-							alpha.push_back(renderable);
-						}
-						else
-						{
-							opaque.push_back(renderable);
-						}
 					}
 				}
 			}
@@ -433,7 +481,8 @@ namespace lambda
 			{
 				Vector<utilities::Renderable*> opaque;
 				Vector<utilities::Renderable*> alpha;
-				createSortedRenderList(statics, dynamics, opaque, alpha, scene);
+				createSortedRenderList(statics, opaque, alpha, scene);
+				createSortedRenderList(dynamics, opaque, alpha, scene);
 				renderAll(opaque, alpha, scene, is_rh);
 			}
 			void renderAll(const Vector<utilities::Renderable*>& opaque, const Vector<utilities::Renderable*>& alpha, scene::Scene& scene, bool is_rh)

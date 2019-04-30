@@ -1,20 +1,24 @@
 #include <gui/gui.h>
-#include <gui/gpu_driver.h>
-#include <gui/file_system.h>
-#include <gui/font_handler.h>
 
 #include <interfaces/irenderer.h>
 #include <platform/scene.h>
+
+#if VIOLET_GUI_ULTRALIGHT
+#include <gui/gpu_driver.h>
+#include <gui/file_system.h>
+#include <gui/font_handler.h>
 
 #include <Ultralight/platform/Platform.h>
 #include <Ultralight/platform/Config.h>
 #include <Ultralight/Ultralight.h>
 #include <JavaScriptCore/JavaScript.h>
+#endif
 
 namespace lambda
 {
 	namespace gui
 	{
+#if VIOLET_GUI_ULTRALIGHT
 		///////////////////////////////////////////////////////////////////////////
 		String exceptionToString(JSValueRef exception, JSContextRef js_context)
 		{
@@ -118,8 +122,7 @@ namespace lambda
 				}
 			}
 		};
-
-
+#endif
 
 
 
@@ -128,15 +131,18 @@ namespace lambda
 			: switch_time_(1.0 / 60.0)
 			, switch_(0.0)
 			, scene_(nullptr)
+			, enabled_(true)
+#if VIOLET_GUI_ULTRALIGHT
 			, renderer_(nullptr)
 			, view_(nullptr)
-			, enabled_(true)
+#endif
 		{
 		}
 
 		///////////////////////////////////////////////////////////////////////////
 		GUI::~GUI()
 		{
+#if VIOLET_GUI_ULTRALIGHT
 			ultralight::Platform& platform = ultralight::Platform::instance();
 
 			if (platform.gpu_driver())
@@ -156,6 +162,7 @@ namespace lambda
 			}
 
 			foundation::Memory::destruct(view_->view_listener());
+#endif
 
 			for (auto it : jscw_)
 				foundation::Memory::destruct(it);
@@ -168,6 +175,7 @@ namespace lambda
 		{
 			scene_ = &scene;
 
+#if VIOLET_GUI_ULTRALIGHT
 			ultralight::Platform& platform = ultralight::Platform::instance();
 
 			ultralight::Config config;
@@ -194,6 +202,7 @@ namespace lambda
 			ViewListenerImpl* view_listener =
 				foundation::Memory::construct<ViewListenerImpl>();
 			view_->set_view_listener(view_listener);
+#endif
 
 			texture_ = asset::TextureManager::getInstance()->create(Name("__gui"));
 
@@ -205,9 +214,7 @@ namespace lambda
 			texture.mip_count = 1u;
 			texture_->addLayer(asset::TextureLayer(texture));
 
-			scene_->post_process_manager->addTarget(
-				platform::RenderTarget(Name("gui"), texture_)
-			);
+			scene_->post_process_manager->addTarget(platform::RenderTarget(Name("gui"), texture_));
 		}
 
 		///////////////////////////////////////////////////////////////////////////
@@ -216,6 +223,7 @@ namespace lambda
 			if (!enabled_)
 				return;
 
+#if VIOLET_GUI_ULTRALIGHT
 			LoadListenerImpl* load_listener =
 				foundation::Memory::construct<LoadListenerImpl>();
 			view_->set_load_listener(load_listener);
@@ -227,6 +235,7 @@ namespace lambda
 
 			view_->set_load_listener(nullptr);
 			foundation::Memory::destruct(load_listener);
+#endif
 		}
 
 		std::mutex k_mutex;
@@ -250,8 +259,10 @@ namespace lambda
 			}
 			switch_ -= switch_time_;
 
+#if VIOLET_GUI_ULTRALIGHT
 			renderer_->Update();
 			JSGarbageCollect(view_->js_context());
+#endif
 			k_mutex.unlock();
 		}
 
@@ -260,6 +271,7 @@ namespace lambda
 		{
 			k_mutex.lock();
 
+#if VIOLET_GUI_ULTRALIGHT
 			gui::MyGPUDriver* driver = (gui::MyGPUDriver*)ultralight::Platform::instance().gpu_driver();
 			driver->setScene(scene);
 
@@ -278,14 +290,10 @@ namespace lambda
 				{
 					driver->DrawCommandList();
 
-					scene.renderer->copyToTexture(
-						driver->GetRenderBuffer(
-							view_->render_target().render_buffer_id
-						),
-						texture_
-					);
+					scene.renderer->copyToTexture(driver->GetRenderBuffer(view_->render_target().render_buffer_id), texture_);
 				}
 			}
+#endif
 
 			k_mutex.unlock();
 		}
@@ -301,6 +309,7 @@ namespace lambda
 				return false;
 			}
 
+#if VIOLET_GUI_ULTRALIGHT
 			switch (message.type)
 			{
 			case platform::WindowMessageType::kMouseMove:
@@ -342,6 +351,7 @@ namespace lambda
 				break;
 			}
 			}
+#endif
 
 			k_mutex.unlock();
 			return false;
@@ -354,6 +364,7 @@ namespace lambda
 				return;
 
 			k_mutex.lock();
+#if VIOLET_GUI_ULTRALIGHT
 			JSContextRef js_context = view_->js_context();
 			JSStringRef str = JSStringCreateWithUTF8CString(js.c_str());
 
@@ -361,6 +372,7 @@ namespace lambda
 			JSEvaluateScript(js_context, str, 0, 0, 0, &exception);
 			handleException(exception, js_context);
 			JSStringRelease(str);
+#endif
 			k_mutex.unlock();
 		}
 
@@ -378,6 +390,7 @@ namespace lambda
 			void* user_data;
 		};
 
+#if VIOLET_GUI_ULTRALIGHT
 		///////////////////////////////////////////////////////////////////////////
 		JSValueRef NativeFunctionCallback(
 			JSContextRef ctx, 
@@ -493,10 +506,12 @@ namespace lambda
 			}
 			return instance;
 		}
+#endif
 
 		///////////////////////////////////////////////////////////////////////////
 		void GUI::bindJavaScriptCallback(String name, JavaScriptCallback callback, const void* user_data)
 		{
+#if VIOLET_GUI_ULTRALIGHT
 			JSContextRef js_context = view_->js_context();
 			JSStringRef str = JSStringCreateWithUTF8CString(name.c_str());
 
@@ -526,11 +541,13 @@ namespace lambda
 			);
 
 			handleException(exception, js_context);
+#endif
 		}
 
 		///////////////////////////////////////////////////////////////////////////
 		void GUI::bindJavaScriptCallback(String name, JavaScriptCallbackWithRetval callback, const void* user_data)
 		{
+#if VIOLET_GUI_ULTRALIGHT
 			JSContextRef js_context = view_->js_context();
 			JSStringRef str = JSStringCreateWithUTF8CString(name.c_str());
 
@@ -560,6 +577,7 @@ namespace lambda
 			);
 
 			handleException(exception, js_context);
+#endif
 		}
 		void GUI::setEnabled(bool enabled)
 		{

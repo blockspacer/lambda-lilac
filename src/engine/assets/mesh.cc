@@ -2,7 +2,7 @@
 #include "utils/angle.h"
 #include <glm/gtx/orthonormalize.hpp>
 #include "interfaces/irenderer.h"
-#include "assets/mesh_io.h"
+#include <utils/file_system.h>
 
 namespace lambda
 {
@@ -952,9 +952,139 @@ namespace lambda
 		}
 
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		VioletMeshHandle MeshManager::create(Name name, VioletMesh mesh)
+		{
+			Vector<glm::vec3> pos(mesh.data.pos.data.size() / sizeof(glm::vec3));
+			Vector<glm::vec3> nor(mesh.data.nor.data.size() / sizeof(glm::vec3));
+			Vector<glm::vec2> tex(mesh.data.tex.data.size() / sizeof(glm::vec2));
+			Vector<glm::vec4> col(mesh.data.col.data.size() / sizeof(glm::vec4));
+			Vector<glm::vec4> ltn(mesh.data.tan.data.size() / sizeof(glm::vec4));
+			Vector<glm::vec4> joi(mesh.data.joi.data.size() / sizeof(glm::vec4));
+			Vector<glm::vec4> wei(mesh.data.wei.data.size() / sizeof(glm::vec4));
+			Vector<uint32_t>  idx(mesh.data.idx.data.size() / sizeof(uint32_t));
+			Vector<glm::vec3> tan(ltn.size());
+
+			memcpy((void*)pos.data(), mesh.data.pos.data.data(), mesh.data.pos.data.size());
+			memcpy((void*)nor.data(), mesh.data.nor.data.data(), mesh.data.nor.data.size());
+			memcpy((void*)tex.data(), mesh.data.tex.data.data(), mesh.data.tex.data.size());
+			memcpy((void*)col.data(), mesh.data.col.data.data(), mesh.data.col.data.size());
+			memcpy((void*)ltn.data(), mesh.data.tan.data.data(), mesh.data.tan.data.size());
+			memcpy((void*)joi.data(), mesh.data.joi.data.data(), mesh.data.joi.data.size());
+			memcpy((void*)wei.data(), mesh.data.wei.data.data(), mesh.data.wei.data.size());
+			memcpy((void*)idx.data(), mesh.data.idx.data.data(), mesh.data.idx.data.size());
+			for (uint64_t i = 0u; i < tan.size(); ++i)
+				memcpy((glm::vec3*)tan.data() + i, (glm::vec4*)ltn.data() + i, sizeof(float) * 3u);
+
+			Vector<asset::SubMesh> sub_meshes;
+			for (const VioletSubMesh& m : mesh.meshes)
+			{
+				asset::SubMesh sm;
+				sm.io.parent = m.parent;
+				sm.io.topology = m.topology;
+				sm.io.translation = m.translation;
+				sm.io.rotation = m.rotation;
+				sm.io.scale = m.scale;
+				sm.io.tex_alb = m.tex_alb;
+				sm.io.tex_nor = m.tex_nor;
+				sm.io.tex_dmra = m.tex_dmra;
+				sm.io.tex_emi = m.tex_emi;
+				sm.io.double_sided = m.double_sided;
+				sm.io.metallic = m.metallic;
+				sm.io.roughness = m.roughness;
+				sm.io.emissiveness = m.emissiveness;
+				sm.io.colour = m.colour;
+
+				if (m.pos >= 0) sm.offsets[asset::MeshElements::kPositions] = asset::SubMesh::Offset{
+					mesh.data.pos.segments.at(m.pos).offset,
+					mesh.data.pos.segments.at(m.pos).count,
+					mesh.data.pos.segments.at(m.pos).stride
+				};
+				if (m.nor >= 0) sm.offsets[asset::MeshElements::kNormals] = asset::SubMesh::Offset{
+					mesh.data.nor.segments.at(m.nor).offset,
+					mesh.data.nor.segments.at(m.nor).count,
+					mesh.data.nor.segments.at(m.nor).stride
+				};
+				if (m.col >= 0) sm.offsets[asset::MeshElements::kColours] = asset::SubMesh::Offset{
+					mesh.data.col.segments.at(m.col).offset,
+					mesh.data.col.segments.at(m.col).count,
+					mesh.data.col.segments.at(m.col).stride
+				};
+				if (m.tan >= 0) sm.offsets[asset::MeshElements::kTangents] = asset::SubMesh::Offset{
+					mesh.data.tan.segments.at(m.tan).offset / mesh.data.tan.segments.at(m.tan).stride * sizeof(glm::vec3),
+					//mesh.data.tan.segments.at(m.tan].offset,
+					mesh.data.tan.segments.at(m.tan).count,
+					sizeof(glm::vec3) // mesh.data.tan.segments.at(m.tan).stride
+				};
+				if (m.tex >= 0) sm.offsets[asset::MeshElements::kTexCoords] = asset::SubMesh::Offset{
+					mesh.data.tex.segments.at(m.tex).offset,
+					mesh.data.tex.segments.at(m.tex).count,
+					mesh.data.tex.segments.at(m.tex).stride
+				};
+				if (m.joi >= 0) sm.offsets[asset::MeshElements::kJoints] = asset::SubMesh::Offset{
+					mesh.data.joi.segments.at(m.joi).offset,
+					mesh.data.joi.segments.at(m.joi).count,
+					mesh.data.joi.segments.at(m.joi).stride
+				};
+				if (m.wei >= 0) sm.offsets[asset::MeshElements::kWeights] = asset::SubMesh::Offset{
+					mesh.data.wei.segments.at(m.wei).offset,
+					mesh.data.wei.segments.at(m.wei).count,
+					mesh.data.wei.segments.at(m.wei).stride
+				};
+				if (m.idx >= 0) sm.offsets[asset::MeshElements::kIndices] = asset::SubMesh::Offset{
+					mesh.data.idx.segments.at(m.idx).offset,
+					mesh.data.idx.segments.at(m.idx).count,
+					mesh.data.idx.segments.at(m.idx).stride
+				};
+				sm.min = m.aabb_min;
+				sm.max = m.aabb_max;
+				sub_meshes.push_back(sm);
+			}
+
+			Vector<asset::VioletTextureHandle> textures;
+			for (const String& texture : mesh.data.tex_alb)
+				textures.push_back(asset::TextureManager::getInstance()->get(texture));
+			for (const String& texture : mesh.data.tex_nrm)
+				textures.push_back(asset::TextureManager::getInstance()->get(texture));
+			for (const String& texture : mesh.data.tex_dmra)
+				textures.push_back(asset::TextureManager::getInstance()->get(texture));
+			for (const String& texture : mesh.data.tex_emi)
+				textures.push_back(asset::TextureManager::getInstance()->get(texture));
+
+			asset::Mesh m;
+			m.set(asset::MeshElements::kPositions, eastl::move(pos));
+			m.set(asset::MeshElements::kNormals, eastl::move(nor));
+			m.set(asset::MeshElements::kTexCoords, eastl::move(tex));
+			m.set(asset::MeshElements::kColours, eastl::move(col));
+			m.set(asset::MeshElements::kTangents, eastl::move(tan));
+			m.set(asset::MeshElements::kJoints, eastl::move(joi));
+			m.set(asset::MeshElements::kWeights, eastl::move(wei));
+			m.set(asset::MeshElements::kIndices, eastl::move(idx));
+			m.setSubMeshes(eastl::move(sub_meshes));
+			m.setAttachedTextures(eastl::move(textures));
+			m.setAttachedTextureCount(glm::uvec4(
+				mesh.data.tex_alb.size(),
+				mesh.data.tex_nrm.size(),
+				mesh.data.tex_dmra.size(),
+				mesh.data.tex_emi.size()
+			));
+
+			return create(name, m);
+		}
+
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		VioletMeshHandle lambda::asset::MeshManager::get(Name name)
 		{
-			return create(name, io::MeshIO::asAsset(io::MeshIO::load(name.getName())));
+			uint64_t hash = manager_.GetHash(FileSystem::MakeRelative(name.getName()));
+			LMB_ASSERT(manager_.HasHeader(hash), "Could not find mesh: %s", name.getName().c_str());
+			return get(hash);
+		}
+
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		VioletMeshHandle MeshManager::get(uint64_t hash)
+		{
+			LMB_ASSERT(manager_.HasHeader(hash), "Could not find mesh: %llu", hash);
+			VioletMesh mesh = manager_.GetMesh(hash, true);
+			return create(mesh.file, mesh);
 		}
 
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -999,6 +1129,18 @@ namespace lambda
 		{
 			while (!mesh_cache_.empty())
 				destroy(mesh_cache_.begin()->second, mesh_cache_.begin()->first);
+		}
+
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		VioletMeshManager& MeshManager::getManager()
+		{
+			return manager_;
+		}
+
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		const VioletMeshManager& MeshManager::getManager() const
+		{
+			return manager_;
 		}
   }
 }

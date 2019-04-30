@@ -5,6 +5,7 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtc/quaternion.hpp>
 #include <memory/memory.h>
+#include <assets/mesh_manager.h>
 
 namespace lambda
 {
@@ -13,13 +14,13 @@ namespace lambda
 		enum MeshElements : uint32_t
 		{
 			kPositions = constexprHash("Positions"),
-			kNormals = constexprHash("Normals"),
+			kNormals   = constexprHash("Normals"),
 			kTexCoords = constexprHash("TexCoords"),
-			kColours = constexprHash("Colours"),
-			kTangents = constexprHash("Tangents"),
-			kJoints = constexprHash("Joints"),
-			kWeights = constexprHash("Weights"),
-			kIndices = constexprHash("Indices"),
+			kColours   = constexprHash("Colours"),
+			kTangents  = constexprHash("Tangents"),
+			kJoints    = constexprHash("Joints"),
+			kWeights   = constexprHash("Weights"),
+			kIndices   = constexprHash("Indices"),
 		};
 
 		enum class Topology : uint8_t
@@ -243,7 +244,7 @@ namespace lambda
 			return vector;
 		}
 
-		typedef VioletHandle<Mesh> VioletMeshHandle;
+		using VioletMeshHandle = VioletHandle<Mesh>;
 
 		///////////////////////////////////////////////////////////////////////////
 		class MeshManager
@@ -251,7 +252,9 @@ namespace lambda
 		public:
 			VioletMeshHandle create(Name name);
 			VioletMeshHandle create(Name name, Mesh mesh);
+			VioletMeshHandle create(Name name, VioletMesh mesh);
 			VioletMeshHandle get(Name name);
+			VioletMeshHandle get(uint64_t hash);
 			VioletMeshHandle getFromCache(Name name);
 			void destroy(Mesh* mesh, const size_t& hash);
 
@@ -260,9 +263,13 @@ namespace lambda
 			static void setRenderer(platform::IRenderer* renderer);
 			~MeshManager();
 
+		protected:
+			VioletMeshManager& getManager();
+			const VioletMeshManager& getManager() const;
+
 		private:
 			platform::IRenderer* renderer_;
-
+			VioletMeshManager manager_;
 			UnorderedMap<uint64_t, Mesh*> mesh_cache_;
 		};
 	}

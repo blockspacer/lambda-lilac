@@ -47,6 +47,7 @@ namespace lambda
 				utilities::Distance near_plane = utilities::Distance::fromMeter(0.1f);
 				utilities::Distance far_plane = utilities::Distance::fromMeter(1000.0f);
 				Vector<platform::ShaderPass> shader_passes;
+				glm::mat4x4 world_matrix;
 
 				entity::Entity entity;
 				bool valid = true;
@@ -79,6 +80,7 @@ namespace lambda
 			void initialize(scene::Scene& scene);
 			void deinitialize(scene::Scene& scene);
 			void onRender(scene::Scene& scene);
+			void updateCameraTransforms(scene::Scene& scene);
 
 			void setFov(const entity::Entity& entity, const utilities::Angle& fov, scene::Scene& scene);
 			utilities::Angle getFov(const entity::Entity& entity, scene::Scene& scene);

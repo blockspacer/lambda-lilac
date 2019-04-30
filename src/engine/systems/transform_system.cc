@@ -358,11 +358,8 @@ namespace lambda
 
 			glm::vec3 getWorldTranslation(const entity::Entity& entity, scene::Scene& scene)
 			{
-				glm::vec3 scale;
 				glm::vec3 translation;
-				glm::quat orientation;
-				utilities::decomposeMatrix(getWorld(entity, scene), scale, orientation, translation);
-
+				utilities::decomposeMatrix(getWorld(entity, scene), nullptr, nullptr, &translation);
 				return translation;
 			}
 

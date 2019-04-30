@@ -75,6 +75,12 @@ namespace lambda
 				Data(const entity::Entity& entity) : entity(entity) {};
 				Data(const Data& other);
 				Data& operator=(const Data& other);
+				~Data() {
+					render_target.clear();
+					depth_target.clear();
+					render_target_texture.clear();
+					depth_target_texture.clear();
+				};
 
 				LightType type = LightType::kUnknown;
 				ShadowType shadow_type = ShadowType::kNone;
@@ -104,11 +110,13 @@ namespace lambda
 				Vector<asset::VioletTextureHandle> depth_target_texture;
 				Vector<platform::RenderTarget> render_target;
 				Vector<platform::RenderTarget> depth_target;
+
+				glm::mat4x4 world_matrix;
 			};
 
 			struct SystemData
 			{
-				Vector<Data>                  data;
+				Vector<Data>                  data; // TODO (Hilze): Remove this horrible hack!
 				Map<entity::Entity, uint32_t> entity_to_data;
 				Map<uint32_t, entity::Entity> data_to_entity;
 				Set<entity::Entity>           marked_for_delete;
@@ -155,6 +163,7 @@ namespace lambda
 			void deinitialize(scene::Scene& scene);
 			void onRender(scene::Scene& scene);
 			void collectGarbage(scene::Scene& scene);
+			void updateLightTransforms(scene::Scene& scene);
 
 			void setColour(const entity::Entity& entity, const glm::vec3& colour, scene::Scene& scene);
 			glm::vec3 getColour(const entity::Entity& entity, scene::Scene& scene);

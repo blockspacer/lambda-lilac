@@ -5,18 +5,19 @@
 
 #include <containers/containers.h>
 
+#if VIOLET_GUI_ULTRALIGHT
 #include <Ultralight/Renderer.h>
 #include <Ultralight/View.h>
 #include <JavaScriptCore/JavaScript.h>
-
-#include <functional>
-
 #ifdef min
 #undef min
 #endif
 #ifdef max
 #undef max
 #endif
+#endif
+
+#include <functional>
 
 namespace lambda
 {
@@ -64,10 +65,13 @@ namespace lambda
 			glm::ivec2 mouse_position_;
 			asset::VioletTextureHandle texture_;
 			scene::Scene* scene_;
-			ultralight::RefPtr<ultralight::Renderer> renderer_;
-			ultralight::RefPtr<ultralight::View> view_;
 			Vector<JSCW*>   jscw_;
 			Vector<JSCWRW*> jscwrw_;
+
+#if VIOLET_GUI_ULTRALIGHT
+			ultralight::RefPtr<ultralight::Renderer> renderer_;
+			ultralight::RefPtr<ultralight::View> view_;
+#endif
 		};
 	}
 }

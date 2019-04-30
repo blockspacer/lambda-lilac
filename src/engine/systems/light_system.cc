@@ -22,6 +22,7 @@ namespace lambda
   {
 		namespace LightSystem
 		{
+#pragma optimize ("", off)
 			LightComponent addComponent(const entity::Entity& entity, scene::Scene& scene)
 			{
 				if (!TransformSystem::hasComponent(entity, scene))
@@ -72,6 +73,15 @@ namespace lambda
 						}
 					}
 					scene.light.marked_for_delete.clear();
+				}
+			}
+
+			void updateLightTransforms(scene::Scene& scene)
+			{
+				for (Data& data : scene.light.data)
+				{
+					TransformSystem::cleanIfDirty(scene.transform.get(data.entity), scene);
+					data.world_matrix = scene.transform.get(data.entity).world;
 				}
 			}
 			LightComponent addDirectionalLight(const entity::Entity& entity, scene::Scene& scene)
@@ -1168,6 +1178,7 @@ namespace lambda
 		// The system data.
 		namespace LightSystem
 		{
+#pragma optimize ("", off)
 			Data& SystemData::add(const entity::Entity& entity)
 			{
 				uint32_t idx = 0ul;
@@ -1190,6 +1201,7 @@ namespace lambda
 				return data[idx];
 			}
 
+#pragma optimize ("", off)
 			Data& SystemData::get(const entity::Entity& entity)
 			{
 				auto it = entity_to_data.find(entity);
@@ -1243,6 +1255,7 @@ namespace lambda
 				valid = other.valid;
 				render_target_texture = other.render_target_texture;
 				depth_target_texture = other.depth_target_texture;
+				world_matrix = other.world_matrix;
 			}
 			Data & Data::operator=(const Data & other)
 			{
@@ -1270,6 +1283,7 @@ namespace lambda
 				valid = other.valid;
 				render_target_texture = other.render_target_texture;
 				depth_target_texture = other.depth_target_texture;
+				world_matrix = other.world_matrix;
 
 				return *this;
 			}

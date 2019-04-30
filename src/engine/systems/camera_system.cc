@@ -69,7 +69,8 @@ namespace lambda
 				components::MeshRenderSystem::createRenderList(scene.camera.main_camera_culler, scene.camera.main_camera_frustum, scene);
 				auto statics = scene.camera.main_camera_culler.getStatics();
 				auto dynamics = scene.camera.main_camera_culler.getDynamics();
-				components::MeshRenderSystem::createSortedRenderList(&statics, &dynamics, opaque, alpha, scene);
+				components::MeshRenderSystem::createSortedRenderList(&statics, opaque, alpha, scene);
+				components::MeshRenderSystem::createSortedRenderList(&dynamics, opaque, alpha, scene);
 
 				// Draw all passes.
 				scene.renderer->beginTimer("Main Camera");
@@ -88,6 +89,15 @@ namespace lambda
 
 				// Reset the depth stencil state. // TODO (Hilze): Find out how to handle depth stencil state.
 				scene.renderer->setDepthStencilState(platform::DepthStencilState::Default());
+			}
+
+			void updateCameraTransforms(scene::Scene& scene)
+			{
+				for (Data& data : scene.camera.data)
+				{
+					TransformSystem::cleanIfDirty(scene.transform.get(data.entity), scene);
+					data.world_matrix = scene.transform.get(data.entity).world;
+				}
 			}
 
 			CameraComponent CameraSystem::addComponent(const entity::Entity& entity, scene::Scene& scene)
@@ -250,6 +260,7 @@ namespace lambda
 				shader_passes = other.shader_passes;
 				entity = other.entity;
 				valid = other.valid;
+				world_matrix = other.world_matrix;
 			}
 			Data& Data::operator=(const Data & other)
 			{
@@ -259,6 +270,7 @@ namespace lambda
 				shader_passes = other.shader_passes;
 				entity = other.entity;
 				valid = other.valid;
+				world_matrix = other.world_matrix;
 				return *this;
 			}
 		}

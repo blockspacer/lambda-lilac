@@ -3,7 +3,7 @@
 #include <cassert>
 #include "containers/containers.h"
 #include "stack_trace.h"
-#define LOG_TO_FILE 1
+#define LOG_TO_FILE 0
 
 #ifndef LOG_TO_FILE
 #define LOG_TO_FILE 0

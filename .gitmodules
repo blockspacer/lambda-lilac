@@ -76,3 +76,6 @@
 [submodule "deps/StackWalker"]
 	path = deps/StackWalker
 	url = https://github.com/JochenKalmbach/StackWalker.git
+[submodule "deps/VulkanMemoryAllocator"]
+	path = deps/VulkanMemoryAllocator
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git

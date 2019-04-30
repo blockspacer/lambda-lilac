@@ -20,6 +20,7 @@ namespace lambda
 			TextureLayer();
 			TextureLayer(const TextureLayer& layer);
 			TextureLayer(const VioletTexture& data);
+			~TextureLayer() {};
 			const Vector<char>& getData() const;
 			void setData(const Vector<char>& data);
 			uint32_t getWidth() const;
@@ -50,6 +51,7 @@ namespace lambda
 			Texture();
 			Texture(const Texture& texture);
 			Texture(const VioletTexture& texture, uint32_t layer_count = 1u);
+			~Texture() {};
 			void clean();
 			void makeDirty();
 			bool isDirty() const;

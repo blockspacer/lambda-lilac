@@ -1,4 +1,6 @@
 SET(CompilersSources
+  "compilers/mesh_compiler.h"
+  "compilers/mesh_compiler.cc"
   "compilers/shader_compiler.h"
   "compilers/shader_compiler.cc"
   "compilers/shader_includer.h"
@@ -22,7 +24,7 @@ IF(NOT ${VIOLET_CONFIG_FOUNDATION})
 ENDIF()
 
 ADD_LIBRARY(lambda-packager ${Sources})
-TARGET_LINK_LIBRARIES(lambda-packager PUBLIC lambda-foundation soloud)
+TARGET_LINK_LIBRARIES(lambda-packager PUBLIC lambda-foundation tiny-gltf soloud)
 
 IF(${VIOLET_SHADER_CONDUCTOR})
   TARGET_LINK_LIBRARIES(lambda-packager PUBLIC ShaderConductor)

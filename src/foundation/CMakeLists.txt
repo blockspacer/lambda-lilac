@@ -2,6 +2,8 @@ SET(AssetsSources
   "assets/base_asset_manager.h"
   "assets/base_asset_manager.cc"
   "assets/enums.h"
+  "assets/mesh_manager.h"
+  "assets/mesh_manager.cc"
   "assets/shader_manager.h"
   "assets/shader_manager.cc"
   "assets/shader_pass_manager.h"
@@ -32,6 +34,7 @@ SET(PackageSources
   "package/package.cc"
 )
 SET(UtilsSources
+  "utils/decompose_matrix.h"
   "utils/colour.h"
   "utils/colour.cc"
   "utils/console.h"

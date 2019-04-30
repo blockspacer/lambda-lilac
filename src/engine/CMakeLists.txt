@@ -36,6 +36,12 @@ SET(InputSources
   "input/keyboard.h"
   "input/mouse.h"
 )
+SET(NoGuiSources
+  "gui/gui.h"
+  "gui/gui.cc"
+  "gui/gui_value.h"
+  "gui/gui_value.cc"
+)
 SET(UltralightGuiSources
   "gui/gui.h"
   "gui/gui.cc"
@@ -305,7 +311,8 @@ SET(SystemsSources
 )
 SET(UtilsSources
   "utils/angle.h"
-  "utils/decompose_matrix.h"
+  "utils/bvh.h"
+  "utils/bvh.cc"
   "utils/distance.h"
   "utils/mesh_decimator.h"
   "utils/mesh_decimator.cc"
@@ -338,6 +345,7 @@ SOURCE_GROUP("imgui\\imgui" FILES ${ImGuiSources})
 SOURCE_GROUP("imgui\\nuklear" FILES ${NuklearImGuiSources})
 SOURCE_GROUP("imgui\\no" FILES ${NoImGuiSources})
 SOURCE_GROUP("input" FILES ${InputSources})
+SOURCE_GROUP("gui\\gui" FILES ${NoGuiSources})
 SOURCE_GROUP("gui\\gui" FILES ${UltralightGuiSources})
 SOURCE_GROUP("interfaces" FILES ${InterfacesSources})
 SOURCE_GROUP("physics\\bullet" FILES ${PhysicsBulletSources})
@@ -439,6 +447,8 @@ ENDIF()
 # /// GUI ///////////////////////////////////////////////////////
 IF(${VIOLET_GUI} STREQUAL "Ultralight")
 	SET(Sources ${Sources} ${UltralightGuiSources})
+ELSE()
+	SET(Sources ${Sources} ${NoGuiSources})
 ENDIF()
 
 # ///////////////////////////////////////////////////////////////
@@ -468,6 +478,7 @@ ENDIF()
 # /// GUI ///////////////////////////////////////////////////////
 IF(${VIOLET_GUI} STREQUAL "Ultralight")
   TARGET_LINK_LIBRARIES(lambda-engine PUBLIC ultralight)
+  TARGET_COMPILE_DEFINITIONS(lambda-engine PRIVATE VIOLET_GUI_ULTRALIGHT)
 
   IF(VIOLET_WIN32)
     ADD_CUSTOM_COMMAND(TARGET lambda-engine POST_BUILD
@@ -484,6 +495,8 @@ IF(${VIOLET_GUI} STREQUAL "Ultralight")
       COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/UltralightCore.dll ${CMAKE_BINARY_DIR}/bin/RelWithDebInfo/UltralightCore.dll
       COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/WebCore.dll ${CMAKE_BINARY_DIR}/bin/RelWithDebInfo/WebCore.dll)
   ENDIF()
+ELSE()
+  TARGET_COMPILE_DEFINITIONS(lambda-engine PRIVATE VIOLET_GUI_NO)
 ENDIF()
 
 TARGET_INCLUDE_DIRECTORIES(lambda-engine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
@@ -499,7 +512,7 @@ ENDIF()
 IF(${VIOLET_RENDERER} STREQUAL "Vulkan")
   TARGET_COMPILE_DEFINITIONS(lambda-engine PRIVATE VIOLET_RENDERER_VULKAN)
   TARGET_INCLUDE_DIRECTORIES(lambda-engine PRIVATE $ENV{VULKAN_SDK}/Include)
-	TARGET_LINK_LIBRARIES(lambda-engine PUBLIC $ENV{VULKAN_SDK}/Lib/vulkan-1.lib)
+	TARGET_LINK_LIBRARIES(lambda-engine PUBLIC $ENV{VULKAN_SDK}/Lib/vulkan-1.lib vma)
   ENDIF()
 IF(${VIOLET_RENDERER} STREQUAL "Metal")
   TARGET_LINK_LIBRARIES(lambda-engine PUBLIC "-framework Metal -framework MetalKit -framework Cocoa -framework AudioToolbox -framework CoreFoundation -framework AppKit -framework QuartzCore")
@@ -555,6 +568,8 @@ ENDIF()
 # /// GUI ///////////////////////////////////////////////////////
 IF(${VIOLET_GUI} STREQUAL "Ultralight")
   TARGET_COMPILE_DEFINITIONS(lambda-engine PRIVATE VIOLET_GUI_ULTRALIGHT)
+ELSE()
+  TARGET_COMPILE_DEFINITIONS(lambda-engine PRIVATE VIOLET_GUI_NO)
 ENDIF()
 
 # ///////////////////////////////////////////////////////////////

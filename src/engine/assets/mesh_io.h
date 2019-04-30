@@ -46,13 +46,13 @@ namespace lambda
         // Textures.
         int tex_alb  = -1;
         int tex_nor  = -1;
-				int tex_dmra = -1;
-				int tex_emi  = -1;
+		int tex_dmra = -1;
+		int tex_emi  = -1;
         // Additional information.
         bool double_sided = false;
         float metallic = 0.0f;
-				float roughness = 1.0f;
-				glm::vec3 emissiveness = glm::vec3(0.0f);
+		float roughness = 1.0f;
+		glm::vec3 emissiveness = glm::vec3(0.0f);
         glm::vec4 colour = glm::vec4(1.0f);
       };
       struct MeshData
@@ -65,10 +65,10 @@ namespace lambda
         DataInfo joi;
         DataInfo wei;
         DataInfo idx;
-				Vector<asset::VioletTextureHandle> tex_alb;
-				Vector<asset::VioletTextureHandle> tex_nrm;
-				Vector<asset::VioletTextureHandle> tex_dmra;
-				Vector<asset::VioletTextureHandle> tex_emi;
+		Vector<asset::VioletTextureHandle> tex_alb;
+		Vector<asset::VioletTextureHandle> tex_nrm;
+		Vector<asset::VioletTextureHandle> tex_dmra;
+		Vector<asset::VioletTextureHandle> tex_emi;
       };
       struct Mesh
       {
@@ -104,10 +104,17 @@ namespace lambda
           size_t count;
           size_t stride;
         };
-        struct ModelHeader
-        {
-          size_t model_count;
-        };
+		struct ModelHeader
+		{
+			size_t model_count;
+		};
+		struct TextureHeader
+		{
+			size_t alb_count;
+			size_t nrm_count;
+			size_t dmra_count;
+			size_t emi_count;
+		};
       };
     };
   }
