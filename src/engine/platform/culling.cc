@@ -44,36 +44,21 @@ namespace lambda
 		////////////////////////////////////////////////////////////////////////////
 		void Culler::cullDynamics(const BaseBVH& bvh, const Frustum& frustum)
 		{
-			dynamic_.data = nullptr;
-			dynamic_.next = nullptr;
-			dynamic_.previous = nullptr;
+			memset(&dynamic_, 0, sizeof(dynamic_));
 			LinkedNode* node_it = &dynamic_;
 
 			BVHAABB aabb(frustum.getMin(), frustum.getMax());
 
-			for (const void* user_data : bvh.getAllUserDataInAABB(aabb))
+			for (const void* user_data : bvh.getAllUserDataInFrustum(frustum))
 			{
 				Renderable* data = (Renderable*)user_data;
-				if (data->mesh && frustum.ContainsAABB(data->min, data->max))
+				if (data->mesh)
 				{
-					/*Renderable* renderable = foundation::GetFrameHeap()->construct<Renderable>();
-					renderable->entity           = data->entity;
-					renderable->mesh             = data->mesh;
-					renderable->sub_mesh         = data->sub_mesh;
-					renderable->albedo_texture   = data->albedo_texture;
-			renderable->normal_texture   = data->normal_texture;
-			renderable->dmra_texture     = data->dmra_texture;
-			renderable->emissive_texture = data->emissive_texture;
-			renderable->metallicness     = data->metallicness;
-					renderable->roughness        = data->roughness;
-					renderable->emissiveness     = data->emissiveness;
-					renderable->model_matrix     = data->model_matrix;*/
-
 					LinkedNode* node = foundation::GetFrameHeap()->construct<LinkedNode>();
-					node_it->next = node;
-					node->data = data;
+					node_it->next  = node;
+					node->data     = data;
 					node->previous = node_it;
-					node_it = node;
+					node_it        = node;
 				}
 			}
 		}
@@ -81,36 +66,21 @@ namespace lambda
 		////////////////////////////////////////////////////////////////////////////
 		void Culler::cullStatics(const BaseBVH& bvh, const Frustum& frustum)
 		{
-			static_.data = nullptr;
-			static_.next = nullptr;
-			static_.previous = nullptr;
+			memset(&static_, 0, sizeof(static_));
 			LinkedNode* node_it = &static_;
 
 			BVHAABB aabb(frustum.getMin(), frustum.getMax());
 
-			for (const void* user_data : bvh.getAllUserDataInAABB(aabb))
+			for (const void* user_data : bvh.getAllUserDataInFrustum(frustum))
 			{
 				Renderable* data = (Renderable*)user_data;
-				if (data->mesh && frustum.ContainsAABB(data->min, data->max))
+				if (data->mesh)
 				{
-					/*Renderable* renderable = foundation::GetFrameHeap()->construct<Renderable>();
-					renderable->entity           = data->entity;
-					renderable->mesh             = data->mesh;
-					renderable->sub_mesh         = data->sub_mesh;
-					renderable->albedo_texture   = data->albedo_texture;
-			renderable->normal_texture   = data->normal_texture;
-			renderable->dmra_texture     = data->dmra_texture;
-			renderable->emissive_texture = data->emissive_texture;
-			renderable->metallicness     = data->metallicness;
-					renderable->roughness        = data->roughness;
-					renderable->emissiveness     = data->emissiveness;
-					renderable->model_matrix     = data->model_matrix;*/
-
 					LinkedNode* node = foundation::GetFrameHeap()->construct<LinkedNode>();
-					node_it->next = node;
-					node->data = data;
+					node_it->next  = node;
+					node->data     = data;
 					node->previous = node_it;
-					node_it = node;
+					node_it        = node;
 				}
 			}
 		}

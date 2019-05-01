@@ -24,6 +24,31 @@ namespace lambda
 	{
 		namespace MeshRenderSystem
 		{
+			void getMinMax(const glm::vec3& in_min, const glm::vec3& in_max, const glm::mat4x4& matrix, glm::vec3& out_min, glm::vec3& out_max)
+			{
+
+				const glm::vec3 corners[] = {
+					matrix * glm::vec4(in_min.x, in_min.y, in_min.z, 1.0f),
+					matrix * glm::vec4(in_min.x, in_min.y, in_max.z, 1.0f),
+					matrix * glm::vec4(in_max.x, in_min.y, in_max.z, 1.0f),
+					matrix * glm::vec4(in_max.x, in_min.y, in_min.z, 1.0f),
+
+					matrix * glm::vec4(in_min.x, in_max.y, in_min.z, 1.0f),
+					matrix * glm::vec4(in_min.x, in_max.y, in_max.z, 1.0f),
+					matrix * glm::vec4(in_max.x, in_max.y, in_max.z, 1.0f),
+					matrix * glm::vec4(in_max.x, in_max.y, in_min.z, 1.0f),
+				};
+
+				out_min = corners[0];
+				out_max = corners[0];
+
+				for (uint32_t i = 0; i < sizeof(corners) / sizeof(corners[0]); ++i)
+				{
+					out_min = glm::min(corners[i], out_min);
+					out_max = glm::max(corners[i], out_max);
+				}
+			}
+
 			MeshRenderComponent addComponent(const entity::Entity& entity, scene::Scene& scene)
 			{
 				if (!TransformSystem::hasComponent(entity, scene))
@@ -164,24 +189,15 @@ namespace lambda
 					renderable->emissiveness     = data.emissiveness;
 					renderable->model_matrix     = components::TransformSystem::getWorld(data.entity, scene);
 
-					const asset::SubMesh& sub_mesh = renderable->mesh->getSubMeshes().at(renderable->sub_mesh);
+					if (data.mesh)
+					{
+						const asset::SubMesh& sub_mesh = renderable->mesh->getSubMeshes().at(renderable->sub_mesh);
+						getMinMax(sub_mesh.min, sub_mesh.max, renderable->model_matrix, renderable->min, renderable->max);
+						renderable->center = (renderable->min + renderable->max) * 0.5f;
+						renderable->radius = glm::length(renderable->center - renderable->max);
 
-					const glm::vec3 min = renderable->model_matrix * glm::vec4(sub_mesh.min, 1.0f);
-					const glm::vec3 max = renderable->model_matrix * glm::vec4(sub_mesh.max, 1.0f);
-					renderable->min = glm::vec3(
-						std::fminf(min.x, max.x),
-						std::fminf(min.y, max.y),
-						std::fminf(min.z, max.z)
-					);
-					renderable->max = glm::vec3(
-						std::fmaxf(min.x, max.x),
-						std::fmaxf(min.y, max.y),
-						std::fmaxf(min.z, max.z)
-					);
-					renderable->center = (renderable->min + renderable->max) * 0.5f;
-					renderable->radius = glm::length(renderable->center - renderable->max);
-
-					scene.mesh_render.dynamic_bvh->add(renderable->entity, renderable, utilities::BVHAABB(renderable->min, renderable->max));
+						scene.mesh_render.dynamic_bvh->add(renderable->entity, renderable, utilities::BVHAABB(renderable->min, renderable->max));
+					}
 				}
 			}
 			void setMesh(const entity::Entity& entity, asset::VioletMeshHandle mesh, scene::Scene& scene)
@@ -366,10 +382,7 @@ namespace lambda
 				LMB_ASSERT(renderable, "MESH RENDER: Could not find dynamic renderable with entity: %llu", entity);
 
 				const Data& data = scene.mesh_render.get(entity);
-				if (!data.mesh)
-					return;
-
-
+				
 				renderable->entity           = entity;
 				renderable->model_matrix     = TransformSystem::getWorld(entity, scene);
 				renderable->mesh             = data.mesh;
@@ -382,24 +395,16 @@ namespace lambda
 				renderable->roughness        = data.roughness;
 				renderable->emissiveness     = data.emissiveness;
 
-				const asset::SubMesh& sub_mesh = renderable->mesh->getSubMeshes().at(renderable->sub_mesh);
+				if (renderable->mesh)
+				{
+					const asset::SubMesh& sub_mesh = renderable->mesh->getSubMeshes().at(renderable->sub_mesh);
+					getMinMax(sub_mesh.min, sub_mesh.max, renderable->model_matrix, renderable->min, renderable->max);
+					renderable->center = (renderable->min + renderable->max) * 0.5f;
+					renderable->radius = glm::length(renderable->center - renderable->max);
 
-				const glm::vec3 min = renderable->model_matrix * glm::vec4(sub_mesh.min, 1.0f);
-				const glm::vec3 max = renderable->model_matrix * glm::vec4(sub_mesh.max, 1.0f);
-				renderable->min = glm::vec3(
-					std::fminf(min.x, max.x),
-					std::fminf(min.y, max.y),
-					std::fminf(min.z, max.z)
-				);
-				renderable->max = glm::vec3(
-					std::fmaxf(min.x, max.x),
-					std::fmaxf(min.y, max.y),
-					std::fmaxf(min.z, max.z)
-				);
-				renderable->center = (renderable->min + renderable->max) * 0.5f;
-				renderable->radius = glm::length(renderable->center - renderable->max);
+					scene.mesh_render.static_bvh->add(entity, renderable, utilities::BVHAABB(renderable->min, renderable->max));
+				}
 
-				scene.mesh_render.static_bvh->add(entity, renderable, utilities::BVHAABB(renderable->min, renderable->max));
 				scene.mesh_render.static_renderables.push_back(renderable);
 			}
 			void makeDynamic(const entity::Entity& entity, scene::Scene& scene)

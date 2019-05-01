@@ -197,7 +197,7 @@ namespace lambda
 				bool found = false;
 				for (auto s_renderable : s_renderables)
 				{
-					if (s_renderable->mesh   == renderable->mesh &&
+					if (s_renderable->mesh     == renderable->mesh &&
 						s_renderable->sub_mesh == renderable->sub_mesh &&
 						s_renderable->albedo   == renderable->albedo_texture &&
 						s_renderable->normal   == renderable->normal_texture &&
@@ -1224,7 +1224,7 @@ namespace lambda
 			Vector<IRenderAction*> render_actions;
 			render_actions.push_back(foundation::GetFrameHeap()->construct<RenderAction_PostProcess>());
 			render_actions.push_back(foundation::GetFrameHeap()->construct<RenderAction_RigidBodyRenderer>());
-			render_actions.push_back(foundation::GetFrameHeap()->construct<RenderAction_MeshRenderDebug>());
+			//render_actions.push_back(foundation::GetFrameHeap()->construct<RenderAction_MeshRenderDebug>());
 			render_actions.push_back(foundation::GetFrameHeap()->construct<RenderAction_DebugRenderer>());
 			render_actions.push_back(foundation::GetFrameHeap()->construct<RenderAction_CopyToScreen>());
 			render_actions.insert(render_actions.end(), scene.render_actions.begin(), scene.render_actions.end());

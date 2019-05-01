@@ -153,6 +153,28 @@ namespace lambda
 	}
 
 	///////////////////////////////////////////////////////////////////////////
+	Vector<void*> BaseBVH::getAllUserDataInFrustum(const Frustum & frustum) const
+	{
+		Vector<void*> user_datas;
+
+		if (base_node_)
+			getUserDataInFrustum(user_datas, frustum, base_node_);
+
+		return user_datas;
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	Vector<entity::Entity> BaseBVH::getAllEntityInAABB(const Frustum & frustum) const
+	{
+		Vector<entity::Entity> entities;
+
+		if (base_node_)
+			getEntityInFrustum(entities, frustum, base_node_);
+
+		return entities;
+	}
+
+	///////////////////////////////////////////////////////////////////////////
 	void BaseBVH::getUserDataInAABB(Vector<void*>& user_datas, const BVHAABB& aabb, BVHNode* node) const
 	{
 		BVHNode* n = node;
@@ -182,6 +204,42 @@ namespace lambda
 					getEntityInAABB(entities, aabb, n->child_left);
 				if (n->child_right)
 					getEntityInAABB(entities, aabb, n->child_right);
+			}
+			else
+				entities.push_back(n->entity);
+		}
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	void BaseBVH::getUserDataInFrustum(Vector<void*>& user_datas, const Frustum & frustum, BVHNode * node) const
+	{
+		BVHNode* n = node;
+		if (frustum.ContainsAABB(n->aabb.bl, n->aabb.tr))
+		{
+			if (!n->is_leaf)
+			{
+				if (n->child_left)
+					getUserDataInFrustum(user_datas, frustum, n->child_left);
+				if (n->child_right)
+					getUserDataInFrustum(user_datas, frustum, n->child_right);
+			}
+			else
+				user_datas.push_back(n->user_data);
+		}
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	void BaseBVH::getEntityInFrustum(Vector<entity::Entity>& entities, const Frustum & frustum, BVHNode * node) const
+	{
+		BVHNode* n = node;
+		if (frustum.ContainsAABB(n->aabb.bl, n->aabb.tr))
+		{
+			if (!n->is_leaf)
+			{
+				if (n->child_left)
+					getEntityInFrustum(entities, frustum, n->child_left);
+				if (n->child_right)
+					getEntityInFrustum(entities, frustum, n->child_right);
 			}
 			else
 				entities.push_back(n->entity);
@@ -275,69 +333,43 @@ namespace lambda
 
 		if (!only_draw_leaf_nodes || n->is_leaf)
 		{
-			renderer->DrawLine(platform::DebugLine(
+			const glm::vec3 corners[] = {
 				glm::vec3(n->aabb.bl.x, n->aabb.bl.y, n->aabb.bl.z),
 				glm::vec3(n->aabb.bl.x, n->aabb.bl.y, n->aabb.tr.z),
-				kColors[depth % kColorCount]
-			));
-			renderer->DrawLine(platform::DebugLine(
-				glm::vec3(n->aabb.bl.x, n->aabb.bl.y, n->aabb.tr.z),
-				glm::vec3(n->aabb.tr.x, n->aabb.bl.y, n->aabb.tr.z),
-				kColors[depth % kColorCount]
-			));
-			renderer->DrawLine(platform::DebugLine(
 				glm::vec3(n->aabb.tr.x, n->aabb.bl.y, n->aabb.tr.z),
 				glm::vec3(n->aabb.tr.x, n->aabb.bl.y, n->aabb.bl.z),
-				kColors[depth % kColorCount]
-			));
-			renderer->DrawLine(platform::DebugLine(
-				glm::vec3(n->aabb.tr.x, n->aabb.bl.y, n->aabb.bl.z),
-				glm::vec3(n->aabb.bl.x, n->aabb.bl.y, n->aabb.bl.z),
-				kColors[depth % kColorCount]
-			));
 
-
-			renderer->DrawLine(platform::DebugLine(
 				glm::vec3(n->aabb.bl.x, n->aabb.tr.y, n->aabb.bl.z),
 				glm::vec3(n->aabb.bl.x, n->aabb.tr.y, n->aabb.tr.z),
-				kColors[depth % kColorCount]
-			));
-			renderer->DrawLine(platform::DebugLine(
-				glm::vec3(n->aabb.bl.x, n->aabb.tr.y, n->aabb.tr.z),
-				glm::vec3(n->aabb.tr.x, n->aabb.tr.y, n->aabb.tr.z),
-				kColors[depth % kColorCount]
-			));
-			renderer->DrawLine(platform::DebugLine(
 				glm::vec3(n->aabb.tr.x, n->aabb.tr.y, n->aabb.tr.z),
 				glm::vec3(n->aabb.tr.x, n->aabb.tr.y, n->aabb.bl.z),
-				kColors[depth % kColorCount]
-			));
-			renderer->DrawLine(platform::DebugLine(
-				glm::vec3(n->aabb.tr.x, n->aabb.tr.y, n->aabb.bl.y),
-				glm::vec3(n->aabb.bl.x, n->aabb.tr.y, n->aabb.bl.y),
-				kColors[depth % kColorCount]
-			));
+			};
 
-			renderer->DrawLine(platform::DebugLine(
-				glm::vec3(n->aabb.bl.x, n->aabb.tr.y, n->aabb.bl.z),
-				glm::vec3(n->aabb.bl.x, n->aabb.bl.y, n->aabb.bl.z),
-				kColors[depth % kColorCount]
-			));
-			renderer->DrawLine(platform::DebugLine(
-				glm::vec3(n->aabb.bl.x, n->aabb.tr.y, n->aabb.tr.z),
-				glm::vec3(n->aabb.bl.x, n->aabb.bl.y, n->aabb.tr.z),
-				kColors[depth % kColorCount]
-			));
-			renderer->DrawLine(platform::DebugLine(
-				glm::vec3(n->aabb.tr.x, n->aabb.tr.y, n->aabb.tr.z),
-				glm::vec3(n->aabb.tr.x, n->aabb.bl.y, n->aabb.tr.z),
-				kColors[depth % kColorCount]
-			));
-			renderer->DrawLine(platform::DebugLine(
-				glm::vec3(n->aabb.tr.x, n->aabb.tr.y, n->aabb.bl.y),
-				glm::vec3(n->aabb.tr.x, n->aabb.bl.y, n->aabb.bl.y),
-				kColors[depth % kColorCount]
-			));
+			static const glm::ivec2 indices[] = {
+				glm::ivec2(0, 1),
+				glm::ivec2(1, 2),
+				glm::ivec2(2, 3),
+				glm::ivec2(3, 0),
+
+				glm::ivec2(4, 5),
+				glm::ivec2(5, 6),
+				glm::ivec2(6, 7),
+				glm::ivec2(7, 4),
+
+				glm::ivec2(0, 4),
+				glm::ivec2(1, 5),
+				glm::ivec2(2, 6),
+				glm::ivec2(3, 7),
+			};
+
+			for (uint32_t i = 0; i < sizeof(indices) / sizeof(indices[0]); ++i)
+			{
+				renderer->DrawLine(platform::DebugLine(
+					corners[indices[i].x],
+					corners[indices[i].y],
+					kColors[depth % kColorCount]
+				));
+			}
 		}
 
 		if (n->child_left)

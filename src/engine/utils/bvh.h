@@ -4,6 +4,7 @@
 #include <glm/vec3.hpp>
 #include <mutex>
 #include <systems/entity.h>
+#include <platform/frustum.h>
 
 namespace lambda
 {
@@ -50,6 +51,8 @@ namespace lambda
 
 		  Vector<void*> getAllUserDataInAABB(const BVHAABB& aabb) const;
 		  Vector<entity::Entity> getAllEntityInAABB(const BVHAABB& aabb) const;
+		  Vector<void*> getAllUserDataInFrustum(const Frustum& frustum) const;
+		  Vector<entity::Entity> getAllEntityInAABB(const Frustum& frustum) const;
 
 	  protected:
 		  void findAndRemove(BVHNode* node, const entity::Entity& entity);
@@ -60,6 +63,8 @@ namespace lambda
 
 		  void getUserDataInAABB(Vector<void*>& user_datas, const BVHAABB& aabb, BVHNode* node) const;
 		  void getEntityInAABB(Vector<entity::Entity>& entities, const BVHAABB& aabb, BVHNode* node) const;
+		  void getUserDataInFrustum(Vector<void*>& user_datas, const Frustum& frustum, BVHNode* node) const;
+		  void getEntityInFrustum(Vector<entity::Entity>& entities, const Frustum& frustum, BVHNode* node) const;
 
 		  virtual BVHNode* privateCreate() = 0;
 		  void insert(BVHNode* node, BVHNode* parent);

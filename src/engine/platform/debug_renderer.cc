@@ -42,47 +42,66 @@ namespace lambda
 			if (lines_.positions.empty() && tris_.positions.empty())
 				return;
 
-			// Lines.
-			asset::SubMesh sub_mesh;
-			sub_mesh.offsets[asset::MeshElements::kPositions] =
-				asset::SubMesh::Offset(0u, lines_.positions.size(), sizeof(glm::vec3));
-			sub_mesh.offsets[asset::MeshElements::kColours] =
-				asset::SubMesh::Offset(0u, lines_.colours.size(), sizeof(glm::vec4));
-
-			lines_.mesh->set(asset::MeshElements::kPositions, lines_.positions);
-			lines_.mesh->set(asset::MeshElements::kColours, lines_.colours);
-			lines_.mesh->setSubMeshes({ sub_mesh });
-
-			lines_.positions.resize(0u);
-			lines_.colours.resize(0u);
-
-			// Tris.
-			sub_mesh.offsets[asset::MeshElements::kPositions] =
-				asset::SubMesh::Offset(0u, tris_.positions.size(), sizeof(glm::vec3));
-			sub_mesh.offsets[asset::MeshElements::kColours] =
-				asset::SubMesh::Offset(0u, tris_.colours.size(), sizeof(glm::vec4));
-
-			tris_.mesh->set(asset::MeshElements::kPositions, tris_.positions);
-			tris_.mesh->set(asset::MeshElements::kColours, tris_.colours);
-			tris_.mesh->setSubMeshes({ sub_mesh });
-
-			tris_.positions.resize(0u);
-			tris_.colours.resize(0u);
-
-			scene.renderer->bindShaderPass(ShaderPass(Name("debug"), 
-				asset::ShaderManager::getInstance()->get(Name("resources/shaders/debug.fx")), 
-				{}, 
-				{ scene.post_process_manager->getTarget(scene.post_process_manager->getFinalTarget()) }
-			));
-			scene.renderer->setSubMesh(0u);
+			bool render_lines = lines_.positions.size() > 0ull;
+			bool render_tris  = tris_.positions.size() > 0ull;
 
 			// Lines.
-			scene.renderer->setMesh(lines_.mesh);
-			scene.renderer->draw();
+			if (render_lines)
+			{
+				asset::SubMesh sub_mesh;
+				sub_mesh.offsets[asset::MeshElements::kPositions] =
+					asset::SubMesh::Offset(0u, lines_.positions.size(), sizeof(glm::vec3));
+				sub_mesh.offsets[asset::MeshElements::kColours] =
+					asset::SubMesh::Offset(0u, lines_.colours.size(), sizeof(glm::vec4));
+
+				lines_.mesh->set(asset::MeshElements::kPositions, lines_.positions);
+				lines_.mesh->set(asset::MeshElements::kColours, lines_.colours);
+				lines_.mesh->setSubMeshes({ sub_mesh });
+
+				lines_.positions.resize(0u);
+				lines_.colours.resize(0u);
+			}
 
 			// Tris.
-			scene.renderer->setMesh(tris_.mesh);
-			scene.renderer->draw();
+			if (render_tris)
+			{
+				asset::SubMesh sub_mesh;
+				sub_mesh.offsets[asset::MeshElements::kPositions] =
+					asset::SubMesh::Offset(0u, tris_.positions.size(), sizeof(glm::vec3));
+				sub_mesh.offsets[asset::MeshElements::kColours] =
+					asset::SubMesh::Offset(0u, tris_.colours.size(), sizeof(glm::vec4));
+
+				tris_.mesh->set(asset::MeshElements::kPositions, tris_.positions);
+				tris_.mesh->set(asset::MeshElements::kColours, tris_.colours);
+				tris_.mesh->setSubMeshes({ sub_mesh });
+
+				tris_.positions.resize(0u);
+				tris_.colours.resize(0u);
+			}
+
+			if (render_tris || render_lines)
+			{
+				scene.renderer->bindShaderPass(ShaderPass(Name("debug"),
+					asset::ShaderManager::getInstance()->get(Name("resources/shaders/debug.fx")),
+					{},
+					{ scene.post_process_manager->getTarget(scene.post_process_manager->getFinalTarget()) }
+				));
+				scene.renderer->setSubMesh(0u);
+			}
+
+			// Lines.
+			if (render_lines)
+			{
+				scene.renderer->setMesh(lines_.mesh);
+				scene.renderer->draw();
+			}
+
+			// Tris.
+			if (render_tris)
+			{
+				scene.renderer->setMesh(tris_.mesh);
+				scene.renderer->draw();
+			}
 		}
 
 		void DebugRenderer::Initialize(scene::Scene& scene)
