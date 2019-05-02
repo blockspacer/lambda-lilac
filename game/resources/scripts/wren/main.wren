@@ -40,328 +40,38 @@ import "resources/scripts/wren/trees" for Trees
 import "resources/scripts/wren/item_manager" for ItemManager
 import "resources/scripts/wren/door" for Door
 import "resources/scripts/wren/physics_layers" for PhysicsLayers
-
-class PositionNode {
-  construct new(position) {
-    _position = position
-  }
-  position { _position }
-}
-
-class Node {
-  getDir(a, b, s) {
-      var c = (b - a)
-      c.y = 0.0
-      var d = c.x
-      c.x = -c.z
-      c.z = d
-      return c.normalized * s
-  }
-  drawCircle(center, radius, segments, colour) {
-    for (i in 0..segments) {
-      var i1 = i % segments
-      var i2 = (i + 1) % segments
-
-      var s1 = Math.sin((i1 / segments) * Math.tau)
-      var c1 = Math.cos((i1 / segments) * Math.tau)
-      var s2 = Math.sin((i2 / segments) * Math.tau)
-      var c2 = Math.cos((i2 / segments) * Math.tau)
-
-      Debug.drawLine(center + Vec3.new(s1 * radius, 0.0, c1 * radius), center + Vec3.new(s2 * radius, 0.0, c2 * radius), colour)
-    }
-  }
-
-  valid { true }
-
-  construct new(index, position) {
-    _index       = index
-    _position    = position
-    _connections = []
-    _drawIndex   = 0
-    _searchValue = -1
-  }
-
-  addConnection(connection) {
-    for (c in _connections) {
-      if (c == connection) {
-        return
-      }
-    }
-
-    _connections.add(connection)
-    connection.addConnection(this)
-    return this
-  }
-
-  evaluateRoute(searchValue) {
-    if (searchValue > _searchValue && _searchValue != -1) {
-      return
-    }
-
-    _searchValue = searchValue
-    
-    for (connection in connections) {
-      var distance = (position - connection.position).length
-      connection.evaluateRoute(searchValue + distance)
-    }
-  }
-
-  getNextNode() {
-    var bestValue = -1
-    var bestNode = null
-    
-    for (connection in connections) {
-      if (connection.getSearchValue < bestValue || bestValue == -1) {
-        bestValue = connection.getSearchValue
-        bestNode = connection
-      }
-    }
-
-    return bestNode
-  }
-
-  getSearchValue { _searchValue }
-  index { _index }
-
-  reset() {
-    if (_searchValue == -1) {
-      return
-    }
-
-    _searchValue = -1
-    
-    for (connection in connections) {
-      connection.reset()
-    }
-  }
-
-  connections { _connections }
-  position    { _position }
-
-  validDrawIndex(drawIndex) { _drawIndex < drawIndex }
-
-  render(drawIndex) {
-    if (!validDrawIndex(drawIndex)) {
-      return
-    }
-    _drawIndex = drawIndex
-
-    var scale = 0.5
-    var segments = 12
-    var colourLine = Vec4.new(1.0, 0.0, 0.0, 1.0)
-    var colourCircle = Vec4.new(0.0, 0.0, 1.0, 1.0)
-    drawCircle(position, scale, segments, colourCircle)
-
-    for (connection in connections) {
-      var dir = getDir(connection.position, position, scale)
-    
-      // Side lines.
-      Debug.drawLine(position + dir, connection.position + dir, colourLine)
-      Debug.drawLine(position - dir, connection.position - dir, colourLine)
-
-      connection.render(drawIndex)
-    }
-    return this
-  }
-}
+import "resources/scripts/wren/node_map" for Node, NodeMap, NodeEditor
 
 class World {
-    construct new() { _drawIndex = 0 }
-    
+    construct new() {
+    }
+
     constructNodes() {
-      /*
-      Ground floor
-      _______________
-      |3  4 | | 9  8|
-      | |   | |   | |
-      | | 5  11 10| |
-      | |         | |
-      |1 17  0  19 6|
-      | |         | |
-      | |         | |
-      |2|18__21_20|7|
-
-      First floor
-      _______________
-      |13___ 12___15|
-      | |   | |   | |
-      | |    11   | |
-      |14         | |
-      |_          | |
-      | |         | |
-      | |         | |
-      |_|_________16|
-      */
-
-      // Ground floor
-      _nodeList = []
-      _nodes = List.filled(22, null)
-      _nodes[0]  = Node.new(0, Vec3.new(  0,  0,   0))
-      _nodes[1]  = Node.new(1, Vec3.new(  0,  0, -10))
-      _nodes[2]  = Node.new(2, Vec3.new(-11,  0, -10))
-      _nodes[3]  = Node.new(3, Vec3.new( 10,  0, -10))
-      _nodes[4]  = Node.new(4, Vec3.new( 10,  0,  -6))
-      _nodes[5]  = Node.new(5, Vec3.new(  6,  0,  -6))
-      _nodes[6]  = Node.new(6, Vec3.new(  0,  0,  10))
-      _nodes[7]  = Node.new(7, Vec3.new(-11,  0,  10))
-      _nodes[8]  = Node.new(8, Vec3.new( 10,  0,  10))
-      _nodes[9]  = Node.new(9, Vec3.new( 10,  0,   6))
-      _nodes[10] = Node.new(10, Vec3.new(  6,  0,   6))
-      _nodes[11] = Node.new(11, Vec3.new(  6,  0,   0))
-      _nodes[17] = Node.new(17, Vec3.new(  0,  0,  -6))
-      _nodes[18] = Node.new(18, Vec3.new(-11,  0,  -6))
-      _nodes[19] = Node.new(19, Vec3.new(  0,  0,   6))
-      _nodes[20] = Node.new(20, Vec3.new(-11,  0,   6))
-      _nodes[21] = Node.new(21, Vec3.new(-11,  0,   0))
-      // First floor
-      _nodes[12] = Node.new(12, Vec3.new( 10,  1,   0))
-      _nodes[13] = Node.new(13, Vec3.new( 10,  5, -10))
-      _nodes[14] = Node.new(14, Vec3.new(  4,  5, -10))
-      _nodes[15] = Node.new(15, Vec3.new( 10,  5,  10))
-      _nodes[16] = Node.new(16, Vec3.new(-11,  5,  10))
-
-      _nodes[0].addConnection(_nodes[17])
-      _nodes[0].addConnection(_nodes[5])
-      _nodes[0].addConnection(_nodes[19])
-      _nodes[0].addConnection(_nodes[10])
-      _nodes[0].addConnection(_nodes[11])
-
-      _nodes[1].addConnection(_nodes[17])
-      _nodes[1].addConnection(_nodes[2])
-      _nodes[1].addConnection(_nodes[3])
-      
-      _nodes[2].addConnection(_nodes[1])
-
-      _nodes[3].addConnection(_nodes[1])
-      _nodes[3].addConnection(_nodes[4])
-      
-      _nodes[4].addConnection(_nodes[3])
-      _nodes[4].addConnection(_nodes[5])
-
-      _nodes[5].addConnection(_nodes[0])
-      _nodes[5].addConnection(_nodes[4])
-      _nodes[5].addConnection(_nodes[11])
-      _nodes[5].addConnection(_nodes[17])
-
-      _nodes[6].addConnection(_nodes[19])
-      _nodes[6].addConnection(_nodes[7])
-      _nodes[6].addConnection(_nodes[8])
-
-      _nodes[7].addConnection(_nodes[6])
-
-      _nodes[8].addConnection(_nodes[6])
-      _nodes[8].addConnection(_nodes[9])
-
-      _nodes[9].addConnection(_nodes[8])
-      _nodes[9].addConnection(_nodes[10])
- 
-      _nodes[10].addConnection(_nodes[0])
-      _nodes[10].addConnection(_nodes[9])
-      _nodes[10].addConnection(_nodes[11])
-      _nodes[10].addConnection(_nodes[19])
-
-      _nodes[11].addConnection(_nodes[0])
-      _nodes[11].addConnection(_nodes[5])
-      _nodes[11].addConnection(_nodes[10])
-      _nodes[11].addConnection(_nodes[12])
-      _nodes[11].addConnection(_nodes[17])
-      _nodes[11].addConnection(_nodes[19])
-
-      _nodes[12].addConnection(_nodes[11])
-      _nodes[12].addConnection(_nodes[13])
-      _nodes[12].addConnection(_nodes[15])
-
-      _nodes[13].addConnection(_nodes[12])
-      _nodes[13].addConnection(_nodes[14])
-
-      _nodes[15].addConnection(_nodes[12])
-      _nodes[15].addConnection(_nodes[16])
-
-      _nodes[16].addConnection(_nodes[15])
-
-      _nodes[17].addConnection(_nodes[0])
-      _nodes[17].addConnection(_nodes[1])
-      _nodes[17].addConnection(_nodes[5])
-      _nodes[17].addConnection(_nodes[11])
-      _nodes[17].addConnection(_nodes[18])
-      _nodes[17].addConnection(_nodes[21])
-      
-      _nodes[18].addConnection(_nodes[0])
-      _nodes[18].addConnection(_nodes[17])
-      _nodes[18].addConnection(_nodes[21])
-
-      _nodes[19].addConnection(_nodes[0])
-      _nodes[19].addConnection(_nodes[6])
-      _nodes[19].addConnection(_nodes[10])
-      _nodes[19].addConnection(_nodes[11])
-      _nodes[19].addConnection(_nodes[20])
-      _nodes[19].addConnection(_nodes[21])
-      
-      _nodes[20].addConnection(_nodes[0])
-      _nodes[20].addConnection(_nodes[19])
-      _nodes[20].addConnection(_nodes[21])
-
-      _nodes[21].addConnection(_nodes[0])
-      _nodes[21].addConnection(_nodes[17])
-      _nodes[21].addConnection(_nodes[18])
-      _nodes[21].addConnection(_nodes[19])
-      _nodes[21].addConnection(_nodes[20])
-    }
-
-    findClosestNode(position) {
-      var closest = -1
-      var closestLength = -1
-
-      for (node in _nodes) {
-        var length = (position - node.position).lengthSqr
-        if (length < closestLength || closestLength == -1) {
-          closest = node.index
-          closestLength = length
-        }
-      }
-
-      return closest
-    }
-
-    getNodeList(nodeToMoveTo, nodeToComeFrom) {
-      _nodeList = []
-
-      _nodes[nodeToMoveTo].evaluateRoute(0)
-
-      var currNode = _nodes[nodeToComeFrom]
-      while (currNode.getSearchValue != 0) {
-        currNode = currNode.getNextNode()
-        _nodeList.insert(-1, currNode)
-      }
-
-      _nodes[nodeToMoveTo].reset()
-    }
-    
-    renderNodes() {
-      _drawIndex = _drawIndex + 1
-      _nodes[0].render(_drawIndex)
+      _nodeMap = NodeMap.new()
+      _nodeEditor = NodeEditor.new(_nodeMap)
+      _nodeEditor.deserialize()
     }
 
     getNextNode() {
-      if (_nodeList.isEmpty) {
+      if (_positionList == null || _positionList.isEmpty) {
         return
       }
 
-      _currNode = _nodeList[0]
-      _nodeList.removeAt(0)
+      _currPosition = _positionList[0]
+      _positionList.removeAt(0)
     }
 
     moveMoveMe() {
-      if (_currNode == null && _nodeList.count <= 0) {
-        getNodeList(findClosestNode(_camera.transform.worldPosition), findClosestNode(_moveMe.transform.worldPosition))
+      if (_currPosition == null && (_positionList == null || _positionList.count <= 0)) {
+        _positionList = _nodeMap.findPath(_moveMe.transform.worldPosition, _camera.transform.worldPosition)
         return
       }
 
-      if (_currNode == null) {
+      if (_currPosition == null) {
         getNextNode()
       }
 
-      var offset = _currNode.position - _moveMe.transform.worldPosition
+      var offset = _currPosition - _moveMe.transform.worldPosition
       offset.y = 0.0
       var length = offset.length
       var movement = 2.5 * Time.fixedDeltaTime
@@ -370,10 +80,10 @@ class World {
       }
 
       if (length < 0.1) {
-        var currNode = _currNode
-        getNodeList(findClosestNode(_camera.transform.worldPosition), findClosestNode(_moveMe.transform.worldPosition))
+        var currPosition = _currPosition
+        _positionList = _nodeMap.findPath(_moveMe.transform.worldPosition, _camera.transform.worldPosition)
         getNextNode()
-        if (_currNode == currNode) {
+        if (_currPosition == currPosition) {
           getNextNode()
         }
         //_currNode = _currNode.connections[Math.random(_currNode.connections.count - 1).round]
@@ -462,7 +172,8 @@ class World {
       //var transform = _lighting.rsm.getComponent(Transform)
       //transform.worldPosition = _camera.transform.worldPosition + offset
 
-      renderNodes()
+      _nodeMap.draw()
+      _nodeEditor.update(_camera.transform.worldPosition)
     }
 
     fixedUpdate() {

@@ -71,4 +71,18 @@ class InputController {
 
         return Math.clamp(val, -1.0, 1.0)
     }
+
+    static NodePlaceRemove {
+        var val = 0.0
+        if (Input.getKey(Keys.F)) val = val + 1.0
+
+        return Math.clamp(val, -1.0, 1.0)
+    }
+
+    static NodeConnect {
+        var val = 0.0
+        if (Input.getKey(Keys.G)) val = val + 1.0
+
+        return Math.clamp(val, -1.0, 1.0)
+    }
 }

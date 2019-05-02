@@ -133,6 +133,14 @@ foreign class Vec2 {
         if (v is Num)  return Vec2.new(x / v, y / v)
         if (v is Vec2) return Vec2.new(x / v.x, y / v.y)
     }
+	==(v) {
+		if (v is Num) return x == v && y == v
+		if (v is Vec2) return x == v.x && y == v.y
+	}
+	!=(v) {
+		if (v is Num) return x != v || y != v
+		if (v is Vec2) return x != v.x || y != v.y
+	}
 
     foreign normalized
     foreign toString
@@ -271,9 +279,19 @@ foreign class Vec3 {
         if (v is Num)  return Vec3.new(x / v, y / v, z / v)
         if (v is Vec3) return Vec3.new(x / v.x, y / v.y, z / v.z)
     }
+	==(v) {
+		if (v is Num) return x == v && y == v && z == v
+		if (v is Vec3) return x == v.x && y == v.y && z == v.z
+	}
+	!=(v) {
+		if (v is Num) return x != v || y != v || z != v
+		if (v is Vec3) return x != v.x || y != v.y || z != v.z
+	}
+
 
     foreign normalized
     foreign toString
+	foreign static fromString(string)
 
     foreign x
     foreign y
@@ -408,15 +426,25 @@ foreign class Vec3 {
             )
           );
         };
-        if (strcmp(signature, "toString") == 0) return [](WrenVM* vm) {
-          glm::vec3& vec = *GetForeign<glm::vec3>(vm);
-          String str = "[" + lambda::toString(vec.x) + ", " + 
-            lambda::toString(vec.y) + ", " + lambda::toString(vec.z) + "]";
-          const char* c_str = 
-            (const char*)WREN_ALLOC(str.size() + 1u);
-          memcpy((void*)c_str, str.data(), str.size() + 1u);
-          wrenSetSlotString(vm, 0, c_str);
-        };
+		if (strcmp(signature, "toString") == 0) return [](WrenVM* vm) {
+			glm::vec3& vec = *GetForeign<glm::vec3>(vm);
+			String str = "[" + lambda::toString(vec.x) + ", " +
+				lambda::toString(vec.y) + ", " + lambda::toString(vec.z) + "]";
+			const char* c_str =
+				(const char*)WREN_ALLOC(str.size() + 1u);
+			memcpy((void*)c_str, str.data(), str.size() + 1u);
+			wrenSetSlotString(vm, 0, c_str);
+		};
+		if (strcmp(signature, "fromString(_)") == 0) return [](WrenVM* vm) {
+			String str = wrenGetSlotString(vm, 1);
+			LMB_ASSERT(!str.empty() && str.front() == '[' && str.back() == ']', "WREN: Invalid string format \"%s\"", str.c_str());
+			Vector<String> s = split(str.substr(1, str.size() - 2), ',');
+			*MakeForeign<glm::vec3>(vm) = glm::vec3(
+				std::stof(s[0].c_str()),
+				std::stof(s[1].c_str()),
+				std::stof(s[2].c_str())
+			);
+		};
         return nullptr;
       }
     }
@@ -455,6 +483,14 @@ foreign class Vec4 {
         if (v is Num)  return Vec4.new(x / v, y / v, z / v, w / v)
         if (v is Vec4) return Vec4.new(x / v.x, y / v.y, z / v.z, w / v.w)
     }
+	==(v) {
+		if (v is Num) return x == v && y == v && z == v && w == v
+		if (v is Vec4) return x == v.x && y == v.y && z == v.z && w == v.w
+	}
+	!=(v) {
+		if (v is Num) return x != v || y != v || z != v || w != v
+		if (v is Vec4) return x != v.x || y != v.y || z != v.z || w != v.w
+	}
 
     foreign normalized
     foreign toString
@@ -633,6 +669,15 @@ foreign class Quat {
     foreign normalized
     foreign toString
     foreign toEuler
+
+	==(v) {
+		if (v is Num) return x == v && y == v && z == v && w == v
+		if (v is Quat) return x == v.x && y == v.y && z == v.z && w == v.w
+	}
+	!=(v) {
+		if (v is Num) return x != v || y != v || z != v || w != v
+		if (v is Quat) return x != v.x || y != v.y || z != v.z || w != v.w
+	}
     
     foreign x
     foreign y
@@ -1718,6 +1763,9 @@ foreign class GameObject {
       getComponent(component).goRemove(this)
     }
 
+	==(v) { id == v.id }
+	!=(v) { id != v.id }
+
     [component] { getComponent(component) }
 
 		foreign name
@@ -1860,6 +1908,21 @@ foreign class Transform {
 	toString { "[%(gameObject.id): Transform]" }
 
 	foreign gameObject
+
+	==(v) {
+		if (v is Transform) {
+			return gameObject == v.gameObject 
+		} else {
+			return false
+		}
+	}
+	!=(v) {
+		if (v is Transform) {
+			return gameObject != v.gameObject 
+		} else {
+			return true
+		}
+	}
 
 	foreign goAdd(gameObject)
 	foreign static goGet(gameObject)
@@ -2132,6 +2195,21 @@ foreign class Camera {
     
     foreign gameObject
     
+	==(v) {
+		if (v is Camera) {
+			return gameObject == v.gameObject 
+		} else {
+			return false
+		}
+	}
+	!=(v) {
+		if (v is Camera) {
+			return gameObject != v.gameObject 
+		} else {
+			return true
+		}
+	}
+
     foreign goAdd(gameObject)
     foreign static goGet(gameObject)
     foreign goRemove(gameObject)
@@ -2309,7 +2387,22 @@ foreign class MeshRender {
     toString { "[%(gameObject.id): MeshRender]" }
 
     foreign gameObject
-    
+
+	==(v) {
+		if (v is MeshRender) {
+			return gameObject == v.gameObject 
+		} else {
+			return false
+		}
+	}
+	!=(v) {
+		if (v is MeshRender) {
+			return gameObject != v.gameObject 
+		} else {
+			return true
+		}
+	}
+
     foreign goAdd(gameObject)
     foreign static goGet(gameObject)
     foreign goRemove(gameObject)
@@ -2578,6 +2671,21 @@ foreign class Lod {
 
     foreign gameObject
 
+	==(v) {
+		if (v is Lod) {
+			return gameObject == v.gameObject 
+		} else {
+			return false
+		}
+	}
+	!=(v) {
+		if (v is Lod) {
+			return gameObject != v.gameObject 
+		} else {
+			return true
+		}
+	}
+
     foreign goAdd(gameObject)
     foreign static goGet(gameObject)
     foreign goRemove(gameObject)
@@ -2690,22 +2798,37 @@ class RigidBody {
 
     gameObject { _go }
 
-		goAdd(gameObject) {
-			goAddForeign(gameObject)
-			goSet(gameObject)
+	==(v) {
+		if (v is RigidBody) {
+			return gameObject == v.gameObject 
+		} else {
+			return false
 		}
+	}
+	!=(v) {
+		if (v is RigidBody) {
+			return gameObject != v.gameObject 
+		} else {
+			return true
+		}
+	}
 
-		goSet(gameObject) {
-			_go = gameObject
-		}
+	goAdd(gameObject) {
+		goAddForeign(gameObject)
+		goSet(gameObject)
+	}
+
+	goSet(gameObject) {
+		_go = gameObject
+	}
 
     static goGet(gameObject) {
-			var v = RigidBody.new()
-			v.goSet(gameObject)
-			return v
-		}
+		var v = RigidBody.new()
+		v.goSet(gameObject)
+		return v
+	}
 
-		foreign goAddForeign(gameObject)
+	foreign goAddForeign(gameObject)
 
     goRemove(gameObject) {}
 
@@ -2856,6 +2979,21 @@ foreign class WaveSource {
     toString { "[%(gameObject.id): WaveSource]" }
     
     foreign gameObject
+
+	==(v) {
+		if (v is WaveSource) {
+			return gameObject == v.gameObject 
+		} else {
+			return false
+		}
+	}
+	!=(v) {
+		if (v is WaveSource) {
+			return gameObject != v.gameObject 
+		} else {
+			return true
+		}
+	}
 
     foreign goAdd(gameObject)
     foreign static goGet(gameObject)
@@ -3073,6 +3211,21 @@ foreign class Collider {
     
     foreign gameObject
 
+	==(v) {
+		if (v is Collider) {
+			return gameObject == v.gameObject 
+		} else {
+			return false
+		}
+	}
+	!=(v) {
+		if (v is Collider) {
+			return gameObject != v.gameObject 
+		} else {
+			return true
+		}
+	}
+
     foreign goAdd(gameObject)
     foreign static goGet(gameObject)
     foreign goRemove(gameObject)
@@ -3207,6 +3360,21 @@ foreign class Light {
     toString { "[%(gameObject.id): Light]" }
     
     foreign gameObject
+
+	==(v) {
+		if (v is Light) {
+			return gameObject == v.gameObject 
+		} else {
+			return false
+		}
+	}
+	!=(v) {
+		if (v is Light) {
+			return gameObject != v.gameObject 
+		} else {
+			return true
+		}
+	}
 
     foreign goAdd(gameObject)
     foreign static goGet(gameObject)
@@ -3457,8 +3625,6 @@ class ShadowTypes {
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///// mono_behaviour.wren /////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-import "Core/Console" for Console
-
 class MonoBehaviour {
     construct new() {
     }
@@ -3466,6 +3632,21 @@ class MonoBehaviour {
     
     gameObject { _game_object }
     transform { _transform }
+
+	==(v) {
+		if (v is MonoBehaviour) {
+			return gameObject == v.gameObject 
+		} else {
+			return false
+		}
+	}
+	!=(v) {
+		if (v is MonoBehaviour) {
+			return gameObject != v.gameObject 
+		} else {
+			return true
+		}
+	}
 
     goAdd(gameObject) {
         _game_object = gameObject
