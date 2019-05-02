@@ -375,8 +375,6 @@ class NodeEditor {
     for (i in 0...nodeContent.count) {
       if (nodeContent[i].count > 0) {
         var split = nodeContent[i].split("|")
-        Console.error("%(split[0])")
-        Console.error("%(split[1])")
         var position = Vec3.fromString(split[0])
         var nodeIndex = Num.fromString(split[1])
         nodes[nodeIndex] = Node.new(position)

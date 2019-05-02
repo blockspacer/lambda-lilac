@@ -48,8 +48,9 @@ class World {
 
     constructNodes() {
       _nodeMap = NodeMap.new()
-      _nodeEditor = NodeEditor.new(_nodeMap)
-      _nodeEditor.deserialize()
+      _toggleNodeEditor = false
+      var nodeEditor = NodeEditor.new(_nodeMap)
+      nodeEditor.deserialize()
     }
 
     getNextNode() {
@@ -172,8 +173,22 @@ class World {
       //var transform = _lighting.rsm.getComponent(Transform)
       //transform.worldPosition = _camera.transform.worldPosition + offset
 
-      _nodeMap.draw()
-      _nodeEditor.update(_camera.transform.worldPosition)
+      var toggleNodeEditor = InputController.ToggleNodeEditor != 0
+      var toggleEditor = toggleNodeEditor && !_toggleNodeEditor
+      _toggleNodeEditor = toggleNodeEditor
+
+      if (toggleEditor) {
+        if (_nodeEditor == null) {
+          _nodeEditor = NodeEditor.new(_nodeMap)
+        } else {
+          _nodeEditor = null
+        }
+      }
+
+      if (_nodeEditor) {
+        _nodeEditor.update(_camera.transform.worldPosition)
+        _nodeMap.draw()
+      }
     }
 
     fixedUpdate() {

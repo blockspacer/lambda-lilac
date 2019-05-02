@@ -307,7 +307,7 @@ namespace lambda
 					offset += 64;
 				}
 
-				foundation::GetFrameHeap()->deconstruct(renderable);
+				//foundation::GetFrameHeap()->deconstruct(renderable);
 			}
 		}
 #else
@@ -449,7 +449,7 @@ namespace lambda
 			// Draw all passes.
 			for (uint32_t i = 0u; i < camera_batch.shader_passes.size(); ++i)
 			{
-				if (i == camera_batch.shader_passes.size() - 1ul)
+				if (i == 0)
 					renderer->setDepthStencilState(platform::DepthStencilState::Default());
 				else
 					renderer->setDepthStencilState(platform::DepthStencilState::Equal());

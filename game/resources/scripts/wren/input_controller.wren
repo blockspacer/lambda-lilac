@@ -85,4 +85,11 @@ class InputController {
 
         return Math.clamp(val, -1.0, 1.0)
     }
+
+    static ToggleNodeEditor {
+        var val = 0.0
+        if (Input.getKey(Keys.Tab)) val = val + 1.0
+
+        return Math.clamp(val, -1.0, 1.0)
+    }
 }

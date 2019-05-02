@@ -125,9 +125,9 @@ PSOutput PS(VSOutput pIn)
 
   PSOutput pOut;
   pOut.albedo = tex_albedo.Sample(SamLinearWarp, pIn.tex) * pIn.colour;
-  if (tex_albedo.Sample(SamLinearWarp, pIn.tex).a < 0.25f)
-    discard;
-  pOut.albedo.a = 1.0f;
+  //if (tex_albedo.Sample(SamLinearWarp, pIn.tex).a < 0.25f)
+  //  discard;
+  pOut.albedo.a = when_ge(tex_albedo.Sample(SamLinearWarp, pIn.tex).a, 0.25f);
 
 #if VIOLET_GRID_ALBEDO
 #if VIOLET_DYNAMIC_GRID_SIZE
