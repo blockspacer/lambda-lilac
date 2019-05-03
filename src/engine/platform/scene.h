@@ -53,6 +53,7 @@ namespace lambda
 			gui::GUI*                  gui       = nullptr;
 			Vector<IRenderAction*>     render_actions;
 			double                     fixed_time_step;
+			double                     time_scale;
 		};
 
 		///////////////////////////////////////////////////////////////////////////

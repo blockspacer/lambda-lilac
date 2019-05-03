@@ -181,8 +181,10 @@ class World {
       if (toggleEditor) {
         if (_nodeEditor == null) {
           _nodeEditor = NodeEditor.new(_nodeMap)
+          Time.timeScale = 0.1
         } else {
           _nodeEditor = null
+          Time.timeScale = 1.0
         }
       }
 

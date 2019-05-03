@@ -2354,7 +2354,7 @@ foreign class Camera {
           {
             wrenGetListElement(vm, 3, i, 0);
             inputs[i] = 
-              g_world->getScene().post_process_manager->getTarget(
+              g_scene->post_process_manager->getTarget(
                 Name(wrenGetSlotString(vm, 0))
               );
           }
@@ -2362,7 +2362,7 @@ foreign class Camera {
           {
             wrenGetListElement(vm, 4, i, 0);
             outputs[i] = 
-              g_world->getScene().post_process_manager->getTarget(
+              g_scene->post_process_manager->getTarget(
                 Name(wrenGetSlotString(vm, 0))
               );
           }
@@ -3912,13 +3912,13 @@ class PostProcess {
       WrenForeignMethodFn Bind(const char* signature)
       {
         if (strcmp(signature, "addRenderTarget(_,_,_)") == 0) return [](WrenVM* vm) {
-          g_world->getScene().post_process_manager->addTarget(
+          g_scene->post_process_manager->addTarget(
             platform::RenderTarget(Name(wrenGetSlotString(vm, 1)), (float)wrenGetSlotDouble(vm, 2), (TextureFormat)(uint32_t)wrenGetSlotDouble(vm, 3))
           );
         };
         if (strcmp(signature, "addRenderTarget(_,_)") == 0) return [](WrenVM* vm) {
 			auto texture = *GetForeign<asset::VioletTextureHandle>(vm, 2);
-			g_world->getScene().post_process_manager->addTarget(
+			g_scene->post_process_manager->addTarget(
             platform::RenderTarget(Name(wrenGetSlotString(vm, 1)), 0.0f, texture, true)
           );
         };
@@ -3926,7 +3926,7 @@ class PostProcess {
           LMB_ASSERT(false, "NOT YET IMPLEMENTED");
         };
         if (strcmp(signature, "setFinalRenderTarget(_)") == 0) return [](WrenVM* vm) {
-          g_world->getScene().post_process_manager->setFinalTarget(Name(wrenGetSlotString(vm, 1)));
+          g_scene->post_process_manager->setFinalTarget(Name(wrenGetSlotString(vm, 1)));
         };
         if (strcmp(signature, "addShaderPass(_,_,_,_)") == 0) return [](WrenVM* vm) {
           Name name(wrenGetSlotString(vm, 1));
@@ -3938,20 +3938,20 @@ class PostProcess {
             wrenGetListElement(vm, 3, i, 0);
             const char* target_cstr = wrenGetSlotString(vm, 0);
             Name target_name = Name(target_cstr);
-            const auto& target = g_world->getScene().post_process_manager->getTarget(target_name);
+            const auto& target = g_scene->post_process_manager->getTarget(target_name);
             input.at(i) = target;
           }
           for (int i = 0; i < (int)output.size(); ++i)
           {
             wrenGetListElement(vm, 4, i, 0);
-            output.at(i) = g_world->getScene().post_process_manager->getTarget(Name(wrenGetSlotString(vm, 0)));
+            output.at(i) = g_scene->post_process_manager->getTarget(Name(wrenGetSlotString(vm, 0)));
           }
 
-          g_world->getScene().post_process_manager->addPass(platform::ShaderPass(name, shader, input, output));
+          g_scene->post_process_manager->addPass(platform::ShaderPass(name, shader, input, output));
         };
         if (strcmp(signature, "setShaderPassEnabled(_,_)") == 0) return [](WrenVM* vm) {
           Name name(wrenGetSlotString(vm, 1));
-          for (auto& pass : g_world->getScene().post_process_manager->getPasses())
+          for (auto& pass : g_scene->post_process_manager->getPasses())
           {
             if (pass.getName() == name)
             {
@@ -3964,7 +3964,7 @@ class PostProcess {
           String input = wrenGetSlotString(vm, 1);
           String output = wrenGetSlotString(vm, 2);
 
-          platform::RenderTarget& rt_input = g_world->getScene().post_process_manager->getTarget(input);
+          platform::RenderTarget& rt_input = g_scene->post_process_manager->getTarget(input);
 					asset::VioletShaderHandle shader = asset::ShaderManager::getInstance()->get(Name("resources/shaders/irradiance_convolution.fx"));
 
           float as = (float)rt_input.getTexture()->getLayer(0u).getHeight() / (float)rt_input.getTexture()->getLayer(0u).getWidth();
@@ -3989,7 +3989,7 @@ class PostProcess {
 				}
 		  };
 		  RenderAction* render_action = foundation::GetFrameHeap()->construct<RenderAction>();
-		  g_world->getScene().render_actions.push_back(render_action);
+		  g_scene->render_actions.push_back(render_action);
 
           VioletTexture violet_texture;
           violet_texture.width = 512u;
@@ -4010,13 +4010,13 @@ class PostProcess {
             { platform::RenderTarget(Name("IrradianceConvolution_Out"), texture) }
           );
 
-          g_world->getScene().post_process_manager->addTarget(platform::RenderTarget(Name(output), texture));
+          g_scene->post_process_manager->addTarget(platform::RenderTarget(Name(output), texture));
         };
         if (strcmp(signature, "hammerhead(_,_)") == 0) return [](WrenVM* vm) {
           String input = wrenGetSlotString(vm, 1);
           String output = wrenGetSlotString(vm, 2);
 
-          platform::RenderTarget& rt_input = g_world->getScene().post_process_manager->getTarget(input);
+          platform::RenderTarget& rt_input = g_scene->post_process_manager->getTarget(input);
 		  asset::VioletShaderHandle shader = asset::ShaderManager::getInstance()->get(Name("resources/shaders/hammerhead.fx"));
 
           float as = (float)rt_input.getTexture()->getLayer(0u).getHeight() / (float)rt_input.getTexture()->getLayer(0u).getWidth();
@@ -4060,7 +4060,7 @@ class PostProcess {
 				}
 		  };
 		  RenderAction* render_action = foundation::GetFrameHeap()->construct<RenderAction>();
-		  g_world->getScene().render_actions.push_back(render_action);
+		  g_scene->render_actions.push_back(render_action);
 
           render_action->mesh = asset::MeshManager::getInstance()->create(Name("__hammerhead_mesh__"), asset::Mesh::createScreenQuad());
 
@@ -4081,7 +4081,7 @@ class PostProcess {
 			render_action->passes.push_back(pass);
           }
 
-		  g_world->getScene().post_process_manager->addTarget(platform::RenderTarget(Name(output), texture));
+		  g_scene->post_process_manager->addTarget(platform::RenderTarget(Name(output), texture));
         };
         return nullptr;
       }
@@ -4485,6 +4485,8 @@ class Math {
 class Time {
     foreign static fixedDeltaTime
     foreign static deltaTime
+	foreign static timeScale=(timeScale)
+	foreign static timeScale
 }
 )";
 			char* data = (char*)WREN_ALLOC(str.size() + 1u);
@@ -4494,10 +4496,18 @@ class Time {
 		WrenForeignMethodFn Bind(const char* signature)
 		{
 			if (strcmp(signature, "fixedDeltaTime") == 0) return [](WrenVM* vm) {
-				wrenSetSlotDouble(vm, 0, g_world->getScene().fixed_time_step);
+				wrenSetSlotDouble(vm, 0, g_scene->fixed_time_step);
 			};
 			if (strcmp(signature, "deltaTime") == 0) return [](WrenVM* vm) {
 				wrenSetSlotDouble(vm, 0, g_world->getDeltaTime());
+			};
+			if (strcmp(signature, "timeScale=(_)") == 0) return [](WrenVM* vm) {
+				g_scene->fixed_time_step /= g_scene->time_scale;
+				g_scene->time_scale = wrenGetSlotDouble(vm, 1);
+				g_scene->fixed_time_step *= g_scene->time_scale;
+			};
+			if (strcmp(signature, "timeScale") == 0) return [](WrenVM* vm) {
+				wrenSetSlotDouble(vm, 0, g_scene->time_scale);
 			};
 			return nullptr;
 		}
@@ -4590,14 +4600,14 @@ class Debug {
 			WrenForeignMethodFn Bind(const char* signature)
 			{
 				if (strcmp(signature, "drawLine(_,_,_)") == 0) return [](WrenVM* vm) {
-					g_world->getScene().debug_renderer.DrawLine(platform::DebugLine(
+					g_scene->debug_renderer.DrawLine(platform::DebugLine(
 						*GetForeign<glm::vec3>(vm, 1),
 						*GetForeign<glm::vec3>(vm, 2),
 						*GetForeign<glm::vec4>(vm, 3)
 					));
 				};
 				if (strcmp(signature, "drawTri(_,_,_,_)") == 0) return [](WrenVM* vm) {
-					g_world->getScene().debug_renderer.DrawTri(platform::DebugTri(
+					g_scene->debug_renderer.DrawTri(platform::DebugTri(
 						*GetForeign<glm::vec3>(vm, 1),
 						*GetForeign<glm::vec3>(vm, 2),
 						*GetForeign<glm::vec3>(vm, 3),

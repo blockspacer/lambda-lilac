@@ -19,6 +19,7 @@ namespace lambda
 			scene_.gui       = &gui_;
 			scene_.post_process_manager = &post_process_manager_;
 			scene_.fixed_time_step = 1.0 / 60.0;
+			scene_.time_scale = 1.0;
 
 			asset::TextureManager::setRenderer(scene_.renderer);
 			asset::ShaderManager::setRenderer(scene_.renderer);
@@ -57,7 +58,7 @@ namespace lambda
 
 				controller_manager_.update();
 
-				delta_time_ = timer_.elapsed().seconds();
+				delta_time_ = timer_.elapsed().seconds() * scene_.time_scale;
 				timer_.reset();
 
 				if (scene_.window->getSize().x == 0.0f || scene_.window->getSize().y == 0.0f)
