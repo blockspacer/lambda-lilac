@@ -287,7 +287,7 @@ class NodeEditor {
 
   update(position) {
     position.x = position.x.round
-    position.y = position.y.round - 0.8
+    position.y = position.y.round + 0.2
     position.z = position.z.round
 
     DebugDraw.circle(position, 0.5, 20, Vec4.new(0.0, 1.0, 0.0, 1.0))

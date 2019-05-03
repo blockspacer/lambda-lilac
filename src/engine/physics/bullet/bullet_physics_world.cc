@@ -861,7 +861,7 @@ namespace lambda
 
 				BulletCollisionBody* rb = (BulletCollisionBody*)callback.m_collisionObjects[i]->getUserPointer();
 				manifold.rhs = rb->getEntity();
-				manifold.contacts[0].point = glm::vec3(callback.m_hitPointWorld[i].x(), callback.m_hitPointWorld[i].y(), callback.m_hitPointWorld[i].z()) * VIOLET_PHYSICS_SCALE;
+				manifold.contacts[0].point = glm::vec3(callback.m_hitPointWorld[i].x(), callback.m_hitPointWorld[i].y(), callback.m_hitPointWorld[i].z()) * VIOLET_INV_PHYSICS_SCALE;
 				manifold.contacts[0].normal = glm::vec3(callback.m_hitNormalWorld[i].x(), callback.m_hitNormalWorld[i].y(), callback.m_hitNormalWorld[i].z());
 
 				if (isValid(manifold.contacts[0].point) && isValid(manifold.contacts[0].normal))

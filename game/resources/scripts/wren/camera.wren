@@ -109,6 +109,7 @@ class FreeLookCamera is MonoBehaviour {
 
   rotation { _rotation }
   cameraTransform { _camera_transform }
+  camera { _camera }
 
   getHolding            { _has_input ? InputController.MovementUpDown : 0.0 }
   getHeldAttack         { (InputController.CameraAttack   > 0.0 && _has_input) ? true : false }

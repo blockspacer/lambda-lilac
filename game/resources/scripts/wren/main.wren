@@ -31,10 +31,11 @@ import "Core/PostProcess" for PostProcess
 import "Core/Console" for Console
 import "Core/Physics" for Physics
 import "Core/Debug" for Debug
+import "Core/Sort" for Sort
 
 import "resources/scripts/wren/post_processor" for PostProcessor
 import "resources/scripts/wren/input_controller" for InputController
-import "resources/scripts/wren/camera" for FreeLookCamera
+import "resources/scripts/wren/camera" for FreeLookCamera, Sorter
 import "resources/scripts/wren/lighting" for Lighting
 import "resources/scripts/wren/trees" for Trees
 import "resources/scripts/wren/item_manager" for ItemManager
@@ -186,7 +187,16 @@ class World {
       }
 
       if (_nodeEditor) {
-        _nodeEditor.update(_camera.transform.worldPosition)
+        var camera = _camera.getComponent(FreeLookCamera)
+        var from = camera.cameraTransform.worldPosition
+        var selected = from - Vec3.new(0.0, 1.0, 0.0)
+        var to = from + camera.camera.ndcToWorld(InputController.MousePosition) * 25
+        var sorted = Sort.sort(Physics.castRay(from, to), Sorter.new(from))
+        if (sorted.count > 0) {
+          selected = sorted[0].point
+        }
+
+        _nodeEditor.update(selected)
         _nodeMap.draw()
       }
     }

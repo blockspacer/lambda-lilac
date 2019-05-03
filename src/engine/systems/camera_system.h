@@ -30,6 +30,8 @@ namespace lambda
 			void setShaderPasses(const Vector<platform::ShaderPass>& shader_pass);
 			platform::ShaderPass getShaderPass(uint32_t id) const;
 			Vector<platform::ShaderPass> getShaderPasses() const;
+			glm::mat4x4 getViewMatrix() const;
+			glm::mat4x4 getProjectionMatrix() const;
 
 		private:
 			scene::Scene* scene_;
@@ -92,6 +94,8 @@ namespace lambda
 			void setShaderPasses(const entity::Entity& entity, const Vector<platform::ShaderPass>& shader_pass, scene::Scene& scene);
 			platform::ShaderPass getShaderPass(const entity::Entity& entity, uint32_t id, scene::Scene& scene);
 			Vector<platform::ShaderPass> getShaderPasses(const entity::Entity& entity, scene::Scene& scene);
+			glm::mat4x4 getViewMatrix(const entity::Entity& entity, scene::Scene& scene);
+			glm::mat4x4 getProjectionMatrix(const entity::Entity& entity, scene::Scene& scene);
 
 			void bindCamera(const entity::Entity& entity, scene::Scene& scene);
 			entity::Entity getMainCamera(scene::Scene& scene);

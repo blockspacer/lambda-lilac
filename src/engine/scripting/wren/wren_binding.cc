@@ -2215,6 +2215,7 @@ foreign class Camera {
     foreign goRemove(gameObject)
 
     foreign addShaderPass(name, shader, input, output)
+	foreign ndcToWorld(ndc)
 
     foreign near
     foreign near=(near)
@@ -2250,6 +2251,7 @@ foreign class Camera {
         };
       }
 
+#pragma optimize ("", off)
       /////////////////////////////////////////////////////////////////////////
       WrenForeignMethodFn Bind(const char* signature)
       {
@@ -2369,6 +2371,25 @@ foreign class Camera {
             platform::ShaderPass(name, shader, inputs, outputs)
           );
         };
+		if (strcmp(signature, "ndcToWorld(_)") == 0)
+			return [](WrenVM* vm) 
+		{
+			components::CameraComponent camera = GetForeign<CameraHandle>(vm)->handle;
+			glm::vec2 ndc = *GetForeign<glm::vec2>(vm, 1);
+			glm::vec4 ray_clip(ndc.x, ndc.y, 1.0f, 1.0f);
+
+			glm::mat4x4 projection_matrix = glm::inverse(camera.getProjectionMatrix());
+			glm::vec4 ray_eye = projection_matrix * ray_clip;
+			ray_eye = glm::vec4(ray_eye.x, ray_eye.y, -1.0, 0.0);
+			
+			glm::mat4x4 view_matrix = glm::inverse(camera.getViewMatrix());
+
+			glm::vec4 ray_wor4 = view_matrix * ray_eye;
+			glm::vec3 ray_wor(ray_wor4.x, ray_wor4.y, ray_wor4.z);
+			ray_wor = glm::normalize(ray_wor);
+
+			Vec3::make(vm, glm::normalize(glm::vec3(ray_wor.x, ray_wor.y, ray_wor.z)));
+		};
         return nullptr;
       }
     }
@@ -3743,6 +3764,7 @@ class Graphics {
     foreign static renderScale=(scale)
     foreign static renderScale
     foreign static setLightShaders(generate, modify, modifyCount, publish, shadowType)
+	foreign static windowSize
 }
 )";
 				char* data = (char*)WREN_ALLOC(str.size() + 1u);
@@ -3770,6 +3792,9 @@ class Graphics {
 					String publish = wrenGetSlotString(vm, 4);
 					String shadow_type = wrenGetSlotString(vm, 5);
 					components::LightSystem::setShaders(generate, modify, (uint32_t)modify_count, publish, shadow_type, *g_scene);
+				};
+				if (strcmp(signature, "windowSize") == 0) return [](WrenVM* vm) {
+					Vec2::make(vm, (glm::vec2)g_scene->window->getSize());
 				};
 				return nullptr;
 			}

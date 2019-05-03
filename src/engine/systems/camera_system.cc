@@ -164,37 +164,29 @@ namespace lambda
 			{
 				return scene.camera.get(entity).shader_passes;
 			}
-			void CameraSystem::bindCamera(const entity::Entity& entity, scene::Scene& scene)
+			glm::mat4x4 getViewMatrix(const entity::Entity& entity, scene::Scene& scene)
+			{
+				TransformComponent transform = TransformSystem::getComponent(entity, scene);
+				return glm::inverse(transform.getWorld());
+			}
+			glm::mat4x4 getProjectionMatrix(const entity::Entity& entity, scene::Scene& scene)
 			{
 				Data& data = scene.camera.get(entity);
 
-				TransformComponent transform = TransformSystem::getComponent(data.entity, scene);
-				const glm::mat4x4 view = glm::inverse(transform.getWorld());
-				const glm::mat4x4 projection = glm::perspective(
+				return glm::perspective(
 					data.fov.asRad(),
 					(float)scene.window->getSize().x / (float)scene.window->getSize().y,
 					data.near_plane.asMeter(),
 					data.far_plane.asMeter()
 				);
-
+			}
+			void CameraSystem::bindCamera(const entity::Entity& entity, scene::Scene& scene)
+			{
 				// Update the frustum.
 				scene.camera.main_camera_frustum.construct(
-					projection,
-					view
+					getProjectionMatrix(entity, scene),
+					getViewMatrix(entity, scene)
 				);
-
-				/*scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("view_matrix"), view));
-				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("inverse_view_matrix"), glm::inverse(view)));
-
-				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("projection_matrix"), projection));
-				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("inverse_projection_matrix"), glm::inverse(projection)));
-
-				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("view_projection_matrix"), projection * view));
-				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("inverse_view_projection_matrix"), glm::inverse(projection * view)));
-				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("camera_position"), transform.getWorldTranslation()));
-
-				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("camera_near"), data.near_plane.asMeter()));
-				scene.shader_variable_manager.setVariable(platform::ShaderVariable(Name("camera_far"), data.far_plane.asMeter()));*/
 			}
 			entity::Entity CameraSystem::getMainCamera(scene::Scene& scene)
 			{
@@ -339,6 +331,14 @@ namespace lambda
 		Vector<platform::ShaderPass> CameraComponent::getShaderPasses() const
 		{
 			return CameraSystem::getShaderPasses(entity_, *scene_);
+		}
+		glm::mat4x4 CameraComponent::getViewMatrix() const
+		{
+			return CameraSystem::getViewMatrix(entity_, *scene_);
+		}
+		glm::mat4x4 CameraComponent::getProjectionMatrix() const
+		{
+			return CameraSystem::getProjectionMatrix(entity_, *scene_);
 		}
 	}
 }

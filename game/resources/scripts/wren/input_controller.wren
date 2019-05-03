@@ -1,5 +1,7 @@
 import "Core/Input" for Input, Keys, Buttons, Axes
 import "Core/Math" for Math
+import "Core/Graphics" for Graphics
+import "Core/Vec2" for Vec2
 
 class InputController {
     static MovementHorizontal {
@@ -91,5 +93,10 @@ class InputController {
         if (Input.getKey(Keys.Tab)) val = val + 1.0
 
         return Math.clamp(val, -1.0, 1.0)
+    }
+
+    static MousePosition {
+        var val = Vec2.new(Input.getAxis(Axes.MouseX), Input.getAxis(Axes.MouseY)) / Graphics.windowSize
+        return (val * 2.0 - 1.0) * Vec2.new(1.0, -1.0)
     }
 }
