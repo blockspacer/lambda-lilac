@@ -1,10 +1,10 @@
 #include "common.fxh"
 #include "tbn.fxh"
 
-#define VIOLET_PARALLAX_MAPPING 1
+#define VIOLET_PARALLAX_MAPPING 0
 #define NORMAL_MAPPING 1
 #define VIOLET_GRID_ALBEDO 0
-#define VIOLET_DYNAMIC_GRID_SIZE 1
+#define VIOLET_DYNAMIC_GRID_SIZE 0
 #define VIOLET_DISPLACEMENT 1
 
 struct VSInput
@@ -67,6 +67,10 @@ struct PSOutput
   float4 emissive : SV_Target4;
 };
 
+#if VIOLET_GRID_ALBEDO && VIOLET_DYNAMIC_GRID_SIZE
+static const float kDynamicDistance = 10.0f * 10.0f;
+#endif
+
 #if VIOLET_PARALLAX_MAPPING
 static const float height_scale = 0.03f;
 static const int maxLayers = 8;
@@ -115,6 +119,13 @@ float2 parallaxMapping(float2 tex, float3 eye)
 }
 #endif
 
+#if VIOLET_GRID_ALBEDO && VIOLET_DYNAMIC_GRID_SIZE
+float lengthSqr(const float3 v)
+{
+  return v.x * v.x + v.y * v.y + v.z * v.z;
+}
+#endif
+
 [earlydepthstencil]
 PSOutput PS(VSOutput pIn)
 {
@@ -124,19 +135,23 @@ PSOutput PS(VSOutput pIn)
 #endif
 
   PSOutput pOut;
-  pOut.albedo = tex_albedo.Sample(SamLinearWarp, pIn.tex) * pIn.colour;
-  //if (tex_albedo.Sample(SamLinearWarp, pIn.tex).a < 0.25f)
-  //  discard;
-  pOut.albedo.a = when_ge(tex_albedo.Sample(SamLinearWarp, pIn.tex).a, 0.25f);
+  const float4 albedo = tex_albedo.Sample(SamLinearWarp, pIn.tex) * pIn.colour;
+  if (albedo.a < 0.5f)
+    return pOut;
+
+  pOut.albedo = albedo;
+  pOut.albedo.a = 1.0f;
 
 #if VIOLET_GRID_ALBEDO
+  const float3 offset = float3(0.01f, 0.01f, 0.01f);
+  const float3 hPosition = pIn.hPosition.xyz + offset;
 #if VIOLET_DYNAMIC_GRID_SIZE
-  const float scale = PI * ((length(pIn.hPosition - camera_position) < 100.0f) ? (length(pIn.hPosition - camera_position) < 10.0f) ? 10.0f : 1.0f : 0.1f);
+  const float scale = PI * (((lengthSqr(hPosition - camera_position) < kDynamicDistance) ? 1.0f : 0.1f));
 #else
   const float scale = PI;
 #endif
-  const float3 pl = pIn.hPosition * scale;
-  const float3 ps = pIn.hPosition * (scale * 10.0f);
+  const float3 pl = hPosition * scale;
+  const float3 ps = hPosition * (scale * 10.0f);
 
   float el = sin(pl.x) * sin(pl.y) * sin(pl.z);
   float es = sin(ps.x) * sin(ps.y) * sin(ps.z);
@@ -158,7 +173,7 @@ PSOutput PS(VSOutput pIn)
   pOut.mra      = float4(mra, 1.0f);
   pOut.emissive = float4(tex_emissive.Sample(SamLinearWarp, pIn.tex).rgb * pIn.emissive, 1.0f);
 
-#if VIOLET_DISPLACEMENT
+#if VIOLET_PARALLAX_MAPPING && VIOLET_DISPLACEMENT
   pOut.position.xyz += pIn.normal * dmra.r * height_scale * 2.5f;
 #endif
 

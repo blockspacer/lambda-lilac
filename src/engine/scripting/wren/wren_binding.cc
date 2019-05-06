@@ -407,14 +407,10 @@ foreign class Vec3 {
           make(vm, glm::normalize(*GetForeign<glm::vec3>(vm)));
         };
         if (strcmp(signature, "cross(_)") == 0) return [](WrenVM* vm) {
-          glm::vec3& lhs = *GetForeign<glm::vec3>(vm, 0);
-          glm::vec3& rhs = *GetForeign<glm::vec3>(vm, 1);
-          float x = lhs[1u] * rhs[2u] - lhs[2u] * rhs[1u];
-          float y = lhs[2u] * rhs[0u] - lhs[0u] * rhs[2u];
-          float z = lhs[0u] * rhs[1u] - lhs[1u] * rhs[0u];
-          lhs[0u] = x;
-          lhs[1u] = y;
-          lhs[2u] = z;
+		  Vec3::make(vm, glm::cross(
+			  *GetForeign<glm::vec3>(vm, 0),
+			  *GetForeign<glm::vec3>(vm, 1)
+		  ));
         };
         if (strcmp(signature, "dot(_)") == 0) return [](WrenVM* vm) {
           wrenSetSlotDouble(
@@ -1176,6 +1172,7 @@ foreign class Mesh {
       }
 
       /////////////////////////////////////////////////////////////////////////
+#pragma optimize ("", off)
       WrenForeignMethodFn Bind(const char* signature)
       {
         if (strcmp(signature, "load(_)") == 0) return [](WrenVM* vm) {
@@ -1301,11 +1298,11 @@ foreign class Mesh {
         if (strcmp(signature, "tangents=(_)") == 0) return [](WrenVM* vm) {
           asset::VioletMeshHandle mesh = *GetForeign<asset::VioletMeshHandle>(vm);
 
-          Vector<glm::vec3> tangents(wrenGetListCount(vm, 1));
-          for (int i = 0; i < (int)tangents.size(); ++i)
+		  Vector<glm::vec3> tangents(wrenGetListCount(vm, 1));
+		  for (int i = 0; i < (int)tangents.size(); ++i)
           {
             wrenGetListElement(vm, 1, i, 2);
-            tangents[i] = *GetForeign<glm::vec3>(vm, 2);
+			tangents[i]  = *GetForeign<glm::vec3>(vm, 2);
           }
 
           mesh->set(asset::MeshElements::kTangents, tangents);
@@ -2251,7 +2248,6 @@ foreign class Camera {
         };
       }
 
-#pragma optimize ("", off)
       /////////////////////////////////////////////////////////////////////////
       WrenForeignMethodFn Bind(const char* signature)
       {

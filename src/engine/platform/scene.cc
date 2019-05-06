@@ -258,7 +258,7 @@ namespace lambda
 			}
 		}
 
-		void renderMeshes(platform::IRenderer* renderer, const Vector<SceneRenderable*>& renderables, bool is_rh)
+		void renderMeshes(platform::IRenderer* renderer, const Vector<SceneRenderable*>& renderables, platform::RasterizerState::CullMode cull_mode)
 		{
 			struct CBData
 			{
@@ -287,10 +287,12 @@ namespace lambda
 					renderer->setRasterizerState(platform::RasterizerState::SolidNone());
 				else
 				{
-					if (is_rh)
+					if (cull_mode == platform::RasterizerState::CullMode::kBack)
+						renderer->setRasterizerState(platform::RasterizerState::SolidBack());
+					else if (cull_mode == platform::RasterizerState::CullMode::kFront)
 						renderer->setRasterizerState(platform::RasterizerState::SolidFront());
 					else
-						renderer->setRasterizerState(platform::RasterizerState::SolidBack());
+						renderer->setRasterizerState(platform::RasterizerState::SolidNone());
 				}
 
 				uint32_t offset = 0u;
@@ -456,10 +458,10 @@ namespace lambda
 
 				renderer->bindShaderPass(platform::ShaderPass(Name(""), camera_batch.shader_passes[i].shader, camera_batch.shader_passes[i].input, camera_batch.shader_passes[i].output));
 #if USE_RENDERABLES
-				renderMeshes(renderer, camera_batch.renderables, true);
+				renderMeshes(renderer, camera_batch.renderables, platform::RasterizerState::CullMode::kFront);
 #else
-				renderMeshes(renderer, camera_batch.opaque, true);
-				renderMeshes(renderer, camera_batch.alpha, true);
+				renderMeshes(renderer, camera_batch.opaque, platform::RasterizerState::CullMode::kFront);
+				renderMeshes(renderer, camera_batch.alpha, platform::RasterizerState::CullMode::kFront);
 #endif
 			}
 
@@ -512,14 +514,14 @@ namespace lambda
 					float texels_per_unit = (float)shadow_maps.begin()->getTexture()->getLayer(0u).getWidth() / data.size;
 					glm::vec3 scalar(texels_per_unit);
 
-					glm::mat4x4 look_at = glm::lookAtRH(glm::vec3(0.0f), -forward, glm::vec3(0.0f, 1.0f, 0.0f));
+					glm::mat4x4 look_at = glm::lookAtRH(glm::vec3(0.0f), forward, glm::vec3(0.0f, 1.0f, 0.0f));
 					look_at *= glm::vec4(scalar, 1.0f);
 					glm::mat4x4 look_at_inv = glm::inverse(look_at);
 
-					translation   = glm::vec3(glm::vec4(translation, 1.0f) * look_at);
+					translation   = glm::vec3(look_at * glm::vec4(translation, 1.0f));
 					translation.x = std::floorf(translation.x);
 					translation.y = std::floorf(translation.y);
-					translation   = glm::vec3(glm::vec4(translation, 1.0f) * look_at_inv);
+					translation   = glm::vec3(look_at_inv * glm::vec4(translation, 1.0f));
 				}
 
 				// Update matrices.
@@ -710,6 +712,21 @@ namespace lambda
 					auto view_size = data.view.size();
 					auto view_position_size = data.view_position.size();
 					auto projection_size = data.projection.size();
+
+					// Remove shimmering
+					{
+						float texels_per_unit = (float)shadow_map.getTexture()->getLayer(0u).getWidth() / data.size;
+						glm::vec3 scalar(texels_per_unit);
+
+						glm::mat4x4 look_at = glm::lookAtRH(glm::vec3(0.0f), g_forwards[i], glm::vec3(0.0f, 1.0f, 0.0f));
+						look_at *= glm::vec4(scalar, 1.0f);
+						glm::mat4x4 look_at_inv = glm::inverse(look_at);
+
+						translation = glm::vec3(look_at * glm::vec4(translation, 1.0f));
+						translation.x = std::floorf(translation.x);
+						translation.y = std::floorf(translation.y);
+						translation = glm::vec3(look_at_inv * glm::vec4(translation, 1.0f));
+					}
 
 					data.view[i] = glm::lookAtLH(glm::vec3(0.0f), g_forwards[i], g_ups[i]), glm::vec3(-1.0f, 1.0f, 1.0f);
 					if (i == 2 || i == 3)   data.view[i] = glm::rotate(data.view[i], 1.5708f * 2.0f, glm::vec3(0.0f, 1.0f, 0.0f));
@@ -1028,10 +1045,10 @@ namespace lambda
 						renderer->bindShaderPass(platform::ShaderPass(Name(""), face.generate.shader, face.generate.input, face.generate.output));
 
 #if USE_RENDERABLES
-						renderMeshes(renderer, face.renderables, light_batch.is_rh);
+						renderMeshes(renderer, face.renderables, platform::RasterizerState::CullMode::kNone);
 #else
-						renderMeshes(renderer, face.alpha, light_batch.is_rh);
-						renderMeshes(renderer, face.opaque, light_batch.is_rh);
+						renderMeshes(renderer, face.alpha, platform::RasterizerState::CullMode::kNone);
+						renderMeshes(renderer, face.opaque, platform::RasterizerState::CullMode::kNone);
 #endif
 						renderer->popMarker();
 

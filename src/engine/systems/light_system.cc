@@ -22,7 +22,6 @@ namespace lambda
   {
 		namespace LightSystem
 		{
-#pragma optimize ("", off)
 			LightComponent addComponent(const entity::Entity& entity, scene::Scene& scene)
 			{
 				if (!TransformSystem::hasComponent(entity, scene))
@@ -1178,7 +1177,6 @@ namespace lambda
 		// The system data.
 		namespace LightSystem
 		{
-#pragma optimize ("", off)
 			Data& SystemData::add(const entity::Entity& entity)
 			{
 				uint32_t idx = 0ul;
@@ -1201,7 +1199,6 @@ namespace lambda
 				return data[idx];
 			}
 
-#pragma optimize ("", off)
 			Data& SystemData::get(const entity::Entity& entity)
 			{
 				auto it = entity_to_data.find(entity);

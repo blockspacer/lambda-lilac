@@ -52,9 +52,9 @@ class FreeLookCamera is MonoBehaviour {
     _held_jump        = false
     _held_attack      = false
     _speed_base       = 20.0
-    _speed_sprint     = 50.0
+    _speed_sprint     = 80.0
     _max_speed        = 17.5
-    _max_speed_sprint = 20.0
+    _max_speed_sprint = 40.0
     _on_the_ground    = true
     _sensitivity      = Vec2.new(300.0, 200.0)
 
@@ -113,8 +113,8 @@ class FreeLookCamera is MonoBehaviour {
 
   getHolding            { _has_input ? InputController.MovementUpDown : 0.0 }
   getHeldAttack         { (InputController.CameraAttack   > 0.0 && _has_input) ? true : false }
-  getCameraVertical     { _has_input ? InputController.CameraVertical   * Time.fixedDeltaTime * _sensitivity.x : 0.0 }
-  getCameraHorizontal   { _has_input ? InputController.CameraHorizontal * Time.fixedDeltaTime * _sensitivity.y : 0.0 }
+  getCameraVertical     { _has_input ? InputController.CameraVertical   * (Time.fixedDeltaTime / Time.timeScale) * _sensitivity.x : 0.0 }
+  getCameraHorizontal   { _has_input ? InputController.CameraHorizontal * (Time.fixedDeltaTime / Time.timeScale) * _sensitivity.y : 0.0 }
   getMovementVertical   { _has_input ? InputController.MovementVertical   : 0.0 }
   getMovementHorizontal { _has_input ? InputController.MovementHorizontal : 0.0 }
   getMovementSprint     { _has_input ? Math.lerp(InputController.MovementSprint, _max_speed, _max_speed_sprint) : 0.0 }
@@ -254,8 +254,7 @@ class FreeLookCamera is MonoBehaviour {
         movement.normalize()
       }
 
-      //var speed = _speed_base + InputController.MovementSprint * (_speed_sprint - _speed_base)
-      var speed = _speed_base
+      var speed = _speed_base + InputController.MovementSprint * (_speed_sprint - _speed_base)
       movement = movement * Time.fixedDeltaTime * speed
 
       var vel_length = Vec2.new(_temp_velocity.x, _temp_velocity.z).length

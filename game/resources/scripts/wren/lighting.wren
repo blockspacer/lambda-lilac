@@ -28,7 +28,7 @@ import "resources/scripts/wren/ini" for Ini
 class Lighting {
   construct new() {
     //createSun()
-    //createReflectiveShadowMap()
+    createReflectiveShadowMap()
     //createFlashLight()
   }
 
@@ -109,7 +109,7 @@ class Lighting {
     var size = Ini.new("resources/settings.ini")["Lighting", "ShadowMapSize"]    
 
     var trans_rsm = _rsm.getComponent(Transform)
-    trans_rsm.worldRotation = Math.lookRotation(Vec3.new(0.5, 1.0, 1.0).normalized, Vec3.new(0.0, 1.0, 0.0))
+    trans_rsm.worldRotation = Math.lookRotation(Vec3.new(0.3, 1.0, 0.2).normalized, Vec3.new(0.0, 1.0, 0.0))
 
     // Add a RSM light.
     var light_rsm = _rsm.addComponent(Light)
@@ -120,8 +120,8 @@ class Lighting {
     light_rsm.lightIntensity = 7.0
     light_rsm.shadowType = ShadowTypes.Dynamic
     light_rsm.shadowMapSizePx = size
-    light_rsm.depth = 75.0
-    light_rsm.size = 50.0
+    light_rsm.depth = 200.0
+    light_rsm.size = 250.0
     //light_rsm.enabled = false
   }
 }

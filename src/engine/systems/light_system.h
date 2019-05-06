@@ -95,7 +95,7 @@ namespace lambda
 				float size = 50.0f;
 				bool enabled = true;
 				bool rsm = false;
-				uint8_t dynamic_frequency = 3u;
+				uint8_t dynamic_frequency = 1u;
 				uint8_t dynamic_index = 254u;
 				bool valid = true;
 
@@ -116,7 +116,7 @@ namespace lambda
 
 			struct SystemData
 			{
-				Vector<Data>                  data; // TODO (Hilze): Remove this horrible hack!
+				Vector<Data>                  data;
 				Map<entity::Entity, uint32_t> entity_to_data;
 				Map<uint32_t, entity::Entity> data_to_entity;
 				Set<entity::Entity>           marked_for_delete;

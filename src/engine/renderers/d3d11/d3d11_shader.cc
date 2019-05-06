@@ -32,7 +32,6 @@ namespace lambda
 		}
 
     ///////////////////////////////////////////////////////////////////////////
-#pragma optimize ("", off)
 		D3D11Shader::D3D11Shader(
       asset::VioletShaderHandle shader,
       D3D11Context* context)
@@ -160,7 +159,6 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
-#pragma optimize ("", off)
 		void D3D11Shader::reflectInputLayout(ID3D10Blob* blob, Vector<VioletShaderResource::Input> inputs, ID3D11Device* device)
 		{
 			//! Input layout.

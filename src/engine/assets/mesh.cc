@@ -3,6 +3,7 @@
 #include <glm/gtx/orthonormalize.hpp>
 #include "interfaces/irenderer.h"
 #include <utils/file_system.h>
+#include <glm/gtx/norm.hpp>
 
 namespace lambda
 {
@@ -48,94 +49,78 @@ namespace lambda
       sub_meshes_ = sub_meshes;
     }
 
-		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		const Vector<SubMesh>& Mesh::getSubMeshes() const
-		{
-			return sub_meshes_;
-		}
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	const Vector<SubMesh>& Mesh::getSubMeshes() const
+	{
+		return sub_meshes_;
+	}
 
-		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		Vector<SubMesh>& Mesh::getSubMeshes()
-		{
-			return sub_meshes_;
-		}
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	Vector<SubMesh>& Mesh::getSubMeshes()
+	{
+		return sub_meshes_;
+	}
 
-		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		bool Mesh::has(const uint32_t& hash) const
-		{
-			return buffer_.find(hash) != buffer_.end();
-		}
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	bool Mesh::has(const uint32_t& hash) const
+	{
+		return buffer_.find(hash) != buffer_.end();
+	}
 
-		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		//Mesh::Buffer Mesh::get(const uint32_t& hash)
-		//{
-		//	return buffer_.at(hash);
-		//}
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//Mesh::Buffer Mesh::get(const uint32_t& hash)
+	//{
+	//	return buffer_.at(hash);
+	//}
 
-		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		const Mesh::Buffer& Mesh::get(const uint32_t& hash) const
-		{
-			return buffer_.at(hash);
-		}
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	const Mesh::Buffer& Mesh::get(const uint32_t& hash) const
+	{
+		LMB_ASSERT(buffer_.find(hash) != buffer_.end(), "MESH: Could not find buffer with hash %lu", hash);
+		return buffer_.at(hash);
+	}
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void Mesh::set(const uint32_t& hash, const Buffer& buffer)
     {
-			buffer_[hash] = buffer;
+	  buffer_[hash] = buffer;
       changed_[hash] = true;
     }
     
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void Mesh::clear(bool has_changed)
     {
-			buffer_.clear();
-			changed_.clear();
+	  buffer_.clear();
+	  changed_.clear();
     }
     
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void Mesh::recalculateTangents()
     {
-      Vector<glm::vec3> positions  = get<glm::vec3>(MeshElements::kPositions);
-      Vector<glm::vec3> normals    = get<glm::vec3>(MeshElements::kNormals);
-      Vector<glm::vec2> tex_coords = get<glm::vec2>(MeshElements::kTexCoords);
-      Vector<uint32_t>  indices    = get<uint32_t>(MeshElements::kIndices);
-      Vector<glm::vec3> tangents(positions.size());
+      Vector<glm::vec3> normals = get<glm::vec3>(MeshElements::kNormals);
+	  Vector<uint32_t>  indices = get<uint32_t>(MeshElements::kIndices);
+      Vector<glm::vec3> tangents(get(MeshElements::kPositions).count);
 
-      for (uint32_t i = 0; i < indices.size(); i += 3)
+	  for (glm::vec3& tan : tangents)
+		  tan = glm::vec3(0.0f);
+
+      for (uint32_t i : indices)
       {
-        uint32_t i1 = indices[i];
-        uint32_t i2 = indices[i + 1];
-        uint32_t i3 = indices[i + 2];
+		const glm::vec3& nor = normals[i];
+		
+		glm::vec3 tan;
+		glm::vec3 t1 = glm::cross(nor, glm::vec3(1.0f, 0.0f, 0.0f));
+		glm::vec3 t2 = glm::cross(nor, glm::vec3(0.0f, 1.0f, 0.0f));
+		if (glm::length2(t1) > glm::length2(t2))
+			tan = t1;
+		else
+			tan = t2;
 
-        glm::vec3 p1 = positions[i1];
-        glm::vec3 p2 = positions[i2];
-        glm::vec3 p3 = positions[i3];
-
-        glm::vec2 uv1 = tex_coords[i1];
-        glm::vec2 uv2 = tex_coords[i2];
-        glm::vec2 uv3 = tex_coords[i3];
-
-				glm::vec3 edge1 = p2 - p1;
-				glm::vec3 edge2 = p3 - p1;
-				glm::vec2 deltaUV1 = uv2 - uv1;
-				glm::vec2 deltaUV2 = uv3 - uv1;
-
-				float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
-
-				glm::vec3 tangent;
-				tangent.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
-				tangent.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
-				tangent.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
-				tangent = glm::normalize(tangent);
-
-        tangents[i1] += tangent;
-        tangents[i2] += tangent;
-        tangents[i3] += tangent;
+        tangents[i] += tan;
       }
 
-      for (uint32_t i = 0; i < tangents.size(); ++i)
-				if (tangents[i] != glm::vec3(0.0f, 0.0f, 0.0f))
-					tangents[i] = glm::normalize(tangents[i]);
+	  for (glm::vec3& tan : tangents)
+		tan = glm::normalize(tan);
 
       set(MeshElements::kTangents, Buffer(tangents));
     }

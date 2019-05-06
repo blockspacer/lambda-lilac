@@ -73,7 +73,7 @@ class PostProcessor {
     
     // Add and generate the environment maps.
     PostProcess.addRenderTarget("brdf_lut", Texture.load("resources/textures/lighting/ibl_brdf_lut.png"))
-    PostProcess.addRenderTarget("environment_map", Texture.load("resources/textures/hdr/fireplace_1k.hdr"))
+    PostProcess.addRenderTarget("environment_map", Texture.load("resources/textures/hdr/noga.hdr"))
     PostProcess.irradianceConvolution("environment_map", "irradiance_map")
     PostProcess.hammerhead("environment_map", "prefiltered")
 
