@@ -289,7 +289,7 @@ namespace lambda
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    Mesh Mesh::createCube()
+    Mesh Mesh::createCube(glm::vec3 min, glm::vec3 max)
     {
       Vector<glm::vec3> vertices;
       Vector<glm::vec2> uvs;
@@ -297,55 +297,57 @@ namespace lambda
       Vector<glm::vec4> colors;
       Vector<uint32_t>  indices;
 
-      //FRONT
-      vertices.emplace_back(-0.5f, -0.5f, -0.5f); uvs.emplace_back(0.0f, 1.0f);
-      vertices.emplace_back(-0.5f,  0.5f, -0.5f); uvs.emplace_back(0.0f, 0.0f);
-      vertices.emplace_back( 0.5f,  0.5f, -0.5f); uvs.emplace_back(1.0f, 0.0f);
-      vertices.emplace_back( 0.5f, -0.5f, -0.5f); uvs.emplace_back(1.0f, 1.0f);
+			glm::vec3 size = max - min;
 
-      //BACK
-      vertices.emplace_back(-0.5f, -0.5f, 0.5f); uvs.emplace_back(1.0f, 1.0f);
-      vertices.emplace_back( 0.5f, -0.5f, 0.5f); uvs.emplace_back(0.0f, 1.0f);
-      vertices.emplace_back( 0.5f,  0.5f, 0.5f); uvs.emplace_back(0.0f, 0.0f);
-      vertices.emplace_back(-0.5f,  0.5f, 0.5f); uvs.emplace_back(1.0f, 0.0f);
+      //FRONT
+      vertices.emplace_back(min.x, min.y, min.z); uvs.emplace_back(0.0f,   size.y);
+      vertices.emplace_back(min.x, max.y, min.z); uvs.emplace_back(0.0f,   0.0f);
+      vertices.emplace_back(max.x, max.y, min.z); uvs.emplace_back(size.x, 0.0f);
+      vertices.emplace_back(max.x, min.y, min.z); uvs.emplace_back(size.x, size.y);
+      
+			//BACK
+      vertices.emplace_back(min.x, min.y, max.z); uvs.emplace_back(size.x, size.y);
+      vertices.emplace_back(max.x, min.y, max.z); uvs.emplace_back(0.0f,   size.y);
+      vertices.emplace_back(max.x, max.y, max.z); uvs.emplace_back(0.0f,   0.0f);
+      vertices.emplace_back(min.x, max.y, max.z); uvs.emplace_back(size.x, 0.0f);
 
       //LEFT
-      vertices.emplace_back(-0.5f, -0.5f,  0.5f); uvs.emplace_back(0.0f, 1.0f);
-      vertices.emplace_back(-0.5f,  0.5f,  0.5f); uvs.emplace_back(0.0f, 0.0f);
-      vertices.emplace_back(-0.5f,  0.5f, -0.5f); uvs.emplace_back(1.0f, 0.0f);
-      vertices.emplace_back(-0.5f, -0.5f, -0.5f); uvs.emplace_back(1.0f, 1.0f);
+      vertices.emplace_back(min.x, min.y, max.z); uvs.emplace_back(0.0f,   size.y);
+      vertices.emplace_back(min.x, max.y, max.z); uvs.emplace_back(0.0f,   0.0f);
+      vertices.emplace_back(min.x, max.y, min.z); uvs.emplace_back(size.z, 0.0f);
+      vertices.emplace_back(min.x, min.y, min.z); uvs.emplace_back(size.z, size.y);
+      
+			//RIGHT
+      vertices.emplace_back(max.x, min.y, min.z); uvs.emplace_back(0.0f,   size.y);
+      vertices.emplace_back(max.x, max.y, min.z); uvs.emplace_back(0.0f,   0.0f);
+      vertices.emplace_back(max.x, max.y, max.z); uvs.emplace_back(size.z, 0.0f);
+      vertices.emplace_back(max.x, min.y, max.z); uvs.emplace_back(size.z, size.y);
 
-      //RIGHT
-      vertices.emplace_back(0.5f, -0.5f, -0.5f); uvs.emplace_back(0.0f, 1.0f);
-      vertices.emplace_back(0.5f,  0.5f, -0.5f); uvs.emplace_back(0.0f, 0.0f);
-      vertices.emplace_back(0.5f,  0.5f,  0.5f); uvs.emplace_back(1.0f, 0.0f);
-      vertices.emplace_back(0.5f, -0.5f,  0.5f); uvs.emplace_back(1.0f, 1.0f);
-
-      //TOP
-      vertices.emplace_back(-0.5f, 0.5f, -0.5f); uvs.emplace_back(0.0f, 1.0f);
-      vertices.emplace_back(-0.5f, 0.5f,  0.5f); uvs.emplace_back(0.0f, 0.0f);
-      vertices.emplace_back( 0.5f, 0.5f,  0.5f); uvs.emplace_back(1.0f, 0.0f);
-      vertices.emplace_back( 0.5f, 0.5f, -0.5f); uvs.emplace_back(1.0f, 1.0f);
+			//TOP
+      vertices.emplace_back(min.x, max.y, min.z); uvs.emplace_back(0.0f,   size.z);
+      vertices.emplace_back(min.x, max.y, max.z); uvs.emplace_back(0.0f,   0.0f);
+      vertices.emplace_back(max.x, max.y, max.z); uvs.emplace_back(size.x, 0.0f);
+      vertices.emplace_back(max.x, max.y, min.z); uvs.emplace_back(size.x, size.z);
 
       //BOTTOM
-      vertices.emplace_back(-0.5f, -0.5f, -0.5f); uvs.emplace_back(1.0f, 1.0f);
-      vertices.emplace_back( 0.5f, -0.5f, -0.5f); uvs.emplace_back(0.0f, 1.0f);
-      vertices.emplace_back( 0.5f, -0.5f,  0.5f); uvs.emplace_back(0.0f, 0.0f);
-      vertices.emplace_back(-0.5f, -0.5f,  0.5f); uvs.emplace_back(1.0f, 0.0f);
+      vertices.emplace_back(min.x, min.y, min.z); uvs.emplace_back(size.x, size.z);
+      vertices.emplace_back(max.x, min.y, min.z); uvs.emplace_back(0.0f,   size.z);
+      vertices.emplace_back(max.x, min.y, max.z); uvs.emplace_back(0.0f,   0.0f);
+      vertices.emplace_back(min.x, min.y, max.z); uvs.emplace_back(size.x, 0.0f);
 
       //Generate normals
       for (int i = 0; i < 4; ++i)
-        normals.emplace_back(glm::vec3(0.0f, 0.0f, -1.0f));
+        normals.emplace_back(glm::vec3( 0.0f,  0.0f, -1.0f));
       for (int i = 0; i < 4; ++i)
-        normals.emplace_back(glm::vec3(0.0f, 0.0f, 1.0f));
+        normals.emplace_back(glm::vec3( 0.0f,  0.0f,  1.0f));
       for (int i = 0; i < 4; ++i)
-        normals.emplace_back(glm::vec3(-1.0f, 0.0f, 0.0f));
+        normals.emplace_back(glm::vec3(-1.0f,  0.0f,  0.0f));
       for (int i = 0; i < 4; ++i)
-        normals.emplace_back(glm::vec3(1.0f, 0.0f, 0.0f));
+        normals.emplace_back(glm::vec3( 1.0f,  0.0f,  0.0f));
       for (int i = 0; i < 4; ++i)
-        normals.emplace_back(glm::vec3(0.0f, 1.0f, 0.0f));
+        normals.emplace_back(glm::vec3( 0.0f,  1.0f,  0.0f));
       for (int i = 0; i < 4; ++i)
-        normals.emplace_back(glm::vec3(0.0f, -1.0f, 0.0f));
+        normals.emplace_back(glm::vec3( 0.0f, -1.0f,  0.0f));
 
       //Generate indices
       uint32_t index = 0;
@@ -364,8 +366,6 @@ namespace lambda
       for (uint32_t i = 0; i < vertices.size(); ++i)
         colors.emplace_back(glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
 
-      glm::vec3 min(FLT_MAX), max(FLT_MIN);
-      getMinMax(vertices, min, max);
       Mesh cube({
 				{ kPositions, vertices },
 				{ kNormals,   normals  },

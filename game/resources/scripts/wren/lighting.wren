@@ -1,28 +1,10 @@
-import "Core/Vec2" for Vec2
-import "Core/Vec3" for Vec3
-import "Core/Quat" for Quat
+import "Core" for Vec2, Vec3, Quat
+import "Core" for Texture, TextureFormat, Shader, Wave, Mesh
+import "Core" for GameObject, Transform, Camera, Lod, RigidBody, WaveSource, Collider
+import "Core" for Light, LightTypes, ShadowTypes
+import "Core" for Input, Keys, Buttons, Axes
+import "Core" for Math, Time, PostProcess
 
-import "Core/Texture" for Texture, TextureFormat
-import "Core/Shader" for Shader
-import "Core/Wave" for Wave
-import "Core/Mesh" for Mesh
-
-import "Core/GameObject" for GameObject
-
-import "Core/Transform" for Transform
-import "Core/Camera" for Camera
-import "Core/Lod" for Lod
-import "Core/RigidBody" for RigidBody
-import "Core/WaveSource" for WaveSource
-import "Core/Collider" for Collider
-import "Core/Light" for Light, LightTypes, ShadowTypes
-
-import "Core/Input" for Input, Keys, Buttons, Axes
-import "Core/Math" for Math
-
-import "Core/Time" for Time
-
-import "Core/PostProcess" for PostProcess
 import "resources/scripts/wren/ini" for Ini
 
 class Lighting {

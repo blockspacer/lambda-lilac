@@ -80,6 +80,8 @@ namespace lambda
 			void destroyBody();
 			void createBody();
 
+			btRigidBody* getBody();
+
 		private:
 			btRigidBody* body_;
 			btMotionState* motion_state_;

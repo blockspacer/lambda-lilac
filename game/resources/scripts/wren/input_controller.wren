@@ -1,7 +1,5 @@
-import "Core/Input" for Input, Keys, Buttons, Axes
-import "Core/Math" for Math
-import "Core/Graphics" for Graphics
-import "Core/Vec2" for Vec2
+import "Core" for Input, Keys, Buttons, Axes
+import "Core" for Math, Graphics, Vec2
 
 class InputController {
     static MovementHorizontal {
@@ -76,14 +74,14 @@ class InputController {
 
     static NodePlaceRemove {
         var val = 0.0
-        if (Input.getKey(Keys.F)) val = val + 1.0
+        if (Input.getButton(Buttons.LeftMouseButton)) val = val + 1.0
 
         return Math.clamp(val, -1.0, 1.0)
     }
 
     static NodeConnect {
         var val = 0.0
-        if (Input.getKey(Keys.G)) val = val + 1.0
+        if (Input.getButton(Buttons.RightMouseButton)) val = val + 1.0
 
         return Math.clamp(val, -1.0, 1.0)
     }

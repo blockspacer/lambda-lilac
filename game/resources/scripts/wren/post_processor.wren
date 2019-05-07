@@ -1,15 +1,6 @@
-import "Core/Vec2" for Vec2
-import "Core/Vec3" for Vec3
-import "Core/Vec4" for Vec4
-
-import "Core/Texture" for Texture, TextureFormat
-import "Core/Shader" for Shader
-import "Core/Mesh" for Mesh
-
-import "Core/Graphics" for Graphics
-import "Core/GUI" for GUI
-import "Core/PostProcess" for PostProcess
-import "Core/Console" for Console
+import "Core" for Vec2, Vec3, Vec4
+import "Core" for Texture, TextureFormat, Shader, Mesh
+import "Core/Graphics" for Graphics, GUI, PostProcess, Console
 
 import "resources/scripts/wren/ini" for Ini
 

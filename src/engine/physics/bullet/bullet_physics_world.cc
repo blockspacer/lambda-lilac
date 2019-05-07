@@ -6,6 +6,7 @@
 #include "systems/entity_system.h"
 #include "systems/mono_behaviour_system.h"
 #include <containers/containers.h>
+#include <platform/scene.h>
 
 #include <btBulletDynamicsCommon.h>
 
@@ -449,9 +450,9 @@ namespace lambda
 
 			type_ = BulletCollisionBodyType::kCollider;
 
-			body_->setCollisionFlags(btRigidBody::CF_STATIC_OBJECT);
+			body_->setCollisionFlags(btRigidBody::CF_KINEMATIC_OBJECT);
 			btCollisionObject* collision_object = (btCollisionObject*)body_;
-			collision_object->setCollisionFlags(btRigidBody::CF_STATIC_OBJECT);
+			collision_object->setCollisionFlags(btRigidBody::CF_KINEMATIC_OBJECT);
 			body_->setMassProps(0.0f, btVector3(0.0f, 0.0f, 0.0f));
 
 			dynamics_world_->addCollisionObject(body_);
@@ -512,6 +513,11 @@ namespace lambda
 			);
 			body_ = foundation::Memory::construct<btRigidBody>(rigid_body_ci);
 			body_->setUserPointer(this);
+		}
+
+		btRigidBody* BulletCollisionBody::getBody()
+		{
+			return body_;
 		}
 
 
@@ -727,11 +733,9 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		void BulletPhysicsWorld::update(const double& time_step)
 		{
-			for (int j = dynamics_world_->getNumCollisionObjects() - 1; j >= 0; --j)
+			for (const auto& data : scene_->rigid_body.data)
 			{
-				btCollisionObject* object =
-					dynamics_world_->getCollisionObjectArray()[j];
-				btRigidBody* rigid_body = btRigidBody::upcast(object);
+				btRigidBody* rigid_body = ((BulletCollisionBody*)data.collision_body)->getBody();
 
 				if (!rigid_body->isStaticObject())
 				{
@@ -772,17 +776,15 @@ namespace lambda
 					}
 
 					if (activate)
-						object->activate();
+						rigid_body->activate();
 				}
 			}
 
 			dynamics_world_->stepSimulation((float)time_step, 1, (float)time_step);
 
-			for (int j = dynamics_world_->getNumCollisionObjects() - 1; j >= 0; --j)
+			for (const auto& data : scene_->rigid_body.data)
 			{
-				btCollisionObject* object =
-					dynamics_world_->getCollisionObjectArray()[j];
-				btRigidBody* rigid_body = btRigidBody::upcast(object);
+				btRigidBody* rigid_body = ((BulletCollisionBody*)data.collision_body)->getBody();
 				btTransform transform;
 
 				if (rigid_body && false == rigid_body->isStaticObject())

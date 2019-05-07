@@ -61,25 +61,6 @@ namespace lambda
 		namespace Console
 		{
 			/////////////////////////////////////////////////////////////////////////
-			char* Load()
-			{
-				String str = R"(
-///////////////////////////////////////////////////////////////////////////////
-///// console.wren ////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-class Console {
-    foreign static debug(string)
-    foreign static error(string)
-    foreign static info(string)
-    foreign static warning(string)
-}
-)";
-				char* data = (char*)WREN_ALLOC(str.size() + 1u);
-				memcpy(data, str.data(), str.size() + 1u);
-				return data;
-			}
-
-			/////////////////////////////////////////////////////////////////////////
 			WrenForeignMethodFn Bind(const char* signature)
 			{
 				if (strcmp(signature, "debug(_)") == 0) return [](WrenVM* vm) {
@@ -99,74 +80,13 @@ class Console {
 		}
     namespace Vec2
     {
-
-      /////////////////////////////////////////////////////////////////////////
-      char* Load()
-      {
-        String str = R"(
-///////////////////////////////////////////////////////////////////////////////
-///// vec2.wren ///////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-foreign class Vec2 {
-    construct new() {
-    }
-    construct new(v) {
-    }
-    construct new(x, y) {
-    }
-    foreign normalize()
-    foreign dot(v)
-
-    +(v) {
-        if (v is Num)  return Vec2.new(x + v, y + v)
-        if (v is Vec2) return Vec2.new(x + v.x, y + v.y)
-    }
-    -(v) {
-        if (v is Num)  return Vec2.new(x - v, y - v)
-        if (v is Vec2) return Vec2.new(x - v.x, y - v.y)
-    }
-    *(v) {
-        if (v is Num)  return Vec2.new(x * v, y * v)
-        if (v is Vec2) return Vec2.new(x * v.x, y * v.y)
-    }
-    /(v) {
-        if (v is Num)  return Vec2.new(x / v, y / v)
-        if (v is Vec2) return Vec2.new(x / v.x, y / v.y)
-    }
-	==(v) {
-		if (v is Num) return x == v && y == v
-		if (v is Vec2) return x == v.x && y == v.y
-	}
-	!=(v) {
-		if (v is Num) return x != v || y != v
-		if (v is Vec2) return x != v.x || y != v.y
-	}
-
-    foreign normalized
-    foreign toString
-
-    foreign x
-    foreign y
-    foreign magnitude
-    foreign magnitudeSqr
-    foreign length
-    foreign lengthSqr
-    foreign x=(x)
-    foreign y=(y)
-}
-)";
-        char* data = (char*)WREN_ALLOC(str.size() + 1u);
-        memcpy(data, str.data(), str.size() + 1u);
-        return data;
-      }
       WrenHandle* handle = nullptr;
-
 			/////////////////////////////////////////////////////////////////////////
 			glm::vec2* makeAt(WrenVM* vm, int slot, int class_slot, glm::vec2 val = glm::vec2())
 			{
 				if (handle == nullptr)
 				{
-					wrenGetVariable(vm, "Core/Vec2", "Vec2", class_slot);
+					wrenGetVariable(vm, "Core", "Vec2", class_slot);
 					handle = wrenGetSlotHandle(vm, class_slot);
 				}
 				wrenSetSlotHandle(vm, class_slot, handle);
@@ -245,78 +165,13 @@ foreign class Vec2 {
     }
     namespace Vec3
     {
-      /////////////////////////////////////////////////////////////////////////
-      char* Load()
-      {
-        String str = R"(
-///////////////////////////////////////////////////////////////////////////////
-///// vec3.wren ///////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-foreign class Vec3 {
-    construct new() {
-    }
-    construct new(v) {
-    }
-    construct new(x, y, z) {
-    }
-    foreign normalize()
-    foreign dot(v)
-    foreign cross(v)
-
-    +(v) {
-        if (v is Num)  return Vec3.new(x + v, y + v, z + v)
-        if (v is Vec3) return Vec3.new(x + v.x, y + v.y, z + v.z)
-    }
-    -(v) {
-        if (v is Num)  return Vec3.new(x - v, y - v, z - v)
-        if (v is Vec3) return Vec3.new(x - v.x, y - v.y, z - v.z)
-    }
-    *(v) {
-        if (v is Num)  return Vec3.new(x * v, y * v, z * v)
-        if (v is Vec3) return Vec3.new(x * v.x, y * v.y, z * v.z)
-    }
-    /(v) {
-        if (v is Num)  return Vec3.new(x / v, y / v, z / v)
-        if (v is Vec3) return Vec3.new(x / v.x, y / v.y, z / v.z)
-    }
-	==(v) {
-		if (v is Num) return x == v && y == v && z == v
-		if (v is Vec3) return x == v.x && y == v.y && z == v.z
-	}
-	!=(v) {
-		if (v is Num) return x != v || y != v || z != v
-		if (v is Vec3) return x != v.x || y != v.y || z != v.z
-	}
-
-
-    foreign normalized
-    foreign toString
-	foreign static fromString(string)
-
-    foreign x
-    foreign y
-    foreign z
-    foreign magnitude
-    foreign magnitudeSqr
-    foreign length
-    foreign lengthSqr
-    foreign x=(x)
-    foreign y=(y)
-    foreign z=(z)
-}
-)";
-        char* data = (char*)WREN_ALLOC(str.size() + 1u);
-        memcpy(data, str.data(), str.size() + 1u);
-        return data;
-      }
       WrenHandle* handle = nullptr;
-
 			/////////////////////////////////////////////////////////////////////////
 			glm::vec3* makeAt(WrenVM* vm, int slot, int class_slot, glm::vec3 val = glm::vec3())
 			{
 				if (handle == nullptr)
 				{
-					wrenGetVariable(vm, "Core/Vec3", "Vec3", class_slot);
+					wrenGetVariable(vm, "Core", "Vec3", class_slot);
 					handle = wrenGetSlotHandle(vm, class_slot);
 				}
 				wrenSetSlotHandle(vm, class_slot, handle);
@@ -446,77 +301,13 @@ foreign class Vec3 {
     }
     namespace Vec4
     {
-      /////////////////////////////////////////////////////////////////////////
-      char* Load()
-      {
-        String str = R"(
-///////////////////////////////////////////////////////////////////////////////
-///// vec4.wren ///////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-foreign class Vec4 {
-    construct new() {
-    }
-    construct new(v) {
-    }
-    construct new(x, y, z, w) {
-    }
-    foreign normalize()
-    foreign dot(v)
-
-    +(v) {
-        if (v is Num)  return Vec4.new(x + v, y + v, z + v, w + v)
-        if (v is Vec4) return Vec4.new(x + v.x, y + v.y, z + v.z, w + v.w)
-    }
-    -(v) {
-        if (v is Num)  return Vec4.new(x - v, y - v, z - v, w - v)
-        if (v is Vec4) return Vec4.new(x - v.x, y - v.y, z - v.z, w - v.w)
-    }
-    *(v) {
-        if (v is Num)  return Vec4.new(x * v, y * v, z * v, w * v)
-        if (v is Vec4) return Vec4.new(x * v.x, y * v.y, z * v.z, w * v.w)
-    }
-    /(v) {
-        if (v is Num)  return Vec4.new(x / v, y / v, z / v, w / v)
-        if (v is Vec4) return Vec4.new(x / v.x, y / v.y, z / v.z, w / v.w)
-    }
-	==(v) {
-		if (v is Num) return x == v && y == v && z == v && w == v
-		if (v is Vec4) return x == v.x && y == v.y && z == v.z && w == v.w
-	}
-	!=(v) {
-		if (v is Num) return x != v || y != v || z != v || w != v
-		if (v is Vec4) return x != v.x || y != v.y || z != v.z || w != v.w
-	}
-
-    foreign normalized
-    foreign toString
-    
-    foreign x
-    foreign y
-    foreign z
-    foreign w
-    foreign magnitude
-    foreign magnitudeSqr
-    foreign length
-    foreign lengthSqr
-    foreign x=(x)
-    foreign y=(y)
-    foreign z=(z)
-    foreign w=(w)
-}
-)";
-        char* data = (char*)WREN_ALLOC(str.size() + 1u);
-        memcpy(data, str.data(), str.size() + 1u);
-        return data;
-      }
       WrenHandle* handle = nullptr;
-
 			/////////////////////////////////////////////////////////////////////////
 			glm::vec4* makeAt(WrenVM* vm, int slot, int class_slot, glm::vec4 val = glm::vec4())
 			{
 				if (handle == nullptr)
 				{
-					wrenGetVariable(vm, "Core/Vec4", "Vec4", class_slot);
+					wrenGetVariable(vm, "Core", "Vec4", class_slot);
 					handle = wrenGetSlotHandle(vm, class_slot);
 				}
 				wrenSetSlotHandle(vm, class_slot, handle);
@@ -646,61 +437,13 @@ foreign class Vec4 {
     }
     namespace Quat
     {
-      /////////////////////////////////////////////////////////////////////////
-      char* Load()
-      {
-        String str = R"(
-///////////////////////////////////////////////////////////////////////////////
-///// quat.wren ///////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-foreign class Quat {
-    construct new() {
-    }
-    construct new(x, y, z) { // Euler
-    }
-    construct new(x, y, z, w) { // Quat
-    }
-    foreign normalize()
-
-    foreign normalized
-    foreign toString
-    foreign toEuler
-
-	==(v) {
-		if (v is Num) return x == v && y == v && z == v && w == v
-		if (v is Quat) return x == v.x && y == v.y && z == v.z && w == v.w
-	}
-	!=(v) {
-		if (v is Num) return x != v || y != v || z != v || w != v
-		if (v is Quat) return x != v.x || y != v.y || z != v.z || w != v.w
-	}
-    
-    foreign x
-    foreign y
-    foreign z
-    foreign w
-    foreign magnitude
-    foreign magnitudeSqr
-    foreign length
-    foreign lengthSqr
-    foreign x=(x)
-    foreign y=(y)
-    foreign z=(z)
-    foreign w=(w)
-}
-)";
-        char* data = (char*)WREN_ALLOC(str.size() + 1u);
-        memcpy(data, str.data(), str.size() + 1u);
-        return data;
-      }
       WrenHandle* handle = nullptr;
-
       /////////////////////////////////////////////////////////////////////////
       glm::quat* make(WrenVM* vm, const glm::quat val = glm::quat())
       {
         if (handle == nullptr)
         {
-          wrenGetVariable(vm, "Core/Quat", "Quat", 0);
+          wrenGetVariable(vm, "Core", "Quat", 0);
           handle = wrenGetSlotHandle(vm, 0);
         }
         wrenSetSlotHandle(vm, 1, handle);
@@ -821,52 +564,7 @@ foreign class Quat {
     }
     namespace Texture
     {
-      /////////////////////////////////////////////////////////////////////////
-      char* Load()
-      {
-        String str = R"(
-///////////////////////////////////////////////////////////////////////////////
-///// texture.wren ////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-foreign class Texture {
-    foreign static load(name)
-    foreign static loadCubeMap(front, back, top, bottom, left, right)
-    foreign static create(size, format)
-    // Bytes will be handled as an array of uint32's
-    foreign static create(size, bytes, format) 
-
-    foreign size
-    foreign format
-}
-
-class TextureFormat {
-    static unknown      { 0  }
-    static R8G8B8A8     { 1  }
-    static R16G16B16A16 { 2  }
-    static R32G32B32A32 { 3  }
-    static R16G16       { 4  }
-    static R32G32       { 5  }
-    static R32          { 6  }
-    static R16          { 7  }
-    static R24G8        { 8  }
-    static BC1          { 9  }
-    static BC2          { 10 }
-    static BC3          { 11 }
-    static BC4          { 12 }
-    static BC5          { 13 }
-    static BC6          { 14 }
-    static BC7          { 15 }
-    static B8G8R8A8     { 16 }
-    static A8           { 17 }
-    static D32          { 18 }
-}
-)";
-        char* data = (char*)WREN_ALLOC(str.size() + 1u);
-        memcpy(data, str.data(), str.size() + 1u);
-        return data;
-      }
       WrenHandle* handle = nullptr;
-  
       /////////////////////////////////////////////////////////////////////////
       asset::VioletTextureHandle* make(
         WrenVM* vm, 
@@ -874,7 +572,7 @@ class TextureFormat {
       {
         if (handle == nullptr)
         {
-          wrenGetVariable(vm, "Core/Texture", "Texture", 0);
+          wrenGetVariable(vm, "Core", "Texture", 0);
           handle = wrenGetSlotHandle(vm, 0);
         }
         wrenSetSlotHandle(vm, 1, handle);
@@ -982,23 +680,7 @@ class TextureFormat {
     }
     namespace Shader
     {
-      /////////////////////////////////////////////////////////////////////////
-      char* Load()
-      {
-        String str = R"(
-///////////////////////////////////////////////////////////////////////////////
-///// shader.wren /////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-foreign class Shader {
-    foreign static load(name)
-}
-)";
-        char* data = (char*)WREN_ALLOC(str.size() + 1u);
-        memcpy(data, str.data(), str.size() + 1u);
-        return data;
-      }
       WrenHandle* handle = nullptr;
-     
       /////////////////////////////////////////////////////////////////////////
       asset::VioletShaderHandle* make(
         WrenVM* vm, 
@@ -1006,7 +688,7 @@ foreign class Shader {
       {
         if (handle == nullptr)
         {
-          wrenGetVariable(vm, "Core/Shader", "Shader", 0);
+          wrenGetVariable(vm, "Core", "Shader", 0);
           handle = wrenGetSlotHandle(vm, 0);
         }
         wrenSetSlotHandle(vm, 1, handle);
@@ -1042,23 +724,7 @@ foreign class Shader {
     }
     namespace Wave
     {
-      /////////////////////////////////////////////////////////////////////////
-      char* Load()
-      {
-        String str = R"(
-///////////////////////////////////////////////////////////////////////////////
-///// wave.wren ///////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-foreign class Wave {
-    foreign static load(name)
-}
-)";
-        char* data = (char*)WREN_ALLOC(str.size() + 1u);
-        memcpy(data, str.data(), str.size() + 1u);
-        return data;
-      }
       WrenHandle* handle = nullptr;
-      
       /////////////////////////////////////////////////////////////////////////
       asset::VioletWaveHandle* make(
         WrenVM* vm, 
@@ -1066,7 +732,7 @@ foreign class Wave {
       {
         if (handle == nullptr)
         {
-          wrenGetVariable(vm, "Core/Wave", "Wave", 0);
+          wrenGetVariable(vm, "Core", "Wave", 0);
           handle = wrenGetSlotHandle(vm, 0);
         }
         wrenSetSlotHandle(vm, 1, handle);
@@ -1101,46 +767,7 @@ foreign class Wave {
     }
     namespace Mesh
     {
-      /////////////////////////////////////////////////////////////////////////
-      char* Load()
-      {
-        String str = R"(
-///////////////////////////////////////////////////////////////////////////////
-///// mesh.wren ///////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-foreign class Mesh {
-    foreign static load(name)
-    foreign static generate(type)
-    foreign static create()
-
-    foreign subMeshCount
-
-    foreign positions
-    foreign positions=(vec)
-    foreign normals
-    foreign normals=(vec)
-    foreign texCoords
-    foreign texCoords=(vec)
-    foreign colours
-    foreign colours=(vec)
-    foreign tangents
-    foreign tangents=(vec)
-    foreign joints
-    foreign joints=(vec)
-    foreign weights
-    foreign weights=(vec)
-    foreign indices
-    foreign indices=(vec)
-
-    foreign recalculateTangents()
-}
-)";
-        char* data = (char*)WREN_ALLOC(str.size() + 1u);
-        memcpy(data, str.data(), str.size() + 1u);
-        return data;
-      }
       WrenHandle* handle = nullptr;
-    
       /////////////////////////////////////////////////////////////////////////
       asset::VioletMeshHandle* make(
         WrenVM* vm, 
@@ -1148,7 +775,7 @@ foreign class Mesh {
       {
         if (handle == nullptr)
         {
-          wrenGetVariable(vm, "Core/Mesh", "Mesh", 0);
+          wrenGetVariable(vm, "Core", "Mesh", 0);
           handle = wrenGetSlotHandle(vm, 0);
         }
         wrenSetSlotHandle(vm, 1, handle);
@@ -1179,19 +806,27 @@ foreign class Mesh {
           Name name(wrenGetSlotString(vm, 1));
 					*make(vm) = asset::MeshManager::getInstance()->get(name);
         };
-        if (strcmp(signature, "generate(_)") == 0) return [](WrenVM* vm) {
-          static uint32_t s_idx = 0u;
-          String type = wrenGetSlotString(vm, 1);
-          Name name("__generated_mesh_" + toString(s_idx++) + "__");
-          asset::VioletMeshHandle& handle = *make(vm);
-          if (type == "cube")
-            handle = asset::MeshManager::getInstance()->create(name, asset::Mesh::createCube());
-          else if (type == "cylinder")
+				if (strcmp(signature, "generate(_)") == 0) return [](WrenVM* vm) {
+					static uint32_t s_idx = 0u;
+					String type = wrenGetSlotString(vm, 1);
+					Name name("__generated_mesh_" + toString(s_idx++) + "__");
+					asset::VioletMeshHandle& handle = *make(vm);
+					if (type == "cube")
+						handle = asset::MeshManager::getInstance()->create(name, asset::Mesh::createCube());
+					else if (type == "cylinder")
 						handle = asset::MeshManager::getInstance()->create(name, asset::Mesh::createCylinder());
-          else if (type == "sphere")
+					else if (type == "sphere")
 						handle = asset::MeshManager::getInstance()->create(name, asset::Mesh::createSphere());
-        };
-        if (strcmp(signature, "create()") == 0) return [](WrenVM* vm) {
+				};
+				if (strcmp(signature, "generateCube(_,_)") == 0) return [](WrenVM* vm) {
+					static uint32_t s_idx = 0u;
+					glm::vec3 min = *GetForeign<glm::vec3>(vm, 1);
+					glm::vec3 max = *GetForeign<glm::vec3>(vm, 2);
+					Name name("__generated_cube_" + toString(s_idx++) + "__");
+					asset::VioletMeshHandle& handle = *make(vm);
+					handle = asset::MeshManager::getInstance()->create(name, asset::Mesh::createCube(min, max));
+				};
+				if (strcmp(signature, "create()") == 0) return [](WrenVM* vm) {
           static uint32_t s_idx = 0u;
           Name name("__created_mesh_" + toString(s_idx++) + "__");
           asset::VioletMeshHandle& handle = *make(vm);
@@ -1445,7 +1080,7 @@ foreign class Mesh {
       {
         if (handle == nullptr)
         {
-          wrenGetVariable(vm, "Core/Transform", "Transform", 0);
+          wrenGetVariable(vm, "Core", "Transform", 0);
           handle = wrenGetSlotHandle(vm, 0);
         }
         wrenSetSlotHandle(vm, 1, handle);
@@ -1464,7 +1099,7 @@ foreign class Mesh {
       {
         if (handle == nullptr)
         {
-          wrenGetVariable(vm, "Core/Camera", "Camera", 0);
+          wrenGetVariable(vm, "Core", "Camera", 0);
           handle = wrenGetSlotHandle(vm, 0);
         }
         wrenSetSlotHandle(vm, 1, handle);
@@ -1485,7 +1120,7 @@ foreign class Mesh {
       {
         if (handle == nullptr)
         {
-          wrenGetVariable(vm, "Core/MeshRender", "MeshRender", 0);
+          wrenGetVariable(vm, "Core", "MeshRender", 0);
           handle = wrenGetSlotHandle(vm, 0);
         }
         wrenSetSlotHandle(vm, 1, handle);
@@ -1504,7 +1139,7 @@ foreign class Mesh {
       {
         if (handle == nullptr)
         {
-          wrenGetVariable(vm, "Core/Lod", "Lod", 0);
+          wrenGetVariable(vm, "Core", "Lod", 0);
           handle = wrenGetSlotHandle(vm, 0);
         }
         wrenSetSlotHandle(vm, 1, handle);
@@ -1525,7 +1160,7 @@ foreign class Mesh {
       {
         if (handle == nullptr)
         {
-          wrenGetVariable(vm, "Core/RigidBody", "RigidBody", 0);
+          wrenGetVariable(vm, "Core", "RigidBody", 0);
           handle = wrenGetSlotHandle(vm, 0);
         }
         wrenSetSlotHandle(vm, 1, handle);
@@ -1546,7 +1181,7 @@ foreign class Mesh {
       {
         if (handle == nullptr)
         {
-          wrenGetVariable(vm, "Core/WaveSource", "WaveSource", 0);
+          wrenGetVariable(vm, "Core", "WaveSource", 0);
           handle = wrenGetSlotHandle(vm, 0);
         }
         wrenSetSlotHandle(vm, 1, handle);
@@ -1565,7 +1200,7 @@ foreign class Mesh {
       {
         if (handle == nullptr)
         {
-          wrenGetVariable(vm, "Core/Collider", "Collider", 0);
+          wrenGetVariable(vm, "Core", "Collider", 0);
           handle = wrenGetSlotHandle(vm, 0);
         }
         wrenSetSlotHandle(vm, 1, handle);
@@ -1584,7 +1219,7 @@ foreign class Mesh {
       {
         if (handle == nullptr)
         {
-          wrenGetVariable(vm, "Core/Light", "Light", 0);
+          wrenGetVariable(vm, "Core", "Light", 0);
           handle = wrenGetSlotHandle(vm, 0);
         }
         wrenSetSlotHandle(vm, 1, handle);
@@ -1733,60 +1368,13 @@ foreign class Mesh {
     ///////////////////////////////////////////////////////////////////////////
     namespace GameObject
     {
-      /////////////////////////////////////////////////////////////////////////
-      char* Load()
-      {
-        String str = R"(
-///////////////////////////////////////////////////////////////////////////////
-///// gameObject.wren /////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-import "Core/Transform" for Transform
-
-foreign class GameObject {
-    construct new() {
-      addComponent(Transform)
-    }
-		foreign destroy()
-
-    addComponent(component) { 
-      var c = component.new()
-      c.goAdd(this)
-      return c
-    }
-    getComponent(component) { 
-      return component.goGet(this)
-    }
-    removeComponent(component) { 
-      getComponent(component).goRemove(this)
-    }
-
-	==(v) { id == v.id }
-	!=(v) { id != v.id }
-
-    [component] { getComponent(component) }
-
-		foreign name
-		foreign name=(name)
-		foreign tags
-		foreign tags=(tags)
-
-    transform { getComponent(Transform) }
-    toString { "[%(id)]" }
-    foreign id
-}
-)";
-        char* data = (char*)WREN_ALLOC(str.size() + 1u);
-        memcpy(data, str.data(), str.size() + 1u);
-        return data;
-      }
       WrenHandle* handle = nullptr;
-      
       /////////////////////////////////////////////////////////////////////////
 			entity::Entity* makeAt(WrenVM* vm, int slot, int class_slot, entity::Entity val = {})
 			{
 				if (handle == nullptr)
 				{
-					wrenGetVariable(vm, "Core/GameObject", "GameObject", class_slot);
+					wrenGetVariable(vm, "Core", "GameObject", class_slot);
 					handle = wrenGetSlotHandle(vm, class_slot);
 				}
 				wrenSetSlotHandle(vm, class_slot, handle);
@@ -1893,79 +1481,6 @@ foreign class GameObject {
     ///////////////////////////////////////////////////////////////////////////
     namespace Transform
     {
-      /////////////////////////////////////////////////////////////////////////
-      char* Load()
-      {
-        String str = R"(
-///////////////////////////////////////////////////////////////////////////////
-///// Transform.wren //////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-foreign class Transform {
-	construct new() {}
-	toString { "[%(gameObject.id): Transform]" }
-
-	foreign gameObject
-
-	==(v) {
-		if (v is Transform) {
-			return gameObject == v.gameObject 
-		} else {
-			return false
-		}
-	}
-	!=(v) {
-		if (v is Transform) {
-			return gameObject != v.gameObject 
-		} else {
-			return true
-		}
-	}
-
-	foreign goAdd(gameObject)
-	foreign static goGet(gameObject)
-	foreign goRemove(gameObject)
-
-	moveLocal(movement) { localPosition = localPosition + movement }
-	moveWorld(movement) { worldPosition = worldPosition + movement }
-	scaleLocal(scale) { localScale = localScale * scale }
-	scaleWorld(scale) { worldScale = worldScale * scale }
-	rotateEulerLocal(euler) { localEuler = localEuler + euler }
-	rotateEulerWorld(euler) { worldEuler = worldEuler + euler }
- 
-	foreign parent
-	foreign parent=(parent)
-	foreign children
-
-	foreign worldPosition
-	foreign worldPosition=(p)
-	foreign worldScale
-	foreign worldScale=(s)
-	foreign worldRotation
-	foreign worldRotation=(e)
-	foreign worldEuler
-	foreign worldEuler=(e)
-	foreign worldForward
-	foreign worldRight
-	foreign worldUp
- 
-	foreign localPosition
-	foreign localPosition=(p)
-	foreign localScale
-	foreign localScale=(s)
-	foreign localRotation
-	foreign localRotation=(e)
-	foreign localEuler
-	foreign localEuler=(e)
-	foreign localForward
-	foreign localRight
-	foreign localUp
-}
-)";
-        char* data = (char*)WREN_ALLOC(str.size() + 1u);
-        memcpy(data, str.data(), str.size() + 1u);
-        return data;
-      }
-
       /////////////////////////////////////////////////////////////////////////
       WrenForeignClassMethods Construct()
       {
@@ -2179,59 +1694,6 @@ foreign class Transform {
     namespace Camera
     {
       /////////////////////////////////////////////////////////////////////////
-      char* Load()
-      {
-        String str = R"(
-///////////////////////////////////////////////////////////////////////////////
-///// camera.wren /////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-foreign class Camera {
-    construct new() {
-    }
-    toString { "[%(gameObject.id): Camera]" }
-    
-    foreign gameObject
-    
-	==(v) {
-		if (v is Camera) {
-			return gameObject == v.gameObject 
-		} else {
-			return false
-		}
-	}
-	!=(v) {
-		if (v is Camera) {
-			return gameObject != v.gameObject 
-		} else {
-			return true
-		}
-	}
-
-    foreign goAdd(gameObject)
-    foreign static goGet(gameObject)
-    foreign goRemove(gameObject)
-
-    foreign addShaderPass(name, shader, input, output)
-	foreign ndcToWorld(ndc)
-
-    foreign near
-    foreign near=(near)
-    foreign far
-    foreign far=(far)
-    foreign fovDeg
-    foreign fovDeg=(deg)
-    foreign fovRad
-    foreign fovRad=(rad)
-    fov { fovRad }
-    fov(rad) { fovRad = rad }
-}
-)";
-        char* data = (char*)WREN_ALLOC(str.size() + 1u);
-        memcpy(data, str.data(), str.size() + 1u);
-        return data;
-      }
-
-      /////////////////////////////////////////////////////////////////////////
       WrenForeignClassMethods Construct()
       {
         return WrenForeignClassMethods{
@@ -2391,72 +1853,6 @@ foreign class Camera {
     }
     namespace MeshRender
     {
-      /////////////////////////////////////////////////////////////////////////
-      char* Load()
-      {
-        String str = R"(
-///////////////////////////////////////////////////////////////////////////////
-///// msehRender.wren /////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-foreign class MeshRender {
-    construct new() {
-    }
-    toString { "[%(gameObject.id): MeshRender]" }
-
-    foreign gameObject
-
-	==(v) {
-		if (v is MeshRender) {
-			return gameObject == v.gameObject 
-		} else {
-			return false
-		}
-	}
-	!=(v) {
-		if (v is MeshRender) {
-			return gameObject != v.gameObject 
-		} else {
-			return true
-		}
-	}
-
-    foreign goAdd(gameObject)
-    foreign static goGet(gameObject)
-    foreign goRemove(gameObject)
-
-    foreign attach(mesh)
-    
-    foreign makeStatic()
-    foreign makeStaticRecursive()
-    foreign makeDynamic()
-    foreign makeDynamicRecursive()
-
-		foreign metallicnessFactor
-		foreign metallicnessFactor=(metallicnessFactor)
-		foreign roughnessFactor
-		foreign roughnessFactor=(roughnessFactor)
-		foreign emissivenessFactor
-		foreign emissivenessFactor=(emissivenessFactor)
-
-    foreign mesh
-    foreign mesh=(mesh)
-    foreign subMesh
-    foreign subMesh=(subMesh)
-    foreign albedo
-    foreign albedo=(albedo)
-    foreign normal
-    foreign normal=(normal)
-    foreign DMRA
-    foreign DMRA=(dmra)
-    foreign emissive
-    foreign emissive=(emissive)
-}
-)";
-        char* data = (char*)WREN_ALLOC(str.size() + 1u);
-        memcpy(data, str.data(), str.size() + 1u);
-        return data;
-      }
-      
       /////////////////////////////////////////////////////////////////////////
       WrenForeignClassMethods Construct()
       {
@@ -2675,48 +2071,6 @@ foreign class MeshRender {
     namespace LOD
     {
       /////////////////////////////////////////////////////////////////////////
-      char* Load()
-      {
-        String str = R"(
-///////////////////////////////////////////////////////////////////////////////
-///// lod.wren ////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-foreign class Lod {
-    construct new() {
-    }
-    toString { "[%(gameObject.id): Lod]" }
-
-    foreign gameObject
-
-	==(v) {
-		if (v is Lod) {
-			return gameObject == v.gameObject 
-		} else {
-			return false
-		}
-	}
-	!=(v) {
-		if (v is Lod) {
-			return gameObject != v.gameObject 
-		} else {
-			return true
-		}
-	}
-
-    foreign goAdd(gameObject)
-    foreign static goGet(gameObject)
-    foreign goRemove(gameObject)
-
-    foreign addLod(mesh, distance)
-    foreign addLodRecursive(mesh, distance)
-}
-)";
-        char* data = (char*)WREN_ALLOC(str.size() + 1u);
-        memcpy(data, str.data(), str.size() + 1u);
-        return data;
-      }
-
-      /////////////////////////////////////////////////////////////////////////
       WrenForeignClassMethods Construct()
       {
         return WrenForeignClassMethods{
@@ -2801,88 +2155,6 @@ foreign class Lod {
     }
     namespace RigidBody
     {
-      /////////////////////////////////////////////////////////////////////////
-      char* Load()
-      {
-				String str = R"(
-///////////////////////////////////////////////////////////////////////////////
-///// rigidBody.wren //////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-class RigidBody {
-	construct new() {
-    }
-    toString { "[%(gameObject.id): RigidBody]" }
-
-    gameObject { _go }
-
-	==(v) {
-		if (v is RigidBody) {
-			return gameObject == v.gameObject 
-		} else {
-			return false
-		}
-	}
-	!=(v) {
-		if (v is RigidBody) {
-			return gameObject != v.gameObject 
-		} else {
-			return true
-		}
-	}
-
-	goAdd(gameObject) {
-		goAddForeign(gameObject)
-		goSet(gameObject)
-	}
-
-	goSet(gameObject) {
-		_go = gameObject
-	}
-
-    static goGet(gameObject) {
-		var v = RigidBody.new()
-		v.goSet(gameObject)
-		return v
-	}
-
-	foreign goAddForeign(gameObject)
-
-    goRemove(gameObject) {}
-
-    foreign priv_applyImpulse(go, impulse)
-    foreign priv_velocity(go)
-    foreign priv_velocity(go, velocity)
-    foreign priv_angularVelocity(go)
-    foreign priv_angularVelocity(go, angularVelocity)
-    foreign priv_velocityConstraints(go)
-    foreign priv_velocityConstraints(go, velocityConstraints) 
-    foreign priv_angularConstraints(go)
-    foreign priv_angularConstraints(go, angularConstraints)   
-    foreign priv_friction(go)
-    foreign priv_friction(go, friction)   
-    foreign priv_mass(go)
-    foreign priv_mass(go, mass)   
-
-    applyImpulse(impulse)                     { priv_applyImpulse(_go, impulse) }
-    velocity                                  { priv_velocity(_go) }
-    velocity=(velocity)                       { priv_velocity(_go, velocity) }
-    angularVelocity                           { priv_angularVelocity(_go) }
-    angularVelocity=(angularVelocity)         { priv_angularVelocity(_go, angularVelocity) }
-    velocityConstraints                       { priv_velocityConstraints(_go) }
-    velocityConstraints=(velocityConstraints) { priv_velocityConstraints(_go, velocityConstraints) }
-    angularConstraints                        { priv_angularConstraints(_go) }
-    angularConstraints=(angularConstraints)   { priv_angularConstraints(_go, angularConstraints) }
-	friction                                  { priv_friction(_go) }
-	friction=(friction)                       { priv_friction(_go, friction) }
-	mass                                      { priv_mass(_go) }
-	mass=(mass)                               { priv_mass(_go, mass) }
-}
-)";
-        char* data = (char*)WREN_ALLOC(str.size() + 1u);
-        memcpy(data, str.data(), str.size() + 1u);
-        return data;
-      }
-
       /////////////////////////////////////////////////////////////////////////
       WrenForeignClassMethods Construct()
       {
@@ -2983,67 +2255,6 @@ class RigidBody {
     }
     namespace WaveSource
     {
-      /////////////////////////////////////////////////////////////////////////
-      char* Load()
-      {
-        String str = R"(
-///////////////////////////////////////////////////////////////////////////////
-///// waveSource.wren /////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-foreign class WaveSource {
-    construct new() {
-    }
-    toString { "[%(gameObject.id): WaveSource]" }
-    
-    foreign gameObject
-
-	==(v) {
-		if (v is WaveSource) {
-			return gameObject == v.gameObject 
-		} else {
-			return false
-		}
-	}
-	!=(v) {
-		if (v is WaveSource) {
-			return gameObject != v.gameObject 
-		} else {
-			return true
-		}
-	}
-
-    foreign goAdd(gameObject)
-    foreign static goGet(gameObject)
-    foreign goRemove(gameObject)
-
-    foreign play()
-    foreign pause()
-    foreign stop()
-    foreign makeMainListener()
-
-    foreign buffer
-    foreign buffer=(buffer)
-    foreign state
-    foreign relativeToListener
-    foreign relativeToListener=(relative)
-    foreign loop
-    foreign loop=(loop)
-    foreign offset=(offset)
-    foreign volume
-    foreign volume=(volume)
-    foreign gain
-    foreign gain=(gain)
-    foreign pitch 
-    foreign pitch=(pitch) 
-    foreign radius 
-    foreign radius=(radius) 
-}
-)";
-        char* data = (char*)WREN_ALLOC(str.size() + 1u);
-        memcpy(data, str.data(), str.size() + 1u);
-        return data;
-      }
-      
       /////////////////////////////////////////////////////////////////////////
       WrenForeignClassMethods Construct()
       {
@@ -3215,56 +2426,6 @@ foreign class WaveSource {
     namespace Collider
     {
       /////////////////////////////////////////////////////////////////////////
-      char* Load()
-      {
-        String str = R"(
-///////////////////////////////////////////////////////////////////////////////
-///// collider.wren ///////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-foreign class Collider {
-    construct new() {
-    }
-    toString { "[%(gameObject.id): Collider]" }
-    
-    foreign gameObject
-
-	==(v) {
-		if (v is Collider) {
-			return gameObject == v.gameObject 
-		} else {
-			return false
-		}
-	}
-	!=(v) {
-		if (v is Collider) {
-			return gameObject != v.gameObject 
-		} else {
-			return true
-		}
-	}
-
-    foreign goAdd(gameObject)
-    foreign static goGet(gameObject)
-    foreign goRemove(gameObject)
-
-    foreign makeBoxCollider()
-    makeCubeCollider() { makeBoxCollider() }
-    foreign makeSphereCollider()
-    foreign makeCapsuleCollider()
-    foreign makeMeshCollider(mesh, subMesh)
-    foreign makeMeshColliderRecursive(mesh)
-
-    foreign layers
-    foreign layers=(layers)
-    foreign layersRecursive=(layers)
-}
-)";
-        char* data = (char*)WREN_ALLOC(str.size() + 1u);
-        memcpy(data, str.data(), str.size() + 1u);
-        return data;
-      }
-
-      /////////////////////////////////////////////////////////////////////////
       WrenForeignClassMethods Construct()
       {
         return WrenForeignClassMethods{
@@ -3280,7 +2441,8 @@ foreign class Collider {
         }
         };
       }
-      void addMeshCollider(entity::Entity entity, asset::VioletMeshHandle mesh)
+			/////////////////////////////////////////////////////////////////////////
+			void addMeshCollider(entity::Entity entity, asset::VioletMeshHandle mesh)
       {
         bool add_mesh_collider = false;
 
@@ -3305,7 +2467,8 @@ foreign class Collider {
         for (const auto& child : components::TransformSystem::getChildren(entity, *g_scene))
           addMeshCollider(child, mesh);
       }
-      void setLayersRecursive(entity::Entity entity, uint16_t layers)
+			/////////////////////////////////////////////////////////////////////////
+			void setLayersRecursive(entity::Entity entity, uint16_t layers)
       {
         if (components::ColliderSystem::hasComponent(entity, *g_scene))
 			components::ColliderSystem::setLayers(entity, layers, *g_scene);
@@ -3313,7 +2476,8 @@ foreign class Collider {
 		for (const auto& child : components::TransformSystem::getChildren(entity, *g_scene))
 			setLayersRecursive(child, layers);
       }
-      WrenForeignMethodFn Bind(const char* signature)
+			/////////////////////////////////////////////////////////////////////////
+			WrenForeignMethodFn Bind(const char* signature)
       {
         if (strcmp(signature, "gameObject") == 0) return [](WrenVM* vm) {
           GameObject::make(vm, GetForeign<ColliderHandle>(vm)->handle.entity());
@@ -3365,86 +2529,8 @@ foreign class Collider {
     }
     namespace Light
     {
-      char* Load()
-      {
-        String str = R"(
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///// light.wren //////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-foreign class Light {
-    construct new() {
-    }
-    toString { "[%(gameObject.id): Light]" }
-    
-    foreign gameObject
-
-	==(v) {
-		if (v is Light) {
-			return gameObject == v.gameObject 
-		} else {
-			return false
-		}
-	}
-	!=(v) {
-		if (v is Light) {
-			return gameObject != v.gameObject 
-		} else {
-			return true
-		}
-	}
-
-    foreign goAdd(gameObject)
-    foreign static goGet(gameObject)
-    foreign goRemove(gameObject)
-    
-    foreign type
-    foreign type=(type)
-    foreign isRSM
-    foreign isRSM=(isRSM)
-    foreign lightColour
-    foreign lightColour=(colour)
-    foreign ambientColour
-    foreign ambientColour=(colour)
-    foreign lightIntensity
-    foreign lightIntensity=(intensity)
-    foreign shadowType
-    foreign shadowType=(shadowType)
-    foreign shadowMapSizePx
-    foreign shadowMapSizePx=(shadowMapSizePx)
-    foreign depth
-    foreign depth=(depth)
-    foreign size
-    foreign size=(size)
-    foreign enabled
-    foreign enabled=(enabled)
-    foreign texture
-    foreign texture=(texture)
-    foreign innerCutOff
-    foreign innerCutOff=(innerCutOff)
-    foreign outerCutOff
-    foreign outerCutOff=(outerCutOff)
-}
-
-class LightTypes {
-    static Unknown     { 0 }
-    static Directional { 1 }
-    static Spot        { 2 }
-    static Point       { 3 }
-    static Cascade     { 4 }
-}
-
-class ShadowTypes {
-    static Off          { 0 }
-    static Generated    { 1 }
-    static GenerateOnce { 2 }
-    static Dynamic      { 3 }
-}
-)";
-        char* data = (char*)WREN_ALLOC(str.size() + 1u);
-        memcpy(data, str.data(), str.size() + 1u);
-        return data;
-      }
-      WrenForeignClassMethods Construct()
+			/////////////////////////////////////////////////////////////////////////
+			WrenForeignClassMethods Construct()
       {
         return WrenForeignClassMethods{
           [](WrenVM* vm) {
@@ -3459,7 +2545,8 @@ class ShadowTypes {
         }
         };
       }
-      WrenForeignMethodFn Bind(const char* signature)
+			/////////////////////////////////////////////////////////////////////////
+			WrenForeignMethodFn Bind(const char* signature)
       {
         if (strcmp(signature, "gameObject") == 0) return [](WrenVM* vm) {
           GameObject::make(vm, GetForeign<LightHandle>(vm)->handle.entity());
@@ -3636,71 +2723,6 @@ class ShadowTypes {
 
     namespace MonoBehaviour
     {
-      char* Load()
-      {
-        String str = R"(
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///// mono_behaviour.wren /////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-class MonoBehaviour {
-    construct new() {
-    }
-    toString { "[%(gameObject.id): MonoBehaviour]" }
-    
-    gameObject { _game_object }
-    transform { _transform }
-
-	==(v) {
-		if (v is MonoBehaviour) {
-			return gameObject == v.gameObject 
-		} else {
-			return false
-		}
-	}
-	!=(v) {
-		if (v is MonoBehaviour) {
-			return gameObject != v.gameObject 
-		} else {
-			return true
-		}
-	}
-
-    goAdd(gameObject) {
-        _game_object = gameObject
-        _transform = gameObject.transform
-        goAddPrivate(gameObject)
-        initialize()
-    }
-
-    goRemove(gameObject) {
-        deinitialize()
-        goRemovePrivate(gameObject)
-    }
-    
-    initialize() {}
-    deinitialize() {}
-
-    update() {}
-    fixedUpdate() {}
-
-    onCollisionEnter(other, normal) {}
-    onCollisionStay(other, normal)  {}
-    onCollisionExit(other, normal)  {}
-
-    onTriggerEnter(other, normal) {}
-    onTriggerStay(other, normal)  {}
-    onTriggerExit(other, normal)  {}
-
-    foreign goAddPrivate(gameObject)
-    foreign static goGet(gameObject)
-    foreign goRemovePrivate(gameObject)
-}
-)";
-        char* data = (char*)WREN_ALLOC(str.size() + 1u);
-        memcpy(data, str.data(), str.size() + 1u);
-        return data;
-      }
-
       WrenForeignMethodFn Bind(const char* signature)
       {
         if (strcmp(signature, "goAddPrivate(_)") == 0) return [](WrenVM* vm) {
@@ -3748,25 +2770,6 @@ class MonoBehaviour {
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		namespace Graphics
 		{
-			char* Load()
-			{
-				String str = R"(
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///// graphics.wren ///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-class Graphics {
-    foreign static vsync=(enabled)
-    foreign static vsync
-    foreign static renderScale=(scale)
-    foreign static renderScale
-    foreign static setLightShaders(generate, modify, modifyCount, publish, shadowType)
-	foreign static windowSize
-}
-)";
-				char* data = (char*)WREN_ALLOC(str.size() + 1u);
-				memcpy(data, str.data(), str.size() + 1u);
-				return data;
-			}
 			WrenForeignMethodFn Bind(const char* signature)
 			{
 				if (strcmp(signature, "vsync=(_)") == 0) return [](WrenVM* vm) {
@@ -3797,26 +2800,6 @@ class Graphics {
 		}
 		namespace GUI
 		{
-			/////////////////////////////////////////////////////////////////////////
-			char* Load()
-			{
-				String str = R"(
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///// gui.wren ////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-class GUI {
-    foreign static enabled=(enabled)
-    foreign static enabled
-    foreign static loadURL(url)
-    foreign static executeJavaScript(string)
-    foreign static bindCallback(name, object)
-}
-)";
-				char* data = (char*)WREN_ALLOC(str.size() + 1u);
-				memcpy(data, str.data(), str.size() + 1u);
-				return data;
-			}
-
 			/////////////////////////////////////////////////////////////////////////
 			struct UserDataWrapper
 			{
@@ -3884,27 +2867,6 @@ class GUI {
 		}
 		namespace PostProcess
     {
-      char* Load()
-      {
-        String str = R"(
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///// postProcess.wren ////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-class PostProcess {
-    foreign static addRenderTarget(name, render_scale, format)
-    foreign static addRenderTarget(name, texture)
-    foreign static setRenderTargetFlag(name, flag, value)
-    foreign static setFinalRenderTarget(name)
-    foreign static addShaderPass(name, shader, input, output)
-    foreign static setShaderPassEnabled(name, enabled)
-    foreign static irradianceConvolution(input, output)
-    foreign static hammerhead(input, output)
-}
-)";
-        char* data = (char*)WREN_ALLOC(str.size() + 1u);
-        memcpy(data, str.data(), str.size() + 1u);
-        return data;
-      }
       WrenForeignMethodFn Bind(const char* signature)
       {
         if (strcmp(signature, "addRenderTarget(_,_,_)") == 0) return [](WrenVM* vm) {
@@ -4084,193 +3046,6 @@ class PostProcess {
     }
     namespace Input
     {
-      char* Load()
-      {
-        String str = R"(
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///// input.wren //////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-class Input {
-    foreign static getKey(key)
-    foreign static getAxis(axis)
-    foreign static getButton(button)
-}
-
-class Axes {
-    static LeftStickX   { 0  }
-    static LeftStickY   { 1  }
-    static RightStickX  { 2  }
-    static RightStickY  { 3  }
-    static LeftTrigger  { 4  }
-    static RightTrigger { 5  }
-    
-    static MouseX       { 20 }
-    static MouseY       { 21 }
-    static Scroll       { 22 }
-}
-
-class Buttons {
-    static A                 { 0  }
-    static B                 { 1  }
-    static X                 { 2  }
-    static Y                 { 3  }
-    static Up                { 4  }
-    static Down              { 5  }
-    static Left              { 6  }
-    static Right             { 7  }
-    static LeftBumper        { 8  }
-    static RightBumper       { 9  }
-    static LeftStick         { 0  }
-    static RightStick        { 11 }
-    static Start             { 12 }
-    static Back              { 13 }
-
-    static LMB               { 20 }
-    static LeftMouseButton   { 20 }
-    static MMB               { 21 }
-    static MiddleMouseButton { 21 }
-    static RMB               { 22 }
-    static RightMouseButton  { 22 }
-    static LMBD              { 23 }
-    static MMBD              { 24 }
-    static RMBD              { 25 }
-}
-
-class Keys {
-    static A            { 65   }
-    static B            { 66   }
-    static C            { 67   }
-    static D            { 68   }
-    static E            { 69   }
-    static F            { 70   }
-    static G            { 71   }
-    static H            { 72   }
-    static I            { 73   }
-    static J            { 74   }
-    static K            { 75   }
-    static L            { 76   }
-    static M            { 77   }
-    static N            { 78   }
-    static O            { 79   }
-    static P            { 80   }
-    static Q            { 81   }
-    static R            { 82   }
-    static S            { 83   }
-    static T            { 84   }
-    static U            { 85   }
-    static V            { 86   }
-    static W            { 87   }
-    static X            { 88   }
-    static Y            { 89   }
-    static Z            { 90   }
-
-    static Tilde        { 126  }
-
-    static Num0         { 48   }
-    static Num1         { 49   }
-    static Num2         { 50   }
-    static Num3         { 51   }
-    static Num4         { 52   }
-    static Num5         { 53   }
-    static Num6         { 54   }
-    static Num7         { 55   }
-    static Num8         { 56   }
-    static Num9         { 57   }
-
-    static F1           { 0x70 }
-    static F2           { 0x71 }
-    static F3           { 0x72 }
-    static F4           { 0x73 }
-    static F5           { 0x74 }
-    static F6           { 0x75 }
-    static F7           { 0x76 }
-    static F8           { 0x77 }
-    static F9           { 0x78 }
-    static F10          { 0x79 }
-    static F11          { 0x7A }
-    static F12          { 0x7B }
-    static F13          { 0x7C }
-    static F14          { 0x7D }
-    static F15          { 0x7E }
-    static F16          { 0x7F }
-    static F17          { 0x80 }
-    static F18          { 0x81 }
-    static F19          { 0x82 }
-    static F20          { 0x83 }
-    static F21          { 0x84 }
-    static F22          { 0x85 }
-    static F23          { 0x86 }
-    static F24          { 0x87 }
-    static F25          { 0x88 }
-
-    static Numpad0      { 0x60 }
-    static Numpad1      { 0x61 }
-    static Numpad2      { 0x62 }
-    static Numpad3      { 0x63 }
-    static Numpad4      { 0x64 }
-    static Numpad5      { 0x65 }
-    static Numpad6      { 0x66 }
-    static Numpad7      { 0x67 }
-    static Numpad8      { 0x68 }
-    static Numpad9      { 0x69 }
-
-    static Tab          { 0x09 }
-    static Backspace    { 0x08 }
-    static Insert       { 0x2D }
-    static Delete       { 0x2E }
-    static Return       { 0x0D }
-    static Enter        { 0x0D }
-    static Space        { 0x20 }
-    static Minus        { 0xBD }
-    static Shift        { 0x10 }
-    static LShift       { 0xA0 }
-    static RShift       { 0xA1 }
-    static Control      { 0x11 }
-    static LControl     { 0xA2 }
-    static RControl     { 0xA3 }
-
-    static Left         { 0x25 }
-    static Up           { 0x26 }
-    static Right        { 0x27 }
-    static Down         { 0x28 }
-      
-    static PageUp       { 0x21 }
-    static PageDown     { 0x22 }
-    static Home         { 0x24 }
-    static End          { 0x23 }
-    static CapsLock     { 0x14 }
-    static ScrollLock   { 0x91 }
-    static NumLock      { 0x90 }
-    static PrintScreen  { 0x2C }
-    static Pause        { 0x13 }
-    static Decimal      { 0x6E }
-    static Divide       { 0x6F }
-    static Multiply     { 0x6A }
-    static Subtract     { 0x6D }
-    static Add          { 0x6B }
-    static Equal        { 0xBB }
-    static LeftBracket  { 219  }
-    static RightBracket { 221  }
-    static BackSlash    { 0xE2 }
-    static Semicolon    { 186  }
-    static Apostrophe   { 0xDE }
-    static Grave        { 126  }
-    static Comma        { 0xBC }
-    static Period       { 0xBE }
-    static Slash        { 191  }
-    static LAlt         { 0x12 }
-    static LSuper       { 0x5B }
-    static RAlt         { 0x12 }
-    static RSuper       { 0x5C }
-    static Menu         { 0xA4 }
-
-    static Escape       { 0x1B }
-}
-)";
-        char* data = (char*)WREN_ALLOC(str.size() + 1u);
-        memcpy(data, str.data(), str.size() + 1u);
-        return data;
-      }
       WrenForeignMethodFn Bind(const char* signature)
       {
         if (strcmp(signature, "getKey(_)") == 0) return [](WrenVM* vm) {
@@ -4311,65 +3086,6 @@ class Keys {
     }
     namespace Math
     {
-      char* Load()
-      {
-        String str = R"(
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///// math.wren ///////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-class Math {
-    foreign static random(min, max)
-    foreign static random(max)
-    foreign static random()
-    
-    foreign static clamp(val, min, max)
-    foreign static clamp(val)
-
-    foreign static wrap(val, min, max)
-    foreign static wrapMax(val, max)
-
-    foreign static lerp(lhs, rhs, val)
-
-    foreign static sqrt(val)
-    foreign static sqr(val)
-    foreign static pow(val, pow)
-
-    foreign static min(lhs, rhs)
-    foreign static max(lhs, rhs)
-
-    foreign static abs(val)
-    foreign static floor(val)
-    foreign static ceil(val)
-    foreign static round(val)
-
-    foreign static cos(val)
-    foreign static cosh(val)
-    foreign static acos(val)
-
-    foreign static sin(val)
-    foreign static sinh(val)
-    foreign static asin(val)
-
-    foreign static tan(val)
-    foreign static tanh(val)
-    foreign static atan(val)
-
-    foreign static atan2(y, x)
-
-    foreign static lookRotation(forward, up)
-
-    static pi { 3.14159265359 }
-    static tau { 6.28318530718 }
-    static deg2Rad { 0.0174533 }
-    static degToRad { 0.0174533 }
-    static rad2Deg { 57.2958 }
-    static radToDeg { 57.2958 }
-}
-)";
-        char* data = (char*)WREN_ALLOC(str.size() + 1u);
-        memcpy(data, str.data(), str.size() + 1u);
-        return data;
-      }
       WrenForeignMethodFn Bind(const char* signature)
       {
         if (strcmp(signature, "random(_,_)") == 0) return [](WrenVM* vm) {
@@ -4472,23 +3188,6 @@ class Math {
     }
 	namespace Time
 	{
-		char* Load()
-		{
-			String str = R"(
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///// time.wren ///////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-class Time {
-    foreign static fixedDeltaTime
-    foreign static deltaTime
-	foreign static timeScale=(timeScale)
-	foreign static timeScale
-}
-)";
-			char* data = (char*)WREN_ALLOC(str.size() + 1u);
-			memcpy(data, str.data(), str.size() + 1u);
-			return data;
-		}
 		WrenForeignMethodFn Bind(const char* signature)
 		{
 			if (strcmp(signature, "fixedDeltaTime") == 0) return [](WrenVM* vm) {
@@ -4508,91 +3207,8 @@ class Time {
 			return nullptr;
 		}
 	}
-	namespace PhysicsConstraints
-	{
-		char* Load()
-		{
-			String str = R"(
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///// physics constraints.wren ////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-class PhysicsConstraints {
-	static None { 0   }
-	static X { 1 << 0 }
-	static Y { 1 << 1 }
-	static Z { 1 << 2 }
-}
-)";
-			char* data = (char*)WREN_ALLOC(str.size() + 1u);
-			memcpy(data, str.data(), str.size() + 1u);
-			return data;
-		}
-	}
-	namespace Sort
-	{
-		char* Load()
-		{
-			String str = R"(
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///// sort.wren ///////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-class Sort {
-  static swap(arr, l, r) {
-    var t = arr[l]
-    arr[l] = arr[r]
-    arr[r] = t
-    return arr
-  }
-
-  static bubbleSort(arr, sorter) { 
-    var i = 0
-    while (i < arr.count - 1) {
-      // Last i elements are already in place    
-      var j = 0
-      while (j < arr.count - i - 1) {
-        if (sorter.greater(arr[j], arr[j + 1])) {
-          arr = swap(arr, j, j + 1)
-        }
-        
-        j = j + 1
-      }
-      
-      i = i + 1
-    }
-
-    return arr
-  }
-
-  // Default to bubble sort.
-  static sort(arr, sorter) { bubbleSort(arr, sorter) }
-}
-)";
-			char* data = (char*)WREN_ALLOC(str.size() + 1u);
-			memcpy(data, str.data(), str.size() + 1u);
-			return data;
-		}
-		WrenForeignMethodFn Bind(const char* signature)
-		{
-			return nullptr;
-		}
-	}
 		namespace Debug
 		{
-			char* Load()
-			{
-				String str = R"(
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///// debug.wren //////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-class Debug {
-    foreign static drawLine(from, to, color)
-    foreign static drawTri(p1, p2, p3, color)
-}
-)";
-				char* data = (char*)WREN_ALLOC(str.size() + 1u);
-				memcpy(data, str.data(), str.size() + 1u);
-				return data;
-			}
 			WrenForeignMethodFn Bind(const char* signature)
 			{
 				if (strcmp(signature, "drawLine(_,_,_)") == 0) return [](WrenVM* vm) {
@@ -4615,31 +3231,13 @@ class Debug {
 		}
 		namespace Manifold
 		{
-			char* Load()
-			{
-				String str = R"(
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///// manifold.wren ///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-foreign class Manifold {
-	foreign gameObject
-	foreign normal
-	foreign depth
-	foreign point
-}
-)";
-				char* data = (char*)WREN_ALLOC(str.size() + 1u);
-				memcpy(data, str.data(), str.size() + 1u);
-				return data;
-			}
-
 			WrenHandle* handle = nullptr;
 			/////////////////////////////////////////////////////////////////////////
 			physics::Manifold* makeAt(WrenVM* vm, int slot, int class_slot, physics::Manifold val = physics::Manifold())
 			{
 				if (handle == nullptr)
 				{
-					wrenGetVariable(vm, "Core/Manifold", "Manifold", class_slot);
+					wrenGetVariable(vm, "Core", "Manifold", class_slot);
 					handle = wrenGetSlotHandle(vm, class_slot);
 				}
 				wrenSetSlotHandle(vm, class_slot, handle);
@@ -4688,25 +3286,6 @@ foreign class Manifold {
 		}
 		namespace Physics
 		{
-			char* Load()
-			{
-				String str = R"(
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///// physics.wren ////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-class Physics {
-    foreign static gravity
-    foreign static gravity=(gravity)
-    foreign static castRay(from, to)
-
-	foreign static debugDrawEnabled
-	foreign static debugDrawEnabled=(debugDrawEnabled)
-}
-)";
-				char* data = (char*)WREN_ALLOC(str.size() + 1u);
-				memcpy(data, str.data(), str.size() + 1u);
-				return data;
-			}
 			WrenForeignMethodFn Bind(const char* signature)
 			{
 				if (strcmp(signature, "gravity") == 0) return [](WrenVM* vm) {
@@ -4739,28 +3318,6 @@ class Physics {
 		}
     namespace File
     {
-      char* Load()
-      {
-        String str = R"(
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///// file.wren ///////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-foreign class File {
-    construct open(file) {}
-    construct open(file, writeMode) {}
-    foreign close()
-    foreign read()
-    foreign write(text)
-
-    static readOnly  { 1 }
-    static writeOnly { 2 }
-    static readWrite { 3 }
-}
-)";
-        char* data = (char*)WREN_ALLOC(str.size() + 1u);
-        memcpy(data, str.data(), str.size() + 1u);
-        return data;
-      }
       struct File
       {
         FILE* fp;
@@ -4770,7 +3327,7 @@ foreign class File {
       {
         if (handle == nullptr)
         {
-          wrenGetVariable(vm, "Core/File", "File", 0);
+          wrenGetVariable(vm, "Core", "File", 0);
           handle = wrenGetSlotHandle(vm, 0);
         }
         wrenSetSlotHandle(vm, 1, handle);
@@ -4831,44 +3388,6 @@ foreign class File {
     }
     namespace Noise
     {
-      char* Load()
-      {
-        String str = R"(
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///// noise.wren //////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-foreign class Noise {
-    construct new() {}
-
-    foreign seed
-    foreign seed=(seed)
-    foreign frequency
-    foreign frequency=(frequency)
-    foreign interpolation
-    foreign interpolation=(interpolation)
-
-    foreign getPerlin(id)
-    foreign getPerlinFractal(id)
-    foreign getCellular(id)
-    foreign getCubic(id)
-    foreign getCubicFractal(id)
-    foreign getSimplex(id)
-    foreign getSimplexFractal(id)
-    foreign getValue(id)
-    foreign getValueFractal(id)
-    foreign getWhiteNoise(id)
-}
-
-foreign class NoiseInterpolation {
-    static Linear  { 0 }
-    static Hermite { 1 }
-    static Quintic { 2 }
-}
-)";
-        char* data = (char*)WREN_ALLOC(str.size() + 1u);
-        memcpy(data, str.data(), str.size() + 1u);
-        return data;
-      }
       struct Noise
       {
         FastNoise noise;
@@ -4878,7 +3397,7 @@ foreign class NoiseInterpolation {
       {
         if (handle == nullptr)
         {
-          wrenGetVariable(vm, "Core/Noise", "Noise", 0);
+          wrenGetVariable(vm, "Core", "Noise", 0);
           handle = wrenGetSlotHandle(vm, 0);
         }
         wrenSetSlotHandle(vm, 1, handle);
@@ -4980,26 +3499,6 @@ foreign class NoiseInterpolation {
 		///////////////////////////////////////////////////////////////////////////
     namespace Assert
     {
-			/////////////////////////////////////////////////////////////////////////
-      char* Load()
-      {
-        String str = R"(
-///////////////////////////////////////////////////////////////////////////////
-///// assert.wren /////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-class Assert {
-    foreign static isTrue(expr)
-    foreign static isTrue(expr, msg)
-    foreign static isFalse(expr)
-    foreign static isFalse(expr, msg)
-    foreign static throw(msg)
-}
-)";
-        char* data = (char*)WREN_ALLOC(str.size() + 1u);
-        memcpy(data, str.data(), str.size() + 1u);
-        return data;
-      }
-
 			/////////////////////////////////////////////////////////////////////////
       WrenForeignMethodFn Bind(const char* signature)
       {
@@ -5141,8 +3640,6 @@ class Assert {
 					return Math::Bind(signature);
 				if (hashEqual(className, "Time"))
 					return Time::Bind(signature);
-				if (hashEqual(className, "Sort"))
-					return Sort::Bind(signature);
 				if (hashEqual(className, "Debug"))
 					return Debug::Bind(signature);
 				if (hashEqual(className, "Physics"))
@@ -5165,72 +3662,11 @@ class Assert {
 		{
 			if (strstr(name_cstr, "Core") != 0)
 			{
-				if (hashEqual(name_cstr + 5u, "Console"))
-					return Console::Load();
-				if (hashEqual(name_cstr + 5u, "Vec2"))
-					return Vec2::Load();
-				if (hashEqual(name_cstr + 5u, "Vec3"))
-					return Vec3::Load();
-				if (hashEqual(name_cstr + 5u, "Vec4"))
-					return Vec4::Load();
-				if (hashEqual(name_cstr + 5u, "Quat"))
-					return Quat::Load();
-				if (hashEqual(name_cstr + 5u, "Texture"))
-					return Texture::Load();
-				if (hashEqual(name_cstr + 5u, "Shader"))
-					return Shader::Load();
-				if (hashEqual(name_cstr + 5u, "Wave"))
-					return Wave::Load();
-				if (hashEqual(name_cstr + 5u, "Mesh"))
-					return Mesh::Load();
-				if (hashEqual(name_cstr + 5u, "GameObject"))
-					return GameObject::Load();
-				if (hashEqual(name_cstr + 5u, "Transform"))
-					return Transform::Load();
-				if (hashEqual(name_cstr + 5u, "Camera"))
-					return Camera::Load();
-				if (hashEqual(name_cstr + 5u, "MeshRender"))
-					return MeshRender::Load();
-				if (hashEqual(name_cstr + 5u, "Lod"))
-					return LOD::Load();
-				if (hashEqual(name_cstr + 5u, "RigidBody"))
-					return RigidBody::Load();
-				if (hashEqual(name_cstr + 5u, "WaveSource"))
-					return WaveSource::Load();
-				if (hashEqual(name_cstr + 5u, "Collider"))
-					return Collider::Load();
-				if (hashEqual(name_cstr + 5u, "Light"))
-					return Light::Load();
-				if (hashEqual(name_cstr + 5u, "MonoBehaviour"))
-					return MonoBehaviour::Load();
-				if (hashEqual(name_cstr + 5u, "Graphics"))
-					return Graphics::Load();
-				if (hashEqual(name_cstr + 5u, "GUI"))
-					return GUI::Load();
-				if (hashEqual(name_cstr + 5u, "PostProcess"))
-					return PostProcess::Load();
-				if (hashEqual(name_cstr + 5u, "Input"))
-					return Input::Load();
-				if (hashEqual(name_cstr + 5u, "Math"))
-					return Math::Load();
-				if (hashEqual(name_cstr + 5u, "Time"))
-					return Time::Load();
-				if (hashEqual(name_cstr + 5u, "PhysicsConstraints"))
-					return PhysicsConstraints::Load();
-				if (hashEqual(name_cstr + 5u, "Sort"))
-					return Sort::Load();
-				if (hashEqual(name_cstr + 5u, "Debug"))
-					return Debug::Load();
-				if (hashEqual(name_cstr + 5u, "Physics"))
-					return Physics::Load();
-				if (hashEqual(name_cstr + 5u, "Manifold"))
-					return Manifold::Load();
-				if (hashEqual(name_cstr + 5u, "File"))
-					return File::Load();
-				if (hashEqual(name_cstr + 5u, "Noise"))
-					return Noise::Load();
-				if (hashEqual(name_cstr + 5u, "Assert"))
-					return Assert::Load();
+#include "wren_binding.inc"
+				size_t data_size = strlen(wrenModuleSource);
+				char* data = (char*)WREN_ALLOC(data_size + 1u);
+				memcpy(data, wrenModuleSource, data_size + 1u);
+				return data;
 			}
 			else
 			{

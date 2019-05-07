@@ -1,34 +1,11 @@
-import "Core/Vec2"               for Vec2
-import "Core/Vec3"               for Vec3
-import "Core/Vec4"               for Vec4
-import "Core/Texture"            for Texture
-import "Core/Shader"             for Shader
-import "Core/Mesh"               for Mesh
-import "Core/Console"            for Console
-import "Core/GameObject"         for GameObject
-import "Core/Transform"          for Transform
-import "Core/Camera"             for Camera
-import "Core/Lod"                for Lod
-import "Core/RigidBody"          for RigidBody
-import "Core/PhysicsConstraints" for PhysicsConstraints
-import "Core/WaveSource"         for WaveSource
-import "Core/Collider"           for Collider
-import "Core/MonoBehaviour"      for MonoBehaviour
-import "Core/Physics"            for Physics
-import "Core/Manifold"           for Manifold
-import "Core/Input"              for Input
-import "Core/Input"              for Keys
-import "Core/Input"              for Buttons
-import "Core/Input"              for Axes
-import "Core/Math"               for Math
-import "Core/Time"               for Time
-import "Core/Debug"              for Debug
-import "Core/Sort"               for Sort
-import "Core/PostProcess"        for PostProcess
-import "Core/Light"              for Light
-import "Core/Light"              for LightTypes
-import "Core/Light"              for ShadowTypes
-
+import "Core" for Vec2, Vec3, Vec4
+import "Core" for Texture, Shader, Mesh
+import "Core" for Console
+import "Core" for GameObject, Transform, Camera, Lod, RigidBody, PhysicsConstraints, WaveSource, Collider, MonoBehaviour
+import "Core" for Physics, Manifold
+import "Core" for Input, Keys, Buttons, Axes
+import "Core" for Math, Time, Debug, Sort, PostProcess
+import "Core" for Light, LightTypes, ShadowTypes
 
 import "resources/scripts/wren/input_controller" for InputController
 import "resources/scripts/wren/shuriken"         for ShurikenBehaviour
@@ -88,11 +65,11 @@ class FreeLookCamera is MonoBehaviour {
     collider.makeCapsuleCollider()
     collider.layers = PhysicsLayers.General
 
-    var output_pre_z = [ "depth_buffer" ]
+    //var output_pre_z = [ "depth_buffer" ]
     var output_opaque = [ "albedo", "position", "normal", "metallic_roughness", "emissiveness", "depth_buffer" ]
-    var deferred_shader_pre_z = Shader.load("resources/shaders/pre_z_opaque.fx")
+    //var deferred_shader_pre_z = Shader.load("resources/shaders/pre_z_opaque.fx")
     var deferred_shader_opaque = Shader.load("resources/shaders/default_opaque.fx")
-    _camera.addShaderPass("deferred_shader_pre_z", deferred_shader_pre_z, [], output_pre_z)
+    //_camera.addShaderPass("deferred_shader_pre_z", deferred_shader_pre_z, [], output_pre_z)
     _camera.addShaderPass("deferred_shader_opaque", deferred_shader_opaque, [], output_opaque)
 
     gameObject.name = "player"

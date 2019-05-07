@@ -1,26 +1,8 @@
-import "Core/Vec2" for Vec2
-import "Core/Vec3" for Vec3
-
-import "Core/Texture" for Texture
-import "Core/Shader" for Shader
-import "Core/Mesh" for Mesh
-import "Core/Console" for Console
-
-import "Core/GameObject" for GameObject
-
-import "Core/Transform" for Transform
-import "Core/Camera" for Camera
-import "Core/Lod" for Lod
-import "Core/RigidBody" for RigidBody
-import "Core/WaveSource" for WaveSource
-import "Core/Collider" for Collider
-import "Core/MonoBehaviour" for MonoBehaviour
-import "Core/MeshRender" for MeshRender
-
-import "Core/Input" for Input, Keys, Buttons, Axes
-import "Core/Math" for Math
-
-import "Core/Time" for Time
+import "Core" for Vec2, Vec3
+import "Core" for Texture, Shader, Mesh
+import "Core" for Console, Math, Time
+import "Core" for GameObject, Transform, Camera, Lod, RigidBody, WaveSource, Collider, MonoBehaviour, MeshRender
+import "Core" for Input, Keys, Buttons, Axes
 
 import "resources/scripts/wren/physics_layers" for PhysicsLayers
 

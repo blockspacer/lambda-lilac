@@ -200,7 +200,7 @@ namespace lambda
 			// Creators
 			static Mesh createPoint();
 			static Mesh createQuad(const glm::vec2& min = glm::vec2(-1.0f), const glm::vec2& max = glm::vec2(1.0f));
-			static Mesh createCube();
+			static Mesh createCube(glm::vec3 min = glm::vec3(-0.5f), glm::vec3 max = glm::vec3(0.5f));
 			static Mesh createPlane(uint32_t sub_divisions = 1);
 			static Mesh createPyramid();
 			static Mesh createCone(float height = 1.5f, float bottom_radius = 0.5f, uint32_t slice_count = 24, uint32_t stack_count = 1);

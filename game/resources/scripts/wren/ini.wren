@@ -1,5 +1,4 @@
-import "Core/Console" for Console
-import "Core/File" for File
+import "Core" for Console, File
 
 class Ini {
   construct new(file_name) {

@@ -47,10 +47,11 @@ VSOutput VS(VSInput vIn, uint instanceID : SV_InstanceID)
   vOut.emissive  = emissiveness[instanceID].xyz;
 
 #if NORMAL_MAPPING
+  float3x3 model_matrix_3x3 = (float3x3)model_matrix[instanceID];
   float3 bitangent = cross(vIn.tangent, vIn.normal);
-  float3 N = normalize(mul((float3x3)model_matrix[instanceID], vIn.normal));
-  float3 B = normalize(mul((float3x3)model_matrix[instanceID], bitangent));
-  float3 T = normalize(mul((float3x3)model_matrix[instanceID], vIn.tangent));
+  float3 N = normalize(mul(model_matrix_3x3, vIn.normal));
+  float3 B = normalize(mul(model_matrix_3x3, bitangent));
+  float3 T = normalize(mul(model_matrix_3x3, vIn.tangent));
   vOut.tbn = float3x3(T, B, N);
 #endif
   vOut.normal    = normalize(mul((float3x3)model_matrix[instanceID], vIn.normal));
@@ -82,8 +83,8 @@ static const float kDynamicDistance = 20.0f * 20.0f;
 
 #if VIOLET_PARALLAX_MAPPING
 static const float height_scale = 0.03f;
-static const int maxLayers = 8;
-static const int minLayers = 4;
+static const int maxLayers = 32;
+static const int minLayers = 16;
 
 float2 parallaxMapping(float2 tex, float3 eye)
 {
@@ -166,6 +167,10 @@ PSOutput PS(VSOutput pIn)
   const float el = sin(dotTan) * sin(dotBit);
   const float es = sin(dotTan * 10.0f) * sin(dotBit * 10.0f);
 	pOut.albedo.rgb = lerp(lerp(0.4f, 0.5f, when_ge(es, 0.0f)), lerp(0.9f, 1.0f, when_ge(es, 0.0f)), when_ge(el, 0.0f));
+  
+  float2 tex = float2(pIn.hPosition.x + pIn.hPosition.z, pIn.hPosition.y);
+  pOut.albedo = tex_albedo.Sample(SamLinearWarp, tex) * pIn.colour;
+  pOut.albedo.a = when_ge(pOut.albedo.a, 0.25f);
 #endif
 #endif
 

@@ -97,7 +97,15 @@ namespace lambda
 				profiler_.endTimer("Update");
 
 				profiler_.startTimer("CollectGarbage");
-				scripting_->collectGarbage();
+				static double kTimer = 0.0;
+				kTimer += delta_time_;
+
+				if (kTimer > 1.0)
+				{
+					kTimer -= 1.0;
+					scripting_->collectGarbage();
+				}
+
 				scene::sceneCollectGarbage(scene_);
 				profiler_.endTimer("CollectGarbage");
 
