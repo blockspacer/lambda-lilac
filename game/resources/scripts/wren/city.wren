@@ -37,12 +37,8 @@ import "resources/scripts/wren/physics_layers" for PhysicsLayers
 
 class CustomMesh {
   construct new () {
-    _positions = []
-    _normals   = []
-    _tangents  = []
-    _uvs       = []
-    _indices   = []
-    _baseIndex = 0
+    _mesh = Mesh.create()
+    clear()
   }
 
   addTri(posA, posB, posC, uvA, uvB, uvC) {
@@ -50,9 +46,9 @@ class CustomMesh {
     var v = posC - posA
     var normal = Vec3.new(u.y * v.z - u.z * v.y, u.z * v.x - u.x * v.z, u.x * v.y - u.y * v.x)
 
-		var t1 = normal.cross(Vec3.new(1.0, 0.0, 0.0))
-		var t2 = normal.cross(Vec3.new(0.0, 1.0, 0.0))
-		var tangent = (t1.lengthSqr > t2.lengthSqr) ? t1 : t2
+	var t1 = normal.cross(Vec3.new(1.0, 0.0, 0.0))
+	var t2 = normal.cross(Vec3.new(0.0, 1.0, 0.0))
+	var tangent = (t1.lengthSqr > t2.lengthSqr) ? t1 : t2
 
     _positions.add(posA)
     _positions.add(posB)
@@ -77,9 +73,9 @@ class CustomMesh {
     var v = posC - posA
     var normal = Vec3.new(u.y * v.z - u.z * v.y, u.z * v.x - u.x * v.z, u.x * v.y - u.y * v.x)
 
-		var t1 = normal.cross(Vec3.new(1.0, 0.0, 0.0))
-		var t2 = normal.cross(Vec3.new(0.0, 1.0, 0.0))
-		var tangent = (t1.lengthSqr > t2.lengthSqr) ? t1 : t2
+	var t1 = normal.cross(Vec3.new(1.0, 0.0, 0.0))
+	var t2 = normal.cross(Vec3.new(0.0, 1.0, 0.0))
+	var tangent = (t1.lengthSqr > t2.lengthSqr) ? t1 : t2
 
     _positions.add(posA)
     _positions.add(posB)
@@ -106,14 +102,22 @@ class CustomMesh {
     _baseIndex = _baseIndex + 4
   }
 
+  clear() {
+      _positions = []
+      _normals   = []
+      _tangents  = []
+      _uvs       = []
+      _indices   = []
+      _baseIndex = 0
+  }
+
   make {
-    var mesh = Mesh.create()
-    mesh.positions = _positions
-    mesh.normals   = _normals
-    mesh.tangents  = _tangents
-    mesh.texCoords = _uvs
-    mesh.indices   = _indices
-    return mesh
+    _mesh.positions = _positions
+    _mesh.normals   = _normals
+    _mesh.tangents  = _tangents
+    _mesh.texCoords = _uvs
+    _mesh.indices   = _indices
+    return _mesh
   }
 }
 
@@ -130,6 +134,7 @@ class City {
     _meshGreenery  = CustomMesh.new()
 
     constructBlocks()
+    constructNavMesh()
 
     makeBuildings()
     makeRoads()
@@ -192,14 +197,12 @@ class City {
   constructSquare(min, max) {
     var size = (max - min) * 0.5
     var pos  = (max + min) * 0.5
-
     _meshGreenery.addQuad(pos + Vec3.new(-size.x,  size.y, -size.z), pos + Vec3.new(-size.x,  size.y,  size.z), pos + Vec3.new( size.x,  size.y,  size.z), pos + Vec3.new( size.x,  size.y, -size.z), Vec2.new(0.0, size.z), Vec2.new(0.0, 0.0), Vec2.new(size.x, 0.0), Vec2.new(size.x, size.z))
   }
 
   constructRoad(min, max) {
     var size = (max - min) * 0.5
     var pos  = (max + min) * 0.5
-
     _meshRoads.addQuad(pos + Vec3.new(-size.x,  size.y, -size.z), pos + Vec3.new(-size.x,  size.y,  size.z), pos + Vec3.new( size.x,  size.y,  size.z), pos + Vec3.new( size.x,  size.y, -size.z), Vec2.new(0.0, size.z), Vec2.new(0.0, 0.0), Vec2.new(size.x, 0.0), Vec2.new(size.x, size.z))
   }
 
@@ -262,10 +265,6 @@ class City {
           var scale = 10
           
           spawnBlock(fullMin, fullMax, num, scale)
-          //spawnBlock(fullMin + Vec3.new(size.x * 0.0, 0, size.z * 0.0), fullMin + Vec3.new(size.x * 0.5, 0, size.z * 0.5), num, scale)
-          //spawnBlock(fullMin + Vec3.new(size.x * 0.5, 0, size.z * 0.0), fullMin + Vec3.new(size.x * 1.0, 0, size.z * 0.5), num, scale)
-          //spawnBlock(fullMin + Vec3.new(size.x * 0.0, 0, size.z * 0.5), fullMin + Vec3.new(size.x * 0.5, 0, size.z * 1.0), num, scale)
-          //spawnBlock(fullMin + Vec3.new(size.x * 0.5, 0, size.z * 0.5), fullMin + Vec3.new(size.x * 1.0, 0, size.z * 1.0), num, scale)
         } else {
           constructSquare(fullMin, fullMax)
         }
@@ -274,5 +273,9 @@ class City {
         constructRoad(Vec3.new(fullMin.x - _streetSize.x, fullMin.y, fullMin.z - _streetSize.y), Vec3.new(fullMin.x, fullMin.y, fullMin.z))
       }
     }
+  }
+
+  constructNavMesh() {
+      // TODO (Hilze): Implement.
   }
 }

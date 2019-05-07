@@ -4,7 +4,8 @@
 #define VIOLET_PARALLAX_MAPPING 0
 #define NORMAL_MAPPING 1
 #define VIOLET_GRID_ALBEDO 0
-#define VIOLET_DYNAMIC_GRID_SIZE 0
+#define VIOLET_GRID_TEXTURED 1
+#define VIOLET_DYNAMIC_GRID_SIZE 1
 #define VIOLET_DISPLACEMENT 1
 
 struct VSInput
@@ -29,6 +30,10 @@ struct VSOutput
 #if NORMAL_MAPPING
   float3x3 tbn     : TBN;
 #endif
+#if VIOLET_GRID_ALBEDO
+  float3 tangent   : TANGENT;
+  float3 bitangent : BITANGENT;
+#endif
 };
 
 VSOutput VS(VSInput vIn, uint instanceID : SV_InstanceID)
@@ -48,7 +53,11 @@ VSOutput VS(VSInput vIn, uint instanceID : SV_InstanceID)
   float3 T = normalize(mul((float3x3)model_matrix[instanceID], vIn.tangent));
   vOut.tbn = float3x3(T, B, N);
 #endif
-  vOut.normal = normalize(mul((float3x3)model_matrix[instanceID], vIn.normal));
+  vOut.normal    = normalize(mul((float3x3)model_matrix[instanceID], vIn.normal));
+#if VIOLET_GRID_ALBEDO
+  vOut.tangent   = normalize(mul((float3x3)model_matrix[instanceID], vIn.tangent));
+  vOut.bitangent = cross(vOut.tangent, vOut.normal);
+#endif
 
   return vOut;
 }
@@ -68,7 +77,7 @@ struct PSOutput
 };
 
 #if VIOLET_GRID_ALBEDO && VIOLET_DYNAMIC_GRID_SIZE
-static const float kDynamicDistance = 10.0f * 10.0f;
+static const float kDynamicDistance = 20.0f * 20.0f;
 #endif
 
 #if VIOLET_PARALLAX_MAPPING
@@ -143,20 +152,21 @@ PSOutput PS(VSOutput pIn)
   pOut.albedo.a = 1.0f;
 
 #if VIOLET_GRID_ALBEDO
-  const float3 offset = float3(0.01f, 0.01f, 0.01f);
-  const float3 hPosition = pIn.hPosition.xyz + offset;
+  const float3 hPosition = pIn.hPosition.xyz;
 #if VIOLET_DYNAMIC_GRID_SIZE
   const float scale = PI * (((lengthSqr(hPosition - camera_position) < kDynamicDistance) ? 1.0f : 0.1f));
 #else
   const float scale = PI;
 #endif
-  const float3 pl = hPosition * scale;
-  const float3 ps = hPosition * (scale * 10.0f);
-
-  float el = sin(pl.x) * sin(pl.y) * sin(pl.z);
-  float es = sin(ps.x) * sin(ps.y) * sin(ps.z);
-
+  const float dotTan = dot(normalize(pIn.tangent),   hPosition * scale);
+  const float dotBit = dot(normalize(pIn.bitangent), hPosition * scale);
+#if VIOLET_GRID_TEXTURED
+  pOut.albedo.rgb = (tex_albedo.Sample(SamLinearWarp, float2(dotTan, dotBit)) * pIn.colour).rgb;
+#else
+  const float el = sin(dotTan) * sin(dotBit);
+  const float es = sin(dotTan * 10.0f) * sin(dotBit * 10.0f);
 	pOut.albedo.rgb = lerp(lerp(0.4f, 0.5f, when_ge(es, 0.0f)), lerp(0.9f, 1.0f, when_ge(es, 0.0f)), when_ge(el, 0.0f));
+#endif
 #endif
 
 #if NORMAL_MAPPING
