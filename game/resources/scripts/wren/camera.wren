@@ -117,7 +117,8 @@ class FreeLookCamera is MonoBehaviour {
   getCameraHorizontal   { _has_input ? InputController.CameraHorizontal * (Time.fixedDeltaTime / Time.timeScale) * _sensitivity.y : 0.0 }
   getMovementVertical   { _has_input ? InputController.MovementVertical   : 0.0 }
   getMovementHorizontal { _has_input ? InputController.MovementHorizontal : 0.0 }
-  getMovementSprint     { _has_input ? Math.lerp(InputController.MovementSprint, _max_speed, _max_speed_sprint) : 0.0 }
+  getMovementSprint     { _has_input ? Math.lerp(_max_speed,  _max_speed_sprint, InputController.MovementSprint) : 0.0 }
+  getMovementSprintSpd  { _has_input ? Math.lerp(_speed_base, _speed_sprint,     InputController.MovementSprint) : 0.0 }
 
   drawDebug() {
     var from = _camera_transform.worldPosition
@@ -254,8 +255,7 @@ class FreeLookCamera is MonoBehaviour {
         movement.normalize()
       }
 
-      var speed = _speed_base + InputController.MovementSprint * (_speed_sprint - _speed_base)
-      movement = movement * Time.fixedDeltaTime * speed
+      movement = movement * Time.fixedDeltaTime * getMovementSprintSpd
 
       var vel_length = Vec2.new(_temp_velocity.x, _temp_velocity.z).length
       var mov_length = movement.length

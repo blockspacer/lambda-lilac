@@ -117,10 +117,10 @@ class Lighting {
     //light_rsm.isRSM = true
 
     light_rsm.lightColour = Vec3.new(1.0, 1.0, 1.0)
-    light_rsm.lightIntensity = 7.0
+    light_rsm.lightIntensity = 3.0
     light_rsm.shadowType = ShadowTypes.Dynamic
     light_rsm.shadowMapSizePx = size
-    light_rsm.depth = 200.0
+    light_rsm.depth = 500.0
     light_rsm.size = 250.0
     //light_rsm.enabled = false
   }
