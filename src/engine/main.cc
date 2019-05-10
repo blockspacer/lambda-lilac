@@ -259,7 +259,7 @@ public:
 	  frame_counter.tick();
 
 	  float mem_def = (float)(foundation::Memory::default_allocator()->allocated() + foundation::Memory::new_allocator()->allocated()) / (1024.0f * 1024.0f);
-		getGUI().executeJavaScript("updateAllocatedMemory(" + toString(round(mem_def, 3)) + ")");
+	  getGUI().executeJavaScript("if (gameState == Game) { updateAllocatedMemory(" + toString(round(mem_def, 3)) + ") }");
 
 	  static constexpr uint32_t kTimerCount = 4u;
 	  static Average kTimers[kTimerCount];
@@ -280,7 +280,7 @@ public:
 			  execute_string += ", ";
 	  }
 
-	  getGUI().executeJavaScript("setAllTimers([" + execute_string + "] );");
+	  getGUI().executeJavaScript("if (gameState == Game) { setAllTimers([" + execute_string + "] ) }");
 	  
 	  float dynamic_resolution_scale = 1.0f;
 

@@ -1819,6 +1819,56 @@ static constexpr char* wrenModuleSource =
 "}\n"
 
 "///////////////////////////////////////////////////////////////////////////////////////////////////\n"
+"///// render target flags /////////////////////////////////////////////////////////////////////////\n"
+"///////////////////////////////////////////////////////////////////////////////////////////////////\n"
+/*
+* Class: RenderTargetFlags
+* Enum _*Render Target Flags*_
+*/
+"class RenderTargetFlags {\n"
+/*
+* Function: :DynamicScale
+* _*Static*_ Dynamic Scale flag.
+*/
+"static DynamicScale { 1 << 1 }\n"
+/*
+* Function: :DynamicData
+* _*Static*_ Dynamic Data flag.
+*/
+"static DynamicData { 1 << 2 }\n"
+/*
+* Function: :Clear
+* _*Static*_ Clear flag.
+*/
+"static Clear { 1 << 3 }\n"
+/*
+* Function: :Recreate
+* _*Static*_ Recreate flag.
+*/
+"static Recreate { 1 << 4 }\n"
+/*
+* Function: :IsRenderTarget
+* _*Static*_ Is Render Target flag.
+*/
+"static IsRenderTarget { 1 << 5 }\n"
+/*
+* Function: :FromDDS
+* _*Static*_ From DDS flag.
+*/
+"static FromDDS { 1 << 6 }\n"
+/*
+* Function: :ContainsAlpha
+* _*Static*_ Contains Alpha flag.
+*/
+"static ContainsAlpha { 1 << 7 }\n"
+/*
+* Function: :Resize
+* _*Static*_ Resize flag.
+*/
+"static Resize { 1 << 8 }\n"
+"}"
+
+"///////////////////////////////////////////////////////////////////////////////////////////////////\n"
 "///// input ///////////////////////////////////////////////////////////////////////////////////////\n"
 "///////////////////////////////////////////////////////////////////////////////////////////////////\n"
 /*
@@ -2872,6 +2922,73 @@ static constexpr char* wrenModuleSource =
 * _*Static*_ Get the noise interpolation type Quintic.
 */
 "static Quintic { 2 }\n"
+"}\n"
+
+"///////////////////////////////////////////////////////////////////////////////////////////////////\n"
+"///// nav mesh node ///////////////////////////////////////////////////////////////////////////////\n"
+"///////////////////////////////////////////////////////////////////////////////////////////////////\n"
+/*
+* Class: NavMeshNode
+* _*Navigation Mesh Node*_
+*/
+"foreign class NavMeshNode {\n"
+/*
+* Function: :addConnection(_)
+* Adds a connection between this node and the specified node.
+*
+* Parameters:
+* node - The node that you want this node to be connected to.
+*/
+"foreign addConnection(node)\n"
+/*
+* Function: :removeConnection(_)
+* Removes the connection between this node and the specified node.
+*
+* Parameters:
+* node - The node that you want the connection to be broken with.
+*/
+"foreign removeConnection(node)\n"
+"}\n"
+
+"///////////////////////////////////////////////////////////////////////////////////////////////////\n"
+"///// nav mesh ////////////////////////////////////////////////////////////////////////////////////\n"
+"///////////////////////////////////////////////////////////////////////////////////////////////////\n"
+/*
+* Class: NavMesh
+* _*Navigation Mesh*_
+*/
+"foreign class NavMesh {\n"
+/*
+* Constructor: :new()
+* Constructs an empty navigation mesh.
+*/
+"construct new() {}\n"
+/*
+* Function: :addNode(_)
+* Adds a node to this navigation mesh at the specified position.
+* Returns the added node.
+*
+* Parameters:
+* position - The position that you want this node to be at.
+*/
+"foreign addNode(position)\n"
+/*
+* Function: :removeNode(_)
+* Removes a node from this navigation mesh at the specified position.
+*
+* Parameters:
+* node - The node that you want to remove.
+*/
+"foreign removeNode(node)\n"
+/*
+* Function: :findPath(_,_)
+* Finds the best path over the navigation mesh between two positions.
+*
+* Parameters:
+* from - The position that you want to search from.
+* to - The position that you want to search to.
+*/
+"foreign findPath(from, to)\n"
 "}\n"
 
 "///////////////////////////////////////////////////////////////////////////////////////////////////\n"

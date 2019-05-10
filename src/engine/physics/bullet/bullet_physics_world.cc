@@ -119,13 +119,13 @@ namespace lambda
 			destroyBody();
 
 			if (collision_shape_)
-				foundation::Memory::destruct(collision_shape_);
+				foundation::Memory::destruct(collision_shape_), collision_shape_ = nullptr;
 			if (triangle_mesh_)
-				foundation::Memory::destruct(triangle_mesh_);
+				foundation::Memory::destruct(triangle_mesh_), triangle_mesh_ = nullptr;
 			if (indices_)
-				foundation::Memory::deallocate(indices_);
+				foundation::Memory::deallocate(indices_), indices_ = nullptr;
 			if (vertices_)
-				foundation::Memory::deallocate(vertices_);
+				foundation::Memory::deallocate(vertices_), vertices_ = nullptr;
 		}
 
 		///////////////////////////////////////////////////////////////////////////
@@ -490,11 +490,9 @@ namespace lambda
 			type_ = BulletCollisionBodyType::kNone;
 
 			if (motion_state_)
-				foundation::Memory::destruct(motion_state_);
-			motion_state_ = nullptr;
+				foundation::Memory::destruct(motion_state_), motion_state_ = nullptr;
 			if (body_)
-				foundation::Memory::destruct(body_);
-			body_ = nullptr;
+				foundation::Memory::destruct(body_), body_ = nullptr;
 		}
 
 		void BulletCollisionBody::createBody()
@@ -735,6 +733,9 @@ namespace lambda
 		{
 			for (const auto& data : scene_->rigid_body.data)
 			{
+				if (!data.valid)
+					continue;
+
 				btRigidBody* rigid_body = ((BulletCollisionBody*)data.collision_body)->getBody();
 
 				if (!rigid_body->isStaticObject())
@@ -784,6 +785,9 @@ namespace lambda
 
 			for (const auto& data : scene_->rigid_body.data)
 			{
+				if (!data.valid)
+					continue;
+
 				btRigidBody* rigid_body = ((BulletCollisionBody*)data.collision_body)->getBody();
 				btTransform transform;
 

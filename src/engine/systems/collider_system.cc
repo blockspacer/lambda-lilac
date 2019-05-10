@@ -47,11 +47,7 @@ namespace lambda
 						if (it != scene.collider.entity_to_data.end())
 						{
 							auto& data = scene.collider.data.at(it->second);
-							
-							if (RigidBodySystem::hasComponent(entity, scene))
-								RigidBodySystem::removeComponent(entity, scene);
-							else
-								RigidBodySystem::getPhysicsWorld(scene)->destroyCollisionBody(data.collision_body);
+							auto collision_body = data.collision_body;
 							
 							data.collision_body = nullptr;
 
@@ -60,6 +56,10 @@ namespace lambda
 							scene.collider.data_to_entity.erase(idx);
 							scene.collider.entity_to_data.erase(entity);
 							scene.collider.data[idx].valid = false;
+
+							if (RigidBodySystem::hasComponent(entity, scene))
+								RigidBodySystem::removeComponent(entity, scene);
+							RigidBodySystem::getPhysicsWorld(scene)->destroyCollisionBody(collision_body);
 						}
 					}
 					scene.collider.marked_for_delete.clear();

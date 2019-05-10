@@ -1,6 +1,6 @@
 import "Core" for Vec2, Vec3, Vec4
 import "Core" for Texture, TextureFormat, Shader, Mesh
-import "Core/Graphics" for Graphics, GUI, PostProcess, Console
+import "Core/Graphics" for Graphics, GUI, PostProcess, RenderTargetFlags, Console
 
 import "resources/scripts/wren/ini" for Ini
 
@@ -109,6 +109,9 @@ class PostProcessor {
     )
     ssr(
       ini_reader["SSR", "Enabled"]
+    )
+    motionBlur(
+      false
     )
     gui(
       ini_reader["GUI", "Enabled"]
@@ -274,6 +277,14 @@ class PostProcessor {
   ssr(enabled) {
     if (!enabled) return
   PostProcess.addShaderPass("ssr", Shader.load("resources/shaders/ssr.fx"), [ _post_process_output, _position_output, "normal" ], [ flipFlopPostProcess() ])
+  }
+  motionBlur(enabled) {
+    if (!enabled) return
+    var post_process_output = _post_process_output
+    PostProcess.addRenderTarget("prev_albedo", 1.0, TextureFormat.R16G16B16A16)
+    PostProcess.setRenderTargetFlag("prev_albedo", RenderTargetFlags.Clear, false)
+    PostProcess.addShaderPass("motion_blur", Shader.load("resources/shaders/motion_blur.fx"), [ _post_process_output, "prev_albedo" ], [ flipFlopPostProcess() ])
+    PostProcess.addShaderPass("motion_blur_copy", Shader.load("resources/shaders/copy.fx"), [ post_process_output ], [ "prev_albedo" ])
   }
   gui(enabled) {
     GUI.enabled = enabled

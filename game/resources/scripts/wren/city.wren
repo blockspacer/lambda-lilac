@@ -6,9 +6,10 @@ import "Core" for Math
 import "Core" for Graphics, GUI, Time, File, Assert
 import "Core" for MonoBehaviour
 import "Core" for PostProcess, Console, Physics, Debug, Sort
+import "Core" for NavMesh
 
 import "resources/scripts/wren/physics_layers" for PhysicsLayers
-import "resources/scripts/wren/node_map" for Node, NodeMap, NodeEditor
+//import "resources/scripts/wren/node_map" for Node, NodeMap, NodeEditor
 
 class CustomMesh {
   construct new () {
@@ -336,7 +337,7 @@ class City {
   }
 
   constructNavMesh() {
-    _navMesh = NodeMap.new()
+    _navMesh = NavMesh.new()
     
     var nodes = List.filled(_numBlocks.y, null)
     for (z in 0..._numBlocks.y) {
@@ -348,8 +349,7 @@ class City {
       for (x in (-_numBlocks.x / 2)...(_numBlocks.x / 2)) {
         var xOffset = x * _blockSize.x - (_blockSize.x * 0.5)
 
-        var node = Node.new(Vec3.new(xOffset, 0.0, zOffset))
-        _navMesh.addNode(node)
+        var node = _navMesh.addNode(Vec3.new(xOffset, 0.0, zOffset))
         if (x > -_numBlocks.x / 2) node.addConnection(nodes[z + _numBlocks.y / 2][x + _numBlocks.x / 2 - 1])
         if (z > -_numBlocks.y / 2) node.addConnection(nodes[z + _numBlocks.y / 2 - 1][x + _numBlocks.x / 2])
         nodes[z + _numBlocks.y / 2][x + _numBlocks.x / 2] = node

@@ -280,6 +280,8 @@
 	}
 	</style>
 	<script>
+		parent.gameState = parent.Game
+
 		var menus = {};
 		var current_menu = "";
 		var sideways = {};
@@ -706,6 +708,10 @@
 			}
 
 			setAllTimers([ "test", 100, "red","all", 200, "green", "things", 50, "blue" ]);
+			
+			parent.updateDebug           = updateDebug
+			parent.updateAllocatedMemory = updateAllocatedMemory
+			parent.setAllTimers          = setAllTimers
 		</script>
 	</body>
 </html>

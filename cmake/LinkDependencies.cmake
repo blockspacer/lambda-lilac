@@ -206,20 +206,8 @@ function(LinkDependencies)
   ENDIF()
   
   IF(${USE_ULTRALIGHT})
-      ADD_LIBRARY(ultralight INTERFACE)
-      TARGET_INCLUDE_DIRECTORIES(ultralight INTERFACE "deps/ultralight/include")
-      TARGET_INCLUDE_DIRECTORIES(ultralight INTERFACE "deps/ultralight/deps")
-      
-      IF(VIOLET_WIN32)
-        TARGET_LINK_LIBRARIES(ultralight INTERFACE 
-          "${CMAKE_SOURCE_DIR}/deps/ultralight/lib/win/x64/Ultralight.lib"
-          "${CMAKE_SOURCE_DIR}/deps/ultralight/lib/win/x64/UltralightCore.lib"
-          "${CMAKE_SOURCE_DIR}/deps/ultralight/lib/win/x64/WebCore.lib")
-      ELSEIF(VIOLET_LINUX)
-        # TODO (Hilze): Implement.
-      ELSEIF(VIOLET_OSX)
-        TARGET_LINK_LIBRARIES(ultralight INTERFACE "-lUltralightCore -framework Ultralight -framework WebCore")
-      ENDIF()
+      include(LinkUltralight)
+      LinkUltralight()
   ENDIF()
   
   IF(${USE_BULLET3})

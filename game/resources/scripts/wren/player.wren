@@ -106,7 +106,9 @@ class ThirdPersonCamera is MonoBehaviour {
     var outputOpaque         = [ "albedo", "position", "normal", "metallic_roughness", "emissiveness", "depth_buffer" ]
     var deferredShaderOpaque = Shader.load("resources/shaders/default_opaque.fx")
     _camera.addShaderPass("deferredShaderOpaque", deferredShaderOpaque, [], outputOpaque)
-
+    _fovDefault = 90.0
+    _fovWall = 80.0
+    _fov = _fovDefault
 
     // Add a point light.
     var light            = _entityCamera.addComponent(Light)
@@ -144,13 +146,33 @@ class ThirdPersonCamera is MonoBehaviour {
 
     // Apply the new rotation and velocity.
     if (_onWall) {
-      _transformInBetween.localEuler = Vec3.new(_rotation.x, _rotation.y - _onWallRotation * Math.rad2Deg, 0.0) * Math.deg2Rad
-      transform.localEuler           = Vec3.new(0.0, _onWallRotation, 0.0)
+      var diff = 65.0 - _rotation.x
+
+      var onWallRotation = _onWallRotation - 90
+
+      // Something needs to be done.
+      var delta = onWallRotation - _rotation.y 
+      if (Math.abs(delta + 360) < Math.abs(delta)) {
+        onWallRotation = onWallRotation + 360
+      }
+      if (Math.abs(delta - 360) < Math.abs(delta)) {
+        onWallRotation = onWallRotation - 360
+      }
+
+      _rotation.x = Math.lerp(_rotation.x, _rotation.x + diff, 0.1)
+      _rotation.y = Math.lerp(_rotation.y, onWallRotation, 0.1)
+
+      _fov = Math.lerp(_fov, _fovWall, 0.1)
+
+      _transformInBetween.localEuler = Vec3.new(_rotation.x, _rotation.y - _onWallRotation, 0.0) * Math.deg2Rad
+      transform.localEuler           = Vec3.new(0.0, _onWallRotation * Math.deg2Rad, 0.0)
     } else {
+      _fov = Math.lerp(_fov, _fovDefault, 0.1)
       transform.localEuler           = Vec3.new(0.0, _rotation.y, 0.0) * Math.deg2Rad
       _transformInBetween.localEuler = Vec3.new(_rotation.x, 0.0, 0.0) * Math.deg2Rad
     }
     _rigidBody.velocity = _velocity
+    _camera.fovDeg = _fov
   }
 
   rotateCamera() {
@@ -158,6 +180,14 @@ class ThirdPersonCamera is MonoBehaviour {
     _rotation = _rotation + Vec3.new(cameraVertical, cameraHorizontal, 0.0)
     _rotation.x = Math.clamp(_rotation.x, -90.0, 90.0)
     _rotation.y = Math.wrap( _rotation.y, 0.0, 360.0)
+  }
+
+  dirToDeg(dir) {
+    //if (dir.x == 1) return 0
+    //if (dir.z == 1) return 90
+    //if (dir.x == -1) return 180
+    //if (dir.z == -1) return 270
+    return Math.atan2(-dir.z, dir.x) * Math.rad2Deg
   }
 
   wallRun(dir) {
@@ -168,7 +198,8 @@ class ThirdPersonCamera is MonoBehaviour {
       _velocity = Vec3.new(0, _speedWall, 0)
       _onWall  = true
       _onWallDir = dir
-      _onWallRotation = Math.atan2(-dir.z, dir.x)
+      _onWallRotation = dirToDeg(dir)
+      if (_onWallRotation < 0) _onWallRotation = _onWallRotation + 360
       return true
     }
     return false

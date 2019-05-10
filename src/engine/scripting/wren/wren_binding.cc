@@ -25,6 +25,7 @@
 #include <utils/file_system.h>
 #include <utils/console.h>
 #include <utils/utilities.h>
+#include <utils/nav_mesh.h>
 
 #include <wren.hpp>
 #include <glm/glm.hpp>
@@ -2881,7 +2882,18 @@ namespace lambda
           );
         };
         if (strcmp(signature, "setRenderTargetFlag(_,_,_)") == 0) return [](WrenVM* vm) {
-          LMB_ASSERT(false, "NOT YET IMPLEMENTED");
+			String rt = wrenGetSlotString(vm, 1);
+			uint32_t flag = (uint32_t)wrenGetSlotDouble(vm, 2);
+			bool value = wrenGetSlotBool(vm, 3);
+			auto texture = g_scene->post_process_manager->getTarget(Name(rt)).getTexture();
+
+			for (uint32_t i = 0; i < texture->getLayerCount(); ++i)
+			{
+				if (value)
+					texture->getLayer(i).setFlags(texture->getLayer(i).getFlags() | flag);
+				else
+					texture->getLayer(i).setFlags(texture->getLayer(i).getFlags() & ~flag);
+			}
         };
         if (strcmp(signature, "setFinalRenderTarget(_)") == 0) return [](WrenVM* vm) {
           g_scene->post_process_manager->setFinalTarget(Name(wrenGetSlotString(vm, 1)));
@@ -3496,6 +3508,116 @@ namespace lambda
       }
     }
 
+	///////////////////////////////////////////////////////////////////////////
+	namespace NavMeshNode
+	{
+		struct NavMeshNode
+		{
+			platform::NavNode* node;
+		};
+		WrenHandle* handle = nullptr;
+		NavMeshNode* makeAt(WrenVM* vm, int slot, int class_slot, NavMeshNode val = NavMeshNode())
+		{
+			if (handle == nullptr)
+			{
+				wrenGetVariable(vm, "Core", "NavMeshNode", class_slot);
+				handle = wrenGetSlotHandle(vm, class_slot);
+			}
+			wrenSetSlotHandle(vm, class_slot, handle);
+			NavMeshNode* data = MakeForeign<NavMeshNode>(vm, slot, class_slot);
+			memcpy(data, &val, sizeof(NavMeshNode));
+			return data;
+		}
+		NavMeshNode* make(WrenVM* vm, NavMeshNode val = NavMeshNode())
+		{
+			return makeAt(vm, 0, 1, val);
+		}
+		WrenForeignClassMethods Construct()
+		{
+			return WrenForeignClassMethods{
+				[](WrenVM* vm) {
+				make(vm);
+			},
+				[](void* data) {
+			}
+			};
+		}
+		WrenForeignMethodFn Bind(const char* signature)
+		{
+			if (strcmp(signature, "addConnection(_)") == 0) return [](WrenVM* vm) {
+				NavMeshNode& nav_mesh_node = *GetForeign<NavMeshNode>(vm, 0);
+				NavMeshNode& other_nav_mesh_node = *GetForeign<NavMeshNode>(vm, 1);
+				nav_mesh_node.node->addConnection(other_nav_mesh_node.node);
+			};
+			if (strcmp(signature, "removeConnection(_)") == 0) return [](WrenVM* vm) {
+				NavMeshNode& nav_mesh_node = *GetForeign<NavMeshNode>(vm, 0);
+				NavMeshNode& other_nav_mesh_node = *GetForeign<NavMeshNode>(vm, 1);
+				nav_mesh_node.node->removeConnection(other_nav_mesh_node.node);
+			};
+			return nullptr;
+		}
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	namespace NavMesh
+	{
+		struct NavMesh
+		{
+			platform::NavMap nav_map;
+		};
+		WrenHandle* handle = nullptr;
+		NavMesh* make(WrenVM* vm, NavMesh val = NavMesh())
+		{
+			if (handle == nullptr)
+			{
+				wrenGetVariable(vm, "Core", "NavMesh", 0);
+				handle = wrenGetSlotHandle(vm, 0);
+			}
+			wrenSetSlotHandle(vm, 1, handle);
+			NavMesh* data = MakeForeign<NavMesh>(vm, 0, 1);
+			memcpy(data, &val, sizeof(NavMesh));
+			return data;
+		}
+		WrenForeignClassMethods Construct()
+		{
+			return WrenForeignClassMethods{
+				[](WrenVM* vm) {
+				make(vm);
+			},
+				[](void* data) {
+			}
+			};
+		}
+		WrenForeignMethodFn Bind(const char* signature)
+		{
+			if (strcmp(signature, "addNode(_)") == 0) return [](WrenVM* vm) {
+				NavMesh& nav_mesh = *GetForeign<NavMesh>(vm, 0);
+				const glm::vec3& position = *GetForeign<glm::vec3>(vm, 1);
+				NavMeshNode::make(vm, { nav_mesh.nav_map.addNode(position) });
+			};
+			if (strcmp(signature, "removeNode(_)") == 0) return [](WrenVM* vm) {
+				NavMesh& nav_mesh = *GetForeign<NavMesh>(vm, 0);
+				const glm::vec3& position = *GetForeign<glm::vec3>(vm, 1);
+				nav_mesh.nav_map.removeNode(position);
+			};
+			if (strcmp(signature, "findPath(_,_)") == 0) return [](WrenVM* vm) {
+				NavMesh& nav_mesh = *GetForeign<NavMesh>(vm, 0);
+				const glm::vec3& from = *GetForeign<glm::vec3>(vm, 1);
+				const glm::vec3& to = *GetForeign<glm::vec3>(vm, 2);
+				Vector<glm::vec3> path = nav_mesh.nav_map.findPath(from, to);
+
+				wrenSetSlotNewList(vm, 0);
+
+				for (const glm::vec3& pos : path)
+				{
+					Vec3::makeAt(vm, 1, 2, pos);
+					wrenInsertInList(vm, 0, -1, 1);
+				}
+			};
+			return nullptr;
+		}
+	}
+
 		///////////////////////////////////////////////////////////////////////////
     namespace Assert
     {
@@ -3528,134 +3650,142 @@ namespace lambda
     }
 
 		///////////////////////////////////////////////////////////////////////////
-    WrenForeignClassMethods wrenBindForeignClass(
-			WrenVM* vm, 
-			const char* module, 
-			const char* className)
-    {
-      if (strstr(module, "Core") != 0)
-      {
-        if (hashEqual(className, "Vec2"))     
-					return Vec2::Construct();
-        if (hashEqual(className, "Vec3"))     
-					return Vec3::Construct();
-        if (hashEqual(className, "Vec4"))     
-					return Vec4::Construct();
-        if (hashEqual(className, "Quat"))      
-					return Quat::Construct();
-        if (hashEqual(className, "Texture"))   
-					return Texture::Construct();
-        if (hashEqual(className, "Shader"))    
-					return Shader::Construct();
-        if (hashEqual(className, "Wave"))      
-					return Wave::Construct();
-        if (hashEqual(className, "Mesh"))      
-					return Mesh::Construct();
-        if (hashEqual(className, "GameObject")) 
-					return GameObject::Construct();
-        if (hashEqual(className, "Transform")) 
-					return Transform::Construct();
-        if (hashEqual(className, "Camera"))    
-					return Camera::Construct();
-        if (hashEqual(className, "MeshRender")) 
-					return MeshRender::Construct();
-        if (hashEqual(className, "Lod"))       
-					return LOD::Construct();
-        if (hashEqual(className, "RigidBody"))
-					return RigidBody::Construct();
-        if (hashEqual(className, "WaveSource")) 
-					return WaveSource::Construct();
-        if (hashEqual(className, "Collider"))  
-					return Collider::Construct();
-        if (hashEqual(className, "Light"))     
-					return Light::Construct();
-        if (hashEqual(className, "Manifold"))    
-					return Manifold::Construct();
-        if (hashEqual(className, "File"))
-					return File::Construct();
-        if (hashEqual(className, "Noise"))  
-					return Noise::Construct();
-      }
+	WrenForeignClassMethods wrenBindForeignClass(
+		WrenVM* vm,
+		const char* module,
+		const char* className)
+	{
+		if (strstr(module, "Core") != 0)
+		{
+			if (hashEqual(className, "Vec2"))
+				return Vec2::Construct();
+			if (hashEqual(className, "Vec3"))
+				return Vec3::Construct();
+			if (hashEqual(className, "Vec4"))
+				return Vec4::Construct();
+			if (hashEqual(className, "Quat"))
+				return Quat::Construct();
+			if (hashEqual(className, "Texture"))
+				return Texture::Construct();
+			if (hashEqual(className, "Shader"))
+				return Shader::Construct();
+			if (hashEqual(className, "Wave"))
+				return Wave::Construct();
+			if (hashEqual(className, "Mesh"))
+				return Mesh::Construct();
+			if (hashEqual(className, "GameObject"))
+				return GameObject::Construct();
+			if (hashEqual(className, "Transform"))
+				return Transform::Construct();
+			if (hashEqual(className, "Camera"))
+				return Camera::Construct();
+			if (hashEqual(className, "MeshRender"))
+				return MeshRender::Construct();
+			if (hashEqual(className, "Lod"))
+				return LOD::Construct();
+			if (hashEqual(className, "RigidBody"))
+				return RigidBody::Construct();
+			if (hashEqual(className, "WaveSource"))
+				return WaveSource::Construct();
+			if (hashEqual(className, "Collider"))
+				return Collider::Construct();
+			if (hashEqual(className, "Light"))
+				return Light::Construct();
+			if (hashEqual(className, "Manifold"))
+				return Manifold::Construct();
+			if (hashEqual(className, "File"))
+				return File::Construct();
+			if (hashEqual(className, "Noise"))
+				return Noise::Construct();
+			if (hashEqual(className, "NavMeshNode"))
+				return NavMeshNode::Construct();
+			if (hashEqual(className, "NavMesh"))
+				return NavMesh::Construct();
+		}
 
-      return WrenForeignClassMethods{};
-    }
+		return WrenForeignClassMethods{};
+	}
 
 	///////////////////////////////////////////////////////////////////////////
-		WrenForeignMethodFn wrenBindForeignMethod(
-			WrenVM* vm,
-			const char* module,
-			const char* className,
-			bool isStatic,
-			const char* signature)
+	WrenForeignMethodFn wrenBindForeignMethod(
+		WrenVM* vm,
+		const char* module,
+		const char* className,
+		bool isStatic,
+		const char* signature)
+	{
+		if (strstr(module, "Core") != 0)
 		{
-			if (strstr(module, "Core") != 0)
-			{
-				if (hashEqual(className, "Console"))
-					return Console::Bind(signature);
-				if (hashEqual(className, "Vec2"))
-					return Vec2::Bind(signature);
-				if (hashEqual(className, "Vec3"))
-					return Vec3::Bind(signature);
-				if (hashEqual(className, "Vec4"))
-					return Vec4::Bind(signature);
-				if (hashEqual(className, "Quat"))
-					return Quat::Bind(signature);
-				if (hashEqual(className, "Texture"))
-					return Texture::Bind(signature);
-				if (hashEqual(className, "Shader"))
-					return Shader::Bind(signature);
-				if (hashEqual(className, "Wave"))
-					return Wave::Bind(signature);
-				if (hashEqual(className, "Mesh"))
-					return Mesh::Bind(signature);
-				if (hashEqual(className, "GameObject"))
-					return GameObject::Bind(signature);
-				if (hashEqual(className, "Transform"))
-					return Transform::Bind(signature);
-				if (hashEqual(className, "Camera"))
-					return Camera::Bind(signature);
-				if (hashEqual(className, "MeshRender"))
-					return MeshRender::Bind(signature);
-				if (hashEqual(className, "Lod"))
-					return LOD::Bind(signature);
-				if (hashEqual(className, "RigidBody"))
-					return RigidBody::Bind(signature);
-				if (hashEqual(className, "WaveSource"))
-					return WaveSource::Bind(signature);
-				if (hashEqual(className, "Collider"))
-					return Collider::Bind(signature);
-				if (hashEqual(className, "Light"))
-					return Light::Bind(signature);
-				if (hashEqual(className, "MonoBehaviour"))
-					return MonoBehaviour::Bind(signature);
-				if (hashEqual(className, "Graphics"))
-					return Graphics::Bind(signature);
-				if (hashEqual(className, "GUI"))
-					return GUI::Bind(signature);
-				if (hashEqual(className, "PostProcess"))
-					return PostProcess::Bind(signature);
-				if (hashEqual(className, "Input"))
-					return Input::Bind(signature);
-				if (hashEqual(className, "Math"))
-					return Math::Bind(signature);
-				if (hashEqual(className, "Time"))
-					return Time::Bind(signature);
-				if (hashEqual(className, "Debug"))
-					return Debug::Bind(signature);
-				if (hashEqual(className, "Physics"))
-					return Physics::Bind(signature);
-				if (hashEqual(className, "Manifold"))
-					return Manifold::Bind(signature);
-				if (hashEqual(className, "File"))
-					return File::Bind(signature);
-				if (hashEqual(className, "Noise"))
-					return Noise::Bind(signature);
-				if (hashEqual(className, "Assert"))
-					return Assert::Bind(signature);
-			}
-
-			return nullptr;
+			if (hashEqual(className, "Console"))
+				return Console::Bind(signature);
+			if (hashEqual(className, "Vec2"))
+				return Vec2::Bind(signature);
+			if (hashEqual(className, "Vec3"))
+				return Vec3::Bind(signature);
+			if (hashEqual(className, "Vec4"))
+				return Vec4::Bind(signature);
+			if (hashEqual(className, "Quat"))
+				return Quat::Bind(signature);
+			if (hashEqual(className, "Texture"))
+				return Texture::Bind(signature);
+			if (hashEqual(className, "Shader"))
+				return Shader::Bind(signature);
+			if (hashEqual(className, "Wave"))
+				return Wave::Bind(signature);
+			if (hashEqual(className, "Mesh"))
+				return Mesh::Bind(signature);
+			if (hashEqual(className, "GameObject"))
+				return GameObject::Bind(signature);
+			if (hashEqual(className, "Transform"))
+				return Transform::Bind(signature);
+			if (hashEqual(className, "Camera"))
+				return Camera::Bind(signature);
+			if (hashEqual(className, "MeshRender"))
+				return MeshRender::Bind(signature);
+			if (hashEqual(className, "Lod"))
+				return LOD::Bind(signature);
+			if (hashEqual(className, "RigidBody"))
+				return RigidBody::Bind(signature);
+			if (hashEqual(className, "WaveSource"))
+				return WaveSource::Bind(signature);
+			if (hashEqual(className, "Collider"))
+				return Collider::Bind(signature);
+			if (hashEqual(className, "Light"))
+				return Light::Bind(signature);
+			if (hashEqual(className, "MonoBehaviour"))
+				return MonoBehaviour::Bind(signature);
+			if (hashEqual(className, "Graphics"))
+				return Graphics::Bind(signature);
+			if (hashEqual(className, "GUI"))
+				return GUI::Bind(signature);
+			if (hashEqual(className, "PostProcess"))
+				return PostProcess::Bind(signature);
+			if (hashEqual(className, "Input"))
+				return Input::Bind(signature);
+			if (hashEqual(className, "Math"))
+				return Math::Bind(signature);
+			if (hashEqual(className, "Time"))
+				return Time::Bind(signature);
+			if (hashEqual(className, "Debug"))
+				return Debug::Bind(signature);
+			if (hashEqual(className, "Physics"))
+				return Physics::Bind(signature);
+			if (hashEqual(className, "Manifold"))
+				return Manifold::Bind(signature);
+			if (hashEqual(className, "File"))
+				return File::Bind(signature);
+			if (hashEqual(className, "Noise"))
+				return Noise::Bind(signature);
+			if (hashEqual(className, "NavMeshNode"))
+				return NavMeshNode::Bind(signature);
+			if (hashEqual(className, "NavMesh"))
+				return NavMesh::Bind(signature);
+			if (hashEqual(className, "Assert"))
+				return Assert::Bind(signature);
 		}
+
+		return nullptr;
+	}
 
 		///////////////////////////////////////////////////////////////////////////
 		char* wrenLoadModule(WrenVM* vm, const char* name_cstr)
@@ -3780,6 +3910,8 @@ namespace lambda
 			SAFE_RELEASE(vm, Manifold::handle);
 			SAFE_RELEASE(vm, File::handle);
 			SAFE_RELEASE(vm, Noise::handle);
+			SAFE_RELEASE(vm, NavMeshNode::handle);
+			SAFE_RELEASE(vm, NavMesh::handle);
 
 			components::MonoBehaviourSystem::deinitialize(*g_scene);
 

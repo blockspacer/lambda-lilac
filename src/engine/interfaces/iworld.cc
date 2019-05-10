@@ -1,6 +1,19 @@
 #include "iworld.h"
 #include "utils/profiler.h"
 
+#define USE_MT_GC 1
+
+#if USE_MT_GC
+#if VIOLET_WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#undef near
+#undef far
+#undef min
+#undef max
+#endif
+#endif
+
 namespace lambda
 {
 	namespace world
@@ -39,9 +52,73 @@ namespace lambda
 		{
 		}
 
+#if USE_MT_GC
+		std::thread k_gc_thread;
+		scripting::IScriptContext* k_gc_data = nullptr;
+		bool k_gc_keep_alive = true;
+		std::mutex k_gc_mutex;
+
+		void gcCanRead()
+		{
+			bool can_get = false;
+			do
+			{
+				k_gc_mutex.lock();
+				can_get = k_gc_data != nullptr;
+				k_gc_mutex.unlock();
+				if (!can_get)
+					std::this_thread::sleep_for(std::chrono::microseconds(1));
+			} while (!can_get);
+		}
+
+		void gcCanWrite()
+		{
+			bool can_set = false;
+			do
+			{
+				k_gc_mutex.lock();
+				can_set = k_gc_data == nullptr;
+				k_gc_mutex.unlock();
+				if (!can_set)
+					std::this_thread::sleep_for(std::chrono::microseconds(1));
+			} while (!can_set);
+		}
+
+		void gcSet(scripting::IScriptContext* data)
+		{
+			k_gc_mutex.lock();
+			k_gc_data = data;
+			k_gc_mutex.unlock();
+		}
+
+		void gcLoop()
+		{
+			while (k_gc_keep_alive)
+			{
+				gcCanRead();
+
+				k_gc_data->collectGarbage();
+				
+				k_gc_mutex.lock();
+				k_gc_data = nullptr;
+				k_gc_mutex.unlock();
+			}
+		}
+
+#endif
+
 		///////////////////////////////////////////////////////////////////////////
 		void IWorld::run()
 		{
+#if USE_MT_GC
+			k_gc_thread = std::thread(gcLoop);
+#if VIOLET_WIN32
+			SetThreadPriority(k_gc_thread.native_handle(), THREAD_PRIORITY_ABOVE_NORMAL);
+			SetThreadPriorityBoost(k_gc_thread.native_handle(), TRUE);
+			//SetThreadDescription(k_gc_thread.native_handle(), L"Construct Thread");
+#endif
+#endif
+
 			initialize();
 			scripting_->executeFunction("Game::Initialize", {});
 			scene_.renderer->resize();
@@ -64,16 +141,22 @@ namespace lambda
 				if (scene_.window->getSize().x == 0.0f || scene_.window->getSize().y == 0.0f)
 					continue;
 
+#if USE_MT_GC
+				gcCanWrite();
+#endif
+
 				scripting_->executeFunction("Input::InputHelper::UpdateAxes", {});
 
 				profiler_.startTimer("Total");
 				profiler_.startTimer("FixedUpdate");
 				static unsigned char max_step_count_count = 8u;
 				unsigned char time_step_count = 0u;
+				bool did_fixed_update = false;
 				time_step_remainer += delta_time_;
 				while (time_step_remainer >= scene_.fixed_time_step &&
 					time_step_count++ < max_step_count_count)
 				{
+					did_fixed_update = true;
 					fixedUpdate();
 					time_step_remainer -= scene_.fixed_time_step;
 
@@ -97,15 +180,12 @@ namespace lambda
 				profiler_.endTimer("Update");
 
 				profiler_.startTimer("CollectGarbage");
-				static double kTimer = 0.0;
-				kTimer += delta_time_;
-
-				if (kTimer > 1.0)
-				{
-					kTimer -= 1.0;
-					scripting_->collectGarbage();
-				}
-
+#if USE_MT_GC
+				if (did_fixed_update)
+					gcSet(scene_.scripting);
+#else
+				scene_.scripting->collectGarbage();
+#endif
 				scene::sceneCollectGarbage(scene_);
 				profiler_.endTimer("CollectGarbage");
 

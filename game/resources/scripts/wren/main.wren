@@ -2,7 +2,8 @@ import "Core" for Vec2, Vec3, Vec4
 import "Core" for Texture, Shader, Mesh
 import "Core" for GameObject, Transform, Camera, MeshRender, Lod, RigidBody, WaveSource, Collider, MonoBehaviour
 import "Core" for Input, Keys, Buttons, Axes
-import "Core" for Math, Graphics, GUI, Time, File, Assert, PostProcess, Console, Physics, Debug, Sort
+import "Core" for Math, Graphics, GUI, Time, File, Assert, PostProcess, Console, Physics, Debug, Sort, PhysicsConstraints
+import "Core" for NavMesh
 
 import "resources/scripts/wren/post_processor" for PostProcessor
 import "resources/scripts/wren/input_controller" for InputController
@@ -13,7 +14,7 @@ import "resources/scripts/wren/trees" for Trees
 import "resources/scripts/wren/item_manager" for ItemManager
 import "resources/scripts/wren/door" for Door
 import "resources/scripts/wren/physics_layers" for PhysicsLayers
-import "resources/scripts/wren/node_map" for Node, NodeMap, NodeEditor
+//import "resources/scripts/wren/node_map" for Node, NodeMap, NodeEditor
 import "resources/scripts/wren/city" for City
 
 class Rando is MonoBehaviour {
@@ -29,11 +30,11 @@ class Rando is MonoBehaviour {
     }
 
     gameObject.name = "rando"
-    transform.worldScale = Vec3.new(3.0)
+    transform.worldScale = Vec3.new(1.0)
 
-    var x = Math.random(-_city.numBlocks.x / 2, _city.numBlocks.x / 2).round * _city.blockSize.x
-    var z = Math.random(-_city.numBlocks.y / 2, _city.numBlocks.y / 2).round * _city.blockSize.y
-    transform.worldPosition = Vec3.new(x, 10.0, z)
+    var x = Math.random(-_city.numBlocks.x / 2, _city.numBlocks.x / 2 - 2).round * _city.blockSize.x + _city.blockSize.x * 0.5
+    var z = Math.random(-_city.numBlocks.y / 2, _city.numBlocks.y / 2 - 2).round * _city.blockSize.y + _city.blockSize.y * 0.5
+    transform.worldPosition = Vec3.new(x, 20, z)
 
     var meshRender = gameObject.addComponent(MeshRender)
     meshRender.mesh    = __mesh
@@ -42,27 +43,56 @@ class Rando is MonoBehaviour {
     meshRender.normal  = Texture.load("resources/textures/wood/FloorMahogany_nrm.jpg")
     meshRender.DMRA    = Texture.load("resources/textures/wood/FloorMahogany_dmra.png")
     
-    var collider  = gameObject.addComponent(Collider)
+    var collider = gameObject.addComponent(Collider)
     _rigidBody = gameObject.addComponent(RigidBody)
     collider.makeBoxCollider()
     collider.layers    = PhysicsLayers.General | PhysicsLayers.MovingObjects
+    _rigidBody.angularConstraints = PhysicsConstraints.X | PhysicsConstraints.Y | PhysicsConstraints.Z
     _rigidBody.mass     = 1.0
-    _rigidBody.friction = 2.0
+    //_rigidBody.friction = 2.0
+
+    //attachPeople()
+  }
+
+  attachPeople() {
+    for (x in -5...5) {
+      for (z in -5...5) {
+        if (!(x == 0 && z == 0)) {
+          var go = GameObject.new()
+          go.name = "rando"
+          go.transform.worldScale = Vec3.new(1.0)
+          go.transform.localPosition = Vec3.new(x * 1.5, 0.0, z * 1.5)
+          go.transform.parent = gameObject
+
+          var meshRender = go.addComponent(MeshRender)
+          meshRender.mesh    = __mesh
+          meshRender.subMesh = 0
+          meshRender.albedo  = Texture.load("resources/textures/wood/FloorMahogany_alb.jpg")
+          meshRender.normal  = Texture.load("resources/textures/wood/FloorMahogany_nrm.jpg")
+          meshRender.DMRA    = Texture.load("resources/textures/wood/FloorMahogany_dmra.png")
+        }
+      }
+    }
   }
 
   getNextNode() {
-    if (_positionList == null || _positionList.isEmpty) {
+    if (_positionListIndex == null) {
+      _positionListIndex = -1
+    }
+    _positionListIndex = _positionListIndex + 1
+    if (_positionList == null || _positionListIndex >= _positionList.count) {
       _currPosition = null
+      _positionList = null
+      _positionListIndex = -1
       return
     }
 
-    _currPosition = _positionList[0]
-    _positionList.removeAt(0)
+    _currPosition = _positionList[_positionListIndex]
   }
 
   getPath() {
-      var x = Math.random(-_city.numBlocks.x / 2, _city.numBlocks.x / 2).round * _city.blockSize.x
-      var z = Math.random(-_city.numBlocks.y / 2, _city.numBlocks.y / 2).round * _city.blockSize.y
+      var x = Math.random(-_city.numBlocks.x / 2, _city.numBlocks.x / 2 - 2).round * _city.blockSize.x + _city.blockSize.x * 0.5
+      var z = Math.random(-_city.numBlocks.y / 2, _city.numBlocks.y / 2 - 2).round * _city.blockSize.y + _city.blockSize.y * 0.5
       _positionList = _city.navMesh.findPath(transform.worldPosition, Vec3.new(x, 0.0, z))
   }
 
@@ -73,13 +103,14 @@ class Rando is MonoBehaviour {
       return
     }
 
-    if (_currPosition == null && (_positionList == null || _positionList.count <= 0)) {
+    if (_currPosition == null && _positionList == null) {
       getPath()
       return
     }
 
     if (_currPosition == null) {
       getNextNode()
+      if (_currPosition == null) return
     }
 
     var offset = _currPosition - transform.worldPosition
@@ -119,10 +150,10 @@ class World {
   }
 
   constructNodes() {
-    _nodeMap = NodeMap.new()
+    _nodeMap = NavMesh.new()
     _toggleNodeEditor = false
-    var nodeEditor = NodeEditor.new(_nodeMap)
-    nodeEditor.deserialize()
+    //var nodeEditor = NodeEditor.new(_nodeMap)
+    //nodeEditor.deserialize()
   }
 
   getNextNode() {
@@ -174,7 +205,7 @@ class World {
     _city = City.new(Vec2.new(10), Vec2.new(100), Vec2.new(25), Vec2.new(10), 50, 100)
     _randos = []
 
-    for (i in 0...0) {
+    for (i in 0...100) {
       var rando = GameObject.new()
       rando.addComponent(Rando).realInitialize(_city)
       _randos.add(rando)
@@ -237,25 +268,40 @@ class World {
     }
   }
 
+  delayedInitialize() {
+    initializeCity()
+    //initializeRoom()
+
+    GUI.executeJavaScript("LoadWebPage('file:///resources/web-pages/menu.html')")
+    GUI.bindCallback("changedSetting(_,_)", this)
+    GUI.bindCallback("movedToMenu(_)", this)
+  }
+
   initialize() {
     _post_processer = PostProcessor.new()
     _lighting = Lighting.new()
 
     _camera = GameObject.new()
     _camera.addComponent(ThirdPersonCamera)
-    
-    initializeCity()
-    //initializeRoom()
 
-    GUI.loadURL("file:///resources/web-pages/menu.html")
-    GUI.bindCallback("changedSetting(_,_)", this)
-    GUI.bindCallback("movedToMenu(_)", this)
+    GUI.loadURL("file:///resources/web-pages/ui.html")
+    GUI.executeJavaScript("LoadWebPage('file:///resources/web-pages/loading_screen.html')")
+
+    //delayedInitialize()
+    _initializeTimeLeft = 1.0
   }
   deinitialize() {
 
   }
   update() {
-    GUI.executeJavaScript("updateDebug(%(Time.deltaTime));")
+    if (_initializeTimeLeft > 0.0) {
+      _initializeTimeLeft = _initializeTimeLeft - Time.deltaTime
+      if (_initializeTimeLeft <= 0.0) {
+        delayedInitialize()
+      }
+    }
+
+    GUI.executeJavaScript("if (gameState == Game) { updateDebug(%(Time.deltaTime)) }")
     
     // Update the RSM light.
     var sin_y_rot = -Math.sin(Math.deg2Rad * _camera.getComponent(FreeLookCamera).rotation.y)
@@ -266,13 +312,13 @@ class World {
 
     if (_city) return
 
-    var toggleNodeEditor = InputController.ToggleNodeEditor != 0		
-    var toggleEditor = toggleNodeEditor && !_toggleNodeEditor		
+    var toggleNodeEditor = InputController.ToggleNodeEditor != 0
+    var toggleEditor = toggleNodeEditor && !_toggleNodeEditor
     _toggleNodeEditor = toggleNodeEditor		
 
     if (toggleEditor) {
       if (_nodeEditor == null) {
-        _nodeEditor = NodeEditor.new(_nodeMap)
+        _nodeEditor = null// NodeEditor.new(_nodeMap)
         Time.timeScale = 0.1
       } else {
         _nodeEditor = null

@@ -320,6 +320,8 @@ SET(UtilsSources
   "utils/mt_manager.cc"
   "utils/name.h"
   "utils/renderable.h"
+  "utils/nav_mesh.h"
+  "utils/nav_mesh.cc"
   "utils/zone_manager.h"
   "utils/zone_manager.cc"
 )
@@ -477,24 +479,8 @@ ENDIF()
 # ///////////////////////////////////////////////////////////////
 # /// GUI ///////////////////////////////////////////////////////
 IF(${VIOLET_GUI} STREQUAL "Ultralight")
-  TARGET_LINK_LIBRARIES(lambda-engine PUBLIC ultralight)
-  TARGET_COMPILE_DEFINITIONS(lambda-engine PRIVATE VIOLET_GUI_ULTRALIGHT)
-
-  IF(VIOLET_WIN32)
-    ADD_CUSTOM_COMMAND(TARGET lambda-engine POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/Ultralight.dll ${CMAKE_BINARY_DIR}/bin/Debug/Ultralight.dll
-      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/UltralightCore.dll ${CMAKE_BINARY_DIR}/bin/Debug/UltralightCore.dll
-      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/WebCore.dll ${CMAKE_BINARY_DIR}/bin/Debug/WebCore.dll
-      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/Ultralight.dll ${CMAKE_BINARY_DIR}/bin/Release/Ultralight.dll
-      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/UltralightCore.dll ${CMAKE_BINARY_DIR}/bin/Release/UltralightCore.dll
-      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/WebCore.dll ${CMAKE_BINARY_DIR}/bin/Release/WebCore.dll
-      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/Ultralight.dll ${CMAKE_BINARY_DIR}/bin/MinSizeRel/Ultralight.dll
-      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/UltralightCore.dll ${CMAKE_BINARY_DIR}/bin/MinSizeRel/UltralightCore.dll
-      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/WebCore.dll ${CMAKE_BINARY_DIR}/bin/MinSizeRel/WebCore.dll
-      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/Ultralight.dll ${CMAKE_BINARY_DIR}/bin/RelWithDebInfo/Ultralight.dll
-      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/UltralightCore.dll ${CMAKE_BINARY_DIR}/bin/RelWithDebInfo/UltralightCore.dll
-      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/deps/ultralight/bin/win/x64/WebCore.dll ${CMAKE_BINARY_DIR}/bin/RelWithDebInfo/WebCore.dll)
-  ENDIF()
+  include(LinkUltralight)
+  BindUltralight(lambda-engine)
 ELSE()
   TARGET_COMPILE_DEFINITIONS(lambda-engine PRIVATE VIOLET_GUI_NO)
 ENDIF()
