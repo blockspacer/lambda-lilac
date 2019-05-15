@@ -1,15 +1,16 @@
 function(LinkUltralight)
 	add_subdirectory("deps/ultralight")
+	set(SDK_ROOT "${CMAKE_BINARY_DIR}/SDK/")
+	set(ULTRALIGHT_LIBRARY_DIR "${SDK_ROOT}/lib")
+	link_directories(${ExeName} PUBLIC "${ULTRALIGHT_LIBRARY_DIR}")
 endfunction()
 
 function(BindUltralight ExeName)
 	set(SDK_ROOT "${CMAKE_BINARY_DIR}/SDK/")
 	set(ULTRALIGHT_INCLUDE_DIR "${SDK_ROOT}/include")
 	set(ULTRALIGHT_BINARY_DIR "${SDK_ROOT}/bin")
-	set(ULTRALIGHT_LIBRARY_DIR "${SDK_ROOT}/lib")
 
 	target_include_directories(${ExeName} PUBLIC "${ULTRALIGHT_INCLUDE_DIR}")
-	target_link_directories(${ExeName} PUBLIC "${ULTRALIGHT_LIBRARY_DIR}")
 	target_link_libraries(${ExeName} PUBLIC UltralightCore AppCore Ultralight WebCore)
 
 	# Copy all binaries to target directory

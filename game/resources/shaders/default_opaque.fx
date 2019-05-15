@@ -4,7 +4,7 @@
 #define VIOLET_PARALLAX_MAPPING 0
 #define NORMAL_MAPPING 1
 #define VIOLET_GRID_ALBEDO 0
-#define VIOLET_GRID_TEXTURED 1
+#define VIOLET_GRID_TEXTURED 0
 #define VIOLET_DYNAMIC_GRID_SIZE 1
 #define VIOLET_DISPLACEMENT 1
 
@@ -167,10 +167,6 @@ PSOutput PS(VSOutput pIn)
   const float el = sin(dotTan) * sin(dotBit);
   const float es = sin(dotTan * 10.0f) * sin(dotBit * 10.0f);
 	pOut.albedo.rgb = lerp(lerp(0.4f, 0.5f, when_ge(es, 0.0f)), lerp(0.9f, 1.0f, when_ge(es, 0.0f)), when_ge(el, 0.0f));
-  
-  float2 tex = float2(pIn.hPosition.x + pIn.hPosition.z, pIn.hPosition.y);
-  pOut.albedo = tex_albedo.Sample(SamLinearWarp, tex) * pIn.colour;
-  pOut.albedo.a = when_ge(pOut.albedo.a, 0.25f);
 #endif
 #endif
 
