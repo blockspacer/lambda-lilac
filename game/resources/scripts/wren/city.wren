@@ -6,7 +6,7 @@ import "Core" for Math
 import "Core" for Graphics, GUI, Time, File, Assert
 import "Core" for MonoBehaviour
 import "Core" for PostProcess, Console, Physics, Debug, Sort
-import "Core" for NavMesh
+import "Core" for NavMesh, TriNavMesh
 
 import "resources/scripts/wren/physics_layers" for PhysicsLayers
 //import "resources/scripts/wren/node_map" for Node, NodeMap, NodeEditor
@@ -111,6 +111,7 @@ class City {
     _meshSidewalks = CustomMesh.new()
     _meshGreenery  = CustomMesh.new()
 
+    constructTriNavMesh()
     constructBlocks()
     constructNavMesh()
 
@@ -124,7 +125,7 @@ class City {
   blockSize    { _blockSize    }
   streetSize   { _streetSize   }
   sidewalkSize { _sidewalkSize }
-  navMesh      { _navMesh      }
+  navMesh      { _triNavMesh   }
 
   draw() {
     _nodeMap.draw()
@@ -145,6 +146,8 @@ class City {
     var collider = _buildings.addComponent(Collider)
     collider.makeMeshCollider(meshRender.mesh, 0)
     collider.layers = PhysicsLayers.General
+
+    _meshBuildings.clear()
   }
 
   makeRoads() {
@@ -162,6 +165,8 @@ class City {
     var collider = _roads.addComponent(Collider)
     collider.makeMeshCollider(meshRender.mesh, 0)
     collider.layers = PhysicsLayers.General
+
+    _meshRoads.clear()
   }
 
   makeSidewalks() {
@@ -179,6 +184,8 @@ class City {
     var collider = _sidewalks.addComponent(Collider)
     collider.makeMeshCollider(meshRender.mesh, 0)
     collider.layers = PhysicsLayers.General
+
+    _meshSidewalks.clear()
   }
 
   makeGreenery() {
@@ -196,6 +203,8 @@ class City {
     var collider = _greenery.addComponent(Collider)
     collider.makeMeshCollider(meshRender.mesh, 0)
     collider.layers = PhysicsLayers.General
+  
+    _meshGreenery.clear()
   }
 
   constructSquare(min, max) {
@@ -213,6 +222,7 @@ class City {
     var size = (max - min) * 0.5
     var pos  = (max + min) * 0.5
     _meshRoads.addQuad(pos + Vec3.new(-size.x,  size.y, -size.z), pos + Vec3.new(-size.x,  size.y,  size.z), pos + Vec3.new( size.x,  size.y,  size.z), pos + Vec3.new( size.x,  size.y, -size.z), Vec2.new(0.0, size.z), Vec2.new(0.0, 0.0), Vec2.new(size.x, 0.0), Vec2.new(size.x, size.z))
+    addTriNavMeshQuad(min, max)
   }
   constructRoad(min, max, type) {
     // 0: up.
@@ -231,11 +241,143 @@ class City {
     if (type == 2) {
       constructRoad(Vec3.new(min.x, min.y, min.z), Vec3.new(max.x, max.y, min.z + _sidewalkSize.y / 2), 0)
       constructRoad(Vec3.new(min.x, min.y, max.z - _sidewalkSize.y / 2), Vec3.new(max.x, max.y, max.z), 0)
-      constructRoad(Vec3.new(min.x, min.y, min.z + _sidewalkSize.y / 2), Vec3.new(max.x, max.y, max.z - _sidewalkSize.y / 2))
+
+      constructRoad(Vec3.new(min.x, min.y, min.z), Vec3.new(min.x + _sidewalkSize.x / 2, max.y, max.z), 1)
+      constructRoad(Vec3.new(max.x - _sidewalkSize.x / 2, min.y, min.z), Vec3.new(max.x, max.y, max.z), 1)
+
+      constructRoad(Vec3.new(min.x + _sidewalkSize.x / 2, min.y, min.z + _sidewalkSize.y / 2), Vec3.new(max.x - _sidewalkSize.x / 2, max.y, max.z - _sidewalkSize.y / 2))
     }
   }
 
-  spawnBlock(fullMin, fullMax, num, scale) {
+  spawnCube(min, max, scale) {
+    var size = (max - min) * 0.5
+    var pos  = (max + min) * 0.5
+    var uv   = size * (1.0 / scale)
+    /*-z*/_meshBuildings.addQuad(pos + Vec3.new(-size.x, -size.y, -size.z), pos + Vec3.new(-size.x,  size.y, -size.z), pos + Vec3.new( size.x,  size.y, -size.z), pos + Vec3.new( size.x, -size.y, -size.z), Vec2.new(0.0,  0.0), Vec2.new(0.0,  uv.y), Vec2.new(uv.x, uv.y), Vec2.new(uv.x, 0.0))
+    /*+z*/_meshBuildings.addQuad(pos + Vec3.new(-size.x, -size.y,  size.z), pos + Vec3.new( size.x, -size.y,  size.z), pos + Vec3.new( size.x,  size.y,  size.z), pos + Vec3.new(-size.x,  size.y,  size.z), Vec2.new(0.0,  0.0), Vec2.new(uv.x, 0.0),  Vec2.new(uv.x, uv.y), Vec2.new(0.0,  uv.y))
+    /*-x*/_meshBuildings.addQuad(pos + Vec3.new(-size.x, -size.y,  size.z), pos + Vec3.new(-size.x,  size.y,  size.z), pos + Vec3.new(-size.x,  size.y, -size.z), pos + Vec3.new(-size.x, -size.y, -size.z), Vec2.new(uv.z, 0.0), Vec2.new(uv.z, uv.y), Vec2.new(0.0,  uv.y), Vec2.new(0.0,  0.0))
+    /*+x*/_meshBuildings.addQuad(pos + Vec3.new( size.x, -size.y, -size.z), pos + Vec3.new( size.x,  size.y, -size.z), pos + Vec3.new( size.x,  size.y,  size.z), pos + Vec3.new( size.x, -size.y,  size.z), Vec2.new(0.0,  0.0), Vec2.new(0.0,  uv.y), Vec2.new(uv.z, uv.y), Vec2.new(uv.z, 0.0))    
+    /*+y*/_meshBuildings.addQuad(pos + Vec3.new(-size.x,  size.y, -size.z), pos + Vec3.new(-size.x,  size.y,  size.z), pos + Vec3.new( size.x,  size.y,  size.z), pos + Vec3.new( size.x,  size.y, -size.z), Vec2.new(0.0,  0.0), Vec2.new(0.0,  uv.z), Vec2.new(uv.x, uv.z), Vec2.new(uv.x, 0.0))
+    /*-y*/_meshBuildings.addQuad(pos + Vec3.new( size.x, -size.y, -size.z), pos + Vec3.new( size.x, -size.y,  size.z), pos + Vec3.new(-size.x, -size.y,  size.z), pos + Vec3.new(-size.x, -size.y, -size.z), Vec2.new(uv.x, 0.0), Vec2.new(uv.x, uv.z), Vec2.new(0.0,  uv.z), Vec2.new(0.0,  0.0))
+  }
+
+  //             __
+  //          __|  |__
+  //         |        |
+  //       __|        |__
+  //      |              |
+  //      |              |
+  //      |              |
+  //    __|              |__
+  //   |                    |
+  //   |                    |
+  //   |                    |
+  //   |                    |
+  //   |                    |
+  // __|                    |__
+  //|                          |
+  //|                          |
+  //|__________________________|
+  spawnBuilding01(min, max, scale) {
+    var size = (max - min)
+    var center = (max + min) / 2
+    
+    var steps = [ _maxHeight * 0.2, _maxHeight * 0.7, _maxHeight * 0.825, _maxHeight * 0.95, _maxHeight * 1.0 ]
+    for (i in 0...steps.count) {
+      var prev = i == 0 ? 0 : steps[i - 1]
+      var curr = steps[i]
+      var size = size * ((steps.count - i) / steps.count) / 2
+
+      var min = Vec3.new(center.x - size.x, prev, center.z - size.z)
+      var max = Vec3.new(center.x + size.x, curr, center.z + size.z)
+      spawnCube(min, max, scale)
+    }
+  }
+
+  // ______     ______
+  //|      |   |      |
+  //|      |   |      |
+  //|      |   |      |
+  //|      |___|      |
+  //|                 |
+  //|                 |
+  //|       ___       |
+  //|      |   |      |
+  //|      |   |      |
+  //|      |   |      |
+  //|      |   |      |
+  //|      |   |      |
+  //|      |   |      |
+  //|      |   |      |
+  //|      |   |      |
+  //|______|   |______|
+  spawnBuilding02(min, max, scale) {
+    max.y = _maxHeight
+    var size = (max - min)
+    var center = (max + min) / 2
+
+    var leftMin    = Vec3.new(min.x, min.y, min.z)
+    var leftMax    = Vec3.new(max.x, max.y, min.z + size.z * 0.4)
+    var rightMin   = Vec3.new(min.x, min.y, max.z - size.z * 0.4)
+    var rightMax   = Vec3.new(max.x, max.y, max.z)
+    var centerMin  = Vec3.new(min.x, min.y, min.z + size.z * 0.4)
+    var centerMax  = Vec3.new(max.x, min.y, max.z - size.z * 0.4)
+    var walkwayMin = Vec3.new(min.x + size.x * 0.2, (min.y + max.y) / 2, min.z + size.z * 0.4)
+    var walkwayMax = Vec3.new(max.x - size.x * 0.2, (min.y + max.y) / 2 + 20, max.z - size.z * 0.4)
+    spawnCube(leftMin, leftMax, scale)
+    constructSidewalk(centerMin, centerMax)
+    spawnCube(rightMin, rightMax, scale)
+    spawnCube(walkwayMin, walkwayMax, scale)
+  }
+
+  // _________________
+  //|    |       |    |
+  //|    |       |    |
+  //|    |       |    |
+  //|    |       |    |
+  //|    |       |    |
+  //|    |       |    |
+  //|    |       |    |
+  //|    |       |    |
+  //|    |       |    |
+  //|    |       |    |
+  //|    |       |    |
+  //|    |       |    |
+  //|    |       |    |
+  //|    |   _   |    |
+  //|    |  | |  |    |
+  //|____|_|___|_|____|
+  spawnBuilding03(min, max, scale) {
+    max.y = _maxHeight
+    var size = (max - min)
+    var center = (max + min) / 2
+
+    var leftMin   = Vec3.new(min.x, min.y, min.z)
+    var leftMax   = Vec3.new(max.x, max.y, min.z + size.z * 0.2)
+    var rightMin  = Vec3.new(min.x, min.y, max.z - size.z * 0.2)
+    var rightMax  = Vec3.new(max.x, max.y, max.z)
+    var centerMin = Vec3.new(min.x, min.y, min.z + size.z * 0.2)
+    var centerMax = Vec3.new(max.x - size.x * 0.4, min.y, max.z - size.z * 0.2)
+    var backMin   = Vec3.new(max.x - size.x * 0.4, min.y, min.z + size.z * 0.2)
+    var backMax   = Vec3.new(max.x, max.y, max.z - size.z * 0.2)
+    spawnCube(leftMin, leftMax, scale)
+    constructSidewalk(centerMin, centerMax)
+    spawnCube(rightMin, rightMax, scale)
+    spawnCube(backMin, backMax, scale)
+
+    var fcenter = center - Vec3.new(size.x * 0.25, 0.0, 0.0)
+    var fmin = fcenter - size * 0.1
+    var fmax = fcenter + size * 0.1
+
+    spawnCube(Vec3.new(fmin.x, min.y, fmin.z), Vec3.new(fmin.x + 1, min.y + 2, fmax.z), scale)
+    spawnCube(Vec3.new(fmax.x - 1, min.y, fmin.z), Vec3.new(fmax.x, min.y + 2, fmax.z), scale)
+    spawnCube(Vec3.new(fmin.x + 1, min.y, fmin.z), Vec3.new(fmax.x - 1, min.y + 2, fmin.z + 1), scale)
+    spawnCube(Vec3.new(fmin.x + 1, min.y, fmax.z - 1), Vec3.new(fmax.x - 1, min.y + 2, fmax.z), scale)
+    spawnCube(Vec3.new(fcenter.x - 0.5, min.y, fcenter.z - 0.5), Vec3.new(fcenter.x + 0.5, min.y + 2, fcenter.z + 0.5), scale)
+    spawnCube(Vec3.new(fcenter.x - 1.0, min.y + 2, fcenter.z - 1.0), Vec3.new(fcenter.x + 1.0, min.y + 5, fcenter.z + 1.0), scale)
+  }
+
+  spawnBuildingBlock(fullMin, fullMax, num, scale) {
     var advantage = Fn.new { |min, max| Math.max(Math.random(min, max), Math.random(min, max)) }
     var convert   = Fn.new { |y, x, w| y * w + x }
 
@@ -276,6 +418,14 @@ class City {
         _meshBuildings.addQuad(pos + Vec3.new(-size.x,  size.y, -size.z), pos + Vec3.new(-size.x,  size.y,  size.z), pos + Vec3.new( size.x,  size.y,  size.z), pos + Vec3.new( size.x,  size.y, -size.z), Vec2.new(0.0,  uv.z), Vec2.new(0.0, 0.0),  Vec2.new(uv.x, 0.0), Vec2.new(uv.x, uv.z))
       }
     }
+  }
+
+  spawnBlock(fullMin, fullMax, num, scale) {
+    var rand = Math.random()
+    if (rand < 0.25) return spawnBuilding01(fullMin, fullMax, scale)
+    if (rand < 0.50) return spawnBuilding02(fullMin, fullMax, scale)
+    if (rand < 0.75) return spawnBuilding03(fullMin, fullMax, scale)
+    if (rand < 1.00) return spawnBuildingBlock(fullMin, fullMax, num, scale)
   }
 
   constructBlocks() {
@@ -354,6 +504,41 @@ class City {
         if (z > -_numBlocks.y / 2) node.addConnection(nodes[z + _numBlocks.y / 2 - 1][x + _numBlocks.x / 2])
         nodes[z + _numBlocks.y / 2][x + _numBlocks.x / 2] = node
       }
+    }
+  }
+
+  constructTriNavMesh() {
+    _triNavMesh = TriNavMesh.new()
+  }
+  addTriNavMeshQuad(min, max) {
+    _triNavMesh.addQuad(Vec2.new(min.x, min.z), Vec2.new(max.x, max.z))
+    return
+
+    var scale = 4
+    min.x = (min.x / scale).round * scale
+    min.y = (min.y / scale).round * scale
+    min.z = (min.z / scale).round * scale
+    max.x = (max.x / scale).round * scale
+    max.y = (max.y / scale).round * scale
+    max.z = (max.z / scale).round * scale
+    var splitsX = Math.max(((max.x - min.x) / scale).round, 1)
+    var splitsZ = Math.max(((max.z - min.z) / scale).round, 1)
+
+    for (z in 0...splitsZ) {
+      for (x in 0...splitsX) {
+        _triNavMesh.addQuad(Vec2.new(min.x + x * scale, min.z + z * scale), Vec2.new(min.x + (x + 1) * scale, min.z + (z + 1) * scale))
+      }  
+    }
+  }
+
+  drawTris() {
+    var tris = _triNavMesh.getTriangles()
+    for (i in 0...(tris.count / 2)) {
+      var ta = tris[i * 2 + 0]
+      var tb = tris[i * 2 + 1]
+      var a = Vec3.new(ta.x, 0.0, ta.y)
+      var b = Vec3.new(tb.x, 0.0, tb.y)
+      Debug.drawLine(a, b, Vec4.new(1.0))
     }
   }
 }

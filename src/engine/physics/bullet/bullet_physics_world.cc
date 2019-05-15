@@ -310,7 +310,7 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		void BulletCollisionBody::makeSphereCollider()
 		{
-			glm::vec3 scale = components::TransformSystem::getWorldScale(entity_, scene_) * VIOLET_INV_PHYSICS_SCALE;
+			glm::vec3 scale = components::TransformSystem::getWorldScale(entity_, scene_) * VIOLET_PHYSICS_SCALE;
 			btScalar radius = (scale.x + scale.z) / 4.0f;
 			btCollisionShape* shape = foundation::Memory::construct<btSphereShape>(radius);
 			makeShape(shape);

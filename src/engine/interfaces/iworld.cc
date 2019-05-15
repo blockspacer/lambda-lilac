@@ -1,7 +1,7 @@
 #include "iworld.h"
 #include "utils/profiler.h"
 
-#define USE_MT_GC 1
+#define USE_MT_GC 0
 
 #if USE_MT_GC
 #if VIOLET_WIN32

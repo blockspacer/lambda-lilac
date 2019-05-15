@@ -274,7 +274,8 @@ public:
 
 		  // name, colour, value
 			String name = kTimerNames[i];
-			name = /*toString((int)(kTimers[i].average() * 1000.0f));// +"\n" +*/ kTimerNames[i];
+			name = toString((kTimers[i].average()));
+			//name = kTimerNames[i];
 		  execute_string += "\"" + String(name) + "\", " + toString(kTimers[i].average()) + ", \"" + kTimerColours[i] + "\"";
 		  if (i < kTimerCount - 1)
 			  execute_string += ", ";

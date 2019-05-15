@@ -79,3 +79,6 @@
 [submodule "deps/VulkanMemoryAllocator"]
 	path = deps/VulkanMemoryAllocator
 	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
+[submodule "deps/polypartition"]
+	path = deps/polypartition
+	url = https://github.com/ivanfratric/polypartition.git

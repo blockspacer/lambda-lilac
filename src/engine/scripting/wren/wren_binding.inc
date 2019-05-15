@@ -2992,6 +2992,75 @@ static constexpr char* wrenModuleSource =
 "}\n"
 
 "///////////////////////////////////////////////////////////////////////////////////////////////////\n"
+"///// nav mesh ////////////////////////////////////////////////////////////////////////////////////\n"
+"///////////////////////////////////////////////////////////////////////////////////////////////////\n"
+/*
+* Class: TriNavMesh
+* _*Triangle Navigation Mesh*_
+*/
+"foreign class TriNavMesh {\n"
+/*
+* Constructor: :new()
+* Constructs an empty navigation mesh.
+*/
+"construct new() {}\n"
+/*
+* Function: :addTri(_,_,_)
+* Adds a triangle to the navigation mesh.
+* Needs to be in clockwise order.
+*
+* Parameters:
+* a - Point a of the triangle. Needs to be Vec2.
+* b - Point b of the triangle. Needs to be Vec2.
+* c - Point c of the triangle. Needs to be Vec2.
+*/
+"foreign addTri(a, b, c)\n"
+/*
+* Function: :addTriHole(_,_,_)
+* Adds a triangluar hole to the navigation mesh.
+* Needs to be in clockwise order.
+*
+* Parameters:
+* a - Point a of the triangle hole. Needs to be Vec2.
+* b - Point b of the triangle hole. Needs to be Vec2.
+* c - Point c of the triangle hole. Needs to be Vec2.
+*/
+"foreign addTriHole(a, b, c)\n"
+/*
+* Function: :addQuad(_,_,_)
+* Adds a quad to the navigation mesh using an AABB.
+*
+* Parameters:
+* min - Min of the AABB quad. Needs to be Vec2.
+* max - Max of the AABB quad. Needs to be Vec2.
+*/
+"foreign addQuad(min, max)\n"
+/*
+* Function: :addQuadHole(_,_,_)
+* Adds a quad hole to the navigation mesh using an AABB.
+*
+* Parameters:
+* min - Min of the AABB quad hole. Needs to be Vec2.
+* max - Max of the AABB quad hole. Needs to be Vec2.
+*/
+"foreign addQuadHole(min, max)\n"
+/*
+* Function: :generate()
+* generates the navigation mesh.
+*/
+"foreign getTriangles()\n"
+/*
+* Function: :findPath(_,_)
+* Finds the best path over the navigation mesh between two positions.
+*
+* Parameters:
+* from - The position that you want to search from.
+* to - The position that you want to search to.
+*/
+"foreign findPath(from, to)\n"
+"}\n"
+
+"///////////////////////////////////////////////////////////////////////////////////////////////////\n"
 "///// assert //////////////////////////////////////////////////////////////////////////////////////\n"
 "///////////////////////////////////////////////////////////////////////////////////////////////////\n"
 /*

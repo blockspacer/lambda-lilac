@@ -800,7 +800,6 @@ namespace lambda
       }
 
       /////////////////////////////////////////////////////////////////////////
-#pragma optimize ("", off)
       WrenForeignMethodFn Bind(const char* signature)
       {
         if (strcmp(signature, "load(_)") == 0) return [](WrenVM* vm) {
@@ -3618,6 +3617,103 @@ namespace lambda
 		}
 	}
 
+	///////////////////////////////////////////////////////////////////////////
+	namespace TriNavMesh
+	{
+		struct TriNavMesh
+		{
+			platform::TriNavMap nav_map;
+		};
+		WrenHandle* handle = nullptr;
+		TriNavMesh* make(WrenVM* vm, TriNavMesh val = TriNavMesh())
+		{
+			if (handle == nullptr)
+			{
+				wrenGetVariable(vm, "Core", "TriNavMesh", 0);
+				handle = wrenGetSlotHandle(vm, 0);
+			}
+			wrenSetSlotHandle(vm, 1, handle);
+			TriNavMesh* data = MakeForeign<TriNavMesh>(vm, 0, 1);
+			memcpy(data, &val, sizeof(TriNavMesh));
+			return data;
+		}
+		WrenForeignClassMethods Construct()
+		{
+			return WrenForeignClassMethods{
+				[](WrenVM* vm) {
+				make(vm);
+			},
+				[](void* data) {
+			}
+			};
+		}
+		WrenForeignMethodFn Bind(const char* signature)
+		{
+			/*
+			"foreign addTri(a, b, c)\n"
+				"foreign addTriHole(a, b, c)\n"
+				"foreign addQuad(min, max)\n"
+				"foreign addQuad(min, max)\n"
+				"foreign construct()\n"
+				"foreign getTriangles()\n"
+				"foreign findPath(from, to)\n"*/
+			if (strcmp(signature, "addTri(_,_,_)") == 0) return [](WrenVM* vm) {
+				TriNavMesh& nav_mesh = *GetForeign<TriNavMesh>(vm, 0);
+				const glm::vec2& a = *GetForeign<glm::vec2>(vm, 1);
+				const glm::vec2& b = *GetForeign<glm::vec2>(vm, 2);
+				const glm::vec2& c = *GetForeign<glm::vec2>(vm, 3);
+				nav_mesh.nav_map.addTri(a, b, c);
+			};
+			if (strcmp(signature, "addTriHole(_,_,_)") == 0) return [](WrenVM* vm) {
+				TriNavMesh& nav_mesh = *GetForeign<TriNavMesh>(vm, 0);
+				const glm::vec2& a = *GetForeign<glm::vec2>(vm, 1);
+				const glm::vec2& b = *GetForeign<glm::vec2>(vm, 2);
+				const glm::vec2& c = *GetForeign<glm::vec2>(vm, 3);
+				nav_mesh.nav_map.addTriHole(a, b, c);
+			};
+			if (strcmp(signature, "addQuad(_,_)") == 0) return [](WrenVM* vm) {
+				TriNavMesh& nav_mesh = *GetForeign<TriNavMesh>(vm, 0);
+				const glm::vec2& min = *GetForeign<glm::vec2>(vm, 1);
+				const glm::vec2& max = *GetForeign<glm::vec2>(vm, 2);
+				nav_mesh.nav_map.addQuad(min, max);
+			};
+			if (strcmp(signature, "addQuadHole(_,_)") == 0) return [](WrenVM* vm) {
+				TriNavMesh& nav_mesh = *GetForeign<TriNavMesh>(vm, 0);
+				const glm::vec2& min = *GetForeign<glm::vec2>(vm, 1);
+				const glm::vec2& max = *GetForeign<glm::vec2>(vm, 2);
+				nav_mesh.nav_map.addQuadHole(min, max);
+			};
+			if (strcmp(signature, "getTriangles()") == 0) return [](WrenVM* vm) {
+				TriNavMesh& nav_mesh = *GetForeign<TriNavMesh>(vm, 0);
+				Vector<glm::vec2> tris = nav_mesh.nav_map.getTris();
+
+				wrenSetSlotNewList(vm, 0);
+
+				for (const glm::vec2& tri : tris)
+				{
+					Vec2::makeAt(vm, 1, 2, tri);
+					wrenInsertInList(vm, 0, -1, 1);
+				}
+			};
+			if (strcmp(signature, "findPath(_,_)") == 0) return [](WrenVM* vm) {
+				TriNavMesh& nav_mesh = *GetForeign<TriNavMesh>(vm, 0);
+				const glm::vec3& from = *GetForeign<glm::vec3>(vm, 1);
+				const glm::vec3& to = *GetForeign<glm::vec3>(vm, 2);
+				Vector<glm::vec3> path = nav_mesh.nav_map.findPath(from, to);
+
+				wrenSetSlotNewList(vm, 0);
+
+				for (const glm::vec3& pos : path)
+				{
+					Vec3::makeAt(vm, 1, 2, pos);
+					wrenInsertInList(vm, 0, -1, 1);
+				}
+			};
+
+			return nullptr;
+		}
+	}
+
 		///////////////////////////////////////////////////////////////////////////
     namespace Assert
     {
@@ -3701,6 +3797,8 @@ namespace lambda
 				return NavMeshNode::Construct();
 			if (hashEqual(className, "NavMesh"))
 				return NavMesh::Construct();
+			if (hashEqual(className, "TriNavMesh"))
+				return TriNavMesh::Construct();
 		}
 
 		return WrenForeignClassMethods{};
@@ -3780,6 +3878,8 @@ namespace lambda
 				return NavMeshNode::Bind(signature);
 			if (hashEqual(className, "NavMesh"))
 				return NavMesh::Bind(signature);
+			if (hashEqual(className, "TriNavMesh"))
+				return TriNavMesh::Bind(signature);
 			if (hashEqual(className, "Assert"))
 				return Assert::Bind(signature);
 		}
@@ -3912,6 +4012,7 @@ namespace lambda
 			SAFE_RELEASE(vm, Noise::handle);
 			SAFE_RELEASE(vm, NavMeshNode::handle);
 			SAFE_RELEASE(vm, NavMesh::handle);
+			SAFE_RELEASE(vm, TriNavMesh::handle);
 
 			components::MonoBehaviourSystem::deinitialize(*g_scene);
 

@@ -463,7 +463,7 @@ ENDIF()
 # /// CREATE EXE ////////////////////////////////////////////////
 # ///////////////////////////////////////////////////////////////
 ADD_EXECUTABLE(lambda-engine ${Sources})
-TARGET_LINK_LIBRARIES(lambda-engine PUBLIC lambda-foundation fast-noise inih rapidjson mesh-decimation stb tiny-gltf soloud)
+TARGET_LINK_LIBRARIES(lambda-engine PUBLIC lambda-foundation fast-noise inih rapidjson mesh-decimation poly-partition stb tiny-gltf soloud)
 
 # ///////////////////////////////////////////////////////////////
 # /// MISC //////////////////////////////////////////////////////

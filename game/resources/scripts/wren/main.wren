@@ -24,6 +24,9 @@ class Rando is MonoBehaviour {
 
   realInitialize(city) {
     _city = city
+    _user = Vec3.new(0.0)
+    _notMoved = 0.0
+    _prevPos = Vec3.new(0.0)
 
     if (!__mesh) {
       __mesh = Mesh.generate("cube")
@@ -32,8 +35,8 @@ class Rando is MonoBehaviour {
     gameObject.name = "rando"
     transform.worldScale = Vec3.new(1.0)
 
-    var x = Math.random(-_city.numBlocks.x / 2, _city.numBlocks.x / 2 - 2).round * _city.blockSize.x + _city.blockSize.x * 0.5
-    var z = Math.random(-_city.numBlocks.y / 2, _city.numBlocks.y / 2 - 2).round * _city.blockSize.y + _city.blockSize.y * 0.5
+    var x = Math.random(-_city.numBlocks.x / 2, _city.numBlocks.x / 2 - 2).round * _city.blockSize.x
+    var z = Math.random(-_city.numBlocks.y / 2, _city.numBlocks.y / 2 - 2).round * _city.blockSize.y
     transform.worldPosition = Vec3.new(x, 20, z)
 
     var meshRender = gameObject.addComponent(MeshRender)
@@ -45,7 +48,7 @@ class Rando is MonoBehaviour {
     
     var collider = gameObject.addComponent(Collider)
     _rigidBody = gameObject.addComponent(RigidBody)
-    collider.makeBoxCollider()
+    collider.makeSphereCollider()
     collider.layers    = PhysicsLayers.General | PhysicsLayers.MovingObjects
     _rigidBody.angularConstraints = PhysicsConstraints.X | PhysicsConstraints.Y | PhysicsConstraints.Z
     _rigidBody.mass     = 1.0
@@ -53,6 +56,8 @@ class Rando is MonoBehaviour {
 
     //attachPeople()
   }
+
+  user=(v) { _user = v }
 
   attachPeople() {
     for (x in -5...5) {
@@ -75,25 +80,45 @@ class Rando is MonoBehaviour {
     }
   }
 
-  getNextNode() {
-    if (_positionListIndex == null) {
-      _positionListIndex = -1
-    }
-    _positionListIndex = _positionListIndex + 1
-    if (_positionList == null || _positionListIndex >= _positionList.count) {
-      _currPosition = null
-      _positionList = null
-      _positionListIndex = -1
-      return
+  draw() {
+    if (_currPosition) {
+      Debug.drawLine(_currPosition - Vec3.new(1.0, 0.0, 0.0), _currPosition + Vec3.new(1.0, 0.0, 0.0), Vec4.new(1.0, 0.0, 0.0, 1.0))
+      Debug.drawLine(_currPosition - Vec3.new(0.0, 1.0, 0.0), _currPosition + Vec3.new(0.0, 1.0, 0.0), Vec4.new(1.0, 0.0, 0.0, 1.0))
+      Debug.drawLine(_currPosition - Vec3.new(0.0, 0.0, 1.0), _currPosition + Vec3.new(0.0, 0.0, 1.0), Vec4.new(1.0, 0.0, 0.0, 1.0))
+      Debug.drawLine(transform.worldPosition, _currPosition, Vec4.new(0.0, 1.0, 0.0, 1.0))
     }
 
-    _currPosition = _positionList[_positionListIndex]
+    if (_positionList != null && _positionList.count >= 1) {
+      var prev = _positionList[0]
+      
+      if (_currPosition) {
+        prev = _currPosition
+      }
+
+      for (i in 0..._positionList.count) {
+        Debug.drawLine(prev, _positionList[i], Vec4.new(0.0, 0.0, 1.0, 1.0))
+        Debug.drawLine(_positionList[i] - Vec3.new(1.0, 0.0, 0.0), _positionList[i] + Vec3.new(1.0, 0.0, 0.0), Vec4.new(1.0, 0.0, 0.0, 1.0))
+        Debug.drawLine(_positionList[i] - Vec3.new(0.0, 1.0, 0.0), _positionList[i] + Vec3.new(0.0, 1.0, 0.0), Vec4.new(1.0, 0.0, 0.0, 1.0))
+        Debug.drawLine(_positionList[i] - Vec3.new(0.0, 0.0, 1.0), _positionList[i] + Vec3.new(0.0, 0.0, 1.0), Vec4.new(1.0, 0.0, 0.0, 1.0))
+        prev = _positionList[i]
+      }
+    }
+  }
+
+  getNextNode() {
+    if (_positionList == null || _positionList.isEmpty) {
+      _positionList = null
+      _currPosition = null
+      return
+    }
+    _currPosition = _positionList[0]
+    _positionList.removeAt(0)
   }
 
   getPath() {
-      var x = Math.random(-_city.numBlocks.x / 2, _city.numBlocks.x / 2 - 2).round * _city.blockSize.x + _city.blockSize.x * 0.5
-      var z = Math.random(-_city.numBlocks.y / 2, _city.numBlocks.y / 2 - 2).round * _city.blockSize.y + _city.blockSize.y * 0.5
-      _positionList = _city.navMesh.findPath(transform.worldPosition, Vec3.new(x, 0.0, z))
+    var x = Math.random(-_city.numBlocks.x / 2, _city.numBlocks.x / 2 - 2).round * _city.blockSize.x
+    var z = Math.random(-_city.numBlocks.y / 2, _city.numBlocks.y / 2 - 2).round * _city.blockSize.y
+    _positionList = _city.navMesh.findPath(transform.worldPosition, Vec3.new(x, 0.0, z))
   }
 
   fixedUpdate() {
@@ -105,12 +130,14 @@ class Rando is MonoBehaviour {
 
     if (_currPosition == null && _positionList == null) {
       getPath()
-      return
     }
 
     if (_currPosition == null) {
       getNextNode()
-      if (_currPosition == null) return
+      if (_currPosition == null) {
+        _rigidBody.velocity = Vec3.new(0.0)
+        return
+      }
     }
 
     var offset = _currPosition - transform.worldPosition
@@ -121,7 +148,7 @@ class Rando is MonoBehaviour {
       movement = length
     }
 
-    if (length < 5) {
+    if (length < 1) {
       getNextNode()
       return
     }
@@ -129,6 +156,16 @@ class Rando is MonoBehaviour {
     _velocity = _rigidBody.velocity
     _velocity = _velocity + offset.normalized * movement
 
+    var delta = transform.worldPosition - _prevPos
+    if (delta.length < 0.05) {
+      _notMoved = _notMoved + Time.fixedDeltaTime
+    }
+    _prevPos = transform.worldPosition
+
+    if (_notMoved > 5.0) {
+      _velocity.y = 5.0
+      _notMoved = Math.random(0.0, 1.0)
+    }
     
     // If we're on the ground then we should slow down immensly quickly.
     _velocity.x = _velocity.x * (1.0 - Time.fixedDeltaTime * 5.0)
@@ -142,6 +179,127 @@ class Rando is MonoBehaviour {
     }
 
     _rigidBody.velocity = _velocity
+  }
+}
+
+class RandoOld is MonoBehaviour {
+  construct new()      { super()                     }
+  static goGet(val)    { MonoBehaviour.goGet(val)    }
+  static goRemove(val) { MonoBehaviour.goRemove(val) }
+
+  realInitialize(city) {
+    _city = city
+    _humans = []
+    _pathIndex = -1
+    _currPosition = Vec3.new(0.0)
+    _positionList = []
+    if (!__mesh) __mesh = Mesh.generate("cube")
+
+    gameObject.name = "mob"
+    
+    while (_positionList.isEmpty) {
+      var x = Math.random(-_city.numBlocks.x / 2, _city.numBlocks.x / 2 - 2).round * _city.blockSize.x + _city.blockSize.x * 0.5
+      var z = Math.random(-_city.numBlocks.y / 2, _city.numBlocks.y / 2 - 2).round * _city.blockSize.y + _city.blockSize.y * 0.5
+      transform.worldPosition = Vec3.new(x, 20, z)
+      getPath(transform.worldPosition)
+    }
+
+    //for (z in -2...2) {
+    //  for (x in -2...2) {
+    //    spawnHuman(transform.worldPosition + Vec3.new(x, 0.0, z))
+    //  }
+    //}
+    spawnHuman(transform.worldPosition)
+
+    getNextNode()
+  }
+
+  path { _positionList }
+
+  spawnHuman(position) {
+    var go = GameObject.new()
+    go.name                    = "human"
+    go.transform.parent        = gameObject
+    go.transform.worldPosition = position
+    var meshRender     = go.addComponent(MeshRender)
+    meshRender.mesh    = __mesh
+    meshRender.subMesh = 0
+    meshRender.albedo  = Texture.load("resources/textures/wood/FloorMahogany_alb.jpg")
+    meshRender.normal  = Texture.load("resources/textures/wood/FloorMahogany_nrm.jpg")
+    meshRender.DMRA    = Texture.load("resources/textures/wood/FloorMahogany_dmra.png")
+    
+    var collider    = go.addComponent(Collider)
+    collider.layers = PhysicsLayers.General | PhysicsLayers.MovingObjects
+    collider.makeSphereCollider()
+
+    var rb                = go.addComponent(RigidBody)
+    rb.angularConstraints = PhysicsConstraints.X | PhysicsConstraints.Y | PhysicsConstraints.Z
+    rb.mass               = 1.0
+    rb.friction           = 2.0
+
+    _humans.add(go)
+  }
+
+  getNextNode() {
+    _pathIndex = _pathIndex + 1
+    if (_pathIndex >= _positionList.count) {
+      _pathIndex = -_positionList.count + 1
+    }
+
+    _currPosition = _positionList[_pathIndex]
+  }
+
+  getPath(from) {
+      var x = Math.random(-_city.numBlocks.x / 2, _city.numBlocks.x / 2 - 2).round * _city.blockSize.x + _city.blockSize.x * 0.5
+      var z = Math.random(-_city.numBlocks.y / 2, _city.numBlocks.y / 2 - 2).round * _city.blockSize.y + _city.blockSize.y * 0.5
+      var to = Vec3.new(x, 0.0, z)
+      _positionList = _city.navMesh.findPath(from, to)
+  }
+
+  fixedUpdate() {
+    var center = Vec3.new(0.0)
+
+    for (i in 0..._humans.count) center = center + _humans[i].transform.worldPosition
+    center = center / _humans.count
+    var offset = _currPosition - center
+    offset.y = 0.0
+
+    var length = offset.length
+    var movement = 50.0 * Time.fixedDeltaTime
+    if (length < movement) {
+      movement = length
+    }
+
+    if (length < 5) getNextNode()
+
+    for (i in 0..._humans.count) {
+      var rb = _humans[i].getComponent(RigidBody)
+      var velocity = rb.velocity + offset.normalized * movement
+      
+      // If we're on the ground then we should slow down immensly quickly.
+      velocity.x = velocity.x * (1.0 - Time.fixedDeltaTime * 5.0)
+      velocity.z = velocity.z * (1.0 - Time.fixedDeltaTime * 5.0)
+      
+      var maxSpeed = 100.0
+      var len = Vec2.new(velocity.x, velocity.z).length
+      if (len > maxSpeed) {
+        velocity.x = (velocity.x / len) * maxSpeed
+        velocity.z = (velocity.z / len) * maxSpeed
+      }
+
+      rb.velocity = velocity
+
+      //var position = _humans[i].transform.worldPosition + offset.normalized * movement
+      //
+      //var maxSpeed = 100.0
+      //var len = Vec2.new(position.x, position.z).length
+      //if (len > maxSpeed) {
+      //  position.x = (position.x / len) * maxSpeed
+      //  position.z = (position.z / len) * maxSpeed
+      //}
+      //
+      //_humans[i].transform.worldPosition = position
+    }
   }
 }
 
@@ -202,10 +360,10 @@ class World {
   }
 
   initializeCity() {
-    _city = City.new(Vec2.new(10), Vec2.new(100), Vec2.new(25), Vec2.new(10), 50, 100)
+    _city = City.new(Vec2.new(5), Vec2.new(100), Vec2.new(25), Vec2.new(10), 50, 100)
     _randos = []
 
-    for (i in 0...100) {
+  for (i in 0...100) {
       var rando = GameObject.new()
       rando.addComponent(Rando).realInitialize(_city)
       _randos.add(rando)
@@ -287,8 +445,8 @@ class World {
     GUI.loadURL("file:///resources/web-pages/ui.html")
     GUI.executeJavaScript("LoadWebPage('file:///resources/web-pages/loading_screen.html')")
 
-    //delayedInitialize()
-    _initializeTimeLeft = 1.0
+    delayedInitialize()
+    _initializeTimeLeft = 0.0
   }
   deinitialize() {
 
@@ -310,7 +468,15 @@ class World {
     var transform = _lighting.rsm.getComponent(Transform)
     transform.worldPosition = _camera.transform.worldPosition + offset
 
-    if (_city) return
+    if (_city) {
+      //_city.drawTris()
+      for (rando in _randos) {
+        rando.getComponent(Rando).user = _camera.transform.worldPosition
+        //rando.getComponent(Rando).draw()
+      }
+
+      return
+    }
 
     var toggleNodeEditor = InputController.ToggleNodeEditor != 0
     var toggleEditor = toggleNodeEditor && !_toggleNodeEditor

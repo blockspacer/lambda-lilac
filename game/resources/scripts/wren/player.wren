@@ -129,6 +129,14 @@ class ThirdPersonCamera is MonoBehaviour {
   movementSprint     { _hasInput ? (_onTheGround ? Math.lerp(_maxSpeedWalk, _maxSpeedSprint, InputController.MovementSprint) : _maxSpeedWalk) : 0.0 }
   movementSprintSpd  { _hasInput ? (_onTheGround ? Math.lerp(_speedWalk,    _speedSprint,    InputController.MovementSprint) : _speedWalk)    : 0.0 }
 
+  update() {
+    var from = _transformCamera.worldPosition
+    var to = from + _transformCamera.worldForward * 2
+    Debug.drawLine(to, to + Vec3.new(0.1, 0.0, 0.0), Vec4.new(1.0, 0.0, 0.0, 1.0))
+    Debug.drawLine(to, to + Vec3.new(0.0, 0.1, 0.0), Vec4.new(0.0, 1.0, 0.0, 1.0))
+    Debug.drawLine(to, to + Vec3.new(0.0, 0.0, 0.1), Vec4.new(0.0, 0.0, 1.0, 1.0))
+  }
+
   fixedUpdate() {
     // Respawning.
     if (transform.worldPosition.y < -10) {
