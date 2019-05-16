@@ -3010,9 +3010,9 @@ static constexpr char* wrenModuleSource =
 * Needs to be in clockwise order.
 *
 * Parameters:
-* a - Point a of the triangle. Needs to be Vec2.
-* b - Point b of the triangle. Needs to be Vec2.
-* c - Point c of the triangle. Needs to be Vec2.
+* a - Point a of the triangle. Needs to be Vec3.
+* b - Point b of the triangle. Needs to be Vec3.
+* c - Point c of the triangle. Needs to be Vec3.
 */
 "foreign addTri(a, b, c)\n"
 /*
@@ -3021,9 +3021,9 @@ static constexpr char* wrenModuleSource =
 * Needs to be in clockwise order.
 *
 * Parameters:
-* a - Point a of the triangle hole. Needs to be Vec2.
-* b - Point b of the triangle hole. Needs to be Vec2.
-* c - Point c of the triangle hole. Needs to be Vec2.
+* a - Point a of the triangle hole. Needs to be Vec3.
+* b - Point b of the triangle hole. Needs to be Vec3.
+* c - Point c of the triangle hole. Needs to be Vec3.
 */
 "foreign addTriHole(a, b, c)\n"
 /*
@@ -3031,8 +3031,8 @@ static constexpr char* wrenModuleSource =
 * Adds a quad to the navigation mesh using an AABB.
 *
 * Parameters:
-* min - Min of the AABB quad. Needs to be Vec2.
-* max - Max of the AABB quad. Needs to be Vec2.
+* min - Min of the AABB quad. Needs to be Vec3.
+* max - Max of the AABB quad. Needs to be Vec3.
 */
 "foreign addQuad(min, max)\n"
 /*
@@ -3040,8 +3040,8 @@ static constexpr char* wrenModuleSource =
 * Adds a quad hole to the navigation mesh using an AABB.
 *
 * Parameters:
-* min - Min of the AABB quad hole. Needs to be Vec2.
-* max - Max of the AABB quad hole. Needs to be Vec2.
+* min - Min of the AABB quad hole. Needs to be Vec3.
+* max - Max of the AABB quad hole. Needs to be Vec3.
 */
 "foreign addQuadHole(min, max)\n"
 /*

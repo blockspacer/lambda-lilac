@@ -511,7 +511,7 @@ class City {
     _triNavMesh = TriNavMesh.new()
   }
   addTriNavMeshQuad(min, max) {
-    _triNavMesh.addQuad(Vec2.new(min.x, min.z), Vec2.new(max.x, max.z))
+    _triNavMesh.addQuad(min, max)
     return
 
     var scale = 4
@@ -526,7 +526,12 @@ class City {
 
     for (z in 0...splitsZ) {
       for (x in 0...splitsX) {
-        _triNavMesh.addQuad(Vec2.new(min.x + x * scale, min.z + z * scale), Vec2.new(min.x + (x + 1) * scale, min.z + (z + 1) * scale))
+        var a = Vec3.new(min.x + (x + 0) * scale, min.y, min.z + (z + 1) * scale)
+        var b = Vec3.new(min.x + (x + 1) * scale, min.y, min.z + (z + 1) * scale)
+        var c = Vec3.new(min.x + (x + 1) * scale, min.y, min.z + (z + 0) * scale)
+        var d = Vec3.new(min.x + (x + 0) * scale, min.y, min.z + (z + 0) * scale)
+        _triNavMesh.addTri(a, b, c)
+        _triNavMesh.addTri(a, c, d)
       }  
     }
   }
@@ -534,10 +539,8 @@ class City {
   drawTris() {
     var tris = _triNavMesh.getTriangles()
     for (i in 0...(tris.count / 2)) {
-      var ta = tris[i * 2 + 0]
-      var tb = tris[i * 2 + 1]
-      var a = Vec3.new(ta.x, 0.0, ta.y)
-      var b = Vec3.new(tb.x, 0.0, tb.y)
+      var a = tris[i * 2 + 0]
+      var b = tris[i * 2 + 1]
       Debug.drawLine(a, b, Vec4.new(1.0))
     }
   }

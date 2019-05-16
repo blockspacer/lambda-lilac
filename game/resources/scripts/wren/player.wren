@@ -59,7 +59,7 @@ class ThirdPersonCamera is MonoBehaviour {
     _hasInput        = true
     _onTheGround     = true
     _camPoint        = Vec3.new(2.0)
-    _followDistance  = 2.0
+    _followDistance  = 5.0
 
     _fovWalk = 90.0
     _fovRun  = 110.0
@@ -81,15 +81,15 @@ class ThirdPersonCamera is MonoBehaviour {
     // Initialize variables.
     initializeVariables()
 
-    // Create the in-between node.
+    // Create in between.
     _entityInBetween           = GameObject.new()
     _transformInBetween        = _entityInBetween.transform
     _transformInBetween.parent = gameObject
-
+    
     // Create the camera.
     _entityCamera                  = GameObject.new()
     _transformCamera               = _entityCamera.transform
-    _transformCamera.localPosition = Vec3.new(0.0, 1.0, 5.0)
+    _transformCamera.localPosition = Vec3.new(0.0, 1.0, 0.0)
     _transformCamera.parent        = _entityInBetween
     
     // Add the camera.
@@ -192,16 +192,39 @@ class ThirdPersonCamera is MonoBehaviour {
     _camPoint.y = Math.lerp(_camPoint.y, _camPoint.y + delta.y * (length - _followDistance), 0.1)
     _camPoint.z = Math.lerp(_camPoint.z, _camPoint.z + delta.z * (length - _followDistance), 0.1)
 
+    _transformInBetween.worldPosition = _camPoint
     delta = (_camPoint - transform.worldPosition).normalized
     _transformInBetween.worldRotation = Math.lookRotation(delta, Vec3.new(0.0, 1.0, 0.0))
+    
+    var sorted = Sort.sort(Physics.castRay(transform.worldPosition, _transformCamera.worldPosition), Sorter.new(transform.worldPosition))
+    if (sorted.count > 0) {
+      _transformCamera.worldPosition = sorted[0].point
+    } else {
+      var localPosition = _transformCamera.localPosition
+      localPosition.x = Math.lerp(_transformCamera.localPosition.x, 0.0, 0.01)
+      localPosition.y = Math.lerp(_transformCamera.localPosition.y, 1.0, 0.01)
+      localPosition.z = Math.lerp(_transformCamera.localPosition.z, 0.0, 0.01)
+      _transformCamera.localPosition = localPosition
+    }
   }
 
   rotateCamera() {
     // Rotate the camera.
     _playerRotation.y = _playerRotation.y - movementHorizontal * 180.0 * (Time.fixedDeltaTime / Time.timeScale)
-    //_gotoRotation = _gotoRotation + Vec2.new(cameraVertical, cameraHorizontal)
-    //_gotoRotation.x = Math.clamp(_gotoRotation.x, -90.0, 90.0)
-    //_gotoRotation.y = Math.wrap( _gotoRotation.y, 0.0, 360.0)
+
+    if (!_onWall) {
+      var delta = _camPoint - transform.worldPosition
+      var length = delta.length
+
+      var rotY = Math.atan2(delta.z, delta.x) * Math.rad2Deg
+      rotY = rotY - cameraHorizontal * 120.0 * (Time.fixedDeltaTime / Time.timeScale)
+
+      rotY = rotY * Math.deg2Rad
+      var desiredDelta = Vec3.new(Math.cos(rotY), 0.0, Math.sin(rotY)) * length
+      delta = Math.lerp(delta, desiredDelta, 0.1)
+
+      _camPoint = delta + transform.worldPosition
+    }
   }
 
   dirToDeg(dir) {

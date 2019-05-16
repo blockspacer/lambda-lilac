@@ -3649,49 +3649,41 @@ namespace lambda
 		}
 		WrenForeignMethodFn Bind(const char* signature)
 		{
-			/*
-			"foreign addTri(a, b, c)\n"
-				"foreign addTriHole(a, b, c)\n"
-				"foreign addQuad(min, max)\n"
-				"foreign addQuad(min, max)\n"
-				"foreign construct()\n"
-				"foreign getTriangles()\n"
-				"foreign findPath(from, to)\n"*/
 			if (strcmp(signature, "addTri(_,_,_)") == 0) return [](WrenVM* vm) {
 				TriNavMesh& nav_mesh = *GetForeign<TriNavMesh>(vm, 0);
-				const glm::vec2& a = *GetForeign<glm::vec2>(vm, 1);
-				const glm::vec2& b = *GetForeign<glm::vec2>(vm, 2);
-				const glm::vec2& c = *GetForeign<glm::vec2>(vm, 3);
+				const glm::vec3& a = *GetForeign<glm::vec3>(vm, 1);
+				const glm::vec3& b = *GetForeign<glm::vec3>(vm, 2);
+				const glm::vec3& c = *GetForeign<glm::vec3>(vm, 3);
 				nav_mesh.nav_map.addTri(a, b, c);
 			};
 			if (strcmp(signature, "addTriHole(_,_,_)") == 0) return [](WrenVM* vm) {
 				TriNavMesh& nav_mesh = *GetForeign<TriNavMesh>(vm, 0);
-				const glm::vec2& a = *GetForeign<glm::vec2>(vm, 1);
-				const glm::vec2& b = *GetForeign<glm::vec2>(vm, 2);
-				const glm::vec2& c = *GetForeign<glm::vec2>(vm, 3);
+				const glm::vec3& a = *GetForeign<glm::vec3>(vm, 1);
+				const glm::vec3& b = *GetForeign<glm::vec3>(vm, 2);
+				const glm::vec3& c = *GetForeign<glm::vec3>(vm, 3);
 				nav_mesh.nav_map.addTriHole(a, b, c);
 			};
 			if (strcmp(signature, "addQuad(_,_)") == 0) return [](WrenVM* vm) {
 				TriNavMesh& nav_mesh = *GetForeign<TriNavMesh>(vm, 0);
-				const glm::vec2& min = *GetForeign<glm::vec2>(vm, 1);
-				const glm::vec2& max = *GetForeign<glm::vec2>(vm, 2);
+				const glm::vec3& min = *GetForeign<glm::vec3>(vm, 1);
+				const glm::vec3& max = *GetForeign<glm::vec3>(vm, 2);
 				nav_mesh.nav_map.addQuad(min, max);
 			};
 			if (strcmp(signature, "addQuadHole(_,_)") == 0) return [](WrenVM* vm) {
 				TriNavMesh& nav_mesh = *GetForeign<TriNavMesh>(vm, 0);
-				const glm::vec2& min = *GetForeign<glm::vec2>(vm, 1);
-				const glm::vec2& max = *GetForeign<glm::vec2>(vm, 2);
+				const glm::vec3& min = *GetForeign<glm::vec3>(vm, 1);
+				const glm::vec3& max = *GetForeign<glm::vec3>(vm, 2);
 				nav_mesh.nav_map.addQuadHole(min, max);
 			};
 			if (strcmp(signature, "getTriangles()") == 0) return [](WrenVM* vm) {
 				TriNavMesh& nav_mesh = *GetForeign<TriNavMesh>(vm, 0);
-				Vector<glm::vec2> tris = nav_mesh.nav_map.getTris();
+				Vector<glm::vec3> tris = nav_mesh.nav_map.getTris();
 
 				wrenSetSlotNewList(vm, 0);
 
-				for (const glm::vec2& tri : tris)
+				for (const glm::vec3& tri : tris)
 				{
-					Vec2::makeAt(vm, 1, 2, tri);
+					Vec3::makeAt(vm, 1, 2, tri);
 					wrenInsertInList(vm, 0, -1, 1);
 				}
 			};

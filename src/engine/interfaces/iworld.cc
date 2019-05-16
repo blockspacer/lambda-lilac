@@ -113,7 +113,7 @@ namespace lambda
 #if USE_MT_GC
 			k_gc_thread = std::thread(gcLoop);
 #if VIOLET_WIN32
-			SetThreadPriority(k_gc_thread.native_handle(), THREAD_PRIORITY_ABOVE_NORMAL);
+			SetThreadPriority(k_gc_thread.native_handle(), THREAD_PRIORITY_TIME_CRITICAL);
 			SetThreadPriorityBoost(k_gc_thread.native_handle(), TRUE);
 			//SetThreadDescription(k_gc_thread.native_handle(), L"Construct Thread");
 #endif
@@ -184,7 +184,8 @@ namespace lambda
 				if (did_fixed_update)
 					gcSet(scene_.scripting);
 #else
-				scene_.scripting->collectGarbage();
+				if (did_fixed_update)
+					scene_.scripting->collectGarbage();
 #endif
 				scene::sceneCollectGarbage(scene_);
 				profiler_.endTimer("CollectGarbage");

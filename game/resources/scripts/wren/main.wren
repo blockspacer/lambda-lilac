@@ -35,9 +35,9 @@ class Rando is MonoBehaviour {
     gameObject.name = "rando"
     transform.worldScale = Vec3.new(1.0)
 
-    var x = Math.random(-_city.numBlocks.x / 2, _city.numBlocks.x / 2 - 2).round * _city.blockSize.x
-    var z = Math.random(-_city.numBlocks.y / 2, _city.numBlocks.y / 2 - 2).round * _city.blockSize.y
-    transform.worldPosition = Vec3.new(x, 20, z)
+    var x = Math.random(-_city.numBlocks.x / 2, _city.numBlocks.x / 2 - 1).round * _city.blockSize.x
+    var z = Math.random(-_city.numBlocks.y / 2, _city.numBlocks.y / 2 - 1).round * _city.blockSize.y
+    transform.worldPosition = Vec3.new(x, 2, z)
 
     var meshRender = gameObject.addComponent(MeshRender)
     meshRender.mesh    = __mesh
@@ -116,15 +116,16 @@ class Rando is MonoBehaviour {
   }
 
   getPath() {
-    var x = Math.random(-_city.numBlocks.x / 2, _city.numBlocks.x / 2 - 2).round * _city.blockSize.x
-    var z = Math.random(-_city.numBlocks.y / 2, _city.numBlocks.y / 2 - 2).round * _city.blockSize.y
+    var x = Math.random(-_city.numBlocks.x / 2, _city.numBlocks.x / 2 - 1).round * _city.blockSize.x
+    var z = Math.random(-_city.numBlocks.y / 2, _city.numBlocks.y / 2 - 1).round * _city.blockSize.y
     _positionList = _city.navMesh.findPath(transform.worldPosition, Vec3.new(x, 0.0, z))
   }
 
   fixedUpdate() {
     if (transform.worldPosition.y < -20) {
-      Console.debug("Destroying GameObject")
-      gameObject.destroy()
+      transform.worldPosition = Vec3.new(0.0, 2.0, 0.0)
+      _positionList = null
+      _currPosition = null
       return
     }
 
@@ -135,7 +136,7 @@ class Rando is MonoBehaviour {
     if (_currPosition == null) {
       getNextNode()
       if (_currPosition == null) {
-        _rigidBody.velocity = Vec3.new(0.0)
+        _rigidBody.velocity = Vec3.new(0.0, _rigidBody.velocity.y, 0.0)
         return
       }
     }
@@ -171,7 +172,7 @@ class Rando is MonoBehaviour {
     _velocity.x = _velocity.x * (1.0 - Time.fixedDeltaTime * 5.0)
     _velocity.z = _velocity.z * (1.0 - Time.fixedDeltaTime * 5.0)
     
-    var maxSpeed = 100.0
+    var maxSpeed = 1000.0
     var len = Vec2.new(_velocity.x, _velocity.z).length
     if (len > maxSpeed) {
       _velocity.x = (_velocity.x / len) * maxSpeed
@@ -280,7 +281,7 @@ class RandoOld is MonoBehaviour {
       velocity.x = velocity.x * (1.0 - Time.fixedDeltaTime * 5.0)
       velocity.z = velocity.z * (1.0 - Time.fixedDeltaTime * 5.0)
       
-      var maxSpeed = 100.0
+      var maxSpeed = 1000.0
       var len = Vec2.new(velocity.x, velocity.z).length
       if (len > maxSpeed) {
         velocity.x = (velocity.x / len) * maxSpeed
@@ -470,10 +471,10 @@ class World {
 
     if (_city) {
       //_city.drawTris()
-      for (rando in _randos) {
-        rando.getComponent(Rando).user = _camera.transform.worldPosition
-        //rando.getComponent(Rando).draw()
-      }
+      //for (rando in _randos) {
+      //  rando.getComponent(Rando).user = _camera.transform.worldPosition
+      //  rando.getComponent(Rando).draw()
+      //}
 
       return
     }

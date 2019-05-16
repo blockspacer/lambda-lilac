@@ -178,52 +178,54 @@ namespace lambda
 				nodes_[i]->index = i;
 		}
 
-		static inline bool equal(const glm::vec2& a, const glm::vec2& b)
+		static inline bool equal(const glm::vec3& a, const glm::vec3& b)
 		{
 			static constexpr float kEpsilon = 0.001f;
-			const glm::bvec2 res = glm::epsilonEqual(a, b, kEpsilon);
-			return res.x && res.y;
+			const glm::bvec3 res = glm::epsilonEqual(a, b, kEpsilon);
+			return res.x && res.y && res.z;
 		}
 
-		void TriNavMap::addTri(glm::vec2 a, glm::vec2 b, glm::vec2 c)
+		void TriNavMap::addTri(glm::vec3 a, glm::vec3 b, glm::vec3 c)
 		{
 			addShape({ a, b, c });
 		}
 
-		void TriNavMap::addTriHole(glm::vec2 a, glm::vec2 b, glm::vec2 c)
+		void TriNavMap::addTriHole(glm::vec3 a, glm::vec3 b, glm::vec3 c)
 		{
 			addTri(c, b, a);
 		}
 
-		void TriNavMap::addQuad(glm::vec2 bl, glm::vec2 tr)
+		void TriNavMap::addQuad(glm::vec3 bl, glm::vec3 tr)
 		{
-			glm::vec2 a, b, c, d;
-			a.x = bl.x; a.y = tr.y;
-			b.x = tr.x; b.y = tr.y;
-			c.x = tr.x; c.y = bl.y;
-			d.x = bl.x; d.y = bl.y;
+			glm::vec3 a, b, c, d;
+			a.x = bl.x; a.y = tr.y; a.z = tr.z;
+			b.x = tr.x; b.y = tr.y; b.z = tr.z;
+			c.x = tr.x; c.y = bl.y; c.z = bl.z;
+			d.x = bl.x; d.y = bl.y; d.z = bl.z;
 
 			addShape({ a, b, c, d });
 		}
 
-		void TriNavMap::addShape(Vector<glm::vec2> points)
+		void TriNavMap::addShape(Vector<glm::vec3> points)
 		{
 			NavMapShape* shape = foundation::Memory::construct<NavMapShape>();
 			shape->p = points;
 			shape->share_polys.resize(points.size());
 
-			glm::vec2 bl(FLT_MAX);
-			glm::vec2 tr(FLT_MIN);
+			glm::vec3 bl(FLT_MAX);
+			glm::vec3 tr(FLT_MIN);
 
-			for (const glm::vec2& p : points)
+			for (const glm::vec3& p : points)
 			{
 				bl.x = std::min(bl.x, p.x);
 				bl.y = std::min(bl.y, p.y);
+				bl.z = std::min(bl.z, p.z);
 				tr.x = std::max(tr.x, p.x);
 				tr.y = std::max(tr.y, p.y);
+				tr.z = std::max(tr.z, p.z);
 			}
 
-			Vector<void*> user_data = bvh_.getAllUserDataInAABB(utilities::BVHAABB(glm::vec3(bl.x - 1.0f, 0.0f, bl.y - 1.0f), glm::vec3(tr.x + 1.0f, 1.0f, tr.y + 1.0f)));
+			Vector<void*> user_data = bvh_.getAllUserDataInAABB(utilities::BVHAABB(bl - 1.0f, tr + 1.0f));
 
 			for (void* ud : user_data)
 			{
@@ -242,25 +244,25 @@ namespace lambda
 				}
 			}
 
-			bvh_.add((entity::Entity)shapes_.size(), shape, utilities::BVHAABB(glm::vec3(bl.x, 0.0f, bl.y), glm::vec3(tr.x, 1.0f, tr.y)));
+			bvh_.add((entity::Entity)shapes_.size(), shape, utilities::BVHAABB(bl, tr));
 			shapes_.push_back(shape);
 		}
 
-		void TriNavMap::addQuadHole(glm::vec2 bl, glm::vec2 tr)
+		void TriNavMap::addQuadHole(glm::vec3 bl, glm::vec3 tr)
 		{
 			addQuad(tr, bl);
 		}
 
-		Vector<glm::vec2> TriNavMap::getTris()
+		Vector<glm::vec3> TriNavMap::getTris()
 		{
 			LMB_ASSERT(!shapes_.empty(), "TRI NAV MAP: Tried to get the tris from an empty navigation map");
 			
-			Vector<glm::vec2> tris;
+			Vector<glm::vec3> tris;
 
 			struct Line
 			{
-				glm::vec2 a;
-				glm::vec2 b;
+				glm::vec3 a;
+				glm::vec3 b;
 				bool operator==(const Line& other) const
 				{
 					return equal(a, other.a) && equal(b, other.b);
@@ -288,12 +290,8 @@ namespace lambda
 
 			return tris;
 		}
-		Vector<glm::vec3> TriNavMap::findPath(glm::vec3 from, glm::vec3 to)
-		{
-			return findPath(glm::vec2(from.x, from.z), glm::vec2(to.x, to.z));
-		}
 
-		bool IsInConvexPolygon(const Vector<glm::vec2>& polygon, glm::vec2 testPoint)
+		bool IsInConvexPolygon(const Vector<glm::vec3>& polygon, glm::vec3 testPoint)
 		{
 			//n>2 Keep track of cross product sign changes
 			float pos = 0;
@@ -308,18 +306,21 @@ namespace lambda
 				//Form a segment between the i'th point
 				float x1 = polygon[i].x;
 				float y1 = polygon[i].y;
+				float z1 = polygon[i].z;
 
 				//And the i+1'th, or if i is the last, with the first point
 				int i2 = i < polygon.size() - 1 ? i + 1 : 0;
 
 				float x2 = polygon[i2].x;
 				float y2 = polygon[i2].y;
+				float z2 = polygon[i2].z;
 
 				float x = testPoint.x;
 				float y = testPoint.y;
+				float z = testPoint.z;
 
 				//Compute the cross product
-				float d = (x - x1)*(y2 - y1) - (y - y1)*(x2 - x1);
+				float d = (x - x1)*(z2 - z1) - (z - z1)*(x2 - x1);
 
 				if (d > 0) pos++;
 				if (d < 0) neg++;
@@ -333,12 +334,12 @@ namespace lambda
 			return true;
 		}
 
-		NavMapShape* pointOnNavMesh(const utilities::BVH& bvh, glm::vec2 point)
+		NavMapShape* pointOnNavMesh(const utilities::BVH& bvh, glm::vec3 point)
 		{
-			glm::vec2 bl = point - 0.01f;
-			glm::vec2 tr = point + 0.01f;
+			glm::vec3 bl = point - 0.01f;
+			glm::vec3 tr = point + 0.01f;
 
-			auto user_datas = bvh.getAllUserDataInAABB(utilities::BVHAABB(glm::vec3(bl.x, 0.0f, bl.y), glm::vec3(tr.x, 1.0f, tr.y)));
+			auto user_datas = bvh.getAllUserDataInAABB(utilities::BVHAABB(bl, tr));
 			auto size = user_datas.size();
 			for (void* ud : user_datas)
 			{
@@ -350,27 +351,99 @@ namespace lambda
 			return nullptr;
 		}
 
-		Vector<glm::vec3> TriNavMap::findPath(glm::vec2 from, glm::vec2 to)
+		float shortestDistance(glm::vec3 a, glm::vec3 b, glm::vec3 p)
+		{
+			glm::vec3 delta = b - a;
+			float length = glm::length(delta);
+			delta /= length;
+
+			auto ap = p - a;
+			auto bp = p - b;
+
+			float ret = 0.0f;
+			float dot = glm::dot(delta, ap);
+			if (dot <= 0.0f)
+				ret = glm::length(ap);
+			else if (dot >= length)
+				ret = glm::length(bp);
+			else
+				ret = glm::dot(glm::cross(delta, glm::vec3(0.0f, 1.0f, 0.0f)), ap);
+			return ret >- 0.0f ? ret : -ret;
+		}
+
+		float distanceToShape(NavMapShape* s, glm::vec3 p)
+		{
+			if (IsInConvexPolygon(s->p, p))
+				return 0.0f;
+
+			float closestDistance = FLT_MAX;
+			for (uint32_t i = 0; i < s->p.size(); ++i)
+			{
+				float distance = shortestDistance(s->p[i], s->p[(i + 1) % s->p.size()], p);
+				if (distance < closestDistance)
+					closestDistance = distance;
+			}
+			return closestDistance;
+		}
+
+		NavMapShape* closestNavMesh(const Vector<NavMapShape*>& shapes, glm::vec3 point, float maxDistance = FLT_MAX)
+		{
+			NavMapShape* closest = nullptr;
+			float closestDistance = FLT_MAX;
+
+			for (NavMapShape* shape : shapes)
+			{
+				float distance = distanceToShape(shape, point);
+				if (distance < closestDistance)
+				{
+					closestDistance = distance;
+					closest = shape;
+				}
+
+				if (distance == 0.0f)
+					return shape;
+			}
+
+			if (closestDistance > maxDistance)
+				return nullptr;
+
+			if (closest)
+				std::cout << "\tNot on triangle: " << closestDistance << "\t" << glm::length(closest->c - point) << std::endl;
+
+			return closest;
+		}
+
+		NavMapShape* closestNavMeshInArea(const utilities::BVH& bvh, glm::vec3 point, float radius)
+		{
+			Vector<void*> user_datas = bvh.getAllUserDataInAABB(utilities::BVHAABB(point - radius, point + radius));
+			Vector<NavMapShape*> shapes(user_datas.size());
+			for (uint32_t i = 0; i < user_datas.size(); ++i)
+				shapes[i] = (NavMapShape*)user_datas[i];
+			return closestNavMesh(shapes, point, radius);
+		}
+
+#pragma optimize ("", off)
+		Vector<glm::vec3> TriNavMap::findPath(glm::vec3 from, glm::vec3 to)
 		{
 			Vector<glm::vec3> path;
-			NavMapPoint* tri_from = findClosest(from);
-			NavMapPoint* tri_to   = findClosest(to);
+			NavMapPoint* point_from = findClosest(from);
+			NavMapPoint* point_to   = findClosest(to);
 
-			if (tri_from == nullptr || tri_to == nullptr)
+			if (point_from == nullptr || point_to == nullptr)
 				return{};
-			if (tri_from->shape == tri_to->shape)
-				return{ glm::vec3(from.x, 0.0f, from.y), glm::vec3(to.x, 0.0f, to.y) };
+			if (point_from->shape == point_to->shape)
+				return{ from, to };
 
 			Vector<NavMapPoint*> set_closed;
-			Vector<NavMapPoint*> set_open = { tri_from };
+			Vector<NavMapPoint*> set_open = { point_from };
 			UnorderedMap<NavMapPoint*, NavMapPoint*> came_from;
 			UnorderedMap<NavMapPoint, NavMapPoint*> nav_map_points;
 			UnorderedMap<NavMapPoint*, float> score_g;
 			UnorderedMap<NavMapPoint*, float> score_f;
-			score_f[tri_from] = heuristicCostEstimate(tri_from, tri_to);
-			score_g[tri_from] = 0.0f;
-			nav_map_points[*tri_from] = tri_from;
-			nav_map_points[*tri_to] = tri_to;
+			score_f[point_from] = heuristicCostEstimate(point_from, point_to);
+			score_g[point_from] = 0.0f;
+			nav_map_points[*point_from] = point_from;
+			nav_map_points[*point_to] = point_to;
 
 			while (!set_open.empty())
 			{
@@ -387,78 +460,15 @@ namespace lambda
 					}
 				}
 
-				if (current->shape == tri_to->shape)
-				{
-					came_from[tri_to] = current;
-					current = tri_to;
-
-					struct Node
-					{
-						NavMapShape* tri;
-						glm::vec3 p;
-					};
-
-					Vector<Node> p = { { current->shape, glm::vec3(current->point.x, 0.0f, current->point.y) } };
-
-					while (current)
-					{
-						current = came_from[current];
-						if (current)
-							p.push_back({ current->shape, glm::vec3(current->point.x, 0.0f, current->point.y) });
-						if (current == tri_from)
-							current = nullptr;
-					}
-
-					p.push_back({ tri_from->shape, glm::vec3(tri_from->point.x, 0.0f, tri_from->point.y) });
-
-					auto to3 = [](glm::vec2 v) { return glm::vec3(v.x, 0.0f, v.y); };
-
-					for (uint32_t i = 0; i < p.size();)
-					{
-						NavMapShape* prev = i > 0 ? p[i - 1].tri : nullptr;
-						NavMapShape* curr = p[i].tri;
-						NavMapShape* next = i < p.size() - 1 ? p[i + 1].tri : nullptr;
-
-						if (prev && curr && next)
-						{
-							glm::vec3 delta = (p[i + 1].p - p[i - 1].p);
-							float length = glm::length(delta);
-							delta /= length;
-
-							bool valid = true;
-							for (float j = 0.0f; j < length; j += 1.0f)
-							{
-								glm::vec3 point = p[i - 1].p + delta * j;
-								if (pointOnNavMesh(bvh_, glm::vec2(point.x, point.z)) == nullptr)
-								{
-									valid = false;
-									break;
-								}
-							}
-
-							if (valid)
-							{
-								p.erase(p.begin() + i);
-							}
-							else
-							{
-								path.push_back(p[i].p);
-								i++;
-							}
-						}
-						else
-						{
-							path.push_back(p[i].p);
-							i++;
-						}
-					}
-
-					std::reverse(path.begin(), path.end());
-					break;
-				}
-
 				set_open.erase(eastl::find(set_open.begin(), set_open.end(), current));
 				set_closed.push_back(current);
+
+				if (current->shape == point_to->shape)
+				{
+					if (point_to != current)
+						came_from[point_to] = current;
+					break;
+				}
 
 				bool found = false;
 				Vector<NavMapShape*> neighbors;
@@ -502,12 +512,76 @@ namespace lambda
 							{
 								came_from[neighbor] = current;
 								score_g[neighbor] = tenative_score_g;
-								score_f[neighbor] = tenative_score_g + heuristicCostEstimate(neighbor, tri_to);
+								score_f[neighbor] = tenative_score_g + heuristicCostEstimate(neighbor, point_to);
 							}
 						}
 					}
 				}
 			}
+			
+			struct Node
+			{
+				NavMapShape* tri;
+				glm::vec3 p;
+			};
+
+			auto current = point_to;
+			Vector<Node> p = { { current->shape, current->point } };
+
+			while (current)
+			{
+				NavMapPoint* next = came_from[current];
+				current = next;
+
+				if (current)
+					p.push_back({ current->shape, current->point });
+				if (current == point_from)
+					current = nullptr;
+			}
+
+			p.push_back({ point_from->shape, point_from->point });
+
+			for (uint32_t i = 0; i < p.size();)
+			{
+				NavMapShape* prev = i > 0 ? p[i - 1].tri : nullptr;
+				NavMapShape* curr = p[i].tri;
+				NavMapShape* next = i < p.size() - 1 ? p[i + 1].tri : nullptr;
+
+				if (prev && curr && next)
+				{
+					glm::vec3 delta = (p[i + 1].p - p[i - 1].p);
+					float length = glm::length(delta);
+					delta /= length;
+
+					bool valid = true;
+					for (float j = 0.0f; j < length; j += 1.0f)
+					{
+						glm::vec3 point = p[i - 1].p + delta * j;
+						if (pointOnNavMesh(bvh_, point) == nullptr)
+						{
+							valid = false;
+							break;
+						}
+					}
+
+					if (valid)
+					{
+						p.erase(p.begin() + i);
+					}
+					else
+					{
+						path.push_back(p[i].p);
+						i++;
+					}
+				}
+				else
+				{
+					path.push_back(p[i].p);
+					i++;
+				}
+			}
+
+			std::reverse(path.begin(), path.end());
 
 			for (const auto& it : nav_map_points)
 				foundation::Memory::destruct(it.second);
@@ -527,21 +601,18 @@ namespace lambda
 			return (sameSide(p, a, b, c) && sameSide(p, b, a, c) && sameSide(p, c, a, b));
 		}
 
-		NavMapPoint* TriNavMap::findClosest(glm::vec2 position)
+		NavMapPoint* TriNavMap::findClosest(glm::vec3 position)
 		{
-			glm::vec2 bl = position - 0.01f;
-			glm::vec2 tr = position + 0.01f;
+			//NavMapShape* shape = closestNavMeshInArea(bvh_, position, 5.0f);
+			NavMapShape* shape = closestNavMesh(shapes_, position);
 
-			NavMapShape* shape = pointOnNavMesh(bvh_, position);
-			if (shape)
-			{
-				NavMapPoint* point = foundation::Memory::construct<NavMapPoint>();
-				point->point = position;
-				point->shape = shape;
-				return point;
-			}
+			if (!shape)
+				return nullptr;
 
-			return nullptr;
+			NavMapPoint* point = foundation::Memory::construct<NavMapPoint>();
+			point->point = position;
+			point->shape = shape;
+			return point;
 		}
 		float TriNavMap::heuristicCostEstimate(NavMapPoint* a, NavMapPoint* b)
 		{
