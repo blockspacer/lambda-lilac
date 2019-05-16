@@ -557,9 +557,27 @@ namespace lambda
           memcpy((void*)c_str, str.data(), str.size() + 1u);
           wrenSetSlotString(vm, 0, c_str);
         };
-		if (strcmp(signature, "toEuler") == 0) return [](WrenVM* vm) {
-			Vec3::make(vm, glm::eulerAngles(*GetForeign<glm::quat>(vm)));
-		};
+				if (strcmp(signature, "toEuler") == 0) return [](WrenVM* vm) {
+					Vec3::make(vm, glm::eulerAngles(*GetForeign<glm::quat>(vm)));
+				};
+				if (strcmp(signature, "inverse()") == 0) return [](WrenVM* vm) {
+					glm::quat& quat = *GetForeign<glm::quat>(vm);
+					quat = glm::inverse(quat);
+				};
+				if (strcmp(signature, "inverted") == 0) return [](WrenVM* vm) {
+					glm::quat& quat = *GetForeign<glm::quat>(vm);
+					make(vm, glm::inverse(quat));
+				};
+				if (strcmp(signature, "mulVec3(_)") == 0) return [](WrenVM* vm) {
+					const glm::quat& quat = *GetForeign<glm::quat>(vm);
+					const glm::vec3& vec3 = *GetForeign<glm::vec3>(vm, 1);
+					Vec3::make(vm, quat * vec3);
+				};
+				if (strcmp(signature, "mulQuat(_)") == 0) return [](WrenVM* vm) {
+					const glm::quat& quat1 = *GetForeign<glm::quat>(vm);
+					const glm::quat& quat2 = *GetForeign<glm::quat>(vm, 1);
+					make(vm, quat1 * quat2);
+				};
         return nullptr;
       }
     }

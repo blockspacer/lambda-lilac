@@ -446,8 +446,8 @@ class World {
     GUI.loadURL("file:///resources/web-pages/ui.html")
     GUI.executeJavaScript("LoadWebPage('file:///resources/web-pages/loading_screen.html')")
 
-    delayedInitialize()
-    _initializeTimeLeft = 0.0
+    //delayedInitialize()
+    _initializeTimeLeft = 1.0
   }
   deinitialize() {
 

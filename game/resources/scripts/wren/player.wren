@@ -1,34 +1,10 @@
-import "Core/Vec2"               for Vec2
-import "Core/Vec3"               for Vec3
-import "Core/Vec4"               for Vec4
-import "Core/Texture"            for Texture
-import "Core/Shader"             for Shader
-import "Core/Mesh"               for Mesh
-import "Core/Console"            for Console
-import "Core/GameObject"         for GameObject
-import "Core/Transform"          for Transform
-import "Core/Camera"             for Camera
-import "Core/Lod"                for Lod
-import "Core/RigidBody"          for RigidBody
-import "Core/PhysicsConstraints" for PhysicsConstraints
-import "Core/WaveSource"         for WaveSource
-import "Core/Collider"           for Collider
-import "Core/MonoBehaviour"      for MonoBehaviour
-import "Core/Physics"            for Physics
-import "Core/Manifold"           for Manifold
-import "Core/Input"              for Input
-import "Core/Input"              for Keys
-import "Core/Input"              for Buttons
-import "Core/Input"              for Axes
-import "Core/Math"               for Math
-import "Core/Time"               for Time
-import "Core/Debug"              for Debug
-import "Core/Sort"               for Sort
-import "Core/PostProcess"        for PostProcess
-import "Core/Light"              for Light
-import "Core/Light"              for LightTypes
-import "Core/Light"              for ShadowTypes
-import "Core/MeshRender"         for MeshRender
+import "Core" for Vec2, Vec3, Vec4, Quat
+import "Core" for Texture, Shader, Mesh
+import "Core" for GameObject, Transform, Camera, Lod, RigidBody, WaveSource, Collider, MonoBehaviour, Light, MeshRender
+import "Core" for PhysicsConstraints, Physics, Manifold
+import "Core" for Input, Keys, Buttons, Axes
+import "Core" for Math, Time, Debug, Sort, Console
+import "Core" for PostProcess, LightTypes, ShadowTypes
 
 import "resources/scripts/wren/input_controller" for InputController
 import "resources/scripts/wren/physics_layers"   for PhysicsLayers
@@ -60,13 +36,13 @@ class ThirdPersonCamera is MonoBehaviour {
     _onTheGround     = true
     _camPoint        = Vec3.new(2.0)
     _followDistance  = 5.0
+    _mod             = Vec3.new(0.0)
 
     _fovWalk = 90.0
     _fovRun  = 110.0
-    _fovWall = 70.0
+    _fovWall = 80.0
     _fov     = _fovWalk
     _fovGoto = _fov
-
   }
 
   initialize() {
@@ -171,7 +147,6 @@ class ThirdPersonCamera is MonoBehaviour {
 
     // Apply the new rotation and velocity.
     if (_onWall) {
-      _fovGoto = _fovWall
       _playerRotation = Vec3.new(0.0, _onWallRotation, 0.0)
     }
     _fov = Math.lerp(_fov, _fovGoto, 0.1)
@@ -184,9 +159,13 @@ class ThirdPersonCamera is MonoBehaviour {
     var mod = Vec3.new(0.0, 1.0, 0.0)
     if (_onWall) mod = mod - _onWallDir
 
-    var delta = (transform.worldPosition + mod) - _camPoint
+    _mod = Math.lerp(_mod, mod, 0.01)
+
+    var delta = (transform.worldPosition + _mod) - _camPoint
     var length = delta.length
     delta.normalize()
+
+    if (_onWall) _fovGoto = Math.lerp(_fovGoto, _fovWall, Math.clamp(delta.y, 0.0, 1.0))
 
     _camPoint.x = Math.lerp(_camPoint.x, _camPoint.x + delta.x * (length - _followDistance), 0.1)
     _camPoint.y = Math.lerp(_camPoint.y, _camPoint.y + delta.y * (length - _followDistance), 0.1)
@@ -196,9 +175,10 @@ class ThirdPersonCamera is MonoBehaviour {
     delta = (_camPoint - transform.worldPosition).normalized
     _transformInBetween.worldRotation = Math.lookRotation(delta, Vec3.new(0.0, 1.0, 0.0))
     
-    var sorted = Sort.sort(Physics.castRay(transform.worldPosition, _transformCamera.worldPosition), Sorter.new(transform.worldPosition))
+    var offset = (_transformCamera.worldPosition - transform.worldPosition) * 0.2
+    var sorted = Sort.sort(Physics.castRay(transform.worldPosition, _transformCamera.worldPosition + offset * 1.1), Sorter.new(transform.worldPosition))
     if (sorted.count > 0) {
-      _transformCamera.worldPosition = sorted[0].point
+      _transformCamera.worldPosition = sorted[0].point - offset
     } else {
       var localPosition = _transformCamera.localPosition
       localPosition.x = Math.lerp(_transformCamera.localPosition.x, 0.0, 0.01)
@@ -212,19 +192,22 @@ class ThirdPersonCamera is MonoBehaviour {
     // Rotate the camera.
     _playerRotation.y = _playerRotation.y - movementHorizontal * 180.0 * (Time.fixedDeltaTime / Time.timeScale)
 
-    if (!_onWall) {
-      var delta = _camPoint - transform.worldPosition
+    //if (!_onWall) {
+      var delta  = _camPoint - transform.worldPosition
       var length = delta.length
+      var depth  = Math.sqrt(1 - (delta.y / length) * (delta.y / length))
 
-      var rotY = Math.atan2(delta.z, delta.x) * Math.rad2Deg
-      rotY = rotY - cameraHorizontal * 120.0 * (Time.fixedDeltaTime / Time.timeScale)
+      var rotY = Math.atan2(delta.z / length, delta.x / length)
+      rotY = rotY - (cameraHorizontal * 120.0 * (Time.fixedDeltaTime / Time.timeScale)) * Math.deg2Rad
 
-      rotY = rotY * Math.deg2Rad
-      var desiredDelta = Vec3.new(Math.cos(rotY), 0.0, Math.sin(rotY)) * length
+      var rotZ = Math.atan2(delta.y / length, depth)
+      rotZ = rotZ - (cameraVertical * 120.0 * (Time.fixedDeltaTime / Time.timeScale)) * Math.deg2Rad
+
+      var desiredDelta = Vec3.new(Math.cos(rotY) * depth, Math.sin(rotZ), Math.sin(rotY) * depth).normalized * length
       delta = Math.lerp(delta, desiredDelta, 0.1)
 
       _camPoint = delta + transform.worldPosition
-    }
+    //}
   }
 
   dirToDeg(dir) {

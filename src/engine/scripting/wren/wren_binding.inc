@@ -628,6 +628,29 @@ static constexpr char* wrenModuleSource =
 */
 "foreign toEuler\n"
 /*
+* Function: :inverse()
+* Inverts the current quaternion.
+*/
+"foreign inverse()\n"
+/*
+* Function: :inverted
+* Returns an inverted version of the current quaternion.
+*/
+"foreign inverted\n"
+/*
+* Function: :*(_)
+* Multiply a value with the current value and return the result.
+*
+* Parameters:
+* v - The value that this will be multiplied with. Needs to be Quat or Vec3
+*/
+"*(v) {\n"
+"if (v is Quat) return mulVec3(v)\n"
+"if (v is Vec3) return mulQuat(v)\n"
+"}\n"
+"foreign mulVec3(vec3)\n"
+"foreign mulQuat(quat)\n"
+/*
 * Function: :==(_)
 * Check if this is equal to another value.
 *
