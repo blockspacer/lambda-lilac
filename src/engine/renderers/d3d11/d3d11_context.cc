@@ -661,8 +661,8 @@ namespace lambda
 			cbs_.drs->unlock();
 			setConstantBuffer(cbs_.drs, cbDynamicResolutionIdx);
 
-			if (!cbs_.per_frame) cbs_.per_frame = (D3D11RenderBuffer*)allocRenderBuffer(sizeof(float) * 4, platform::IRenderBuffer::kFlagConstant | platform::IRenderBuffer::kFlagDynamic, nullptr);
-			float per_frame_data[] = { screen_size_.x, screen_size_.y, delta_time_, total_time_ };
+			if (!cbs_.per_frame) cbs_.per_frame = (D3D11RenderBuffer*)allocRenderBuffer(sizeof(float) * 5, platform::IRenderBuffer::kFlagConstant | platform::IRenderBuffer::kFlagDynamic, nullptr);
+			float per_frame_data[] = { screen_size_.x, screen_size_.y, delta_time_, total_time_, (float)frame_index_++ };
 			memcpy(cbs_.per_frame->lock(), per_frame_data, sizeof(per_frame_data));
 			cbs_.per_frame->unlock();
 			setConstantBuffer(cbs_.per_frame, cbPerFrameIdx);

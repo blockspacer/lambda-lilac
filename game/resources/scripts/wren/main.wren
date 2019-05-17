@@ -8,7 +8,7 @@ import "Core" for NavMesh
 import "resources/scripts/wren/post_processor" for PostProcessor
 import "resources/scripts/wren/input_controller" for InputController
 import "resources/scripts/wren/camera" for FreeLookCamera, Sorter
-import "resources/scripts/wren/player" for ThirdPersonCamera
+import "resources/scripts/wren/player" for ThirdPersonCamera, Hooman
 import "resources/scripts/wren/lighting" for Lighting
 import "resources/scripts/wren/trees" for Trees
 import "resources/scripts/wren/item_manager" for ItemManager
@@ -28,9 +28,9 @@ class Rando is MonoBehaviour {
     _notMoved = 0.0
     _prevPos = Vec3.new(0.0)
 
-    if (!__mesh) {
-      __mesh = Mesh.generate("cube")
-    }
+    //if (!__mesh) {
+    //  __mesh = Mesh.generate("cube")
+    //}
 
     gameObject.name = "rando"
     transform.worldScale = Vec3.new(1.0)
@@ -39,22 +39,25 @@ class Rando is MonoBehaviour {
     var z = Math.random(-_city.numBlocks.y / 2, _city.numBlocks.y / 2 - 1).round * _city.blockSize.y
     transform.worldPosition = Vec3.new(x, 2, z)
 
-    var meshRender = gameObject.addComponent(MeshRender)
-    meshRender.mesh    = __mesh
-    meshRender.subMesh = 0
-    meshRender.albedo  = Texture.load("resources/textures/wood/FloorMahogany_alb.jpg")
-    meshRender.normal  = Texture.load("resources/textures/wood/FloorMahogany_nrm.jpg")
-    meshRender.DMRA    = Texture.load("resources/textures/wood/FloorMahogany_dmra.png")
+    //var meshRender = gameObject.addComponent(MeshRender)
+    //meshRender.mesh    = __mesh
+    //meshRender.subMesh = 0
+    //meshRender.albedo  = Texture.load("resources/textures/wood/FloorMahogany_alb.jpg")
+    //meshRender.normal  = Texture.load("resources/textures/wood/FloorMahogany_nrm.jpg")
+    //meshRender.DMRA    = Texture.load("resources/textures/wood/FloorMahogany_dmra.png")
     
-    var collider = gameObject.addComponent(Collider)
-    _rigidBody = gameObject.addComponent(RigidBody)
-    collider.makeSphereCollider()
+    _hooman = Hooman.new(gameObject)
+
+    var entityCollider = GameObject.new()
+    entityCollider.transform.localScale = Vec3.new(1.0, 3.0, 1.0)
+    entityCollider.transform.parent = gameObject
+    var collider = entityCollider.addComponent(Collider)
+    _rigidBody = entityCollider.addComponent(RigidBody)
+    collider.makeCapsuleCollider()
     collider.layers    = PhysicsLayers.General | PhysicsLayers.MovingObjects
     _rigidBody.angularConstraints = PhysicsConstraints.X | PhysicsConstraints.Y | PhysicsConstraints.Z
     _rigidBody.mass     = 1.0
-    //_rigidBody.friction = 2.0
-
-    //attachPeople()
+    _rigidBody.friction = 2.0
   }
 
   user=(v) { _user = v }
@@ -136,7 +139,7 @@ class Rando is MonoBehaviour {
     if (_currPosition == null) {
       getNextNode()
       if (_currPosition == null) {
-        _rigidBody.velocity = Vec3.new(0.0, _rigidBody.velocity.y, 0.0)
+        //_rigidBody.velocity = Vec3.new(0.0, _rigidBody.velocity.y, 0.0)
         return
       }
     }
@@ -156,6 +159,11 @@ class Rando is MonoBehaviour {
 
     _velocity = _rigidBody.velocity
     _velocity = _velocity + offset.normalized * movement
+    gameObject.transform.worldPosition = _rigidBody.gameObject.transform.worldPosition - Vec3.new(0.0, -1.0, 0.0)
+    _rigidBody.gameObject.transform.localPosition = Vec3.new(0.0, -1.0, 0.0)
+    gameObject.transform.worldEuler = Vec3.new(0.0, Math.atan2(-_velocity.z, _velocity.x) - Math.pi / 2, 0.0)
+
+    _hooman.fixedUpdate(_velocity.length, 1.0)
 
     var delta = transform.worldPosition - _prevPos
     if (delta.length < 0.05) {
@@ -169,10 +177,10 @@ class Rando is MonoBehaviour {
     }
     
     // If we're on the ground then we should slow down immensly quickly.
-    _velocity.x = _velocity.x * (1.0 - Time.fixedDeltaTime * 5.0)
-    _velocity.z = _velocity.z * (1.0 - Time.fixedDeltaTime * 5.0)
+    //_velocity.x = _velocity.x * (1.0 - Time.fixedDeltaTime * 5.0)
+    //_velocity.z = _velocity.z * (1.0 - Time.fixedDeltaTime * 5.0)
     
-    var maxSpeed = 1000.0
+    var maxSpeed = 5.0
     var len = Vec2.new(_velocity.x, _velocity.z).length
     if (len > maxSpeed) {
       _velocity.x = (_velocity.x / len) * maxSpeed
@@ -447,18 +455,16 @@ class World {
     GUI.executeJavaScript("LoadWebPage('file:///resources/web-pages/loading_screen.html')")
 
     //delayedInitialize()
-    _initializeTimeLeft = 1.0
+    _frameIndex = -1
   }
   deinitialize() {
 
   }
   update() {
-    if (_initializeTimeLeft > 0.0) {
-      _initializeTimeLeft = _initializeTimeLeft - Time.deltaTime
-      if (_initializeTimeLeft <= 0.0) {
-        delayedInitialize()
-      }
-    }
+    _frameIndex = _frameIndex + 1
+    if (_frameIndex == 0) return
+    if (_frameIndex == 1) return delayedInitialize()
+
 
     GUI.executeJavaScript("if (gameState == Game) { updateDebug(%(Time.deltaTime)) }")
     

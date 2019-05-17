@@ -1,3 +1,11 @@
+[CHECKER]
+
+#if TYPE == CHECKER
+#define USE_CHECKER 1
+#else
+#define USE_CHECKER 0
+#endif
+
 #include "common.fxh"
 #include "tbn.fxh"
 
@@ -46,17 +54,17 @@ VSOutput VS(VSInput vIn, uint instanceID : SV_InstanceID)
   vOut.mr        = metallic_roughness[instanceID].xy;
   vOut.emissive  = emissiveness[instanceID].xyz;
 
+  const float3x3 model_matrix_3x3 = (float3x3)model_matrix[instanceID];
 #if NORMAL_MAPPING
-  float3x3 model_matrix_3x3 = (float3x3)model_matrix[instanceID];
   float3 bitangent = cross(vIn.tangent, vIn.normal);
   float3 N = normalize(mul(model_matrix_3x3, vIn.normal));
   float3 B = normalize(mul(model_matrix_3x3, bitangent));
   float3 T = normalize(mul(model_matrix_3x3, vIn.tangent));
   vOut.tbn = float3x3(T, B, N);
 #endif
-  vOut.normal    = normalize(mul((float3x3)model_matrix[instanceID], vIn.normal));
+  vOut.normal    = normalize(mul(model_matrix_3x3, vIn.normal));
 #if VIOLET_GRID_ALBEDO
-  vOut.tangent   = normalize(mul((float3x3)model_matrix[instanceID], vIn.tangent));
+  vOut.tangent   = normalize(mul(model_matrix_3x3, vIn.tangent));
   vOut.bitangent = cross(vOut.tangent, vOut.normal);
 #endif
 
@@ -136,9 +144,12 @@ float lengthSqr(const float3 v)
 }
 #endif
 
-[earlydepthstencil]
 PSOutput PS(VSOutput pIn)
 {
+#if USE_CHECKER
+  if (CHECKER_POSITION) discard;
+#endif
+
 #if VIOLET_PARALLAX_MAPPING
   float3 eye = mul(pIn.tbn, normalize(pIn.hPosition.xyz - camera_position));
   pIn.tex = parallaxMapping(pIn.tex, eye);

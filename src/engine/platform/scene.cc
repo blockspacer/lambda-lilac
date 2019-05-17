@@ -313,7 +313,7 @@ namespace lambda
 			}
 		}
 #else
-		void renderMeshes(platform::IRenderer* renderer, const Vector<utilities::Renderable*>& renderables, bool is_rh)
+		void renderMeshes(platform::IRenderer* renderer, const Vector<utilities::Renderable*>& renderables, platform::RasterizerState::CullMode cull_mode)
 		{
 			struct CBData
 			{
@@ -350,10 +350,12 @@ namespace lambda
 					renderer->setRasterizerState(platform::RasterizerState::SolidNone());
 				else
 				{
-					if (is_rh)
+					if (cull_mode == platform::RasterizerState::CullMode::kBack)
+						renderer->setRasterizerState(platform::RasterizerState::SolidBack());
+					else if (cull_mode == platform::RasterizerState::CullMode::kFront)
 						renderer->setRasterizerState(platform::RasterizerState::SolidFront());
 					else
-						renderer->setRasterizerState(platform::RasterizerState::SolidBack());
+						renderer->setRasterizerState(platform::RasterizerState::SolidNone());
 				}
 
 				renderer->draw(1);

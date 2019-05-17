@@ -638,6 +638,10 @@ namespace lambda
 					rb->getBody()->setTransform(transform);
 					rb->setAngularVelocity(com_ang);
 				}
+				
+				if (rb->getVelocityConstraints() || rb->getAngularConstraints())
+					offset++;
+
 				components::TransformSystem::setWorldTranslation(entity, toGlm(transform.getPosition()) * VIOLET_INV_PHYSICS_SCALE, *scene_);
 				components::TransformSystem::setWorldRotation(entity, toGlm(transform.getOrientation()), *scene_);
 			}

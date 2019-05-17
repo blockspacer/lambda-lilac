@@ -54,6 +54,7 @@ Make_CBuffer(cbPerFrame, cbPerFrameIdx)
   float2 screen_size;
   float delta_time;
   float total_time;
+  float frame_index;
 };
 
 Make_CBuffer(cbPerCamera, cbPerCameraIdx)
@@ -92,6 +93,10 @@ Make_CBuffer(cbDynamicResolution, cbDynamicResolutionIdx)
 {
   float dynamic_resolution_scale;
 };
+
+#define CHECKER_POSITION (round(pIn.position.x + pIn.position.y) % 2 == frame_index % 2)
+#define CHECKER_TEX (round(pIn.tex.x * screen_size.x + pIn.tex.y * screen_size.y) % 2 == frame_index % 2)
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 float4 Sample(Texture2D t, SamplerState s, float2 tex)

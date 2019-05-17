@@ -5,6 +5,7 @@ import "Core/Graphics" for Graphics, GUI, PostProcess, RenderTargetFlags, Consol
 import "resources/scripts/wren/ini" for Ini
 
 class PostProcessor {
+  static getUseChecker { __useChecker }
   flipFlopPostProcess() {
     if (_post_process_output == "post_process_buffer") {
       _post_process_output = "post_process_temp"
@@ -69,7 +70,7 @@ class PostProcessor {
     PostProcess.hammerhead("environment_map", "prefiltered")
 
     // Create all passes.
-    copyAlbedoToPostProcessBuffer()
+    copyAlbedoToPostProcessBuffer(ini_reader["Lighting", "UseChecker"])
     shadowMapping(
       ini_reader["Lighting", "Enabled"],
       ini_reader["Lighting", "ModifyCount"]
@@ -121,7 +122,47 @@ class PostProcessor {
     PostProcess.setFinalRenderTarget(_post_process_output)
   }
 
-  copyAlbedoToPostProcessBuffer() {
+  copyAlbedoToPostProcessBuffer(useChecker) {
+    __useChecker = useChecker
+    if (useChecker) {
+      PostProcess.addRenderTarget("temp", 1.0, TextureFormat.R32G32B32A32)
+      PostProcess.addRenderTarget("prev_albedo", 1.0, TextureFormat.R8G8B8A8)
+      PostProcess.addRenderTarget("prev_position", 1.0, TextureFormat.R32G32B32A32)
+      PostProcess.addRenderTarget("prev_normal", 1.0, TextureFormat.R8G8B8A8)
+      PostProcess.addRenderTarget("prev_metallic_roughness", 1.0, TextureFormat.R8G8B8A8)
+      PostProcess.addRenderTarget("prev_emissiveness", 1.0, TextureFormat.R16G16B16A16)
+      PostProcess.addRenderTarget("prev_light_map", 1.0, TextureFormat.R32G32B32A32)
+      PostProcess.setRenderTargetFlag("prev_albedo", RenderTargetFlags.Clear, false)
+      PostProcess.setRenderTargetFlag("prev_position", RenderTargetFlags.Clear, false)
+      PostProcess.setRenderTargetFlag("prev_normal", RenderTargetFlags.Clear, false)
+      PostProcess.setRenderTargetFlag("prev_metallic_roughness", RenderTargetFlags.Clear, false)
+      PostProcess.setRenderTargetFlag("prev_emissiveness", RenderTargetFlags.Clear, false)
+      PostProcess.setRenderTargetFlag("prev_light_map", RenderTargetFlags.Clear, false)
+      
+      PostProcess.addShaderPass("resolve_albedo", Shader.load("resources/shaders/checker_resolve.fx"), [ "albedo", "prev_albedo" ], [ "temp" ])
+      PostProcess.addShaderPass("copy_albedo", Shader.load("resources/shaders/copy.fx"), [ "albedo" ], [ "prev_albedo" ])
+      PostProcess.addShaderPass("copy_albedo", Shader.load("resources/shaders/copy.fx"), [ "temp" ], [ "albedo" ])
+
+      PostProcess.addShaderPass("resolve_position", Shader.load("resources/shaders/checker_resolve.fx"), [ "position", "prev_position" ], [ "temp" ])
+      PostProcess.addShaderPass("copy_position", Shader.load("resources/shaders/copy.fx"), [ "position" ], [ "prev_position" ])
+      PostProcess.addShaderPass("copy_position", Shader.load("resources/shaders/copy.fx"), [ "temp" ], [ "position" ])
+
+      PostProcess.addShaderPass("resolve_normal", Shader.load("resources/shaders/checker_resolve.fx"), [ "normal", "prev_normal" ], [ "temp" ])
+      PostProcess.addShaderPass("copy_normal", Shader.load("resources/shaders/copy.fx"), [ "normal" ], [ "prev_normal" ])
+      PostProcess.addShaderPass("copy_normal", Shader.load("resources/shaders/copy.fx"), [ "temp" ], [ "normal" ])
+
+      PostProcess.addShaderPass("resolve_metallic_roughness", Shader.load("resources/shaders/checker_resolve.fx"), [ "metallic_roughness", "prev_metallic_roughness" ], [ "temp" ])
+      PostProcess.addShaderPass("copy_metallic_roughness", Shader.load("resources/shaders/copy.fx"), [ "metallic_roughness" ], [ "prev_metallic_roughness" ])
+      PostProcess.addShaderPass("copy_metallic_roughness", Shader.load("resources/shaders/copy.fx"), [ "temp" ], [ "metallic_roughness" ])
+      
+      PostProcess.addShaderPass("resolve_emissiveness", Shader.load("resources/shaders/checker_resolve.fx"), [ "emissiveness", "prev_emissiveness" ], [ "temp" ])
+      PostProcess.addShaderPass("copy_emissiveness", Shader.load("resources/shaders/copy.fx"), [ "emissiveness" ], [ "prev_emissiveness" ])
+      PostProcess.addShaderPass("copy_emissiveness", Shader.load("resources/shaders/copy.fx"), [ "temp" ], [ "emissiveness" ])
+      
+      PostProcess.addShaderPass("resolve_light_map", Shader.load("resources/shaders/checker_resolve.fx"), [ "light_map", "prev_light_map" ], [ "temp" ])
+      PostProcess.addShaderPass("copy_light_map", Shader.load("resources/shaders/copy.fx"), [ "light_map" ], [ "prev_light_map" ])
+      PostProcess.addShaderPass("copy_light_map", Shader.load("resources/shaders/copy.fx"), [ "temp" ], [ "light_map" ])
+    }
     PostProcess.addShaderPass("copy_albedo_to_post_process_buffer", Shader.load("resources/shaders/copy.fx"), [ "albedo" ], [ _post_process_output ])
   }
 

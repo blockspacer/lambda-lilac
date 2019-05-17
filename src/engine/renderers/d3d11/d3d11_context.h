@@ -280,6 +280,7 @@ namespace lambda
 			glm::vec2 screen_size_;
 			float delta_time_ = 0.0f;
 			float total_time_ = 0.0f;
+			size_t frame_index_ = 0ull;
 			float dynamic_resolution_scale_ = 1.0f;
 			Vector<D3D11RenderBuffer*> transient_render_buffers_;
 

@@ -217,36 +217,43 @@ class City {
     var size = (max - min) * 0.5
     var pos  = (max + min) * 0.5
     _meshSidewalks.addQuad(pos + Vec3.new(-size.x,  size.y, -size.z), pos + Vec3.new(-size.x,  size.y,  size.z), pos + Vec3.new( size.x,  size.y,  size.z), pos + Vec3.new( size.x,  size.y, -size.z), Vec2.new(0.0, size.z), Vec2.new(0.0, 0.0), Vec2.new(size.x, 0.0), Vec2.new(size.x, size.z))
+    addTriNavMeshQuad(min, max)
   }
   constructRoad(min, max) {
     var size = (max - min) * 0.5
     var pos  = (max + min) * 0.5
     _meshRoads.addQuad(pos + Vec3.new(-size.x,  size.y, -size.z), pos + Vec3.new(-size.x,  size.y,  size.z), pos + Vec3.new( size.x,  size.y,  size.z), pos + Vec3.new( size.x,  size.y, -size.z), Vec2.new(0.0, size.z), Vec2.new(0.0, 0.0), Vec2.new(size.x, 0.0), Vec2.new(size.x, size.z))
-    addTriNavMeshQuad(min, max)
   }
-  constructRoad(min, max, type) {
+  constructRoad(min, max, type, navMesh) {
     // 0: up.
     // 1: right.
     // 2: crossroad.
     if (type == 0) {
       constructSidewalk(Vec3.new(min.x, min.y, min.z), Vec3.new(min.x + _sidewalkSize.x / 2, max.y, max.z))
       constructSidewalk(Vec3.new(max.x - _sidewalkSize.x / 2, min.y, min.z), Vec3.new(max.x, max.y, max.z))
+
       constructRoad(Vec3.new(min.x + _sidewalkSize.x / 2, min.y, min.z), Vec3.new(max.x - _sidewalkSize.x / 2, max.y, max.z))
+      if (navMesh) addTriNavMeshQuad(Vec3.new(min.x + _sidewalkSize.x / 2, min.y, min.z), Vec3.new(max.x - _sidewalkSize.x / 2, max.y, max.z))
     }
     if (type == 1) {
       constructSidewalk(Vec3.new(min.x, min.y, min.z), Vec3.new(max.x, max.y, min.z + _sidewalkSize.y / 2))
       constructSidewalk(Vec3.new(min.x, min.y, max.z - _sidewalkSize.y / 2), Vec3.new(max.x, max.y, max.z))
+
       constructRoad(Vec3.new(min.x, min.y, min.z + _sidewalkSize.y / 2), Vec3.new(max.x, max.y, max.z - _sidewalkSize.y / 2))
+      if (navMesh) addTriNavMeshQuad(Vec3.new(min.x, min.y, min.z + _sidewalkSize.y / 2), Vec3.new(max.x, max.y, max.z - _sidewalkSize.y / 2))
     }
     if (type == 2) {
-      constructRoad(Vec3.new(min.x, min.y, min.z), Vec3.new(max.x, max.y, min.z + _sidewalkSize.y / 2), 0)
-      constructRoad(Vec3.new(min.x, min.y, max.z - _sidewalkSize.y / 2), Vec3.new(max.x, max.y, max.z), 0)
+      constructRoad(Vec3.new(min.x, min.y, min.z), Vec3.new(max.x, max.y, min.z + _sidewalkSize.y / 2), 0, true)
+      constructRoad(Vec3.new(min.x, min.y, max.z - _sidewalkSize.y / 2), Vec3.new(max.x, max.y, max.z), 0, true)
 
-      constructRoad(Vec3.new(min.x, min.y, min.z), Vec3.new(min.x + _sidewalkSize.x / 2, max.y, max.z), 1)
-      constructRoad(Vec3.new(max.x - _sidewalkSize.x / 2, min.y, min.z), Vec3.new(max.x, max.y, max.z), 1)
+      constructRoad(Vec3.new(min.x, min.y, min.z), Vec3.new(min.x + _sidewalkSize.x / 2, max.y, max.z), 1, true)
+      constructRoad(Vec3.new(max.x - _sidewalkSize.x / 2, min.y, min.z), Vec3.new(max.x, max.y, max.z), 1, true)
 
       constructRoad(Vec3.new(min.x + _sidewalkSize.x / 2, min.y, min.z + _sidewalkSize.y / 2), Vec3.new(max.x - _sidewalkSize.x / 2, max.y, max.z - _sidewalkSize.y / 2))
     }
+  }
+  constructRoad(min, max, type) {
+    constructRoad(min, max, type, false)
   }
 
   spawnCube(min, max, scale) {

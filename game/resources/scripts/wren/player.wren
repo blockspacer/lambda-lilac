@@ -9,6 +9,74 @@ import "Core" for PostProcess, LightTypes, ShadowTypes
 import "resources/scripts/wren/input_controller" for InputController
 import "resources/scripts/wren/physics_layers"   for PhysicsLayers
 import "resources/scripts/wren/camera"           for Sorter
+import "resources/scripts/wren/post_processor"   for PostProcessor
+
+class Arm {
+  construct new(parent) {
+    if (__mesh == null) __mesh = Mesh.generate("cube")
+    
+    _shoulder = GameObject.new()
+    _shoulder.transform.parent        = parent
+    _shoulder.transform.localPosition = Vec3.new(0.0, 0.0, -0.5)
+    
+    _upperArm = GameObject.new()
+    _upperArm.transform.parent = _shoulder
+    var meshRender     = _upperArm.addComponent(MeshRender)
+    meshRender.mesh    = __mesh
+    meshRender.subMesh = 0
+    _upperArm.transform.localScale    = Vec3.new(0.25, 0.25, 1.0)
+    _upperArm.transform.localPosition = Vec3.new(0.0, 0.0, -0.5)
+    
+    _elbow = GameObject.new()
+    _elbow.transform.parent        = _shoulder
+    _elbow.transform.localPosition = Vec3.new(0.0, 0.0, -1.0)
+    
+    _lowerArm = GameObject.new()
+    _lowerArm.transform.parent = _elbow
+    meshRender         = _lowerArm.addComponent(MeshRender)
+    meshRender.mesh    = __mesh
+    meshRender.subMesh = 0
+    _lowerArm.transform.localScale    = Vec3.new(0.25, 0.25, 1.0)
+    _lowerArm.transform.localPosition = Vec3.new(0.0, 0.0, -0.5)
+  }
+  shoulder { _shoulder }
+  elbow    { _elbow }
+}
+
+class Hooman {
+  construct new(parent) {
+    var mesh = Mesh.generate("cube")
+    var body = GameObject.new()
+    body.transform.parent = parent
+    var meshRender     = body.addComponent(MeshRender)
+    meshRender.mesh    = mesh
+    meshRender.subMesh = 0
+
+    _arm1 = Arm.new(body)
+    _arm1.shoulder.transform.localPosition = Vec3.new(-0.5, 0.0, 0.0)
+    _arm2 = Arm.new(body)
+    _arm2.shoulder.transform.localPosition = Vec3.new( 0.5, 0.0, 0.0)
+    _leg1 = Arm.new(body)
+    _leg1.shoulder.transform.localPosition = Vec3.new(-0.25, -0.5, 0.0)
+    _leg2 = Arm.new(body)
+    _leg2.shoulder.transform.localPosition = Vec3.new( 0.25, -0.5, 0.0)
+    _totalTime = 0.0
+  }
+
+  fixedUpdate(speedMultiplier, intensityMultiplier) {
+    _totalTime = _totalTime + Time.fixedDeltaTime * speedMultiplier
+    
+    _arm1.shoulder.transform.localEuler = Vec3.new(0.0, Math.sin(_totalTime) * intensityMultiplier - Math.pi / 2.0, -Math.pi / 2.0)
+    _arm1.elbow.transform.localEuler = Vec3.new(0.0, Math.abs(Math.sin(_totalTime) * intensityMultiplier), 0.0)
+    _arm2.shoulder.transform.localEuler = Vec3.new(0.0, Math.cos(_totalTime) * intensityMultiplier - Math.pi / 2.0, -Math.pi / 2.0)
+    _arm2.elbow.transform.localEuler = Vec3.new(0.0, Math.abs(Math.cos(_totalTime) * intensityMultiplier), 0.0)
+    
+    _leg1.shoulder.transform.localEuler = Vec3.new(0.0, Math.sin(_totalTime) * intensityMultiplier - Math.pi / 2.0, -Math.pi / 2.0)
+    _leg1.elbow.transform.localEuler = Vec3.new(0.0, -Math.abs(Math.sin(_totalTime) * intensityMultiplier), 0.0)
+    _leg2.shoulder.transform.localEuler = Vec3.new(0.0, Math.cos(_totalTime) * intensityMultiplier - Math.pi / 2.0, -Math.pi / 2.0)
+    _leg2.elbow.transform.localEuler = Vec3.new(0.0, -Math.abs(Math.cos(_totalTime) * intensityMultiplier), 0.0)
+  }
+}
 
 class ThirdPersonCamera is MonoBehaviour {
   construct new()      { super()                     }
@@ -45,14 +113,32 @@ class ThirdPersonCamera is MonoBehaviour {
     _fovGoto = _fov
   }
 
+  makeMesh() {
+  }
+
+  updateMesh() {
+    var speedMultiplier = 1.0
+    var intensityMultiplier = 1.0
+    var velLength = Vec2.new(_velocity.x, _velocity.z).length
+
+    if (!_onTheGround) speedMultiplier = 0.1
+    if (_onWall) {
+      speedMultiplier = 1.5
+      intensityMultiplier = 0.25
+    } else {
+      intensityMultiplier = Math.clamp(velLength / (_speedWalk / 2), 0.0, 1.0)
+    }
+
+    _hooman.fixedUpdate(speedMultiplier * velLength, intensityMultiplier)
+  }
+
   initialize() {
     gameObject.name         = "player"
     transform.localPosition = Vec3.new(0.0, 2.0, 0.0)
 
-    // Add a cube to visualize.
-    var meshRender     = gameObject.addComponent(MeshRender)
-    meshRender.mesh    = Mesh.generate("cube")
-    meshRender.subMesh = 0
+    _hooman = Hooman.new(gameObject)
+
+    makeMesh()
 
     // Initialize variables.
     initializeVariables()
@@ -77,20 +163,25 @@ class ThirdPersonCamera is MonoBehaviour {
     listener.makeMainListener()
 
     // Add the collider.
-    var collider    = gameObject.addComponent(Collider)
+    var entityCollider = GameObject.new()
+    entityCollider.name = "playerBody"
+    entityCollider.transform.parent = gameObject
+    entityCollider.transform.localScale = Vec3.new(1.0, 3.0, 1.0)
+    var collider    = entityCollider.addComponent(Collider)
     collider.layers = PhysicsLayers.General
     collider.makeCapsuleCollider()
 
     // Add the rigid body.
-    _rigidBody                    = gameObject.addComponent(RigidBody)
+    _rigidBody                    = entityCollider.addComponent(RigidBody)
     _rigidBody.angularConstraints = PhysicsConstraints.X | PhysicsConstraints.Y | PhysicsConstraints.Z
     
     // Add the render passes.
     /*var outputPreZ = [ "depth_buffer" ]
     var deferredShaderPreZ = Shader.load("resources/shaders/pre_z_opaque.fx")
     _camera.addShaderPass("deferredShaderPreZ", deferredShaderPreZ, [], outputPreZ)*/
+    var checker = PostProcessor.getUseChecker ? "|CHECKER" : ""
     var outputOpaque         = [ "albedo", "position", "normal", "metallic_roughness", "emissiveness", "depth_buffer" ]
-    var deferredShaderOpaque = Shader.load("resources/shaders/default_opaque.fx")
+    var deferredShaderOpaque = Shader.load("resources/shaders/default_opaque.fx%(checker)")
     _camera.addShaderPass("deferredShaderOpaque", deferredShaderOpaque, [], outputOpaque)
 
     // Add a point light.
@@ -130,7 +221,13 @@ class ThirdPersonCamera is MonoBehaviour {
       return b
   }
 
+  vecLerp(a, b, v) { Vec3.new(Math.lerp(a.x, b.x, v), Math.lerp(a.y, b.y, v), Math.lerp(a.z, b.z, v)) }
+
   fixedUpdate() {
+    updateMesh()
+    gameObject.transform.worldPosition = _rigidBody.gameObject.transform.worldPosition - Vec3.new(0.0, -1.0, 0.0)
+    _rigidBody.gameObject.transform.localPosition = Vec3.new(0.0, -1.0, 0.0)
+
     // Respawning.
     if (transform.worldPosition.y < -10) {
       transform.worldPosition = Vec3.new(0.0, 2.0, -0.0) * 2
@@ -149,41 +246,43 @@ class ThirdPersonCamera is MonoBehaviour {
     if (_onWall) {
       _playerRotation = Vec3.new(0.0, _onWallRotation, 0.0)
     }
-    _fov = Math.lerp(_fov, _fovGoto, 0.1)
 
     transform.localEuler = _playerRotation * Math.deg2Rad
 
     _rigidBody.velocity = _velocity
     _camera.fovDeg = _fov
 
-    var mod = Vec3.new(0.0, 1.0, 0.0)
+    var mod = Vec3.new(0.0, 3.0, 0.0)
     if (_onWall) mod = mod - _onWallDir
 
-    _mod = Math.lerp(_mod, mod, 0.01)
+    _mod = Math.lerp(_mod, mod, 1.0)
 
     var delta = (transform.worldPosition + _mod) - _camPoint
     var length = delta.length
     delta.normalize()
 
+    // FOV.
     if (_onWall) _fovGoto = Math.lerp(_fovGoto, _fovWall, Math.clamp(delta.y, 0.0, 1.0))
+    _fov = Math.lerp(_fov, _fovGoto, 0.1)
 
-    _camPoint.x = Math.lerp(_camPoint.x, _camPoint.x + delta.x * (length - _followDistance), 0.1)
-    _camPoint.y = Math.lerp(_camPoint.y, _camPoint.y + delta.y * (length - _followDistance), 0.1)
-    _camPoint.z = Math.lerp(_camPoint.z, _camPoint.z + delta.z * (length - _followDistance), 0.1)
+    // Move the camera towards the player.
+    _camPoint = vecLerp(_camPoint, _camPoint + delta * (length - _followDistance), 0.1)
 
+    // Rotate the camera towards the player.
     _transformInBetween.worldPosition = _camPoint
     delta = (_camPoint - transform.worldPosition).normalized
     _transformInBetween.worldRotation = Math.lookRotation(delta, Vec3.new(0.0, 1.0, 0.0))
     
+    // Keep the camera out of walls.
     var offset = (_transformCamera.worldPosition - transform.worldPosition) * 0.2
     var sorted = Sort.sort(Physics.castRay(transform.worldPosition, _transformCamera.worldPosition + offset * 1.1), Sorter.new(transform.worldPosition))
     if (sorted.count > 0) {
-      _transformCamera.worldPosition = sorted[0].point - offset
+      if (sorted[0].gameObject.name != "playerBody") {
+        _transformCamera.worldPosition = sorted[0].point - offset
+      }
     } else {
       var localPosition = _transformCamera.localPosition
-      localPosition.x = Math.lerp(_transformCamera.localPosition.x, 0.0, 0.01)
-      localPosition.y = Math.lerp(_transformCamera.localPosition.y, 1.0, 0.01)
-      localPosition.z = Math.lerp(_transformCamera.localPosition.z, 0.0, 0.01)
+      localPosition = vecLerp(_transformCamera.localPosition, Vec3.new(0.0, 1.0, 0.0), 0.01)
       _transformCamera.localPosition = localPosition
     }
   }
@@ -215,24 +314,37 @@ class ThirdPersonCamera is MonoBehaviour {
   }
 
   wallRun(dir) {
-    var hits = Physics.castRay(transform.worldPosition, transform.worldPosition + dir)
+    var offset = Vec3.new(0.0, 1.5, 0.0)
+    var from   = transform.worldPosition - offset
+    var to     = from + dir
+    var hits = Physics.castRay(from, to)
     if (hits.count > 0) {
-      var hit = Sort.sort(hits, Sorter.new(transform.worldPosition))[0]
-      transform.worldPosition = hit.point - dir * 0.75
-      _velocity = Vec3.new(0, _speedWall, 0)
-      _onWall  = true
-      _onWallDir = dir
-      _onWallRotation = dirToDeg(dir) - 90
-      return true
+      var sorted = Sort.sort(hits, Sorter.new(from))
+      if (sorted[0].gameObject.name == "playerBody") sorted.removeAt(0)
+
+      if (sorted.count > 0) {
+        var hit = sorted[0]
+        transform.worldPosition = hit.point - dir * 0.75 + offset
+        _velocity = Vec3.new(0, _speedWall, 0)
+        _onWall  = true
+        _onWallDir = dir
+        _onWallRotation = dirToDeg(dir) - 90
+        return true
+      }
     }
     return false
   }
 
   checkOnGround() {
     _onTheGround = false
-    var hits = Physics.castRay(transform.worldPosition, transform.worldPosition + Vec3.new(0.0, -0.751, 0.0))
+    var hits = Physics.castRay(transform.worldPosition, transform.worldPosition + Vec3.new(0.0, -2.751, 0.0))
     if (hits.count > 0) {
-      _onTheGround = true
+      var sorted = Sort.sort(hits, Sorter.new(transform.worldPosition))
+      if (sorted[0].gameObject.name == "playerBody") sorted.removeAt(0)
+
+      if (sorted.count > 0) {
+        _onTheGround = true
+      }
     }
   }
 
@@ -316,9 +428,7 @@ class ThirdPersonCamera is MonoBehaviour {
     }
 
     if (!_onWall) {
-      _avgVelocity.x = Math.lerp(_avgVelocity.x, _velocity.x, 0.1)
-      _avgVelocity.y = Math.lerp(_avgVelocity.y, _velocity.y, 0.1)
-      _avgVelocity.z = Math.lerp(_avgVelocity.z, _velocity.z, 0.1)
+      _avgVelocity = vecLerp(_avgVelocity, _velocity, 0.1)
       var val = _avgVelocity.length * (1.0 / (Time.fixedDeltaTime / Time.timeScale))
       val = (val - (_speedWalk * 10)) / ((_speedSprint * 10) - (_speedWalk * 10))
       val = Math.clamp(val)

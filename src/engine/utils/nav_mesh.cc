@@ -225,6 +225,9 @@ namespace lambda
 				tr.z = std::max(tr.z, p.z);
 			}
 
+			tr.y =  1000.0f;
+			bl.y = -1000.0f;
+
 			Vector<void*> user_data = bvh_.getAllUserDataInAABB(utilities::BVHAABB(bl - 1.0f, tr + 1.0f));
 
 			for (void* ud : user_data)
@@ -334,26 +337,32 @@ namespace lambda
 			return true;
 		}
 
-		NavMapShape* pointOnNavMesh(const utilities::BVH& bvh, glm::vec3 point)
+		NavMapShape* pointOnNavMesh(const Vector<NavMapShape*>& shapes, glm::vec3 point)
 		{
-			glm::vec3 bl = point - 0.01f;
-			glm::vec3 tr = point + 0.01f;
-
-			auto user_datas = bvh.getAllUserDataInAABB(utilities::BVHAABB(bl, tr));
-			auto size = user_datas.size();
-			for (void* ud : user_datas)
-			{
-				NavMapShape* shape = (NavMapShape*)ud;
+			for (NavMapShape* shape : shapes)
 				if (IsInConvexPolygon(shape->p, point))
 					return shape;
-			}
 
 			return nullptr;
+		}
+
+		NavMapShape* pointOnNavMesh(const utilities::BVH& bvh, glm::vec3 point)
+		{
+			glm::vec3 bl = point - 0.0001f;
+			glm::vec3 tr = point + 0.0001f;
+
+			auto user_datas = bvh.getAllUserDataInAABB(utilities::BVHAABB(bl, tr));
+			Vector<NavMapShape*> shapes(user_datas.size());
+			for (uint32_t i = 0; i < user_datas.size(); ++i)
+				shapes[i] = (NavMapShape*)user_datas[i];
+
+			return pointOnNavMesh(shapes, point);
 		}
 
 		float shortestDistance(glm::vec3 a, glm::vec3 b, glm::vec3 p)
 		{
 			glm::vec3 delta = b - a;
+			glm::vec3 cross = glm::cross(delta, glm::vec3(0.0f, 1.0f, 0.0f));
 			float length = glm::length(delta);
 			delta /= length;
 
@@ -367,7 +376,7 @@ namespace lambda
 			else if (dot >= length)
 				ret = glm::length(bp);
 			else
-				ret = glm::dot(glm::cross(delta, glm::vec3(0.0f, 1.0f, 0.0f)), ap);
+				ret = glm::dot(cross, ap);
 			return ret >- 0.0f ? ret : -ret;
 		}
 
@@ -405,10 +414,13 @@ namespace lambda
 			}
 
 			if (closestDistance > maxDistance)
+			{
+				std::cout << "\tNo suitable shape found" << std::endl;
 				return nullptr;
+			}
 
 			if (closest)
-				std::cout << "\tNot on triangle: " << closestDistance << "\t" << glm::length(closest->c - point) << std::endl;
+				std::cout << "\tNot on shape: " << closestDistance << "\t" << glm::length(closest->c - point) << std::endl;
 
 			return closest;
 		}
@@ -422,7 +434,6 @@ namespace lambda
 			return closestNavMesh(shapes, point, radius);
 		}
 
-#pragma optimize ("", off)
 		Vector<glm::vec3> TriNavMap::findPath(glm::vec3 from, glm::vec3 to)
 		{
 			Vector<glm::vec3> path;
@@ -557,7 +568,7 @@ namespace lambda
 					for (float j = 0.0f; j < length; j += 1.0f)
 					{
 						glm::vec3 point = p[i - 1].p + delta * j;
-						if (pointOnNavMesh(bvh_, point) == nullptr)
+						if (pointOnNavMesh(shapes_, point) == nullptr)
 						{
 							valid = false;
 							break;
