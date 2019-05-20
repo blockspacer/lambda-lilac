@@ -16,6 +16,7 @@ import "resources/scripts/wren/door" for Door
 import "resources/scripts/wren/physics_layers" for PhysicsLayers
 //import "resources/scripts/wren/node_map" for Node, NodeMap, NodeEditor
 import "resources/scripts/wren/city" for City
+import "resources/scripts/wren/meshes" for Meshes
 
 class Rando is MonoBehaviour {
   construct new()      { super()                     }
@@ -29,7 +30,7 @@ class Rando is MonoBehaviour {
     _prevPos = Vec3.new(0.0)
 
     //if (!__mesh) {
-    //  __mesh = Mesh.generate("cube")
+    //  __mesh = Meshes.cube
     //}
 
     gameObject.name = "rando"
@@ -121,7 +122,8 @@ class Rando is MonoBehaviour {
   getPath() {
     var x = Math.random(-_city.numBlocks.x / 2, _city.numBlocks.x / 2 - 1).round * _city.blockSize.x
     var z = Math.random(-_city.numBlocks.y / 2, _city.numBlocks.y / 2 - 1).round * _city.blockSize.y
-    _positionList = _city.navMesh.findPath(transform.worldPosition, Vec3.new(x, 0.0, z))
+    _promise = _city.navMesh.findPathPromise(transform.worldPosition, Vec3.new(x, 0.0, z))
+    //_positionList = _city.navMesh.findPath(transform.worldPosition, Vec3.new(x, 0.0, z))
   }
 
   fixedUpdate() {
@@ -132,8 +134,17 @@ class Rando is MonoBehaviour {
       return
     }
 
-    if (_currPosition == null && _positionList == null) {
-      getPath()
+    if (_promise != null) {
+      if (_promise.finished) {
+        _positionList = _promise.path
+        _promise = null
+      } else {
+        return
+      }
+    } else {
+      if (_currPosition == null && _positionList == null) {
+        getPath()
+      }
     }
 
     if (_currPosition == null) {
@@ -163,7 +174,10 @@ class Rando is MonoBehaviour {
     _rigidBody.gameObject.transform.localPosition = Vec3.new(0.0, -1.0, 0.0)
     gameObject.transform.worldEuler = Vec3.new(0.0, Math.atan2(-_velocity.z, _velocity.x) - Math.pi / 2, 0.0)
 
-    _hooman.fixedUpdate(_velocity.length, 1.0)
+    _hooman.inAir = false
+    _hooman.walkingSpeed = Vec2.new(_velocity.x, _velocity.z).length
+    _hooman.maxWalkingSpeed = 10.0
+    _hooman.fixedUpdate()
 
     var delta = transform.worldPosition - _prevPos
     if (delta.length < 0.05) {
@@ -202,7 +216,6 @@ class RandoOld is MonoBehaviour {
     _pathIndex = -1
     _currPosition = Vec3.new(0.0)
     _positionList = []
-    if (!__mesh) __mesh = Mesh.generate("cube")
 
     gameObject.name = "mob"
     
@@ -231,7 +244,7 @@ class RandoOld is MonoBehaviour {
     go.transform.parent        = gameObject
     go.transform.worldPosition = position
     var meshRender     = go.addComponent(MeshRender)
-    meshRender.mesh    = __mesh
+    meshRender.mesh    = Meshes.cube
     meshRender.subMesh = 0
     meshRender.albedo  = Texture.load("resources/textures/wood/FloorMahogany_alb.jpg")
     meshRender.normal  = Texture.load("resources/textures/wood/FloorMahogany_nrm.jpg")

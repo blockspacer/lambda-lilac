@@ -8,6 +8,7 @@ import "Core" for Noise, NoiseInterpolation
 import "Core" for Light, LightTypes, ShadowTypes
 
 import "resources/scripts/wren/physics_layers" for PhysicsLayers
+import "resources/scripts/wren/meshes" for Meshes
 
 class ItemManager is MonoBehaviour {
   construct new()      { super() }
@@ -26,8 +27,8 @@ class ItemManager is MonoBehaviour {
     _light_time = 0.0
     _light_switch = 0.2
       
-    _meshes.add(Mesh.generate("cube"))
-    _meshes.add(Mesh.generate("sphere"))
+    _meshes.add(Meshes.cube)
+    _meshes.add(Meshes.sphere)
     _meshes.add(Mesh.load("resources/gltf/torch/torch.gltf"))
 
     _total_time = 0.0

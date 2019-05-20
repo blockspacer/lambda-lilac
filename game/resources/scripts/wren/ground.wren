@@ -5,6 +5,7 @@ import "Core" for Input, Keys, Buttons, Axes
 import "Core" for Math, Time, File, Assert
 import "Core" for MonoBehaviour
 import "Core" for PostProcess, Console, Noise, NoiseInterpolation
+import "resources/scripts/wren/meshes" for Meshes
 
 class GroundEnabledType {
     static Enabled    { 0 }
@@ -22,9 +23,9 @@ class Ground {
       _dynamics = []
       _offset = Vec3.new(20, 2, 20)
       
-      _meshes.add(Mesh.generate("cube"))
+      _meshes.add(Meshes.cube)
       _needs_box_collider.add(true)
-      _meshes.add(Mesh.generate("sphere"))
+      _meshes.add(Meshes.sphere)
       _needs_box_collider.add(false)
     }
 

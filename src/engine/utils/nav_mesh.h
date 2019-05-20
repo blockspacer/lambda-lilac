@@ -7,6 +7,29 @@ namespace lambda
 {
 	namespace platform
 	{
+		template <typename T>
+		struct Promise
+		{
+			static std::mutex g_mutex;
+			T t;
+			bool is_finished = false;
+			bool finished() {
+				g_mutex.lock();
+				bool finished = is_finished;
+				g_mutex.unlock();
+				return finished;
+			}
+			bool get(T& t)
+			{
+				g_mutex.lock();
+				if (is_finished)
+					t = this->t;
+				bool finished = is_finished;
+				g_mutex.unlock();
+				return finished;
+			}
+		};
+
 		struct NavNode
 		{
 			glm::vec3 position;
@@ -57,6 +80,7 @@ namespace lambda
 			void addQuadHole(glm::vec3 bl, glm::vec3 tr);
 			Vector<glm::vec3> getTris();
 			Vector<glm::vec3> findPath(glm::vec3 from, glm::vec3 to);
+			static Promise<Vector<glm::vec3>>* findPathPromise(TriNavMap* map, glm::vec3 from, glm::vec3 to);
 
 		private:
 			utilities::BVH bvh_;

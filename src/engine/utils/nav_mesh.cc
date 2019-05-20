@@ -4,10 +4,22 @@
 #include <utils/console.h>
 #include <algorithm>
 
+#if VIOLET_WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#undef near
+#undef far
+#undef min
+#undef max
+#endif
+
 namespace lambda
 {
 	namespace platform
 	{
+		template<typename T>
+		std::mutex Promise<T>::g_mutex;
+
 		///////////////////////////////////////////////////////////////////////////
 		void NavNode::addConnection(NavNode* connection)
 		{
@@ -600,16 +612,65 @@ namespace lambda
 			return path;
 		}
 
-		static inline bool sameSide(glm::vec3 p1, glm::vec3 p2, glm::vec3 a, glm::vec3 b)
+		std::thread k_thread;
+		std::mutex  k_mutex;
+		std::atomic<int> k_count;
+
+		struct FindPathQueueInfo
 		{
-			glm::vec3 cp1 = glm::cross(b - a, p1 - a);
-			glm::vec3 cp2 = glm::cross(b - a, p2 - a);
-			return (glm::dot(cp1, cp2) >= 0);
+			TriNavMap* map;
+			glm::vec3 from;
+			glm::vec3 to;
+			Promise<Vector<glm::vec3>>* promise;
+		};
+		Queue<FindPathQueueInfo> k_queue_info;
+		
+		void findPathQueued()
+		{
+			while (true)
+			{
+				if (k_count <= 0)
+				{
+					std::this_thread::sleep_for(std::chrono::microseconds(1));
+					continue;
+				}
+				
+				k_count--;
+
+				k_mutex.lock();
+				FindPathQueueInfo fpqi = k_queue_info.front();
+				k_queue_info.pop();
+				k_mutex.unlock();
+
+				Vector<glm::vec3> path = fpqi.map->findPath(fpqi.from, fpqi.to);
+
+				fpqi.promise->g_mutex.lock();
+				fpqi.promise->t = eastl::move(path);
+				fpqi.promise->is_finished = true;
+				fpqi.promise->g_mutex.unlock();
+			}
 		}
 
-		static inline bool pointInTriangle(glm::vec3 p, glm::vec3 a, glm::vec3 b, glm::vec3 c)
+		Promise<Vector<glm::vec3>>* TriNavMap::findPathPromise(TriNavMap* map, glm::vec3 from, glm::vec3 to)
 		{
-			return (sameSide(p, a, b, c) && sameSide(p, b, a, c) && sameSide(p, c, a, b));
+			Promise<Vector<glm::vec3>>* promise = foundation::Memory::construct<Promise<Vector<glm::vec3>>>();
+			promise->is_finished = false;
+
+			k_mutex.lock();
+			k_queue_info.push({ map, from, to, promise });
+			k_mutex.unlock();
+
+			k_count++;
+
+			if (!k_thread.joinable())
+			{
+				k_thread = std::thread(findPathQueued);
+#if VIOLET_WIN32
+				SetThreadPriority(k_thread.native_handle(), THREAD_PRIORITY_LOWEST);
+#endif
+			}
+
+			return promise;
 		}
 
 		NavMapPoint* TriNavMap::findClosest(glm::vec3 position)

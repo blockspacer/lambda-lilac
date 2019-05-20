@@ -190,6 +190,7 @@ namespace lambda
 		};
 
 #if USE_RENDERABLES
+		static constexpr uint32_t kNumRenderModels = 8ull;
 		void convertRenderableList(const Vector<utilities::Renderable*>& u_renderables, Vector<SceneRenderable*>& s_renderables)
 		{
 			for (const utilities::Renderable* renderable : u_renderables)
@@ -206,7 +207,7 @@ namespace lambda
 					{
 						if (s_renderable->model_count + 1ul > s_renderable->model_size)
 						{
-							uint32_t new_model_size = s_renderable->model_size + 8ul;
+							uint32_t new_model_size = s_renderable->model_size + kNumRenderModels;
 							s_renderable->mm = (glm::mat4x4*)foundation::GetFrameHeap()->realloc(
 								s_renderable->mm,
 								sizeof(glm::mat4x4) * s_renderable->model_size,
@@ -242,7 +243,7 @@ namespace lambda
 					s_renderable->dmra     = renderable->dmra_texture;
 					s_renderable->emissive = renderable->emissive_texture;
 					s_renderable->model_count = 0ul;
-					s_renderable->model_size  = 8ul;
+					s_renderable->model_size  = 1ul;
 					s_renderable->mm = (glm::mat4x4*)foundation::GetFrameHeap()->alloc(sizeof(glm::mat4x4) * s_renderable->model_size);
 					s_renderable->mr = (glm::vec4*)foundation::GetFrameHeap()->alloc(sizeof(glm::vec4) * s_renderable->model_size);
 					s_renderable->em = (glm::vec4*)foundation::GetFrameHeap()->alloc(sizeof(glm::vec4) * s_renderable->model_size);

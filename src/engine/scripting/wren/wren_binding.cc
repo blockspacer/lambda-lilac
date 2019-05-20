@@ -3636,6 +3636,63 @@ namespace lambda
 	}
 
 	///////////////////////////////////////////////////////////////////////////
+	namespace NavMeshPromise
+	{
+		struct NavMeshPromise
+		{
+			platform::Promise<Vector<glm::vec3>>* promise;
+		};
+		WrenHandle* handle = nullptr;
+		NavMeshPromise* make(WrenVM* vm, NavMeshPromise val = NavMeshPromise())
+		{
+			if (handle == nullptr)
+			{
+				wrenGetVariable(vm, "Core", "NavMeshPromise", 0);
+				handle = wrenGetSlotHandle(vm, 0);
+			}
+			wrenSetSlotHandle(vm, 1, handle);
+			NavMeshPromise* data = MakeForeign<NavMeshPromise>(vm, 0, 1);
+			memcpy(data, &val, sizeof(NavMeshPromise));
+			return data;
+		}
+		WrenForeignClassMethods Construct()
+		{
+			return WrenForeignClassMethods{
+				[](WrenVM* vm) {
+				make(vm);
+			},
+				[](void* data) {
+				delete ((NavMeshPromise*)data)->promise;
+			}
+			};
+		}
+		WrenForeignMethodFn Bind(const char* signature)
+		{
+			if (strcmp(signature, "finished") == 0) return [](WrenVM* vm) {
+				NavMeshPromise& promise = *GetForeign<NavMeshPromise>(vm, 0);
+				wrenSetSlotBool(vm, 0, promise.promise->is_finished);
+			};
+			if (strcmp(signature, "path") == 0) return [](WrenVM* vm) {
+				NavMeshPromise& promise = *GetForeign<NavMeshPromise>(vm, 0);
+				LMB_ASSERT(promise.promise, "");
+
+				Vector<glm::vec3> path;
+				if (promise.promise->get(path))
+				{
+					wrenSetSlotNewList(vm, 0);
+
+					for (const glm::vec3& pos : path)
+					{
+						Vec3::makeAt(vm, 1, 2, pos);
+						wrenInsertInList(vm, 0, -1, 1);
+					}
+				}
+			};
+			return nullptr;
+		}
+	}
+
+	///////////////////////////////////////////////////////////////////////////
 	namespace TriNavMesh
 	{
 		struct TriNavMesh
@@ -3718,6 +3775,13 @@ namespace lambda
 					Vec3::makeAt(vm, 1, 2, pos);
 					wrenInsertInList(vm, 0, -1, 1);
 				}
+			};
+			if (strcmp(signature, "findPathPromise(_,_)") == 0) return [](WrenVM* vm) {
+				TriNavMesh& nav_mesh = *GetForeign<TriNavMesh>(vm, 0);
+				const glm::vec3& from = *GetForeign<glm::vec3>(vm, 1);
+				const glm::vec3& to = *GetForeign<glm::vec3>(vm, 2);
+				auto promise = nav_mesh.nav_map.findPathPromise(&nav_mesh.nav_map, from, to);
+				NavMeshPromise::make(vm, { promise });
 			};
 
 			return nullptr;
@@ -3807,6 +3871,8 @@ namespace lambda
 				return NavMeshNode::Construct();
 			if (hashEqual(className, "NavMesh"))
 				return NavMesh::Construct();
+			if (hashEqual(className, "NavMeshPromise"))
+				return NavMeshPromise::Construct();
 			if (hashEqual(className, "TriNavMesh"))
 				return TriNavMesh::Construct();
 		}
@@ -3888,6 +3954,8 @@ namespace lambda
 				return NavMeshNode::Bind(signature);
 			if (hashEqual(className, "NavMesh"))
 				return NavMesh::Bind(signature);
+			if (hashEqual(className, "NavMeshPromise"))
+				return NavMeshPromise::Bind(signature);
 			if (hashEqual(className, "TriNavMesh"))
 				return TriNavMesh::Bind(signature);
 			if (hashEqual(className, "Assert"))
@@ -4022,6 +4090,7 @@ namespace lambda
 			SAFE_RELEASE(vm, Noise::handle);
 			SAFE_RELEASE(vm, NavMeshNode::handle);
 			SAFE_RELEASE(vm, NavMesh::handle);
+			SAFE_RELEASE(vm, NavMeshPromise::handle);
 			SAFE_RELEASE(vm, TriNavMesh::handle);
 
 			components::MonoBehaviourSystem::deinitialize(*g_scene);
