@@ -261,11 +261,11 @@ public:
 	  float mem_def = (float)(foundation::Memory::default_allocator()->allocated() + foundation::Memory::new_allocator()->allocated()) / (1024.0f * 1024.0f);
 	  getGUI().executeJavaScript("if (gameState == Game) { updateAllocatedMemory(" + toString(round(mem_def, 3)) + ") }");
 
-	  static constexpr uint32_t kTimerCount = 4u;
+	  static constexpr uint32_t kTimerCount = 5u;
 	  static Average kTimers[kTimerCount];
-	  static constexpr char* kTimerNames[kTimerCount]   = { "FixedUpdate",  "Update",       "CollectGarbage", "ConstructRender"/*, "OnRender"*/     };
-	  static constexpr bool  kGameTimer[kTimerCount]    = { true,           true,           true,             false/*,             false*/          };
-	  static constexpr char* kTimerColours[kTimerCount] = { "rgb(100,0,0)", "rgb(144,0,0)", "rgb(188,0,0)",   "rgb(0,0,144)"/*,    "rgb(0,0,188)"*/ };
+	  static constexpr char* kTimerNames[kTimerCount]   = { "FixedUpdate",  "Update",       "CollectGarbage", "ConstructRender", "BetweenFrames" };
+	  static constexpr bool  kGameTimer[kTimerCount]    = { true,           true,           true,             false,             false           };
+	  static constexpr char* kTimerColours[kTimerCount] = { "rgb(100,0,0)", "rgb(144,0,0)", "rgb(188,0,0)",   "rgb(0,0,144)",    "rgb(0,188,0)"  };
 	  String execute_string = "";
 
 	  for (uint32_t i = 0; i < kTimerCount; ++i)

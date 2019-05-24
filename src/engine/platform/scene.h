@@ -61,7 +61,6 @@ namespace lambda
 		void sceneUpdate(const float& delta_time, scene::Scene& scene);
 		void sceneFixedUpdate(const float& delta_time, scene::Scene& scene);
 		void sceneConstructRender(scene::Scene& scene);
-		void sceneOnRender(scene::Scene& scene);
 		void sceneCollectGarbage(scene::Scene& scene);
 		void sceneDeinitialize(scene::Scene& scene);
 	}

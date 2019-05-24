@@ -367,7 +367,7 @@ namespace lambda
 			{
 				const Data& data = scene.transform.get(entity);
 				if (data.getParent() != 0u && entity != data.getParent())
-					return data.rotation * getWorldRotation(data.getParent(), scene);
+					return getWorldRotation(data.getParent(), scene) * data.rotation;
 				else
 					return data.rotation;
 			}

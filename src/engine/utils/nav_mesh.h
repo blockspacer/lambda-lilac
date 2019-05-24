@@ -79,14 +79,14 @@ namespace lambda
 			void addShape(Vector<glm::vec3> points);
 			void addQuadHole(glm::vec3 bl, glm::vec3 tr);
 			Vector<glm::vec3> getTris();
-			Vector<glm::vec3> findPath(glm::vec3 from, glm::vec3 to);
+			Vector<glm::vec3> findPath(glm::vec3 from, glm::vec3 to) const;
 			static Promise<Vector<glm::vec3>>* findPathPromise(TriNavMap* map, glm::vec3 from, glm::vec3 to);
 
 		private:
 			utilities::BVH bvh_;
 			Vector<NavMapShape*> shapes_;
-			NavMapPoint* findClosest(glm::vec3 position);
-			float heuristicCostEstimate(NavMapPoint* a, NavMapPoint* b);
+			NavMapPoint* findClosest(glm::vec3 position) const;
+			float heuristicCostEstimate(NavMapPoint* a, NavMapPoint* b) const;
 		};
 
 		extern inline bool equal(const glm::vec3& a, const glm::vec3& b);

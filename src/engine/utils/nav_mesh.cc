@@ -3,6 +3,7 @@
 #include <glm/gtx/norm.hpp>
 #include <utils/console.h>
 #include <algorithm>
+#include "mt_manager.h"
 
 #if VIOLET_WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -426,13 +427,7 @@ namespace lambda
 			}
 
 			if (closestDistance > maxDistance)
-			{
-				std::cout << "\tNo suitable shape found" << std::endl;
 				return nullptr;
-			}
-
-			if (closest)
-				std::cout << "\tNot on shape: " << closestDistance << "\t" << glm::length(closest->c - point) << std::endl;
 
 			return closest;
 		}
@@ -446,7 +441,7 @@ namespace lambda
 			return closestNavMesh(shapes, point, radius);
 		}
 
-		Vector<glm::vec3> TriNavMap::findPath(glm::vec3 from, glm::vec3 to)
+		Vector<glm::vec3> TriNavMap::findPath(glm::vec3 from, glm::vec3 to) const
 		{
 			Vector<glm::vec3> path;
 			NavMapPoint* point_from = findClosest(from);
@@ -612,10 +607,6 @@ namespace lambda
 			return path;
 		}
 
-		std::thread k_thread;
-		std::mutex  k_mutex;
-		std::atomic<int> k_count;
-
 		struct FindPathQueueInfo
 		{
 			TriNavMap* map;
@@ -623,32 +614,20 @@ namespace lambda
 			glm::vec3 to;
 			Promise<Vector<glm::vec3>>* promise;
 		};
-		Queue<FindPathQueueInfo> k_queue_info;
-		
-		void findPathQueued()
+
+		void findPathQueued(void* user_data)
 		{
-			while (true)
-			{
-				if (k_count <= 0)
-				{
-					std::this_thread::sleep_for(std::chrono::microseconds(1));
-					continue;
-				}
-				
-				k_count--;
+			FindPathQueueInfo& fpqi = *(FindPathQueueInfo*)user_data;
 
-				k_mutex.lock();
-				FindPathQueueInfo fpqi = k_queue_info.front();
-				k_queue_info.pop();
-				k_mutex.unlock();
+			Vector<glm::vec3> path = fpqi.map->findPath(fpqi.from, fpqi.to);
+			Promise<Vector<glm::vec3>>* promise = fpqi.promise;
 
-				Vector<glm::vec3> path = fpqi.map->findPath(fpqi.from, fpqi.to);
+			foundation::Memory::destruct(&fpqi);
 
-				fpqi.promise->g_mutex.lock();
-				fpqi.promise->t = eastl::move(path);
-				fpqi.promise->is_finished = true;
-				fpqi.promise->g_mutex.unlock();
-			}
+			promise->g_mutex.lock();
+			promise->t = eastl::move(path);
+			promise->is_finished = true;
+			promise->g_mutex.unlock();
 		}
 
 		Promise<Vector<glm::vec3>>* TriNavMap::findPathPromise(TriNavMap* map, glm::vec3 from, glm::vec3 to)
@@ -656,24 +635,18 @@ namespace lambda
 			Promise<Vector<glm::vec3>>* promise = foundation::Memory::construct<Promise<Vector<glm::vec3>>>();
 			promise->is_finished = false;
 
-			k_mutex.lock();
-			k_queue_info.push({ map, from, to, promise });
-			k_mutex.unlock();
+			FindPathQueueInfo* fpqi = foundation::Memory::construct<FindPathQueueInfo>();
+			fpqi->map     = map;
+			fpqi->from    = from;
+			fpqi->to      = to;
+			fpqi->promise = promise;
 
-			k_count++;
-
-			if (!k_thread.joinable())
-			{
-				k_thread = std::thread(findPathQueued);
-#if VIOLET_WIN32
-				SetThreadPriority(k_thread.native_handle(), THREAD_PRIORITY_LOWEST);
-#endif
-			}
+			TaskScheduler::queue(findPathQueued, fpqi, platform::TaskScheduler::kMedium);
 
 			return promise;
 		}
 
-		NavMapPoint* TriNavMap::findClosest(glm::vec3 position)
+		NavMapPoint* TriNavMap::findClosest(glm::vec3 position) const
 		{
 			//NavMapShape* shape = closestNavMeshInArea(bvh_, position, 5.0f);
 			NavMapShape* shape = closestNavMesh(shapes_, position);
@@ -686,7 +659,7 @@ namespace lambda
 			point->shape = shape;
 			return point;
 		}
-		float TriNavMap::heuristicCostEstimate(NavMapPoint* a, NavMapPoint* b)
+		float TriNavMap::heuristicCostEstimate(NavMapPoint* a, NavMapPoint* b) const
 		{
 			return glm::length2(a->point - b->point);
 		}

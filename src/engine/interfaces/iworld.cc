@@ -1,17 +1,10 @@
 #include "iworld.h"
 #include "utils/profiler.h"
 
-#define USE_MT_GC 0
+#define USE_MT_GC 1
 
 #if USE_MT_GC
-#if VIOLET_WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-#undef near
-#undef far
-#undef min
-#undef max
-#endif
+#include "utils/mt_manager.h"
 #endif
 
 namespace lambda
@@ -53,72 +46,22 @@ namespace lambda
 		}
 
 #if USE_MT_GC
-		std::thread k_gc_thread;
-		scripting::IScriptContext* k_gc_data = nullptr;
-		bool k_gc_keep_alive = true;
-		std::mutex k_gc_mutex;
-
-		void gcCanRead()
+		struct MTGC
 		{
-			bool can_get = false;
-			do
-			{
-				k_gc_mutex.lock();
-				can_get = k_gc_data != nullptr;
-				k_gc_mutex.unlock();
-				if (!can_get)
-					std::this_thread::sleep_for(std::chrono::microseconds(1));
-			} while (!can_get);
-		}
+			scripting::IScriptContext* context = nullptr;
+			std::atomic<bool> done = true;
+		} mtgc;
 
-		void gcCanWrite()
+		void queueGarbageCollection(void* user_data)
 		{
-			bool can_set = false;
-			do
-			{
-				k_gc_mutex.lock();
-				can_set = k_gc_data == nullptr;
-				k_gc_mutex.unlock();
-				if (!can_set)
-					std::this_thread::sleep_for(std::chrono::microseconds(1));
-			} while (!can_set);
+			mtgc.context->collectGarbage();
+			mtgc.done = true;
 		}
-
-		void gcSet(scripting::IScriptContext* data)
-		{
-			k_gc_mutex.lock();
-			k_gc_data = data;
-			k_gc_mutex.unlock();
-		}
-
-		void gcLoop()
-		{
-			while (k_gc_keep_alive)
-			{
-				gcCanRead();
-
-				k_gc_data->collectGarbage();
-				
-				k_gc_mutex.lock();
-				k_gc_data = nullptr;
-				k_gc_mutex.unlock();
-			}
-		}
-
 #endif
 
 		///////////////////////////////////////////////////////////////////////////
 		void IWorld::run()
 		{
-#if USE_MT_GC
-			k_gc_thread = std::thread(gcLoop);
-#if VIOLET_WIN32
-			SetThreadPriority(k_gc_thread.native_handle(), THREAD_PRIORITY_TIME_CRITICAL);
-			SetThreadPriorityBoost(k_gc_thread.native_handle(), TRUE);
-			//SetThreadDescription(k_gc_thread.native_handle(), L"Construct Thread");
-#endif
-#endif
-
 			initialize();
 			scripting_->executeFunction("Game::Initialize", {});
 			scene_.renderer->resize();
@@ -126,7 +69,8 @@ namespace lambda
 			scene_.debug_renderer.Initialize(scene_);
 			
 			double time_step_remainer = 0.0;
-			
+			profiler_.startTimer("BetweenFrames");
+
 			while (scene_.window->isOpen())
 			{
 				handleWindowMessages();
@@ -142,11 +86,13 @@ namespace lambda
 					continue;
 
 #if USE_MT_GC
-				gcCanWrite();
+				while (!mtgc.done)
+					std::this_thread::sleep_for(std::chrono::microseconds(1));
 #endif
 
 				scripting_->executeFunction("Input::InputHelper::UpdateAxes", {});
 
+				profiler_.endTimer("BetweenFrames");
 				profiler_.startTimer("Total");
 				profiler_.startTimer("FixedUpdate");
 				static unsigned char max_step_count_count = 8u;
@@ -174,6 +120,7 @@ namespace lambda
 
 				profiler_.startTimer("Update");
 				gui_.update(delta_time_);
+
 				scripting_->executeFunction("Game::Update", { scripting::ScriptValue((float)delta_time_) });
 				scene::sceneUpdate((float)delta_time_, scene_);
 				scene_.renderer->update(delta_time_);
@@ -182,7 +129,11 @@ namespace lambda
 				profiler_.startTimer("CollectGarbage");
 #if USE_MT_GC
 				if (did_fixed_update)
-					gcSet(scene_.scripting);
+				{
+					mtgc.context = scene_.scripting;
+					mtgc.done = false;
+					platform::TaskScheduler::queue(queueGarbageCollection, nullptr, platform::TaskScheduler::kHigh);
+				}
 #else
 				if (did_fixed_update)
 					scene_.scripting->collectGarbage();
@@ -194,10 +145,8 @@ namespace lambda
 				scene::sceneConstructRender(scene_);
 				profiler_.endTimer("ConstructRender");
 				
-				profiler_.startTimer("OnRender");
-				scene::sceneOnRender(scene_);
-				profiler_.endTimer("OnRender");
 				profiler_.endTimer("Total");
+				profiler_.startTimer("BetweenFrames");
 			}
 
 			scripting_->executeFunction("Game::Deinitialize", {});

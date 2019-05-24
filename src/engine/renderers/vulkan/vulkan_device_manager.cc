@@ -123,6 +123,7 @@ namespace lambda
 		createCommandBuffers();
 		createSemaphores();
 		createVmaAllocator();
+		current_frame_ = 1;
 	}
 
 	///////////////////////////////////////////////////////////////////////////

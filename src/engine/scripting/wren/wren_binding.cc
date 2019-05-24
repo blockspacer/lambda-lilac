@@ -58,6 +58,26 @@ namespace lambda
     {
       return (T*)wrenSetSlotNewForeign(vm, slot, class_slot, sizeof(T));
     }
+	bool anyNaN(const glm::vec2& v)
+	{
+		glm::bvec2 b = glm::isnan(v);
+		return (b.x || b.y);
+	}
+	bool anyNaN(const glm::vec3& v)
+	{
+		glm::bvec3 b = glm::isnan(v);
+		return (b.x || b.y || b.z);
+	}
+	bool anyNaN(const glm::vec4& v)
+	{
+		glm::bvec4 b = glm::isnan(v);
+		return (b.x || b.y || b.z || b.w);
+	}
+	bool anyNaN(const glm::quat& v)
+	{
+		glm::bvec4 b = glm::isnan(v);
+		return (b.x || b.y || b.z || b.w);
+	}
 
 		namespace Console
 		{
@@ -85,6 +105,9 @@ namespace lambda
 			/////////////////////////////////////////////////////////////////////////
 			glm::vec2* makeAt(WrenVM* vm, int slot, int class_slot, glm::vec2 val = glm::vec2())
 			{
+				if (anyNaN(val))
+					val = glm::vec2();
+
 				if (handle == nullptr)
 				{
 					wrenGetVariable(vm, "Core", "Vec2", class_slot);
@@ -170,6 +193,9 @@ namespace lambda
 			/////////////////////////////////////////////////////////////////////////
 			glm::vec3* makeAt(WrenVM* vm, int slot, int class_slot, glm::vec3 val = glm::vec3())
 			{
+				if (anyNaN(val))
+					val = glm::vec3();
+
 				if (handle == nullptr)
 				{
 					wrenGetVariable(vm, "Core", "Vec3", class_slot);
@@ -306,6 +332,9 @@ namespace lambda
 			/////////////////////////////////////////////////////////////////////////
 			glm::vec4* makeAt(WrenVM* vm, int slot, int class_slot, glm::vec4 val = glm::vec4())
 			{
+				if (anyNaN(val))
+					val = glm::vec4();
+
 				if (handle == nullptr)
 				{
 					wrenGetVariable(vm, "Core", "Vec4", class_slot);
@@ -440,10 +469,13 @@ namespace lambda
     {
       WrenHandle* handle = nullptr;
       /////////////////////////////////////////////////////////////////////////
-      glm::quat* make(WrenVM* vm, const glm::quat val = glm::quat())
-      {
+      glm::quat* make(WrenVM* vm, glm::quat val = glm::quat())
+	  {
+        if (anyNaN(val))
+			val = glm::quat();
+
         if (handle == nullptr)
-        {
+		{
           wrenGetVariable(vm, "Core", "Quat", 0);
           handle = wrenGetSlotHandle(vm, 0);
         }
@@ -581,6 +613,136 @@ namespace lambda
         return nullptr;
       }
     }
+	namespace FastArray
+	{
+		enum Type
+		{
+			kTypeUnknown,
+			kTypeVec2,
+			kTypeVec3,
+			kTypeVec4,
+		};
+
+		struct FastArray
+		{
+			Type     type = kTypeUnknown;
+			char*    data = nullptr;
+			uint32_t num  = 0ul;
+		};
+
+		WrenHandle* handle = nullptr;
+		/////////////////////////////////////////////////////////////////////////
+		FastArray* makeAt(WrenVM* vm, int slot, int class_slot, FastArray val = {})
+		{
+			if (handle == nullptr)
+			{
+				wrenGetVariable(vm, "Core", "FastArray", class_slot);
+				handle = wrenGetSlotHandle(vm, class_slot);
+			}
+			wrenSetSlotHandle(vm, class_slot, handle);
+			FastArray* data = MakeForeign<FastArray>(vm, slot, class_slot);
+			memcpy(data, &val, sizeof(FastArray));
+
+			return data;
+		}
+
+		/////////////////////////////////////////////////////////////////////////
+		FastArray* make(WrenVM* vm, const FastArray val = FastArray())
+		{
+			return makeAt(vm, 0, 1, val);
+		}
+
+		/////////////////////////////////////////////////////////////////////////
+		WrenForeignClassMethods Construct()
+		{
+			return WrenForeignClassMethods{
+				[](WrenVM* vm) {
+				Type type = (Type)(int)wrenGetSlotDouble(vm, 1);
+				FastArray& fast_array = *make(vm);
+				fast_array.type = type;
+			},
+				[](void* data) {
+				FastArray& fast_array = *(FastArray*)data;
+				foundation::Memory::deallocate(fast_array.data); 
+				fast_array.data = nullptr; 
+				fast_array.num  = 0ul;
+				fast_array.type = kTypeUnknown;
+			}
+			};
+		}
+
+		/////////////////////////////////////////////////////////////////////////
+		WrenForeignMethodFn Bind(const char* signature)
+		{
+			if (strcmp(signature, "at(_)") == 0) return [](WrenVM* vm) {
+				FastArray& fast_array = *GetForeign<FastArray>(vm, 0);
+				uint32_t elem = (uint32_t)wrenGetSlotDouble(vm, 1);
+				LMB_ASSERT(fast_array.type != kTypeUnknown, "FAST ARRAY: Fast array had unknown type");
+				LMB_ASSERT(elem < fast_array.num, "FAST ARRAY: Tried to access outside of array");
+
+				switch (fast_array.type)
+				{
+				case kTypeVec2: Vec2::make(vm, ((glm::vec2*)fast_array.data)[elem]); break;
+				case kTypeVec3: Vec3::make(vm, ((glm::vec3*)fast_array.data)[elem]); break;
+				case kTypeVec4: Vec4::make(vm, ((glm::vec4*)fast_array.data)[elem]); break;
+				default: wrenSetSlotNull(vm, 0);
+				}
+			};
+			if (strcmp(signature, "removeAt(_)") == 0) return [](WrenVM* vm) {
+				FastArray& fast_array = *GetForeign<FastArray>(vm, 0);
+				uint32_t elem = (uint32_t)wrenGetSlotDouble(vm, 1);
+				LMB_ASSERT(fast_array.type != kTypeUnknown, "FAST ARRAY: Fast array had unknown type");
+				LMB_ASSERT(elem < fast_array.num, "FAST ARRAY: Tried to access outside of array");
+
+				uint32_t elem_size;
+				switch (fast_array.type)
+				{
+				case kTypeVec2: elem_size = sizeof(glm::vec2); break;
+				case kTypeVec3: elem_size = sizeof(glm::vec3); break;
+				case kTypeVec4: elem_size = sizeof(glm::vec4); break;
+				default: elem_size = 0ul; break;
+				}
+
+				fast_array.num--;
+				if (fast_array.num == 0ul)
+				{
+					foundation::Memory::deallocate(fast_array.data);
+					fast_array.data = nullptr;
+					return;
+				}
+
+				char* new_data = (char*)foundation::Memory::allocate(elem_size * (fast_array.num));
+				memcpy(new_data, fast_array.data, elem_size * elem);
+				memcpy(new_data + elem * elem_size, fast_array.data + (elem + 1) * elem_size, elem_size * (fast_array.num - elem));
+				foundation::Memory::deallocate(fast_array.data);
+				fast_array.data = new_data;
+			};
+			if (strcmp(signature, "count") == 0) return [](WrenVM* vm) {
+				FastArray& fast_array = *GetForeign<FastArray>(vm, 0);
+				LMB_ASSERT(fast_array.type != kTypeUnknown, "FAST ARRAY: Fast array had unknown type");
+				wrenSetSlotDouble(vm, 0, (double)fast_array.num);
+			};
+			if (strcmp(signature, "type") == 0) return [](WrenVM* vm) {
+				FastArray& fast_array = *GetForeign<FastArray>(vm, 0);
+				LMB_ASSERT(fast_array.type != kTypeUnknown, "FAST ARRAY: Fast array had unknown type");
+				wrenSetSlotDouble(vm, 0, (double)fast_array.type);
+			};
+			if (strcmp(signature, "isEmpty") == 0) return [](WrenVM* vm) {
+				FastArray& fast_array = *GetForeign<FastArray>(vm, 0);
+				LMB_ASSERT(fast_array.type != kTypeUnknown, "FAST ARRAY: Fast array had unknown type");
+				wrenSetSlotBool(vm, 0, fast_array.num == 0ul);
+			};
+			if (strcmp(signature, "clear") == 0) return [](WrenVM* vm) {
+				FastArray& fast_array = *GetForeign<FastArray>(vm, 0);
+				LMB_ASSERT(fast_array.type != kTypeUnknown, "FAST ARRAY: Fast array had unknown type");
+
+				foundation::Memory::deallocate(fast_array.data);
+				fast_array.data = nullptr;
+				fast_array.num  = 0ul;
+			};
+			return nullptr;
+		}
+	}
     namespace Texture
     {
       WrenHandle* handle = nullptr;
@@ -3113,108 +3275,151 @@ namespace lambda
         return nullptr;
       }
     }
-    namespace Math
-    {
-      WrenForeignMethodFn Bind(const char* signature)
-      {
-        if (strcmp(signature, "random(_,_)") == 0) return [](WrenVM* vm) {
-          wrenSetSlotDouble(vm, 0, (double)utilities::randomRange((float)wrenGetSlotDouble(vm, 1), (float)wrenGetSlotDouble(vm, 2)));
-        };
-        if (strcmp(signature, "random(_)") == 0) return [](WrenVM* vm) {
-          wrenSetSlotDouble(vm, 0, (double)utilities::randomRange(0.0f, (float)wrenGetSlotDouble(vm, 1)));
-        };
-        if (strcmp(signature, "random()") == 0) return [](WrenVM* vm) {
-          wrenSetSlotDouble(vm, 0, (double)utilities::random());
-        };
-        if (strcmp(signature, "clamp(_,_,_)") == 0) return [](WrenVM* vm) {
-          wrenSetSlotDouble(vm, 0, std::min(std::max(wrenGetSlotDouble(vm, 1), wrenGetSlotDouble(vm, 2)), wrenGetSlotDouble(vm, 3)));
-        };
-        if (strcmp(signature, "clamp(_)") == 0) return [](WrenVM* vm) {
-          wrenSetSlotDouble(vm, 0, std::min(std::max(wrenGetSlotDouble(vm, 1), 0.0), 1.0));
-        };
-        if (strcmp(signature, "lerp(_,_,_)") == 0) return [](WrenVM* vm) {
-          double x = wrenGetSlotDouble(vm, 1);
-          double y = wrenGetSlotDouble(vm, 2);
-          double s = wrenGetSlotDouble(vm, 3);
-          wrenSetSlotDouble(vm, 0, x + s * (y - x));
-        };
-        if (strcmp(signature, "sqrt(_)") == 0) return [](WrenVM* vm) {
-          wrenSetSlotDouble(vm, 0, std::sqrt(wrenGetSlotDouble(vm, 1)));
-        };
-        if (strcmp(signature, "sqr(_)") == 0) return [](WrenVM* vm) {
-          double val = wrenGetSlotDouble(vm, 1);
-          wrenSetSlotDouble(vm, 0, val * val);
-        };
-        if (strcmp(signature, "pow(_,_)") == 0) return [](WrenVM* vm) {
-          wrenSetSlotDouble(vm, 0, std::pow(wrenGetSlotDouble(vm, 1), wrenGetSlotDouble(vm, 2)));
-        };
-        if (strcmp(signature, "min(_,_)") == 0) return [](WrenVM* vm) {
-          wrenSetSlotDouble(vm, 0, std::min(wrenGetSlotDouble(vm, 1), wrenGetSlotDouble(vm, 2)));
-        };
-        if (strcmp(signature, "max(_,_)") == 0) return [](WrenVM* vm) {
-          wrenSetSlotDouble(vm, 0, std::max(wrenGetSlotDouble(vm, 1), wrenGetSlotDouble(vm, 2)));
-        };
-        if (strcmp(signature, "abs(_)") == 0) return [](WrenVM* vm) {
-          wrenSetSlotDouble(vm, 0, std::abs(wrenGetSlotDouble(vm, 1)));
-        };
-        if (strcmp(signature, "floor(_)") == 0) return [](WrenVM* vm) {
-          wrenSetSlotDouble(vm, 0, std::floor(wrenGetSlotDouble(vm, 1)));
-        };
-        if (strcmp(signature, "ceil(_)") == 0) return [](WrenVM* vm) {
-          wrenSetSlotDouble(vm, 0, std::ceil(wrenGetSlotDouble(vm, 1)));
-        };
-        if (strcmp(signature, "round(_)") == 0) return [](WrenVM* vm) {
-          wrenSetSlotDouble(vm, 0, std::round(wrenGetSlotDouble(vm, 1)));
-        };
-        if (strcmp(signature, "cos(_)") == 0) return [](WrenVM* vm) {
-          wrenSetSlotDouble(vm, 0, std::cos(wrenGetSlotDouble(vm, 1)));
-        };
-        if (strcmp(signature, "cosh(_)") == 0) return [](WrenVM* vm) {
-          wrenSetSlotDouble(vm, 0, std::cosh(wrenGetSlotDouble(vm, 1)));
-        };
-        if (strcmp(signature, "acos(_)") == 0) return [](WrenVM* vm) {
-          wrenSetSlotDouble(vm, 0, std::acos(wrenGetSlotDouble(vm, 1)));
-        };
-        if (strcmp(signature, "sin(_)") == 0) return [](WrenVM* vm) {
-          wrenSetSlotDouble(vm, 0, std::sin(wrenGetSlotDouble(vm, 1)));
-        };
-        if (strcmp(signature, "sinh(_)") == 0) return [](WrenVM* vm) {
-          wrenSetSlotDouble(vm, 0, std::sinh(wrenGetSlotDouble(vm, 1)));
-        };
-        if (strcmp(signature, "asin(_)") == 0) return [](WrenVM* vm) {
-          wrenSetSlotDouble(vm, 0, std::asin(wrenGetSlotDouble(vm, 1)));
-        };
-        if (strcmp(signature, "tan(_)") == 0) return [](WrenVM* vm) {
-          wrenSetSlotDouble(vm, 0, std::tan(wrenGetSlotDouble(vm, 1)));
-        };
-        if (strcmp(signature, "tanh(_)") == 0) return [](WrenVM* vm) {
-          wrenSetSlotDouble(vm, 0, std::tanh(wrenGetSlotDouble(vm, 1)));
-        };
-        if (strcmp(signature, "atan(_)") == 0) return [](WrenVM* vm) {
-          wrenSetSlotDouble(vm, 0, std::atan(wrenGetSlotDouble(vm, 1)));
-        };
-        if (strcmp(signature, "atan2(_,_)") == 0) return [](WrenVM* vm) {
-          wrenSetSlotDouble(vm, 0, std::atan2(wrenGetSlotDouble(vm, 1), wrenGetSlotDouble(vm, 2)));
-        };
-        if (strcmp(signature, "wrapMax(_,_)") == 0) return [](WrenVM* vm) {
-          double val = wrenGetSlotDouble(vm, 1);
-          double max = wrenGetSlotDouble(vm, 2);
-          wrenSetSlotDouble(vm, 0, std::fmod(max + std::fmod(val, max), max));
-        };
-        if (strcmp(signature, "wrap(_,_,_)") == 0) return [](WrenVM* vm) {
-          double val = wrenGetSlotDouble(vm, 1);
-          double min = wrenGetSlotDouble(vm, 2);
-          double max = wrenGetSlotDouble(vm, 3);
-          max = max - min;
-          val = val - min;
-          wrenSetSlotDouble(vm, 0, min + std::fmod(max + std::fmod(val, max), max));
-        };
-        if (strcmp(signature, "lookRotation(_,_)") == 0) return [](WrenVM* vm) {
-          Quat::make(vm, components::TransformSystem::lookRotation(*GetForeign<glm::vec3>(vm, 1), *GetForeign<glm::vec3>(vm, 2)));
-        };
-        return nullptr;
-      }
-    }
+	namespace Math
+	{
+#pragma optimize ("", off)
+		WrenForeignMethodFn Bind(const char* signature)
+		{
+			if (strcmp(signature, "random(_,_)") == 0) return [](WrenVM* vm) {
+				wrenSetSlotDouble(vm, 0, (double)utilities::randomRange((float)wrenGetSlotDouble(vm, 1), (float)wrenGetSlotDouble(vm, 2)));
+			};
+			if (strcmp(signature, "random(_)") == 0) return [](WrenVM* vm) {
+				wrenSetSlotDouble(vm, 0, (double)utilities::randomRange(0.0f, (float)wrenGetSlotDouble(vm, 1)));
+			};
+			if (strcmp(signature, "random()") == 0) return [](WrenVM* vm) {
+				wrenSetSlotDouble(vm, 0, (double)utilities::random());
+			};
+			if (strcmp(signature, "clamp(_,_,_)") == 0) return [](WrenVM* vm) {
+				wrenSetSlotDouble(vm, 0, std::min(std::max(wrenGetSlotDouble(vm, 1), wrenGetSlotDouble(vm, 2)), wrenGetSlotDouble(vm, 3)));
+			};
+			if (strcmp(signature, "clamp(_)") == 0) return [](WrenVM* vm) {
+				wrenSetSlotDouble(vm, 0, std::min(std::max(wrenGetSlotDouble(vm, 1), 0.0), 1.0));
+			};
+			if (strcmp(signature, "lerp(_,_,_)") == 0) return [](WrenVM* vm) {
+				double x = wrenGetSlotDouble(vm, 1);
+				double y = wrenGetSlotDouble(vm, 2);
+				double s = wrenGetSlotDouble(vm, 3);
+				wrenSetSlotDouble(vm, 0, x + s * (y - x));
+			};
+			if (strcmp(signature, "lerp2(_,_,_)") == 0) return [](WrenVM* vm) {
+				glm::vec2 x = *GetForeign<glm::vec2>(vm, 1);
+				glm::vec2 y = *GetForeign<glm::vec2>(vm, 2);
+				double s = wrenGetSlotDouble(vm, 3);
+				Vec2::make(vm, glm::vec2(
+					x.x + s * (y.x - x.x),
+					x.y + s * (y.y - x.y)
+				));
+			};
+			if (strcmp(signature, "lerp3(_,_,_)") == 0) return [](WrenVM* vm) {
+				glm::vec3 x = *GetForeign<glm::vec3>(vm, 1);
+				glm::vec3 y = *GetForeign<glm::vec3>(vm, 2);
+				double s = wrenGetSlotDouble(vm, 3);
+				Vec3::make(vm, glm::vec3(
+					x.x + s * (y.x - x.x),
+					x.y + s * (y.y - x.y),
+					x.z + s * (y.z - x.z)
+				));
+			};
+			if (strcmp(signature, "lerp4(_,_,_)") == 0) return [](WrenVM* vm) {
+				glm::vec4 x = *GetForeign<glm::vec4>(vm, 1);
+				glm::vec4 y = *GetForeign<glm::vec4>(vm, 2);
+				double s = wrenGetSlotDouble(vm, 3);
+				Vec4::make(vm, glm::vec4(
+					x.x + s * (y.x - x.x),
+					x.y + s * (y.y - x.y),
+					x.z + s * (y.z - x.z),
+					x.w + s * (y.w - x.w)
+				));
+			};
+			if (strcmp(signature, "lerpq(_,_,_)") == 0) return [](WrenVM* vm) {
+				glm::quat x = *GetForeign<glm::quat>(vm, 1);
+				glm::quat y = *GetForeign<glm::quat>(vm, 2);
+				double s = wrenGetSlotDouble(vm, 3);
+				Quat::make(vm, glm::lerp(x, y, (float)s));
+			};
+			if (strcmp(signature, "slerp(_,_,_)") == 0) return [](WrenVM* vm) {
+				glm::quat x = *GetForeign<glm::quat>(vm, 1);
+				glm::quat y = *GetForeign<glm::quat>(vm, 2);
+				double s = wrenGetSlotDouble(vm, 3);
+				Quat::make(vm, glm::slerp(x, y, (float)s));
+			};
+			if (strcmp(signature, "sqrt(_)") == 0) return [](WrenVM* vm) {
+				wrenSetSlotDouble(vm, 0, std::sqrt(wrenGetSlotDouble(vm, 1)));
+			};
+			if (strcmp(signature, "sqr(_)") == 0) return [](WrenVM* vm) {
+				double val = wrenGetSlotDouble(vm, 1);
+				wrenSetSlotDouble(vm, 0, val * val);
+			};
+			if (strcmp(signature, "pow(_,_)") == 0) return [](WrenVM* vm) {
+				wrenSetSlotDouble(vm, 0, std::pow(wrenGetSlotDouble(vm, 1), wrenGetSlotDouble(vm, 2)));
+			};
+			if (strcmp(signature, "min(_,_)") == 0) return [](WrenVM* vm) {
+				wrenSetSlotDouble(vm, 0, std::min(wrenGetSlotDouble(vm, 1), wrenGetSlotDouble(vm, 2)));
+			};
+			if (strcmp(signature, "max(_,_)") == 0) return [](WrenVM* vm) {
+				wrenSetSlotDouble(vm, 0, std::max(wrenGetSlotDouble(vm, 1), wrenGetSlotDouble(vm, 2)));
+			};
+			if (strcmp(signature, "abs(_)") == 0) return [](WrenVM* vm) {
+				wrenSetSlotDouble(vm, 0, std::abs(wrenGetSlotDouble(vm, 1)));
+			};
+			if (strcmp(signature, "floor(_)") == 0) return [](WrenVM* vm) {
+				wrenSetSlotDouble(vm, 0, std::floor(wrenGetSlotDouble(vm, 1)));
+			};
+			if (strcmp(signature, "ceil(_)") == 0) return [](WrenVM* vm) {
+				wrenSetSlotDouble(vm, 0, std::ceil(wrenGetSlotDouble(vm, 1)));
+			};
+			if (strcmp(signature, "round(_)") == 0) return [](WrenVM* vm) {
+				wrenSetSlotDouble(vm, 0, std::round(wrenGetSlotDouble(vm, 1)));
+			};
+			if (strcmp(signature, "cos(_)") == 0) return [](WrenVM* vm) {
+				wrenSetSlotDouble(vm, 0, std::cos(wrenGetSlotDouble(vm, 1)));
+			};
+			if (strcmp(signature, "cosh(_)") == 0) return [](WrenVM* vm) {
+				wrenSetSlotDouble(vm, 0, std::cosh(wrenGetSlotDouble(vm, 1)));
+			};
+			if (strcmp(signature, "acos(_)") == 0) return [](WrenVM* vm) {
+				wrenSetSlotDouble(vm, 0, std::acos(wrenGetSlotDouble(vm, 1)));
+			};
+			if (strcmp(signature, "sin(_)") == 0) return [](WrenVM* vm) {
+				wrenSetSlotDouble(vm, 0, std::sin(wrenGetSlotDouble(vm, 1)));
+			};
+			if (strcmp(signature, "sinh(_)") == 0) return [](WrenVM* vm) {
+				wrenSetSlotDouble(vm, 0, std::sinh(wrenGetSlotDouble(vm, 1)));
+			};
+			if (strcmp(signature, "asin(_)") == 0) return [](WrenVM* vm) {
+				wrenSetSlotDouble(vm, 0, std::asin(wrenGetSlotDouble(vm, 1)));
+			};
+			if (strcmp(signature, "tan(_)") == 0) return [](WrenVM* vm) {
+				wrenSetSlotDouble(vm, 0, std::tan(wrenGetSlotDouble(vm, 1)));
+			};
+			if (strcmp(signature, "tanh(_)") == 0) return [](WrenVM* vm) {
+				wrenSetSlotDouble(vm, 0, std::tanh(wrenGetSlotDouble(vm, 1)));
+			};
+			if (strcmp(signature, "atan(_)") == 0) return [](WrenVM* vm) {
+				wrenSetSlotDouble(vm, 0, std::atan(wrenGetSlotDouble(vm, 1)));
+			};
+			if (strcmp(signature, "atan2(_,_)") == 0) return [](WrenVM* vm) {
+				wrenSetSlotDouble(vm, 0, std::atan2(wrenGetSlotDouble(vm, 1), wrenGetSlotDouble(vm, 2)));
+			};
+			if (strcmp(signature, "wrapMax(_,_)") == 0) return [](WrenVM* vm) {
+				double val = wrenGetSlotDouble(vm, 1);
+				double max = wrenGetSlotDouble(vm, 2);
+				wrenSetSlotDouble(vm, 0, std::fmod(max + std::fmod(val, max), max));
+			};
+			if (strcmp(signature, "wrap(_,_,_)") == 0) return [](WrenVM* vm) {
+				double val = wrenGetSlotDouble(vm, 1);
+				double min = wrenGetSlotDouble(vm, 2);
+				double max = wrenGetSlotDouble(vm, 3);
+				max = max - min;
+				val = val - min;
+				wrenSetSlotDouble(vm, 0, min + std::fmod(max + std::fmod(val, max), max));
+			};
+			if (strcmp(signature, "lookRotation(_,_)") == 0) return [](WrenVM* vm) {
+				Quat::make(vm, components::TransformSystem::lookRotation(*GetForeign<glm::vec3>(vm, 1), *GetForeign<glm::vec3>(vm, 2)));
+			};
+			return nullptr;
+		}
+	}
 	namespace Time
 	{
 		WrenForeignMethodFn Bind(const char* signature)
@@ -3622,14 +3827,13 @@ namespace lambda
 				const glm::vec3& from = *GetForeign<glm::vec3>(vm, 1);
 				const glm::vec3& to = *GetForeign<glm::vec3>(vm, 2);
 				Vector<glm::vec3> path = nav_mesh.nav_map.findPath(from, to);
-
-				wrenSetSlotNewList(vm, 0);
-
-				for (const glm::vec3& pos : path)
-				{
-					Vec3::makeAt(vm, 1, 2, pos);
-					wrenInsertInList(vm, 0, -1, 1);
-				}
+				
+				FastArray::FastArray fast_array;
+				fast_array.type = FastArray::kTypeVec3;
+				fast_array.num  = (uint32_t)path.size();
+				fast_array.data = (char*)foundation::Memory::allocate(sizeof(glm::vec3) * path.size());
+				memcpy(fast_array.data, path.data(), sizeof(glm::vec3) * path.size());
+				FastArray::make(vm, fast_array);
 			};
 			return nullptr;
 		}
@@ -3662,7 +3866,9 @@ namespace lambda
 				make(vm);
 			},
 				[](void* data) {
-				delete ((NavMeshPromise*)data)->promise;
+				platform::Promise<Vector<glm::vec3>>::g_mutex.lock();
+				foundation::Memory::destruct(((NavMeshPromise*)data)->promise);
+				platform::Promise<Vector<glm::vec3>>::g_mutex.unlock();
 			}
 			};
 		}
@@ -3674,18 +3880,17 @@ namespace lambda
 			};
 			if (strcmp(signature, "path") == 0) return [](WrenVM* vm) {
 				NavMeshPromise& promise = *GetForeign<NavMeshPromise>(vm, 0);
-				LMB_ASSERT(promise.promise, "");
+				LMB_ASSERT(promise.promise, "PROMISE: Tried to access an uninitialized promise");
 
 				Vector<glm::vec3> path;
 				if (promise.promise->get(path))
 				{
-					wrenSetSlotNewList(vm, 0);
-
-					for (const glm::vec3& pos : path)
-					{
-						Vec3::makeAt(vm, 1, 2, pos);
-						wrenInsertInList(vm, 0, -1, 1);
-					}
+					FastArray::FastArray fast_array;
+					fast_array.type = FastArray::kTypeVec3;
+					fast_array.num  = (uint32_t)path.size();
+					fast_array.data = (char*)foundation::Memory::allocate(sizeof(glm::vec3) * path.size());
+					memcpy(fast_array.data, path.data(), sizeof(glm::vec3) * path.size());
+					FastArray::make(vm, fast_array);
 				}
 			};
 			return nullptr;
@@ -3754,27 +3959,25 @@ namespace lambda
 				TriNavMesh& nav_mesh = *GetForeign<TriNavMesh>(vm, 0);
 				Vector<glm::vec3> tris = nav_mesh.nav_map.getTris();
 
-				wrenSetSlotNewList(vm, 0);
-
-				for (const glm::vec3& tri : tris)
-				{
-					Vec3::makeAt(vm, 1, 2, tri);
-					wrenInsertInList(vm, 0, -1, 1);
-				}
+				FastArray::FastArray fast_array;
+				fast_array.type = FastArray::kTypeVec3;
+				fast_array.num  = (uint32_t)tris.size();
+				fast_array.data = (char*)foundation::Memory::allocate(sizeof(glm::vec3) * tris.size());
+				memcpy(fast_array.data, tris.data(), sizeof(glm::vec3) * tris.size());
+				FastArray::make(vm, fast_array);
 			};
 			if (strcmp(signature, "findPath(_,_)") == 0) return [](WrenVM* vm) {
 				TriNavMesh& nav_mesh = *GetForeign<TriNavMesh>(vm, 0);
 				const glm::vec3& from = *GetForeign<glm::vec3>(vm, 1);
 				const glm::vec3& to = *GetForeign<glm::vec3>(vm, 2);
 				Vector<glm::vec3> path = nav_mesh.nav_map.findPath(from, to);
-
-				wrenSetSlotNewList(vm, 0);
-
-				for (const glm::vec3& pos : path)
-				{
-					Vec3::makeAt(vm, 1, 2, pos);
-					wrenInsertInList(vm, 0, -1, 1);
-				}
+				
+				FastArray::FastArray fast_array;
+				fast_array.type = FastArray::kTypeVec3;
+				fast_array.num  = (uint32_t)path.size();
+				fast_array.data = (char*)foundation::Memory::allocate(sizeof(glm::vec3) * path.size());
+				memcpy(fast_array.data, path.data(), sizeof(glm::vec3) * path.size());
+				FastArray::make(vm, fast_array);
 			};
 			if (strcmp(signature, "findPathPromise(_,_)") == 0) return [](WrenVM* vm) {
 				TriNavMesh& nav_mesh = *GetForeign<TriNavMesh>(vm, 0);
@@ -3835,6 +4038,8 @@ namespace lambda
 				return Vec4::Construct();
 			if (hashEqual(className, "Quat"))
 				return Quat::Construct();
+			if (hashEqual(className, "FastArray"))
+				return FastArray::Construct();
 			if (hashEqual(className, "Texture"))
 				return Texture::Construct();
 			if (hashEqual(className, "Shader"))
@@ -3900,6 +4105,8 @@ namespace lambda
 				return Vec4::Bind(signature);
 			if (hashEqual(className, "Quat"))
 				return Quat::Bind(signature);
+			if (hashEqual(className, "FastArray"))
+				return FastArray::Bind(signature);
 			if (hashEqual(className, "Texture"))
 				return Texture::Bind(signature);
 			if (hashEqual(className, "Shader"))

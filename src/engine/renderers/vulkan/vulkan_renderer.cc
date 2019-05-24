@@ -16,7 +16,7 @@ namespace lambda
 	///////////////////////////////////////////////////////////////////////////
 	platform::IRenderBuffer* VulkanRenderer::allocRenderBuffer(uint32_t size, uint32_t flags, void* data)
 	{
-		const bool is_dynamic = (flags & platform::IRenderBuffer::kFlagDynamic)   ? true : false;
+      const bool is_dynamic   = (flags & platform::IRenderBuffer::kFlagDynamic)   ? true : false;
       const bool is_staging   = (flags & platform::IRenderBuffer::kFlagStaging)   ? true : false;
       const bool is_immutable = (flags & platform::IRenderBuffer::kFlagImmutable) ? true : false;
       const bool is_vertex    = (flags & platform::IRenderBuffer::kFlagVertex)    ? true : false;
@@ -34,6 +34,7 @@ namespace lambda
 		  (is_vertex   ? VK_BUFFER_USAGE_VERTEX_BUFFER_BIT :
 		  (is_index    ? VK_BUFFER_USAGE_INDEX_BUFFER_BIT :
 		  (is_constant ? VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT : 0u)));
+	  buffer_create_info.size = size;
 
 	  allocation_create_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
@@ -227,6 +228,7 @@ namespace lambda
     }
 
     ///////////////////////////////////////////////////////////////////////////
+#pragma optimize ("", off)
     void VulkanRenderer::startFrame()
     {
 		{
@@ -248,18 +250,18 @@ namespace lambda
 			pipeline_state_manager_.bindPipeline();
 
 			VkViewport viewport;
-			viewport.width = (float)wrapper_image.width;
-			viewport.height = (float)wrapper_image.height;
+			viewport.width    = (float)wrapper_image.width;
+			viewport.height   = (float)wrapper_image.height;
 			viewport.minDepth = 0.0f;
 			viewport.maxDepth = 1.0f;
-			viewport.x = 0;
-			viewport.y = 0;
+			viewport.x        = 0;
+			viewport.y        = 0;
 			vkCmdSetViewport(device_manager_.getCommandBuffer(), 0, 1, &viewport);
 			VkRect2D scissor;
-			scissor.extent.width = wrapper_image.width;
+			scissor.extent.width  = wrapper_image.width;
 			scissor.extent.height = wrapper_image.height;
-			scissor.offset.x = 0;
-			scissor.offset.y = 0;
+			scissor.offset.x      = 0;
+			scissor.offset.y      = 0;
 			vkCmdSetScissor(device_manager_.getCommandBuffer(), 0, 1, &scissor);
 			vkCmdDraw(device_manager_.getCommandBuffer(), 6, 1, 0, 0);
 
@@ -267,34 +269,34 @@ namespace lambda
 			device_manager_.endFrame();
 		}
 
-		command_buffer_.tryBegin();
+		//command_buffer_.tryBegin();
 
-		// Clear everything.
-		beginTimer("Clear Everything");
-		pushMarker("Clear Everything");
-		glm::vec4 colour(0.0f);
-		for (const auto& target : getScene()->post_process_manager->getAllTargets())
-		{
-			if (target.second.getTexture()->getLayer(0u).getFlags()
-				& kTextureFlagClear)
-			{
-				clearRenderTarget(target.second.getTexture(), colour);
-			}
-		}
-		popMarker();
-		endTimer("Clear Everything");
+		//// Clear everything.
+		//beginTimer("Clear Everything");
+		//pushMarker("Clear Everything");
+		//glm::vec4 colour(0.0f);
+		//for (const auto& target : getScene()->post_process_manager->getAllTargets())
+		//{
+		//	if (target.second.getTexture()->getLayer(0u).getFlags()
+		//		& kTextureFlagClear)
+		//	{
+		//		clearRenderTarget(target.second.getTexture(), colour);
+		//	}
+		//}
+		//popMarker();
+		//endTimer("Clear Everything");
 
-		// Reset everything back to normal.
+		//// Reset everything back to normal.
 
-		memset(&state_, 0, sizeof(state_));
-		state_manager_.bindTopology(asset::Topology::kTriangles);
-		setSamplerState(platform::SamplerState::LinearWrap(), 0u);
-		setRasterizerState(platform::RasterizerState::SolidFront());
+		//memset(&state_, 0, sizeof(state_));
+		//state_manager_.bindTopology(asset::Topology::kTriangles);
+		//setSamplerState(platform::SamplerState::LinearWrap(), 0u);
+		//setRasterizerState(platform::RasterizerState::SolidFront());
 
-		memset(&state_, 0, sizeof(state_));
-		state_.sub_mesh = UINT32_MAX;
-		memset(&vk_state_, 0, sizeof(vk_state_));
-		invalidateAll();
+		//memset(&state_, 0, sizeof(state_));
+		//state_.sub_mesh = UINT32_MAX;
+		//memset(&vk_state_, 0, sizeof(vk_state_));
+		//invalidateAll();
 
 		/*if (!cbs_.drs) cbs_.drs = (VulkanRenderBuffer*)allocRenderBuffer(sizeof(float), platform::IRenderBuffer::kFlagConstant | platform::IRenderBuffer::kFlagDynamic, nullptr);
 		float drs_data[] = { dynamic_resolution_scale_ };

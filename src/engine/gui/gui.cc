@@ -18,6 +18,8 @@ namespace lambda
 {
 	namespace gui
 	{
+		std::mutex k_mutex;
+
 #if VIOLET_GUI_ULTRALIGHT
 		///////////////////////////////////////////////////////////////////////////
 		String exceptionToString(JSValueRef exception, JSContextRef js_context)
@@ -220,8 +222,13 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		void GUI::loadURL(String url)
 		{
+			k_mutex.lock();
+
 			if (!enabled_)
+			{
+				k_mutex.unlock();
 				return;
+			}
 
 #if VIOLET_GUI_ULTRALIGHT
 			LoadListenerImpl* load_listener =
@@ -236,9 +243,8 @@ namespace lambda
 			view_->set_load_listener(nullptr);
 			foundation::Memory::destruct(load_listener);
 #endif
+			k_mutex.unlock();
 		}
-
-		std::mutex k_mutex;
 
 		///////////////////////////////////////////////////////////////////////////
 		void GUI::update(double delta_time)
@@ -360,10 +366,13 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		void GUI::executeJavaScript(String js)
 		{
-			if (!enabled_)
-				return;
-
 			k_mutex.lock();
+			if (!enabled_)
+			{
+				k_mutex.unlock();
+				return;
+			}
+
 #if VIOLET_GUI_ULTRALIGHT
 			JSContextRef js_context = view_->js_context();
 			JSStringRef str = JSStringCreateWithUTF8CString(js.c_str());
@@ -373,6 +382,7 @@ namespace lambda
 			handleException(exception, js_context);
 			JSStringRelease(str);
 #endif
+
 			k_mutex.unlock();
 		}
 
@@ -511,6 +521,7 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		void GUI::bindJavaScriptCallback(String name, JavaScriptCallback callback, const void* user_data)
 		{
+			k_mutex.lock();
 #if VIOLET_GUI_ULTRALIGHT
 			JSContextRef js_context = view_->js_context();
 			JSStringRef str = JSStringCreateWithUTF8CString(name.c_str());
@@ -542,11 +553,13 @@ namespace lambda
 
 			handleException(exception, js_context);
 #endif
+			k_mutex.unlock();
 		}
 
 		///////////////////////////////////////////////////////////////////////////
 		void GUI::bindJavaScriptCallback(String name, JavaScriptCallbackWithRetval callback, const void* user_data)
 		{
+			k_mutex.lock();
 #if VIOLET_GUI_ULTRALIGHT
 			JSContextRef js_context = view_->js_context();
 			JSStringRef str = JSStringCreateWithUTF8CString(name.c_str());
@@ -561,7 +574,7 @@ namespace lambda
 
 			JSObjectRef native_function = JSObjectMake(
 				js_context, 
-				NativeFunctionWithRetvalClass(), 
+				NativeFunctionWithRetvalClass(),
 				ud
 			);
 
@@ -578,14 +591,20 @@ namespace lambda
 
 			handleException(exception, js_context);
 #endif
+			k_mutex.unlock();
 		}
 		void GUI::setEnabled(bool enabled)
 		{
+			k_mutex.lock();
 			enabled_ = enabled;
+			k_mutex.unlock();
 		}
 		bool GUI::getEnabled() const
 		{
-			return enabled_;
+			k_mutex.lock();
+			bool enabled = enabled_;
+			k_mutex.unlock();
+			return enabled;
 		}
 	}
 }

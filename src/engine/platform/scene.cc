@@ -13,22 +13,11 @@
 #include <algorithm>
 #include <utils/decompose_matrix.h>
 
-#if VIOLET_WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-#undef near
-#undef far
-#undef min
-#undef max
-#endif
-
 #define USE_MT 1
-#define USE_SEPARATE_CONSTRUCT 0
 #define USE_RENDERABLES 1
 
-#if !USE_MT
-#undef USE_SEPARATE_CONSTRUCT
-#define USE_SEPARATE_CONSTRUCT 0
+#if USE_MT
+#include "utils/mt_manager.h"
 #endif
 
 namespace lambda
@@ -1105,15 +1094,6 @@ namespace lambda
 			renderer->endTimer("Lighting");
 		}
 
-		struct RenderData
-		{
-			~RenderData() {};
-
-			Scene scene;
-			CameraBatch camera_batch;
-			Vector<LightBatch> light_batches;
-		};
-
 		struct RenderAction_PostProcess : public scene::IRenderAction
 		{
 			virtual void execute(scene::Scene& scene) override
@@ -1250,110 +1230,24 @@ namespace lambda
 			render_actions.insert(render_actions.end(), scene.render_actions.begin(), scene.render_actions.end());
 			scene.render_actions = eastl::move(render_actions);
 
-			camera_batch  = constructCamera(scene, scene.camera.main_camera);
+			camera_batch = constructCamera(scene, scene.camera.main_camera);
 			light_batches = constructLight(camera_batch, scene);
 		}
 
-		struct Thread
-		{
-			std::atomic<bool> can_read   = false;
-			std::atomic<bool> can_write  = true;
-			std::atomic<bool> keep_alive = true;
-			std::thread thread;
-
-			RenderData* curr_used_data = nullptr;
-			RenderData* queued_data    = nullptr;
-		};
-
-		Thread k_flush;
-
 #if USE_MT
-		std::mutex k_flush_mutex;
-		RenderData* k_flush_data = nullptr;
-#if USE_SEPARATE_CONSTRUCT
-		std::mutex k_construct_mutex;
-		RenderData* k_construct_data = nullptr;
-		Thread k_construct;
-#endif
-
-		///////////////////////////////////////////////////////////////////////////
-#if USE_SEPARATE_CONSTRUCT
-		void constructLoop()
+		struct QueueFlushData
 		{
-			while (k_construct.keep_alive)
-			{
-				bool can_get = false;
-				do
-				{
-					k_construct_mutex.lock();
-					can_get = k_construct_data != nullptr;
-					k_construct_mutex.unlock();
-					if (!can_get)
-						std::this_thread::sleep_for(std::chrono::microseconds(1));
-				} while (!can_get);
+			std::atomic<bool> done = true;
+			Scene scene;
+			CameraBatch camera_batch;
+			Vector<LightBatch> light_batches;
+		} k_queue_flush_data;
 
-				k_construct_mutex.lock();
-				scene::Scene scene = eastl::move(k_construct_data->scene);
-				k_construct_data = nullptr;
-				k_construct_mutex.unlock();
-
-				// Construct the render scene.
-				if (!k_flush.queued_data)
-					k_flush.queued_data = foundation::Memory::construct<RenderData>();
-
-				construct(scene, k_flush.queued_data->camera_batch, k_flush.queued_data->light_batches);
-				k_flush.queued_data->scene.renderer                 = scene.renderer;
-				k_flush.queued_data->scene.post_process_manager     = scene.post_process_manager;
-				k_flush.queued_data->scene.window                   = scene.window;
-				k_flush.queued_data->scene.gui                      = scene.gui;
-				k_flush.queued_data->scene.render_actions           = scene.render_actions;
-				k_flush.queued_data->scene.rigid_body.physics_world = scene.rigid_body.physics_world;
-				k_flush.queued_data->scene.debug_renderer           = scene.debug_renderer;
-
-				bool can_set = false;
-				do
-				{
-					k_flush_mutex.lock();
-					can_set = k_flush_data == nullptr;
-					k_flush_mutex.unlock();
-					if (!can_set)
-						std::this_thread::sleep_for(std::chrono::microseconds(1));
-				} while (!can_set);
-
-				k_flush_mutex.lock();
-				k_flush_data = k_flush.queued_data;
-				auto temp              = k_flush.curr_used_data;
-				k_flush.curr_used_data = k_flush.queued_data;
-				k_flush.queued_data    = temp;
-				k_flush_mutex.unlock();
-			}
-		}
-#endif
-
-		///////////////////////////////////////////////////////////////////////////
-		void flushLoop()
+		void queueFlush(void* user_data)
 		{
-			while (k_flush.keep_alive)
-			{
-				bool can_get = false;
-				do
-				{
-					k_flush_mutex.lock();
-					can_get = k_flush_data != nullptr;
-					k_flush_mutex.unlock();
-					if (!can_get)
-						std::this_thread::sleep_for(std::chrono::microseconds(1));
-				} while (!can_get);
-
-				k_flush_mutex.lock();
-				scene::Scene       scene         = eastl::move(k_flush_data->scene);
-				CameraBatch        camera_batch  = eastl::move(k_flush_data->camera_batch);
-				Vector<LightBatch> light_batches = eastl::move(k_flush_data->light_batches);
-				k_flush_data = nullptr;
-				k_flush_mutex.unlock();
-
-				flush(scene, camera_batch, light_batches);
-			}
+			QueueFlushData& qfd = *(QueueFlushData*)user_data;
+			flush(qfd.scene, qfd.camera_batch, qfd.light_batches);
+			qfd.done = true;
 		}
 #endif
 
@@ -1363,109 +1257,37 @@ namespace lambda
 			components::LightSystem::updateLightTransforms(scene);
 			components::CameraSystem::updateCameraTransforms(scene);
 
-#if USE_SEPARATE_CONSTRUCT
-			// Create new.
-			if (!k_construct.queued_data)
-				k_construct.queued_data = foundation::Memory::construct<RenderData>();
+#if USE_MT
+			while (!k_queue_flush_data.done)
+				std::this_thread::sleep_for(std::chrono::microseconds(1));
 
-			k_construct.queued_data->scene.camera                   = scene.camera;
-			k_construct.queued_data->scene.light                    = scene.light;
-			k_construct.queued_data->scene.renderer                 = scene.renderer;
-			k_construct.queued_data->scene.post_process_manager     = scene.post_process_manager;
-			k_construct.queued_data->scene.window                   = scene.window;
-			k_construct.queued_data->scene.gui                      = scene.gui;
-			k_construct.queued_data->scene.render_actions           = scene.render_actions;
-			k_construct.queued_data->scene.rigid_body.physics_world = scene.rigid_body.physics_world;
-			k_construct.queued_data->scene.debug_renderer           = scene.debug_renderer;
-			k_construct.queued_data->scene.mesh_render.static_bvh   = scene.mesh_render.static_bvh;
-			k_construct.queued_data->scene.mesh_render.dynamic_bvh  = scene.mesh_render.dynamic_bvh;
+			construct(scene, k_queue_flush_data.camera_batch, k_queue_flush_data.light_batches);
+			k_queue_flush_data.scene.renderer                 = scene.renderer;
+			k_queue_flush_data.scene.post_process_manager     = scene.post_process_manager;
+			k_queue_flush_data.scene.window                   = scene.window;
+			k_queue_flush_data.scene.gui                      = scene.gui;
+			k_queue_flush_data.scene.render_actions           = scene.render_actions;
+			k_queue_flush_data.scene.rigid_body.physics_world = scene.rigid_body.physics_world;
+			k_queue_flush_data.scene.debug_renderer           = scene.debug_renderer;
+			k_queue_flush_data.scene.mesh_render.static_bvh   = scene.mesh_render.static_bvh;
+			k_queue_flush_data.scene.mesh_render.dynamic_bvh  = scene.mesh_render.dynamic_bvh;
 
-			bool can_set = false;
-			do
-			{
-				k_construct_mutex.lock();
-				can_set = k_construct_data == nullptr;
-				k_construct_mutex.unlock();
-				if (!can_set)
-					std::this_thread::sleep_for(std::chrono::microseconds(1));
-			} while (!can_set);
+			k_queue_flush_data.done = false;
 
-			k_construct_mutex.lock();
-			k_construct_data = k_construct.queued_data;
-			auto temp = k_construct.curr_used_data;
-			k_construct.curr_used_data = k_construct.queued_data;
-			k_construct.queued_data = temp;
-			k_construct_mutex.unlock();
+			platform::TaskScheduler::queue(queueFlush, &k_queue_flush_data, platform::TaskScheduler::kCritical);
 #else
 			// Create new.
-			if (!k_flush.queued_data)
-				k_flush.queued_data = foundation::Memory::construct<RenderData>();
 
-			construct(scene, k_flush.queued_data->camera_batch, k_flush.queued_data->light_batches);
-			k_flush.queued_data->scene.renderer                 = scene.renderer;
-			k_flush.queued_data->scene.post_process_manager     = scene.post_process_manager;
-			k_flush.queued_data->scene.window                   = scene.window;
-			k_flush.queued_data->scene.gui                      = scene.gui;
-			k_flush.queued_data->scene.render_actions           = scene.render_actions;
-			k_flush.queued_data->scene.rigid_body.physics_world = scene.rigid_body.physics_world;
-			k_flush.queued_data->scene.debug_renderer           = scene.debug_renderer;
-			k_flush.queued_data->scene.mesh_render.static_bvh   = scene.mesh_render.static_bvh;
-			k_flush.queued_data->scene.mesh_render.dynamic_bvh  = scene.mesh_render.dynamic_bvh;
-
-#if USE_MT
-			bool can_set = false;
-			do
-			{
-				k_flush_mutex.lock();
-				can_set = k_flush_data == nullptr;
-				k_flush_mutex.unlock();
-				if (!can_set)
-					std::this_thread::sleep_for(std::chrono::microseconds(1));
-			} while (!can_set);
-
-			k_flush_mutex.lock();
-			k_flush_data = k_flush.queued_data;
-			auto temp = k_flush.curr_used_data;
-			k_flush.curr_used_data = k_flush.queued_data;
-			k_flush.queued_data = temp;
-			k_flush_mutex.unlock();
-#endif
-#endif
-
-#if !USE_MT
-			flush(k_flush.queued_data->scene, k_flush.queued_data->camera_batch, k_flush.queued_data->light_batches);
+			CameraBatch camera_batch;
+			Vector<LightBatch> light_batches;
+			construct(scene, camera_batch, light_batches);
+			flush(scene, camera_batch, light_batches);
 #endif
 
 			scene.render_actions.clear();
 			scene.debug_renderer.Clear();
 		}
 
-		void sceneOnRender(scene::Scene& scene)
-		{
-#if USE_MT
-#if USE_SEPARATE_CONSTRUCT
-			if (!k_construct.thread.joinable())
-			{
-				k_construct.thread = std::thread(constructLoop);
-#if VIOLET_WIN32
-				SetThreadPriority(k_construct.thread.native_handle(), THREAD_PRIORITY_TIME_CRITICAL);
-				SetThreadPriorityBoost(k_construct.thread.native_handle(), TRUE);
-				//SetThreadDescription(k_construct.thread.native_handle(), L"Construct Thread");
-#endif
-			}
-#endif
-
-			if (!k_flush.thread.joinable())
-			{
-				k_flush.thread = std::thread(flushLoop);
-#if VIOLET_WIN32
-				SetThreadPriority(k_flush.thread.native_handle(), THREAD_PRIORITY_TIME_CRITICAL);
-				SetThreadPriorityBoost(k_flush.thread.native_handle(), TRUE);
-				//SetThreadDescription(k_flush.thread.native_handle(), L"Flush Thread");
-#endif
-			}
-#endif
-		}
 		void sceneCollectGarbage(scene::Scene& scene)
 		{
 			components::NameSystem::collectGarbage(scene);
@@ -1482,20 +1304,9 @@ namespace lambda
 		void sceneDeinitialize(scene::Scene& scene)
 		{
 #if USE_MT
-			k_flush.can_read = true;
-			k_flush.keep_alive = false;
-			k_flush.thread.join();
-#if USE_SEPARATE_CONSTRUCT
-			k_construct.can_read = true;
-			k_construct.keep_alive = false;
-			k_construct.thread.join();
+			while (!k_queue_flush_data.done)
+				std::this_thread::sleep_for(std::chrono::microseconds(1));
 #endif
-#endif
-
-			/*foundation::Memory::destruct(k_flush_data);
-			k_flush_data = nullptr;
-			foundation::Memory::destruct(k_next_flush_data);
-			k_next_flush_data = nullptr;*/
 			
 			components::ColliderSystem::deinitialize(scene);
 			components::RigidBodySystem::deinitialize(scene);

@@ -13,43 +13,66 @@ import "resources/scripts/wren/post_processor"   for PostProcessor
 import "resources/scripts/wren/meshes"           for Meshes
 
 class Arm {
+  construct newNoMesh(parent) {
+    _shoulder = GameObject.new()
+    _shoulder.transform.parent        = parent
+    _shoulder.transform.localPosition = Vec3.new(0.0, 0.0, -0.5)
+    _elbow = GameObject.new()
+    _elbow.transform.parent        = _shoulder
+    _elbow.transform.localPosition = Vec3.new(0.0, 0.0, -1.0)
+  }
+
   construct new(parent) {
     _shoulder = GameObject.new()
     _shoulder.transform.parent        = parent
     _shoulder.transform.localPosition = Vec3.new(0.0, 0.0, -0.5)
     
-    _upperArm = GameObject.new()
-    _upperArm.transform.parent = _shoulder
-    var meshRender     = _upperArm.addComponent(MeshRender)
-    meshRender.mesh    = Meshes.cube
-    meshRender.subMesh = 0
-    _upperArm.transform.localScale    = Vec3.new(0.25, 0.25, 1.0)
-    _upperArm.transform.localPosition = Vec3.new(0.0, 0.0, -0.5)
-    
     _elbow = GameObject.new()
     _elbow.transform.parent        = _shoulder
     _elbow.transform.localPosition = Vec3.new(0.0, 0.0, -1.0)
     
-    _lowerArm = GameObject.new()
-    _lowerArm.transform.parent = _elbow
-    meshRender         = _lowerArm.addComponent(MeshRender)
+    var upperArm = GameObject.new()
+    upperArm.transform.parent = _shoulder
+    var meshRender     = upperArm.addComponent(MeshRender)
     meshRender.mesh    = Meshes.cube
     meshRender.subMesh = 0
-    _lowerArm.transform.localScale    = Vec3.new(0.25, 0.25, 1.0)
-    _lowerArm.transform.localPosition = Vec3.new(0.0, 0.0, -0.5)
+    upperArm.transform.localScale    = Vec3.new(0.25, 0.25, 1.0)
+    upperArm.transform.localPosition = Vec3.new(0.0, 0.0, -0.5)
+    
+    var lowerArm = GameObject.new()
+    lowerArm.transform.parent = _elbow
+    meshRender         = lowerArm.addComponent(MeshRender)
+    meshRender.mesh    = Meshes.cube
+    meshRender.subMesh = 0
+    lowerArm.transform.localScale    = Vec3.new(0.25, 0.25, 1.0)
+    lowerArm.transform.localPosition = Vec3.new(0.0, 0.0, -0.5)
   }
+
   shoulder { _shoulder }
   elbow    { _elbow }
 }
 
-class Hooman {
+class HoomanBase {
+  construct newNoMesh() {
+    _core = GameObject.new()
+    _arm1 = Arm.newNoMesh(_core)
+    _arm2 = Arm.newNoMesh(_core)
+    _leg1 = Arm.newNoMesh(_core)
+    _leg2 = Arm.newNoMesh(_core)
+
+    _arm1.shoulder.transform.localPosition = Vec3.new( -0.5,  1.5, 0.0)
+    _arm2.shoulder.transform.localPosition = Vec3.new(  0.5,  1.5, 0.0)
+    _leg1.shoulder.transform.localPosition = Vec3.new(-0.25, -0.5, 0.0)
+    _leg2.shoulder.transform.localPosition = Vec3.new( 0.25, -0.5, 0.0)
+  }
+
   construct new(parent) {
     var mesh = Meshes.cube
-    var core = GameObject.new()
-    core.transform.parent = parent
+    _core = GameObject.new()
+    if (parent) _core.transform.parent = parent
     
     var body = GameObject.new()
-    body.transform.parent = core
+    body.transform.parent = _core
     var meshRender     = body.addComponent(MeshRender)
     meshRender.mesh    = mesh
     meshRender.subMesh = 0
@@ -57,7 +80,7 @@ class Hooman {
     body.transform.localPosition = Vec3.new(0.0, 0.5, 0.0)
     
     _neck = GameObject.new()
-    _neck.transform.parent = core
+    _neck.transform.parent = _core
     _neck.transform.localPosition = Vec3.new(0.0, 1.5, 0.0)
     
     var head = GameObject.new()
@@ -68,199 +91,220 @@ class Hooman {
     head.transform.localScale = Vec3.new(0.75)
     head.transform.localPosition = Vec3.new(0.0, 0.5, 0.0)
 
-    _arm1 = Arm.new(core)
+    _arm1 = Arm.new(_core)
+    _arm2 = Arm.new(_core)
+    _leg1 = Arm.new(_core)
+    _leg2 = Arm.new(_core)
+
     _arm1.shoulder.transform.localPosition = Vec3.new( -0.5,  1.5, 0.0)
-    _arm2 = Arm.new(core)
     _arm2.shoulder.transform.localPosition = Vec3.new(  0.5,  1.5, 0.0)
-    _leg1 = Arm.new(core)
     _leg1.shoulder.transform.localPosition = Vec3.new(-0.25, -0.5, 0.0)
-    _leg2 = Arm.new(core)
     _leg2.shoulder.transform.localPosition = Vec3.new( 0.25, -0.5, 0.0)
-    
-    _currShoulder1Euler = Vec3.new(0.0)
-    _currShoulder2Euler = Vec3.new(0.0)
-    _currElbow1Euler = Vec3.new(0.0)
-    _currElbow2Euler = Vec3.new(0.0)
-    _currThigh1Euler = Vec3.new(0.0)
-    _currThigh2Euler = Vec3.new(0.0)
-    _currKnee1Euler = Vec3.new(0.0)
-    _currKnee2Euler = Vec3.new(0.0)
-    _currNeckEuler = Vec3.new(0.0)
-    
-    _shoulder1Euler = Vec3.new(0.0)
-    _shoulder2Euler = Vec3.new(0.0)
-    _elbow1Euler = Vec3.new(0.0)
-    _elbow2Euler = Vec3.new(0.0)
-    _thigh1Euler = Vec3.new(0.0)
-    _thigh2Euler = Vec3.new(0.0)
-    _knee1Euler = Vec3.new(0.0)
-    _knee2Euler = Vec3.new(0.0)
-    _neckEuler = Vec3.new(0.0)
-
-    _walkingSpeed = 0.0
-    _minWalkingSpeed = 0.25
-    _maxWalkingSpeed = 1.0
-
-    _totalTime = 0.0
   }
   
-  keepItTogether(a, b) {
-      var delta = b.x - a.x
-      if (Math.abs(delta + Math.tau) < Math.abs(delta)) b.x = b.x + Math.tau
-      if (Math.abs(delta - Math.tau) < Math.abs(delta)) b.x = b.x - Math.tau
-      delta = b.y - a.y 
-      if (Math.abs(delta + Math.tau) < Math.abs(delta)) b.y = b.y + Math.tau
-      if (Math.abs(delta - Math.tau) < Math.abs(delta)) b.y = b.y - Math.tau
-      return b
+  arm1 { _arm1 }
+  arm2 { _arm2 }
+  leg1 { _leg1 }
+  leg2 { _leg2 }
+  core { _core }
+  
+  clone(other) {
+    other.arm1.shoulder.transform.localRotation = _arm1.shoulder.transform.localRotation
+    other.arm1.elbow.transform.localRotation    = _arm1.elbow.transform.localRotation
+    other.arm2.shoulder.transform.localRotation = _arm2.shoulder.transform.localRotation
+    other.arm2.elbow.transform.localRotation    = _arm2.elbow.transform.localRotation
+    other.leg1.shoulder.transform.localRotation = _leg1.shoulder.transform.localRotation
+    other.leg1.elbow.transform.localRotation    = _leg1.elbow.transform.localRotation
+    other.leg2.shoulder.transform.localRotation = _leg2.shoulder.transform.localRotation
+    other.leg2.elbow.transform.localRotation    = _leg2.elbow.transform.localRotation
+    
+    other.arm1.shoulder.transform.localPosition = _arm1.shoulder.transform.localPosition
+    other.arm2.shoulder.transform.localPosition = _arm2.shoulder.transform.localPosition
+    other.leg1.shoulder.transform.localPosition = _leg1.shoulder.transform.localPosition
+    other.leg2.shoulder.transform.localPosition = _leg2.shoulder.transform.localPosition
+  }
+}
+
+class Hooman is HoomanBase {
+  construct newNoMesh() {
+    super()
+
+    _originArmLeft  = Vec3.new( -0.5,   1.5, 0.0)
+    _originArmRight = Vec3.new(  0.5,   1.5, 0.0)
+    _originLegLeft  = Vec3.new(-0.25,  -0.5, 0.0)
+    _originLegRight = Vec3.new( 0.25,  -0.5, 0.0)
+    _pointArmLeft   = Vec3.new(-0.75, -0.25, 0.0)
+    _pointArmRight  = Vec3.new( 0.75, -0.25, 0.0)
+    _pointLegLeft   = Vec3.new(-0.25,  -3.5, 0.0)
+    _pointLegRight  = Vec3.new( 0.25,  -3.5, 0.0)
+
+    _armLength = 2.0
+    _totalTime = 0.0
+  }
+  construct new(parent) {
+    super(parent)
+
+    _originArmLeft  = Vec3.new( -0.5,   1.5, 0.0)
+    _originArmRight = Vec3.new(  0.5,   1.5, 0.0)
+    _originLegLeft  = Vec3.new(-0.25,  -0.5, 0.0)
+    _originLegRight = Vec3.new( 0.25,  -0.5, 0.0)
+    _pointArmLeft   = Vec3.new(-0.75, -0.25, 0.0)
+    _pointArmRight  = Vec3.new( 0.75, -0.25, 0.0)
+    _pointLegLeft   = Vec3.new(-0.25,  -3.5, 0.0)
+    _pointLegRight  = Vec3.new( 0.25,  -3.5, 0.0)
+
+    _armLength = 2.0
+    _totalTime = 0.0
   }
 
-  vecLerp(a, b, v) { 
-    return Vec3.new(Math.lerp(a.x, b.x, v), Math.lerp(a.y, b.y, v), Math.lerp(a.z, b.z, v)) 
+  lookRotation(dir) {
+    if (dir.normalized == Vec3.new(0.0, 1.0, 0.0)) {
+      return Math.lookRotation(dir, Vec3.new(0.0, 0.0, 1.0))
+    } else {
+      return Math.lookRotation(dir, Vec3.new(0.0, 1.0, 0.0))
+    }
   }
 
-  rotLerp(a, b) {
-    return vecLerp(a, keepItTogether(a, b), 0.1)    
+  fixArm(from, to, maxLength, crossDir, arm) {
+    var oldTo = to
+    var delta = to - from
+    var length = delta.length
+    if (length > maxLength) {
+      to = from + (to - from).normalized * maxLength
+      length = maxLength
+    }
+    var perpendicular = length < maxLength ? delta.normalized.cross(crossDir).normalized * Math.sqrt((maxLength * 0.5) * (maxLength * 0.5) - (length * 0.5) * (length * 0.5)) : Vec3.new(0.0)
+
+    var center = (from + to) * 0.5 + perpendicular
+    arm.shoulder.transform.worldPosition = from
+    arm.shoulder.transform.worldRotation = lookRotation(from - center)
+    arm.elbow.transform.worldRotation    = lookRotation(center - to)
+  }
+  
+  rotateVector(a, b) {
+    var r = Math.atan2(a.y, a.x) + Math.atan2(b.y, b.x)
+    return Vec2.new(Math.cos(r), Math.sin(r)) * a.length
+  }
+  
+  rotateVector3D(a, b) {
+    var t = rotateVector(Vec2.new(a.x, a.z), b)
+    return Vec3.new(t.x, a.y, t.y)
   }
 
   fixedUpdate() {
-    _totalTime = _totalTime + Time.fixedDeltaTime
-    
-    if (inAir || onWall) {
-      if (onWall) {
-        animWall()
+    if (_inAir) {
+      if (_onWall) {
+        animOnWall()
       } else {
-        animFall()
+        animInAir()
       }
     } else {
-      if (_walkingSpeed <= _minWalkingSpeed) {
-        animIdle()
-      } else {
-        animWalk()
-      }
+      animOnGround()
     }
 
-    _currShoulder1Euler = rotLerp(_currShoulder1Euler, _shoulder1Euler)
-    _currShoulder2Euler = rotLerp(_currShoulder2Euler, _shoulder2Euler)
-    _currElbow1Euler = rotLerp(_currElbow1Euler, _elbow1Euler)
-    _currElbow2Euler = rotLerp(_currElbow2Euler, _elbow2Euler)
-    _currThigh1Euler = rotLerp(_currThigh1Euler, _thigh1Euler)
-    _currThigh2Euler = rotLerp(_currThigh2Euler, _thigh2Euler)
-    _currKnee1Euler = rotLerp(_currKnee1Euler, _knee1Euler)
-    _currKnee2Euler = rotLerp(_currKnee2Euler, _knee2Euler)
-    _currNeckEuler = rotLerp(_currNeckEuler, _neckEuler)
-    
-    _arm1.shoulder.transform.localEuler = _currShoulder1Euler
-    _arm1.elbow.transform.localEuler    = _currElbow1Euler
-    _arm2.shoulder.transform.localEuler = _currShoulder2Euler
-    _arm2.elbow.transform.localEuler    = _currElbow2Euler
-    
-    _leg1.shoulder.transform.localEuler = _currThigh1Euler
-    _leg1.elbow.transform.localEuler    = _currKnee1Euler
-    _leg2.shoulder.transform.localEuler = _currThigh2Euler
-    _leg2.elbow.transform.localEuler    = _currKnee2Euler
-
-    _neck.transform.localEuler = _currNeckEuler
+    animate()
   }
 
-  walkingSpeed=(walkingSpeed) { _walkingSpeed = walkingSpeed }
-  walkingSpeed { _walkingSpeed }
-  minWalkingSpeed=(minWalkingSpeed) { _minWalkingSpeed = minWalkingSpeed }
-  minWalkingSpeed { _minWalkingSpeed }
-  maxWalkingSpeed=(maxWalkingSpeed) { _maxWalkingSpeed = maxWalkingSpeed }
-  maxWalkingSpeed { _maxWalkingSpeed }
+  animIdle() {
+    _pointArmLeft  = Vec3.new( -0.8, -0.25, 0.25)
+    _pointArmRight = Vec3.new(  0.8, -0.25, 0.25)
+    _pointLegLeft  = Vec3.new(-0.25,  -3.5,  0.0)
+    _pointLegRight = Vec3.new( 0.25,  -3.5,  0.0)
+  }
+
+  animOnGround() {
+    var velLength = Vec2.new(_velocity.x, _velocity.z).length
+    if (velLength < 0.25) return animIdle()
+
+    _totalTime = _totalTime + Time.fixedDeltaTime * velLength * (core.transform.worldForward.dot(_velocity) < 0.0 ? -1.0 : 1.0)
+
+    _pointArmLeft.x  =  Math.abs(Math.sin(_totalTime)) * 0.15 - 0.8
+    _pointArmLeft.y  = -0.25
+    _pointArmLeft.z  = -Math.sin(_totalTime) * 0.5 + 0.25
+    
+    _pointArmRight.x = -Math.abs(Math.sin(_totalTime)) * 0.15 + 0.8
+    _pointArmRight.y = -0.25
+    _pointArmRight.z =  Math.sin(_totalTime) * 0.5 + 0.25
+    
+    _pointLegLeft.x  = -0.25
+    _pointLegLeft.z  =  Math.sin(_totalTime)
+    _pointLegLeft.y  =  Math.cos(_totalTime) * 0.5 - 2.0
+    
+    _pointLegRight.x =  0.25
+    _pointLegRight.z = -Math.sin(_totalTime)
+    _pointLegRight.y = -Math.cos(_totalTime) * 0.5 - 2.0
+  }
+
+  animOnWall() {
+    _totalTime = _totalTime + Time.fixedDeltaTime * _velocity.y
+
+    _pointArmLeft.x  = -1.25
+    _pointArmLeft.y  =  Math.sin(_totalTime) + 1.0
+    _pointArmLeft.z  =  0.5 - Math.cos(_totalTime) * 0.25
+    
+    _pointArmRight.x =  1.25
+    _pointArmRight.y = -Math.sin(_totalTime) + 1.0
+    _pointArmRight.z =  0.5 + Math.cos(_totalTime) * 0.25
+
+    _pointLegLeft.x  = -0.5
+    _pointLegLeft.y  =  Math.sin(_totalTime) - 1.5
+    _pointLegLeft.z  =  0.5 - Math.cos(_totalTime) * 0.25
+    
+    _pointLegRight.x =  0.5
+    _pointLegRight.y = -Math.sin(_totalTime) - 1.5
+    _pointLegRight.z =  0.5 + Math.cos(_totalTime) * 0.25
+  }
+  
+  animInAir() {
+    _totalTime = _totalTime + Time.fixedDeltaTime * 10.0
+
+    _pointArmLeft.x  = -1.5
+    _pointArmLeft.y  =  (Math.sin(_totalTime) + Math.cos(_totalTime * 3.85) * 0.25) * 0.5 + 0.5
+    _pointArmLeft.z  = -Math.cos(_totalTime) * 0.15 + 0.4
+    
+    _pointArmRight.x =  1.5
+    _pointArmRight.y = -(Math.sin(_totalTime) + Math.cos(_totalTime * 3.85) * 0.25) * 0.5 + 0.5
+    _pointArmRight.z =  Math.cos(_totalTime) * 0.15 + 0.4
+
+    _pointLegLeft.x  = -0.5
+    _pointLegLeft.y  =  (Math.sin(_totalTime) + Math.cos(_totalTime * 3.85) * 0.25) * 0.25 - 2.0
+    _pointLegLeft.z  = -Math.cos(_totalTime) * 0.25
+    
+    _pointLegRight.x =  0.5
+    _pointLegRight.y = -(Math.sin(_totalTime) + Math.cos(_totalTime * 3.85) * 0.25) * 0.25 - 2.0
+    _pointLegRight.z =  Math.cos(_totalTime) * 0.25
+  }
+
+  animate() {
+    var temp    = core.transform.worldRotation.mulVec3(Vec3.new(0.0, 0.0, 1.0))
+    var forward = Vec2.new(temp.x, temp.z).normalized
+    var right   = Vec2.new(-temp.z, temp.x).normalized
+
+    var rpal = rotateVector3D(_pointArmLeft,   right)
+    var rpar = rotateVector3D(_pointArmRight,  right)
+    var rpll = rotateVector3D(_pointLegLeft,   right)
+    var rplr = rotateVector3D(_pointLegRight,  right)
+    var roal = rotateVector3D(_originArmLeft,  right)
+    var roar = rotateVector3D(_originArmRight, right)
+    var roll = rotateVector3D(_originLegLeft,  right)
+    var rolr = rotateVector3D(_originLegRight, right)
+
+    var armDirLeft  = Vec3.new(-right.x, 0.0, -right.y)
+    var armDirRight = Vec3.new(-right.x, 0.0, -right.y)
+
+    var center = core.transform.worldPosition
+    fixArm(center + roal, center + rpal, _armLength, armDirLeft,  arm1)
+    fixArm(center + roar, center + rpar, _armLength, armDirRight, arm2)
+    fixArm(center + roll, center + rpll, _armLength, Vec3.new(right.x, 0.0, right.y), leg1)
+    fixArm(center + rolr, center + rplr, _armLength, Vec3.new(right.x, 0.0, right.y), leg2)
+  }
+
+  velocity=(velocity) { _velocity = velocity }
+  velocity { _velocity }
   inAir=(inAir) { _inAir = inAir }
   inAir { _inAir }
   onWall=(onWall) { _onWall = onWall }
   onWall { _onWall }
-
-  animIdle() {
-    var halfPi = Math.pi / 2.0
-    var armWobbleX = Math.sin(_totalTime * 1.0) * 0.125
-    var armWobbleY = Math.cos(_totalTime * 0.25) * Math.sin(_totalTime * 6.0) * 0.125
-    var shoulderWobbleX = Math.cos(_totalTime * 1.0) * Math.sin(_totalTime * 8.0) * 0.125 + 0.125
-    var thighWobbleX = Math.sin(_totalTime * 1.25) * 0.125
-    var thighWobbleY = Math.cos(_totalTime * 0.5) * Math.sin(_totalTime * 1.0) * 0.125
-    var kneeWobbleX = Math.cos(_totalTime * 1.5) * Math.sin(_totalTime * 0.75) * 0.125 + 0.125
-
-    _shoulder1Euler = Vec3.new(0.0, armWobbleY - halfPi, -halfPi * 1.05 - armWobbleX)
-    _elbow1Euler    = Vec3.new(0.0, shoulderWobbleX, 0.0)
-    _shoulder2Euler = Vec3.new(0.0, armWobbleY - halfPi, -halfPi * 0.95 + armWobbleX)
-    _elbow2Euler    = Vec3.new(0.0, shoulderWobbleX, 0.0)
-    
-    _thigh1Euler = Vec3.new(0.0, thighWobbleY - halfPi, -halfPi - thighWobbleX)
-    _knee1Euler  = Vec3.new(0.0, -kneeWobbleX, 0.0)
-    _thigh2Euler = Vec3.new(0.0, thighWobbleY - halfPi, -halfPi + thighWobbleX)
-    _knee2Euler  = Vec3.new(0.0, -kneeWobbleX, 0.0)
-    
-    if (_totalTime % 7.0 >= 5.0) {
-      var time = _totalTime % 10.0 - 5.0
-      time = time * Math.pi
-      _neckEuler = Vec3.new(0.0, Math.sin(time) * 1.0, 0.0)
-    } else {
-      _neckEuler = Vec3.new(0.0)
-    } 
-  }
-  animWalk() {
-    var intensityMultiplier = Math.clamp((_walkingSpeed - _minWalkingSpeed) / (_maxWalkingSpeed - _minWalkingSpeed), 0.0, 1.0)
-    var sin = Math.sin(_totalTime * 10.0) * intensityMultiplier
-    var cos = Math.cos(_totalTime * 10.0) * intensityMultiplier
-    var absSin = Math.abs(sin)
-    var absCos = Math.abs(cos)
-    var halfPi = Math.pi / 2.0
-
-    _shoulder1Euler = Vec3.new(0.0, sin - halfPi, -halfPi)
-    _elbow1Euler    = Vec3.new(0.0, absSin, 0.0)
-    _shoulder2Euler = Vec3.new(0.0, cos - halfPi, -halfPi)
-    _elbow2Euler    = Vec3.new(0.0, absCos, 0.0)
-    
-    _thigh1Euler = Vec3.new(0.0, sin - halfPi, -halfPi)
-    _knee1Euler  = Vec3.new(0.0, -absSin, 0.0)
-    _thigh2Euler = Vec3.new(0.0, cos - halfPi, -halfPi)
-    _knee2Euler  = Vec3.new(0.0, -absCos, 0.0)
-    
-    _neckEuler = Vec3.new(Math.sin(_totalTime * intensityMultiplier * 10.0) * 0.05 + -0.2, Math.cos(_totalTime * intensityMultiplier * 3.0) * 0.1, 0.0)
-  }
-  animFall() {
-    var halfPi = Math.pi / 2.0
-    var armWobbleX = Math.sin(_totalTime * 4.0) * 0.25
-    var armWobbleY = Math.cos(_totalTime * 3.0) * Math.sin(_totalTime * 6.0) * 0.25
-    var shoulderWobbleX = Math.cos(_totalTime * 4.0) * Math.sin(_totalTime * 8.0) * 0.25 + 0.25
-    var thighWobbleX = Math.sin(_totalTime * 6.0) * 0.25
-    var thighWobbleY = Math.cos(_totalTime * 2.0) * Math.sin(_totalTime * 4.0) * 0.25
-    var kneeWobbleX = Math.cos(_totalTime * 7.0) * Math.sin(_totalTime * 3.0) * 0.25 + 0.25
-
-    _shoulder1Euler = Vec3.new(0.0, armWobbleY - halfPi, -halfPi * 2 - armWobbleX)
-    _elbow1Euler    = Vec3.new(shoulderWobbleX, 0.0, 0.0)
-    _shoulder2Euler = Vec3.new(0.0, armWobbleY - halfPi, -halfPi * 0 + armWobbleX)
-    _elbow2Euler    = Vec3.new(-shoulderWobbleX, 0.0, 0.0)
-    
-    _thigh1Euler = Vec3.new(0.0, thighWobbleY - halfPi, -halfPi * 1.25 - thighWobbleX)
-    _knee1Euler  = Vec3.new(0.0, -kneeWobbleX, 0.0)
-    _thigh2Euler = Vec3.new(0.0, thighWobbleY - halfPi, -halfPi * 0.75 + thighWobbleX)
-    _knee2Euler  = Vec3.new(0.0, -kneeWobbleX, 0.0)
-    
-    _neckEuler = Vec3.new(0.0)
-  }
-  animWall() {
-    var intensityMultiplier = 1.0
-    var sin = Math.abs(Math.sin(_totalTime * 10.0) * intensityMultiplier)
-    var cos = Math.abs(Math.cos(_totalTime * 10.0) * intensityMultiplier)
-    var absSin = Math.abs(sin)
-    var absCos = Math.abs(cos)
-    var halfPi = Math.pi / 2.0
-
-    _shoulder1Euler = Vec3.new(0.0, sin - halfPi, -halfPi)
-    _elbow1Euler    = Vec3.new(0.0, absSin, 0.0)
-    _shoulder2Euler = Vec3.new(0.0, cos - halfPi, -halfPi)
-    _elbow2Euler    = Vec3.new(0.0, absCos, 0.0)
-    
-    _thigh1Euler = Vec3.new(0.0, sin - halfPi, -halfPi)
-    _knee1Euler  = Vec3.new(0.0, -absSin, 0.0)
-    _thigh2Euler = Vec3.new(0.0, cos - halfPi, -halfPi)
-    _knee2Euler  = Vec3.new(0.0, -absCos, 0.0)
-    
-    _neckEuler = Vec3.new(halfPi / 2 + Math.sin(_totalTime * 2.0) * 0.2, 0.0, 0.0)
-  }
 }
 
 class ThirdPersonCamera is MonoBehaviour {
@@ -302,11 +346,9 @@ class ThirdPersonCamera is MonoBehaviour {
   }
 
   updateMesh() {
-    var velLength = Vec2.new(_velocity.x, _velocity.z).length
     _hooman.inAir = !_onTheGround
     _hooman.onWall = _onWall
-    _hooman.maxWalkingSpeed = _speedWalk * 0.5
-    _hooman.walkingSpeed = velLength
+    _hooman.velocity = _velocity
 
     _hooman.fixedUpdate()
   }
@@ -400,8 +442,6 @@ class ThirdPersonCamera is MonoBehaviour {
       return b
   }
 
-  vecLerp(a, b, v) { Vec3.new(Math.lerp(a.x, b.x, v), Math.lerp(a.y, b.y, v), Math.lerp(a.z, b.z, v)) }
-
   fixedUpdate() {
     updateMesh()
     gameObject.transform.worldPosition = _rigidBody.gameObject.transform.worldPosition - Vec3.new(0.0, -1.0, 0.0)
@@ -445,7 +485,7 @@ class ThirdPersonCamera is MonoBehaviour {
     _fov = Math.lerp(_fov, _fovGoto, 0.1)
 
     // Move the camera towards the player.
-    _camPoint = vecLerp(_camPoint, _camPoint + delta * (length - _followDistance), 0.1)
+    _camPoint = Math.lerp3(_camPoint, _camPoint + delta * (length - _followDistance), 0.1)
 
     // Rotate the camera towards the player.
     _transformInBetween.worldPosition = _camPoint
@@ -461,7 +501,7 @@ class ThirdPersonCamera is MonoBehaviour {
       }
     } else {
       var localPosition = _transformCamera.localPosition
-      localPosition = vecLerp(_transformCamera.localPosition, Vec3.new(0.0, 1.0, 0.0), 0.01)
+      localPosition = Math.lerp3(_transformCamera.localPosition, Vec3.new(0.0, 1.0, 0.0), 0.01)
       _transformCamera.localPosition = localPosition
     }
   }
@@ -607,7 +647,7 @@ class ThirdPersonCamera is MonoBehaviour {
     }
 
     if (!_onWall) {
-      _avgVelocity = vecLerp(_avgVelocity, _velocity, 0.1)
+      _avgVelocity = Math.lerp3(_avgVelocity, _velocity, 0.1)
       var val = _avgVelocity.length * (1.0 / (Time.fixedDeltaTime / Time.timeScale))
       val = (val - (_speedWalk * 10)) / ((_speedSprint * 10) - (_speedWalk * 10))
       val = Math.clamp(val)

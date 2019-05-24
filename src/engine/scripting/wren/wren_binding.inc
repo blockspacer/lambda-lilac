@@ -735,6 +735,60 @@ static constexpr char* wrenModuleSource =
 "}\n"
 
 "///////////////////////////////////////////////////////////////////////////////////////////////////\n"
+"///// fast array //////////////////////////////////////////////////////////////////////////////////\n"
+"///////////////////////////////////////////////////////////////////////////////////////////////////\n"
+/*
+* Class: FastArray
+* _*Fast Array*_
+*/
+"foreign class FastArray {\n"
+/*
+* Constructor: :new(_)
+* _*Constructor*_ Constructs a FastArray of the specified type.
+*/
+"construct new(type) {}\n"
+/*
+* Function: :at(_)
+* Get the element at the specified index from this FastArray.
+*
+* Parameters:
+* index - The index of the element that you want. Warning. Does not follow wrens negative number rules. Needs to be Num
+*/
+"foreign at(index)\n"
+/*
+* Function: :[_]
+* Get the element at the specified index from this FastArray.
+*
+* Parameters:
+* index - The index of the element that you want. Warning. Does not follow wrens negative number rules. Needs to be Num
+*/
+"[index] { at(index) }\n"
+/*
+* Function: :removeAt(_)
+* Removes the element from this FastArray at the specified index.
+*
+* Parameters:
+* index - The index of the element that you want to erase. Warning. Does not follow wrens negative number rules. Needs to be Num
+*/
+"foreign removeAt(index)\n"
+/*
+* Function: :isEmpty
+* Get if the FastArray is empty.
+*/
+"foreign isEmpty\n"
+/*
+* Function: :count
+* Get the number of elements in this FastArray.
+*/
+"foreign count\n"
+/*
+* Function: :type
+* Get the type of the FastArray.
+*/
+"foreign type\n"
+"}\n"
+
+"///////////////////////////////////////////////////////////////////////////////////////////////////\n"
 "///// texture /////////////////////////////////////////////////////////////////////////////////////\n"
 "///////////////////////////////////////////////////////////////////////////////////////////////////\n"
 /*
@@ -2713,6 +2767,11 @@ static constexpr char* wrenModuleSource =
 "    foreign static wrapMax(val, max)\n"
 "\n"
 "    foreign static lerp(lhs, rhs, val)\n"
+"    foreign static lerp2(lhs, rhs, val)\n"
+"    foreign static lerp3(lhs, rhs, val)\n"
+"    foreign static lerp4(lhs, rhs, val)\n"
+"    foreign static lerpq(lhs, rhs, val)\n"
+"    foreign static slerp(lhs, rhs, val)\n"
 "\n"
 "    foreign static sqrt(val)\n"
 "    foreign static sqr(val)\n"
