@@ -625,7 +625,7 @@ namespace lambda
 			foundation::Memory::destruct(&fpqi);
 
 			promise->g_mutex.lock();
-			promise->t = eastl::move(path);
+			promise->t = path;
 			promise->is_finished = true;
 			promise->g_mutex.unlock();
 		}
