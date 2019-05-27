@@ -200,6 +200,94 @@ namespace lambda
 					}
 				}
 			}
+
+			/////////////////////////////////////////////////////////////////////////////
+			void serialize(scene::Scene& scene, scene::Serializer& serializer)
+			{
+				for (auto v : scene.mesh_render.unused_data_entries.get_container())
+					serializer.serialize("mesh_render/unused_data_entries/", toString(v));
+				for (auto v : scene.mesh_render.marked_for_delete)
+					serializer.serialize("mesh_render/marked_for_delete/", toString(v));
+				for (auto v : scene.mesh_render.data_to_entity)
+					serializer.serialize("mesh_render/data_to_entity/", toString(v.first) + "|" + toString(v.second));
+				for (auto v : scene.mesh_render.entity_to_data)
+					serializer.serialize("mesh_render/entity_to_data/", toString(v.first) + "|" + toString(v.second));
+
+				for (auto v : scene.mesh_render.data)
+				{
+					serializer.serialize("mesh_render/data/entity/", toString(v.entity));
+					serializer.serialize("mesh_render/data/valid/", toString(v.valid));
+					serializer.serialize("mesh_render/data/visible/", toString(v.visible));
+					serializer.serialize("mesh_render/data/sub_mesh/", toString(v.sub_mesh));
+					serializer.serialize("mesh_render/data/cast_shadows/", toString(v.cast_shadows));
+					serializer.serialize("mesh_render/data/emissiveness/", toString(v.emissiveness.x) + "|" + toString(v.emissiveness.y) + "|" + toString(v.emissiveness.z));
+					serializer.serialize("mesh_render/data/metallicness/", toString(v.metallicness));
+					serializer.serialize("mesh_render/data/roughness/", toString(v.roughness));
+					serializer.serialize("mesh_render/data/normal_texture/", v.normal_texture.getName().getName());
+					serializer.serialize("mesh_render/data/albedo_texture/", v.albedo_texture.getName().getName());
+					serializer.serialize("mesh_render/data/dmra_texture/", v.dmra_texture.getName().getName());
+					serializer.serialize("mesh_render/data/emissive_texture/", v.emissive_texture.getName().getName());
+					serializer.serialize("mesh_render/data/mesh/", v.mesh.getName().getName());
+				}
+			}
+
+			/////////////////////////////////////////////////////////////////////////////
+			void deserialize(scene::Scene& scene, scene::Serializer& serializer)
+			{
+				scene.mesh_render.unused_data_entries.get_container().clear();
+				scene.mesh_render.marked_for_delete.clear();
+				scene.mesh_render.data_to_entity.clear();
+				scene.mesh_render.entity_to_data.clear();
+				auto data_backup = scene.mesh_render.data;
+				scene.mesh_render.data.clear();
+
+				for (const String& str : serializer.deserializeNamespace("mesh_render/unused_data_entries/"))
+					scene.mesh_render.unused_data_entries.push(std::stoul(stlString(str)));
+				for (const String& str : serializer.deserializeNamespace("mesh_render/marked_for_delete/"))
+					scene.mesh_render.marked_for_delete.insert(std::stoul(stlString(str)));
+				for (const String& str : serializer.deserializeNamespace("mesh_render/entity_to_data/"))
+					scene.mesh_render.entity_to_data.insert({ std::stoul(stlString(split(str, '|')[0])), std::stoul(stlString(split(str, '|')[1])) });
+				for (const String& str : serializer.deserializeNamespace("mesh_render/data_to_entity/"))
+					scene.mesh_render.data_to_entity.insert({ std::stoul(stlString(split(str, '|')[0])), std::stoul(stlString(split(str, '|')[1])) });
+
+				Vector<String> entities          = serializer.deserializeNamespace("mesh_render/data/entity/");
+				Vector<String> validity          = serializer.deserializeNamespace("mesh_render/data/valid/");
+				Vector<String> visibility        = serializer.deserializeNamespace("mesh_render/data/visible/");
+				Vector<String> sub_meshes        = serializer.deserializeNamespace("mesh_render/data/sub_mesh/");
+				Vector<String> cast_shadows      = serializer.deserializeNamespace("mesh_render/data/cast_shadows/");
+				Vector<String> emissiveness      = serializer.deserializeNamespace("mesh_render/data/emissiveness/");
+				Vector<String> metallicness      = serializer.deserializeNamespace("mesh_render/data/metallicness/");
+				Vector<String> roughness         = serializer.deserializeNamespace("mesh_render/data/roughness/");
+				Vector<String> normal_textures   = serializer.deserializeNamespace("mesh_render/data/normal_texture/");
+				Vector<String> albedo_textures   = serializer.deserializeNamespace("mesh_render/data/albedo_texture/");
+				Vector<String> dmra_textures     = serializer.deserializeNamespace("mesh_render/data/dmra_texture/");
+				Vector<String> emissive_textures = serializer.deserializeNamespace("mesh_render/data/emissive_texture/");
+				Vector<String> meshes            = serializer.deserializeNamespace("mesh_render/data/mesh/");
+				
+				for (uint32_t i = 0; i < entities.size(); ++i)
+				{
+					Data data((entity::Entity)std::stoul(stlString(entities[i])));
+					data.valid = std::stoul(stlString(validity[i])) > 0ul ? true : false;
+					data.visible = std::stoul(stlString(visibility[i])) > 0ul ? true : false;
+					data.cast_shadows = std::stoul(stlString(cast_shadows[i])) > 0ul ? true : false;
+
+					data.sub_mesh = std::stoul(stlString(sub_meshes[i]));
+					data.emissiveness = glm::vec3(
+						std::stof(stlString(split(emissiveness[i], '|')[0])),
+						std::stof(stlString(split(emissiveness[i], '|')[1])),
+						std::stof(stlString(split(emissiveness[i], '|')[2]))
+					);
+					data.metallicness = std::stof(stlString(metallicness[i]));
+					data.roughness = std::stof(stlString(roughness[i]));
+					data.normal_texture   = asset::TextureManager::getInstance()->getFromCache(normal_textures[i]);
+					data.albedo_texture   = asset::TextureManager::getInstance()->getFromCache(albedo_textures[i]);
+					data.dmra_texture     = asset::TextureManager::getInstance()->getFromCache(dmra_textures[i]);
+					data.emissive_texture = asset::TextureManager::getInstance()->getFromCache(emissive_textures[i]);
+					data.mesh = asset::MeshManager::getInstance()->get(meshes[i]);
+					scene.mesh_render.data.push_back(data);
+				}
+			}
+
 			void setMesh(const entity::Entity& entity, asset::VioletMeshHandle mesh, scene::Scene& scene)
 			{
 				scene.mesh_render.get(entity).mesh = mesh;

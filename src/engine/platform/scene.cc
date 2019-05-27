@@ -24,6 +24,68 @@ namespace lambda
 {
 	namespace scene
 	{
+		Serializer::Serializer()
+		{
+		}
+
+		Serializer::~Serializer()
+		{
+			for (auto& serializer : namespaces)
+				foundation::Memory::destruct(serializer.second);
+		}
+
+		void Serializer::serialize(String name, String data)
+		{
+			Vector<String> s = split(name, '/');
+			if (s.size() > 1 || (s.size() == 1 && name.back() == '/'))
+			{
+				auto it = namespaces.find(s[0]);
+				if (it == namespaces.end())
+				{
+					namespaces.insert({ s[0], foundation::Memory::construct<Serializer>() });
+					it = namespaces.find(s[0]);
+				}
+				namespaces[s[0]]->serialize(name.substr(s[0].size() + 1), data);
+			}
+			else if (s.empty())
+				namespace_datas.push_back(data);
+			else
+				datas[s[0]] = data;
+		}
+
+		String Serializer::deserialize(String name)
+		{
+			const char* cstr = name.c_str();
+			Vector<String> s = split(name, '/');
+			if (s.size() > 1 || (s.size() == 1 && name.back() == '/'))
+			{
+				auto it = namespaces.find(s[0]);
+				if (it == namespaces.end())
+					return "";
+				return it->second->deserialize(name.substr(s[0].size() + 1));
+			}
+			else if (s.empty())
+				return namespace_datas[0];
+			else
+				return datas[s[0]];
+		}
+
+		Vector<String> Serializer::deserializeNamespace(String name)
+		{
+			Vector<String> s = split(name, '/');
+			if (s.size() > 1 || (s.size() == 1 && name.back() == '/'))
+			{
+				auto it = namespaces.find(s[0]);
+				if (it == namespaces.end())
+					return{};
+				return it->second->deserializeNamespace(name.substr(s[0].size() + 1));
+			}
+			else if (s.empty())
+				return namespace_datas;
+			else
+				return{ datas[s[0]] };
+		}
+
 		void sceneInitialize(scene::Scene& scene)
 		{
 			components::CameraSystem::initialize(scene);
@@ -1300,6 +1362,20 @@ namespace lambda
 			components::MonoBehaviourSystem::collectGarbage(scene);
 			components::WaveSourceSystem::collectGarbage(scene);
 			components::LightSystem::collectGarbage(scene);
+
+			if (scene.do_serialize)
+			{
+				scene.do_serialize = false;
+				sceneSerialize(scene);
+				sceneCollectGarbage(scene);
+			}
+
+			if (scene.do_deserialize)
+			{
+				scene.do_deserialize = false;
+				sceneDeserialize(scene);
+				sceneCollectGarbage(scene);
+			}
 		}
 		void sceneDeinitialize(scene::Scene& scene)
 		{
@@ -1318,6 +1394,36 @@ namespace lambda
 			components::MonoBehaviourSystem::deinitialize(scene);
 			components::WaveSourceSystem::deinitialize(scene);
 			components::LightSystem::deinitialize(scene);
+		}
+		Serializer k_serializer;
+		void sceneSerialize(scene::Scene& scene)
+		{
+			k_serializer = Serializer();
+			components::EntitySystem::serialize(scene, k_serializer);
+			components::NameSystem::serialize(scene, k_serializer);
+			components::LODSystem::serialize(scene, k_serializer);
+			components::CameraSystem::serialize(scene, k_serializer);
+			components::RigidBodySystem::serialize(scene, k_serializer);
+			components::ColliderSystem::serialize(scene, k_serializer);
+			components::MonoBehaviourSystem::serialize(scene, k_serializer);
+			components::WaveSourceSystem::serialize(scene, k_serializer);
+			components::LightSystem::serialize(scene, k_serializer);
+			components::TransformSystem::serialize(scene, k_serializer);
+			components::MeshRenderSystem::serialize(scene, k_serializer);
+		}
+		void sceneDeserialize(scene::Scene& scene)
+		{
+			components::EntitySystem::deserialize(scene, k_serializer);
+			components::NameSystem::deserialize(scene, k_serializer);
+			components::LODSystem::deserialize(scene, k_serializer);
+			components::CameraSystem::deserialize(scene, k_serializer);
+			components::RigidBodySystem::deserialize(scene, k_serializer);
+			components::ColliderSystem::deserialize(scene, k_serializer);
+			components::MonoBehaviourSystem::deserialize(scene, k_serializer);
+			components::WaveSourceSystem::deserialize(scene, k_serializer);
+			components::LightSystem::deserialize(scene, k_serializer);
+			components::TransformSystem::deserialize(scene, k_serializer);
+			components::MeshRenderSystem::deserialize(scene, k_serializer);
 		}
 	}
 }

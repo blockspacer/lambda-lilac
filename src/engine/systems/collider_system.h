@@ -10,6 +10,7 @@ namespace lambda
 	namespace scene
 	{
 		struct Scene;
+		class Serializer;
 	}
 	namespace components
 	{
@@ -76,6 +77,9 @@ namespace lambda
 
 			void deinitialize(scene::Scene& data);
 			void collectGarbage(scene::Scene& data);
+
+			void serialize(scene::Scene& data, scene::Serializer& serializer);
+			void deserialize(scene::Scene& data, scene::Serializer& serializer);
 
 			void makeBox(const entity::Entity& entity, scene::Scene& data);
 			void makeSphere(const entity::Entity& entity, scene::Scene& data);

@@ -168,6 +168,101 @@ namespace lambda
 					scene.wave_source.marked_for_delete.clear();
 				}
 			}
+			
+			/////////////////////////////////////////////////////////////////////////////
+			void serialize(scene::Scene& scene, scene::Serializer& serializer)
+			{
+				for (auto v : scene.wave_source.unused_data_entries.get_container())
+					serializer.serialize("wave_source/unused_data_entries/", toString(v));
+				for (auto v : scene.wave_source.marked_for_delete)
+					serializer.serialize("wave_source/marked_for_delete/", toString(v));
+				for (auto v : scene.wave_source.data_to_entity)
+					serializer.serialize("wave_source/data_to_entity/", toString(v.first) + "|" + toString(v.second));
+				for (auto v : scene.wave_source.entity_to_data)
+					serializer.serialize("wave_source/entity_to_data/", toString(v.first) + "|" + toString(v.second));
+
+				serializer.serialize("wave_source/listener", toString(scene.wave_source.listener));
+				serializer.serialize("wave_source/last_listener_position", toString(scene.wave_source.last_listener_position.x) + "|" + toString(scene.wave_source.last_listener_position.y) + "|" + toString(scene.wave_source.last_listener_position.z));
+
+				for (auto v : scene.wave_source.data)
+				{
+					serializer.serialize("wave_source/data/entity/", toString(v.entity));
+					serializer.serialize("wave_source/data/valid/", toString(v.valid));
+					serializer.serialize("wave_source/data/gain/", toString(v.gain));
+					serializer.serialize("wave_source/data/in_world/", toString(v.in_world));
+					serializer.serialize("wave_source/data/loop/", toString(v.loop));
+					serializer.serialize("wave_source/data/pitch/", toString(v.pitch));
+					serializer.serialize("wave_source/data/radius/", toString(v.radius));
+					serializer.serialize("wave_source/data/state/", toString((uint32_t)v.state));
+					serializer.serialize("wave_source/data/buffer/", v.buffer.getName().getName());
+					serializer.serialize("wave_source/data/last_position/", toString(v.last_position.x) + "|" + toString(v.last_position.y) + "|" + toString(v.last_position.z));
+					serializer.serialize("wave_source/data/handle/", toString(v.handle));
+					// TODO (Hilze): Fix this handle thing.
+				}
+			}
+
+			/////////////////////////////////////////////////////////////////////////////
+			void deserialize(scene::Scene& scene, scene::Serializer& serializer)
+			{
+				scene.wave_source.unused_data_entries.get_container().clear();
+				scene.wave_source.marked_for_delete.clear();
+				scene.wave_source.data_to_entity.clear();
+				scene.wave_source.entity_to_data.clear();
+				auto data_backup = scene.wave_source.data;
+				scene.wave_source.data.clear();
+
+				for (const String& str : serializer.deserializeNamespace("wave_source/unused_data_entries/"))
+					scene.wave_source.unused_data_entries.push(std::stoul(stlString(str)));
+				for (const String& str : serializer.deserializeNamespace("wave_source/marked_for_delete/"))
+					scene.wave_source.marked_for_delete.insert(std::stoul(stlString(str)));
+				for (const String& str : serializer.deserializeNamespace("wave_source/entity_to_data/"))
+					scene.wave_source.entity_to_data.insert({ std::stoul(stlString(split(str, '|')[0])), std::stoul(stlString(split(str, '|')[1])) });
+				for (const String& str : serializer.deserializeNamespace("wave_source/data_to_entity/"))
+					scene.wave_source.data_to_entity.insert({ std::stoul(stlString(split(str, '|')[0])), std::stoul(stlString(split(str, '|')[1])) });
+
+				scene.wave_source.listener = (entity::Entity)std::stoul(stlString(serializer.deserialize("wave_source/listener")));
+				String last_listener_position = serializer.deserialize("wave_source/last_listener_position");
+				scene.wave_source.last_listener_position = glm::vec3(
+					std::stof(stlString(split(last_listener_position, '|')[0])),
+					std::stof(stlString(split(last_listener_position, '|')[1])),
+					std::stof(stlString(split(last_listener_position, '|')[2]))
+				);
+
+				Vector<String> entities      = serializer.deserializeNamespace("wave_source/data/entity/");
+				Vector<String> validity      = serializer.deserializeNamespace("wave_source/data/valid/");
+				Vector<String> gain          = serializer.deserializeNamespace("wave_source/data/gain/");
+				Vector<String> in_world      = serializer.deserializeNamespace("wave_source/data/in_world/");
+				Vector<String> loop          = serializer.deserializeNamespace("wave_source/data/loop/");
+				Vector<String> pitch         = serializer.deserializeNamespace("wave_source/data/pitch/");
+				Vector<String> radius        = serializer.deserializeNamespace("wave_source/data/radius/");
+				Vector<String> state         = serializer.deserializeNamespace("wave_source/data/state/");
+				Vector<String> buffer        = serializer.deserializeNamespace("wave_source/data/buffer/");
+				Vector<String> last_position = serializer.deserializeNamespace("wave_source/data/last_position/");
+				Vector<String> handle        = serializer.deserializeNamespace("wave_source/data/handle/");
+
+				for (uint32_t i = 0; i < entities.size(); ++i)
+				{
+					Data data((entity::Entity)std::stoul(stlString(entities[i])));
+					data.valid = std::stoul(stlString(validity[i])) > 0ul ? true : false;
+					data.gain = std::stof(stlString(gain[i]));
+					data.in_world = std::stoul(stlString(in_world[i])) > 0ul ? true : false;
+					data.loop = std::stoul(stlString(loop[i])) > 0ul ? true : false;
+					data.pitch = std::stof(stlString(pitch[i]));
+					data.radius = std::stof(stlString(radius[i]));
+					data.state = (WaveSourceState)std::stoul(stlString(state[i]));
+					if (!buffer[i].empty())
+						data.buffer = asset::WaveManager::getInstance()->get(buffer[i]);
+					data.last_position = glm::vec3(
+						std::stof(stlString(split(last_position[i], '|')[0])),
+						std::stof(stlString(split(last_position[i], '|')[1])),
+						std::stof(stlString(split(last_position[i], '|')[2]))
+					);
+					data.handle = std::stoul(stlString(handle[i]));
+					// TODO (Hilze): Fix this handle thing.
+					scene.wave_source.data.push_back(data);
+				}
+			}
+
 			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 			void setBuffer(const entity::Entity& entity, const asset::VioletWaveHandle& buffer, scene::Scene& scene)
 			{

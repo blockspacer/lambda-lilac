@@ -13,6 +13,7 @@ namespace lambda
 	namespace scene
 	{
 		struct Scene;
+		class Serializer;
 	}
 
 	namespace components
@@ -89,6 +90,9 @@ namespace lambda
 			void initialize(scene::Scene& scene);
 			void deinitialize(scene::Scene& scene);
 			void fixedUpdate(const float& delta_time, scene::Scene& scene);
+
+			void serialize(scene::Scene& scene, scene::Serializer& serializer);
+			void deserialize(scene::Scene& scene, scene::Serializer& serializer);
 
 			float getMass(const entity::Entity& entity, scene::Scene& scene);
 			void setMass(const entity::Entity& entity, const float& mass, scene::Scene& scene);

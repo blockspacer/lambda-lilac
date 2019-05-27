@@ -67,6 +67,65 @@ namespace lambda
 			}
 
 			/////////////////////////////////////////////////////////////////////////////
+			void serialize(scene::Scene& scene, scene::Serializer& serializer)
+			{
+				for (auto v : scene.name.unused_data_entries.get_container())
+					serializer.serialize("name/unused_data_entries/", toString(v));
+				for (auto v : scene.name.marked_for_delete)
+					serializer.serialize("name/marked_for_delete/", toString(v));
+				for (auto v : scene.name.data_to_entity)
+					serializer.serialize("name/data_to_entity/", toString(v.first) + "|" + toString(v.second));
+				for (auto v : scene.name.entity_to_data)
+					serializer.serialize("name/entity_to_data/", toString(v.first) + "|" + toString(v.second));
+
+				for (auto v : scene.name.data)
+				{
+					serializer.serialize("name/data/entity/", toString(v.entity));
+					serializer.serialize("name/data/valid/",  toString(v.valid));
+					serializer.serialize("name/data/name/",   v.name);
+
+					String tags;
+					for (uint32_t i = 0; i < v.tags.size(); ++i)
+						tags += v.tags[i] + (i == v.tags.size() - 1 ? "" : "|");
+					serializer.serialize("name/data/tags/", tags);
+				}
+			}
+			
+			/////////////////////////////////////////////////////////////////////////////
+			void deserialize(scene::Scene& scene, scene::Serializer& serializer)
+			{
+				scene.name.unused_data_entries.get_container().clear();
+				scene.name.marked_for_delete.clear();
+				scene.name.data_to_entity.clear();
+				scene.name.entity_to_data.clear();
+				scene.name.data.clear();
+
+				for (const String& str : serializer.deserializeNamespace("name/unused_data_entries/"))
+					scene.name.unused_data_entries.push(std::stoul(stlString(str)));
+				for (const String& str : serializer.deserializeNamespace("name/marked_for_delete/"))
+					scene.name.marked_for_delete.insert(std::stoul(stlString(str)));
+				for (const String& str : serializer.deserializeNamespace("name/entity_to_data/"))
+					scene.name.entity_to_data.insert({ std::stoul(stlString(split(str, '|')[0])), std::stoul(stlString(split(str, '|')[1])) });
+				for (const String& str : serializer.deserializeNamespace("name/data_to_entity/"))
+					scene.name.data_to_entity.insert({ std::stoul(stlString(split(str, '|')[0])), std::stoul(stlString(split(str, '|')[1])) });
+
+				Vector<String> entities = serializer.deserializeNamespace("name/data/entity/");
+				Vector<String> validity = serializer.deserializeNamespace("name/data/valid/");
+				Vector<String> names    = serializer.deserializeNamespace("name/data/name/");
+				Vector<String> tags     = serializer.deserializeNamespace("name/data/tags/");
+				
+				for (uint32_t i = 0; i < entities.size(); ++i)
+				{
+					Data data((entity::Entity)std::stoul(stlString(entities[i])));
+					data.valid = std::stoul(stlString(validity[i])) > 0ul ? true : false;
+					data.name = names[i];
+					for (const String& tag : split(tags[i], '|'))
+						data.tags.push_back(tag);
+					scene.name.data.push_back(data);
+				}
+			}
+
+			/////////////////////////////////////////////////////////////////////////////
 			void NameSystem::setName(const entity::Entity& entity, const String& name, scene::Scene& scene)
 			{
 				scene.name.get(entity).name = name;

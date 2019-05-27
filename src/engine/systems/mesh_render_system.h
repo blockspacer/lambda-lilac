@@ -18,6 +18,7 @@ namespace lambda
 	namespace scene
 	{
 		struct Scene;
+		class Serializer;
 	}
 
 	namespace components
@@ -114,6 +115,9 @@ namespace lambda
 			void initialize(scene::Scene& scene);
 			void deinitialize(scene::Scene& scene);
 			void updateDynamicsBvh(scene::Scene& scene);
+
+			void serialize(scene::Scene& scene, scene::Serializer& serializer);
+			void deserialize(scene::Scene& scene, scene::Serializer& serializer);
 
 			void setMesh(const entity::Entity& entity, asset::VioletMeshHandle mesh, scene::Scene& scene);
 			void setSubMesh(const entity::Entity& entity, const uint32_t& sub_mesh, scene::Scene& scene);

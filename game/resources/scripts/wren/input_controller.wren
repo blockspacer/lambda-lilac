@@ -2,6 +2,18 @@ import "Core" for Input, Keys, Buttons, Axes
 import "Core" for Math, Graphics, Vec2
 
 class InputController {
+    static Serialize {
+        var val = 0.0
+        if (Input.getKey(Keys.Q)) val = val + 1.0
+        return Math.clamp(val, -1.0, 1.0)
+    }
+
+    static Deserialize {
+        var val = 0.0
+        if (Input.getKey(Keys.E)) val = val + 1.0
+        return Math.clamp(val, -1.0, 1.0)
+    }
+
     static MovementHorizontal {
         var val = 0.0
         //val = Input.getAxis(Axes.LeftStickX)

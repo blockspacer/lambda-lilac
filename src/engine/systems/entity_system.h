@@ -5,6 +5,12 @@
 
 namespace lambda
 {
+	namespace scene
+	{
+		struct Scene;
+		class Serializer;
+	}
+
 	namespace components
 	{
 		namespace EntitySystem
@@ -19,6 +25,9 @@ namespace lambda
 				void destroy(entity::Entity entity);
 				bool valid(entity::Entity entity);
 			};
+
+			void serialize(scene::Scene& scene, scene::Serializer& serializer);
+			void deserialize(scene::Scene& scene, scene::Serializer& serializer);
 		}
 	}
 }

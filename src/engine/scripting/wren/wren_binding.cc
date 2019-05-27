@@ -4016,6 +4016,24 @@ namespace lambda
       }
     }
 
+	///////////////////////////////////////////////////////////////////////////
+	namespace World
+	{
+		/////////////////////////////////////////////////////////////////////////
+		WrenForeignMethodFn Bind(const char* signature)
+		{
+			if (strcmp(signature, "serialize(_)") == 0) return [](WrenVM* vm) {
+				String file = wrenGetSlotString(vm, 1);
+				g_scene->do_serialize = true;
+			};
+			if (strcmp(signature, "deserialize(_)") == 0) return [](WrenVM* vm) {
+				String file = wrenGetSlotString(vm, 1);
+				g_scene->do_deserialize = true;
+			};
+			return nullptr;
+		}
+	}
+
 		///////////////////////////////////////////////////////////////////////////
     bool hashEqual(const char* lhs, const char* rhs)
     {
@@ -4167,6 +4185,8 @@ namespace lambda
 				return TriNavMesh::Bind(signature);
 			if (hashEqual(className, "Assert"))
 				return Assert::Bind(signature);
+			if (hashEqual(className, "World"))
+				return World::Bind(signature);
 		}
 
 		return nullptr;

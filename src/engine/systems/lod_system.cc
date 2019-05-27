@@ -112,6 +112,77 @@ namespace lambda
 					components::MeshRenderSystem::setMesh(data.entity, chosen_lod->getMesh(), scene);
 				}
 			}
+
+			/////////////////////////////////////////////////////////////////////////////
+			void serialize(scene::Scene& scene, scene::Serializer& serializer)
+			{
+				for (auto v : scene.lod.unused_data_entries.get_container())
+					serializer.serialize("lod/unused_data_entries/", toString(v));
+				for (auto v : scene.lod.marked_for_delete)
+					serializer.serialize("lod/marked_for_delete/", toString(v));
+				for (auto v : scene.lod.data_to_entity)
+					serializer.serialize("lod/data_to_entity/", toString(v.first) + "|" + toString(v.second));
+				for (auto v : scene.lod.entity_to_data)
+					serializer.serialize("lod/entity_to_data/", toString(v.first) + "|" + toString(v.second));
+
+				for (auto v : scene.lod.data)
+				{
+					String lods;
+					for (const LOD& lod : v.lods)
+						lods += (lods.empty() ? "" : "|") + toString(lod.getDistance()) + "|" + lod.getMesh().getName().getName();
+
+					serializer.serialize("lod/data/entity/", toString(v.entity));
+					serializer.serialize("lod/data/valid/", toString(v.valid));
+					serializer.serialize("lod/data/base_lod/", toString(v.base_lod.getDistance()) + "|" + v.base_lod.getMesh().getName().getName());
+					serializer.serialize("lod/data/lods/", lods);
+				}
+			}
+
+			/////////////////////////////////////////////////////////////////////////////
+			void deserialize(scene::Scene& scene, scene::Serializer& serializer)
+			{
+				scene.lod.unused_data_entries.get_container().clear();
+				scene.lod.marked_for_delete.clear();
+				scene.lod.data_to_entity.clear();
+				scene.lod.entity_to_data.clear();
+				auto data_backup = scene.lod.data;
+				scene.lod.data.clear();
+
+				for (const String& str : serializer.deserializeNamespace("lod/unused_data_entries/"))
+					scene.lod.unused_data_entries.push(std::stoul(stlString(str)));
+				for (const String& str : serializer.deserializeNamespace("lod/marked_for_delete/"))
+					scene.lod.marked_for_delete.insert(std::stoul(stlString(str)));
+				for (const String& str : serializer.deserializeNamespace("lod/entity_to_data/"))
+					scene.lod.entity_to_data.insert({ std::stoul(stlString(split(str, '|')[0])), std::stoul(stlString(split(str, '|')[1])) });
+				for (const String& str : serializer.deserializeNamespace("lod/data_to_entity/"))
+					scene.lod.data_to_entity.insert({ std::stoul(stlString(split(str, '|')[0])), std::stoul(stlString(split(str, '|')[1])) });
+
+				Vector<String> entities = serializer.deserializeNamespace("lod/data/entity/");
+				Vector<String> validity = serializer.deserializeNamespace("lod/data/valid/");
+				Vector<String> base_lods = serializer.deserializeNamespace("lod/data/base_lod/");
+				Vector<String> lods = serializer.deserializeNamespace("lod/data/lods/");
+
+				for (uint32_t i = 0; i < entities.size(); ++i)
+				{
+					Data data((entity::Entity)std::stoul(stlString(entities[i])));
+					data.valid = std::stoul(stlString(validity[i])) > 0ul ? true : false;
+					data.base_lod.setDistance(std::stof(stlString(base_lods[i])));
+					data.base_lod.setMesh(asset::MeshManager::getInstance()->get(base_lods[i]));
+
+					Vector<String> s = split(lods[i], '|');
+
+					for (uint32_t j = 0; j < s.size(); j += 2)
+					{
+						LOD lod;
+						lod.setDistance(std::stof(stlString(s[j])));
+						lod.setMesh(asset::MeshManager::getInstance()->get(s[j + 1]));
+						data.lods.push_back(lod);
+					}
+
+					scene.lod.data.push_back(data);
+				}
+			}
+
 			void setBaseLOD(const entity::Entity& entity, const LOD& lod, scene::Scene& scene)
 			{
 				scene.lod.get(entity).base_lod = lod;

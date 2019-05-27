@@ -8,6 +8,10 @@
 
 namespace lambda
 {
+	namespace scene
+	{
+		class Serializer;
+	}
 	namespace components
 	{
 		enum class ShadowType
@@ -164,6 +168,8 @@ namespace lambda
 			void onRender(scene::Scene& scene);
 			void collectGarbage(scene::Scene& scene);
 			void updateLightTransforms(scene::Scene& scene);
+			void serialize(scene::Scene& scene, scene::Serializer& serializer);
+			void deserialize(scene::Scene& scene, scene::Serializer& serializer);
 
 			void setColour(const entity::Entity& entity, const glm::vec3& colour, scene::Scene& scene);
 			glm::vec3 getColour(const entity::Entity& entity, scene::Scene& scene);

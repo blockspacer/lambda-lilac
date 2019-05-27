@@ -8,6 +8,11 @@
 
 namespace lambda
 {
+	namespace scene
+	{
+		class Serializer;
+	}
+
 	namespace components
 	{
 		class LOD
@@ -87,6 +92,9 @@ namespace lambda
 			void collectGarbage(scene::Scene& scene);
 			void deinitialize(scene::Scene& scene);
 			void update(const float& delta_time, scene::Scene& scene);
+
+			void serialize(scene::Scene& scene, scene::Serializer& serializer);
+			void deserialize(scene::Scene& scene, scene::Serializer& serializer);
 
 			void setBaseLOD(const entity::Entity& entity, const LOD& lod, scene::Scene& scene);
 			void addLOD(const entity::Entity& entity, const LOD& lod, scene::Scene& scene);

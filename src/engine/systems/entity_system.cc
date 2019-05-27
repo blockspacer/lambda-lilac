@@ -1,4 +1,5 @@
 #include "entity_system.h"
+#include <platform/scene.h>
 
 namespace lambda
 {
@@ -30,6 +31,22 @@ namespace lambda
 			bool SystemData::valid(entity::Entity entity)
 			{
 				return entity > 0ull;
+			}
+			void serialize(scene::Scene& scene, scene::Serializer& serializer)
+			{
+				serializer.serialize("entity/free_id_count", toString(scene.entity.free_id_count));
+
+				for (uint32_t i = 0; i < scene.entity.free_ids.size(); ++i)
+					serializer.serialize("entity/free_ids/", toString(scene.entity.free_ids.get_container().at(i)));
+			}
+			void deserialize(scene::Scene& scene, scene::Serializer& serializer)
+			{
+				scene.entity.free_id_count = (entity::Entity)std::stoul(stlString(serializer.deserialize("entity/free_id_count")));
+				while (!scene.entity.free_ids.empty())
+					scene.entity.free_ids.pop();
+
+				for (auto str : serializer.deserializeNamespace("entity/free_ids/"))
+					scene.entity.free_ids.push((entity::Entity)std::stoul(stlString(str)));
 			}
 		}
 	}

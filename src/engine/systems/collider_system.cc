@@ -76,6 +76,16 @@ namespace lambda
 				collectGarbage(scene);
 			}
 
+			void serialize(scene::Scene& data, scene::Serializer& serializer)
+			{
+				// TODO (Hilze): Implement this.
+			}
+
+			void deserialize(scene::Scene& data, scene::Serializer& serializer)
+			{
+				// TODO (Hilze): Implement this.
+			}
+
 			void makeBox(const entity::Entity& entity, scene::Scene& scene)
 			{
 				scene.collider.get(entity).collision_body->makeBoxCollider();

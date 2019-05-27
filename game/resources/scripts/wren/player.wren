@@ -3,7 +3,7 @@ import "Core" for Texture, Shader, Mesh
 import "Core" for GameObject, Transform, Camera, Lod, RigidBody, WaveSource, Collider, MonoBehaviour, Light, MeshRender
 import "Core" for PhysicsConstraints, Physics, Manifold
 import "Core" for Input, Keys, Buttons, Axes
-import "Core" for Math, Time, Debug, Sort, Console
+import "Core" for Math, Time, Debug, Sort, Console, World
 import "Core" for PostProcess, LightTypes, ShadowTypes
 
 import "resources/scripts/wren/input_controller" for InputController
@@ -12,11 +12,35 @@ import "resources/scripts/wren/camera"           for Sorter
 import "resources/scripts/wren/post_processor"   for PostProcessor
 import "resources/scripts/wren/meshes"           for Meshes
 
+class Serializer {
+  construct new() {
+    _values = {}
+  }
+
+  [name]=(value) { 
+    if (value.type == Vec2) return _values[name] = Vec2.new(value.x, value.y)
+    if (value.type == Vec3) return _values[name] = Vec3.new(value.x, value.y, value.z)
+    if (value.type == Vec4) return _values[name] = Vec4.new(value.x, value.y, value.z, value.w)
+    if (value.type == Quat) return _values[name] = Quat.new(value.x, value.y, value.z, value.w)
+    _values[name] = value 
+  }
+  [name] { 
+    var value = _values[name]
+    if (value.type == Vec2) return Vec2.new(value.x, value.y)
+    if (value.type == Vec3) return Vec3.new(value.x, value.y, value.z)
+    if (value.type == Vec4) return Vec4.new(value.x, value.y, value.z, value.w)
+    if (value.type == Quat) return Quat.new(value.x, value.y, value.z, value.w)
+
+    return value
+  }
+}
+
 class Arm {
   construct newNoMesh(parent) {
     _shoulder = GameObject.new()
     _shoulder.transform.parent        = parent
     _shoulder.transform.localPosition = Vec3.new(0.0, 0.0, -0.5)
+
     _elbow = GameObject.new()
     _elbow.transform.parent        = _shoulder
     _elbow.transform.localPosition = Vec3.new(0.0, 0.0, -1.0)
@@ -122,6 +146,44 @@ class HoomanBase {
     other.arm2.shoulder.transform.localPosition = _arm2.shoulder.transform.localPosition
     other.leg1.shoulder.transform.localPosition = _leg1.shoulder.transform.localPosition
     other.leg2.shoulder.transform.localPosition = _leg2.shoulder.transform.localPosition
+  }
+
+  serialize(serializer) {
+    serializer["arm1_shoulder_local_position"] = _arm1.shoulder.transform.localPosition
+    serializer["arm1_shoulder_local_rotation"] = _arm1.shoulder.transform.localRotation
+    serializer["arm2_shoulder_local_position"] = _arm2.shoulder.transform.localPosition
+    serializer["arm2_shoulder_local_rotation"] = _arm2.shoulder.transform.localRotation
+    serializer["leg1_shoulder_local_position"] = _leg1.shoulder.transform.localPosition
+    serializer["leg1_shoulder_local_rotation"] = _leg1.shoulder.transform.localRotation
+    serializer["leg2_shoulder_local_position"] = _leg2.shoulder.transform.localPosition
+    serializer["leg2_shoulder_local_rotation"] = _leg2.shoulder.transform.localRotation
+    serializer["arm1_elbow_local_position"]    = _arm1.elbow.transform.localPosition
+    serializer["arm1_elbow_local_rotation"]    = _arm1.elbow.transform.localRotation
+    serializer["arm2_elbow_local_position"]    = _arm2.elbow.transform.localPosition
+    serializer["arm2_elbow_local_rotation"]    = _arm2.elbow.transform.localRotation
+    serializer["leg1_elbow_local_position"]    = _leg1.elbow.transform.localPosition
+    serializer["leg1_elbow_local_rotation"]    = _leg1.elbow.transform.localRotation
+    serializer["leg2_elbow_local_position"]    = _leg2.elbow.transform.localPosition
+    serializer["leg2_elbow_local_rotation"]    = _leg2.elbow.transform.localRotation
+  }
+  
+  deserialize(serializer) {
+    _arm1.shoulder.transform.localPosition = serializer["arm1_shoulder_local_position"]
+    _arm1.shoulder.transform.localRotation = serializer["arm1_shoulder_local_rotation"]
+    _arm2.shoulder.transform.localPosition = serializer["arm2_shoulder_local_position"]
+    _arm2.shoulder.transform.localRotation = serializer["arm2_shoulder_local_rotation"]
+    _leg1.shoulder.transform.localPosition = serializer["leg1_shoulder_local_position"]
+    _leg1.shoulder.transform.localRotation = serializer["leg1_shoulder_local_rotation"]
+    _leg2.shoulder.transform.localPosition = serializer["leg2_shoulder_local_position"]
+    _leg2.shoulder.transform.localRotation = serializer["leg2_shoulder_local_rotation"]
+    _arm1.elbow.transform.localPosition    = serializer["arm1_elbow_local_position"]
+    _arm1.elbow.transform.localRotation    = serializer["arm1_elbow_local_rotation"]
+    _arm2.elbow.transform.localPosition    = serializer["arm2_elbow_local_position"]
+    _arm2.elbow.transform.localRotation    = serializer["arm2_elbow_local_rotation"]
+    _leg1.elbow.transform.localPosition    = serializer["leg1_elbow_local_position"]
+    _leg1.elbow.transform.localRotation    = serializer["leg1_elbow_local_rotation"]
+    _leg2.elbow.transform.localPosition    = serializer["leg2_elbow_local_position"]
+    _leg2.elbow.transform.localRotation    = serializer["leg2_elbow_local_rotation"]
   }
 }
 
@@ -305,6 +367,28 @@ class Hooman is HoomanBase {
   inAir { _inAir }
   onWall=(onWall) { _onWall = onWall }
   onWall { _onWall }
+  
+  serialize(serializer) {
+    serializer["velocity"]   = _velocity
+    serializer["on_wall"]    = _onWall
+    serializer["in_air"]     = _inAir
+    serializer["arm_length"] = _armLength
+    serializer["total_time"] = _totalTime
+
+    var superSerializer = Serializer.new()
+    super.serialize(superSerializer)
+    serializer["super"] = superSerializer
+  }
+  
+  deserialize(serializer) {
+    _velocity  = serializer["velocity"]
+    _onWall    = serializer["on_wall"]
+    _inAir     = serializer["in_air"]
+    _armLength = serializer["arm_length"]
+    _totalTime = serializer["total_time"]
+
+    super.deserialize(serializer["super"])
+  }
 }
 
 class ThirdPersonCamera is MonoBehaviour {
@@ -345,12 +429,118 @@ class ThirdPersonCamera is MonoBehaviour {
   makeMesh() {
   }
 
+  serialize(serializer) {
+    serializer["has_input"]       = _hasInput
+    serializer["sensitivity"]     = _sensitivity
+    serializer["jump_height"]     = _jumpHeight
+    serializer["player_rotation"] = _playerRotation
+    serializer["velocity"]        = _velocity
+    serializer["avg_velocity"]    = _avgVelocity
+    serializer["on_the_ground"]   = _onTheGround
+    serializer["cam_point"]       = _camPoint
+    serializer["follow_distance"] = _followDistance
+    serializer["mod"]             = _mod
+    serializer["held_jump"]       = _heldJump
+    
+    serializer["rigid_body_velocity"]            = _rigidBody.velocity
+    serializer["rigid_body_angular_constraints"] = _rigidBody.angularConstraints
+
+    serializer["speed_walk"]       = _speedWalk
+    serializer["speed_sprint"]     = _speedSprint
+    serializer["speed_wall"]       = _speedWall
+    serializer["max_speed_walk"]   = _maxSpeedWalk
+    serializer["max_speed_sprint"] = _maxSpeedSprint
+
+    serializer["fov_walk"] = _fovWalk
+    serializer["fov_run"]  = _fovRun
+    serializer["fov_wall"] = _fovWalk
+    serializer["fov"]      = _fov
+    serializer["fov_goto"] = _fovGoto
+
+    serializer["on_wall"]              = _onWall
+    serializer["on_wall_rotation"]     = _onWallRotation
+    serializer["on_wall_dir"]          = _onWallDir
+    serializer["on_wall_last_pressed"] = _onWallLastPressed
+
+    serializer["local_position"]            = transform.localPosition
+    serializer["local_rotation"]            = transform.localRotation
+    serializer["camera_local_position"]     = _transformCamera.localPosition
+    serializer["camera_local_rotation"]     = _transformCamera.localRotation
+    serializer["in_between_local_position"] = _transformInBetween.localPosition
+    serializer["in_between_local_rotation"] = _transformInBetween.localRotation
+    serializer["rigid_body_local_position"] = _rigidBody.gameObject.transform.localPosition
+    serializer["rigid_body_local_rotation"] = _rigidBody.gameObject.transform.localRotation
+    
+    var hoomanSerializer = Serializer.new()
+    _hooman.serialize(hoomanSerializer)
+    serializer["hooman"] = hoomanSerializer
+  }
+  
+  deserialize(serializer) {
+    _hasInput       = serializer["has_input"]      
+    _sensitivity    = serializer["sensitivity"]    
+    _jumpHeight     = serializer["jump_height"]    
+    _playerRotation = serializer["player_rotation"]
+    _velocity       = serializer["velocity"]       
+    _avgVelocity    = serializer["avg_velocity"]   
+    _onTheGround    = serializer["on_the_ground"]  
+    _camPoint       = serializer["cam_point"]      
+    _followDistance = serializer["follow_distance"]
+    _mod            = serializer["mod"]            
+    _heldJump       = serializer["held_jump"]      
+    
+    _rigidBody.velocity           = serializer["rigid_body_velocity"]           
+    _rigidBody.angularConstraints = serializer["rigid_body_angular_constraints"]
+
+    _speedWalk      = serializer["speed_walk"]      
+    _speedSprint    = serializer["speed_sprint"]    
+    _speedWall      = serializer["speed_wall"]      
+    _maxSpeedWalk   = serializer["max_speed_walk"]  
+    _maxSpeedSprint = serializer["max_speed_sprint"]
+
+    _fovWalk = serializer["fov_walk"]
+    _fovRun  = serializer["fov_run"] 
+    _fovWalk = serializer["fov_wall"]
+    _fov     = serializer["fov"]     
+    _fovGoto = serializer["fov_goto"]
+
+    _onWall            = serializer["on_wall"]             
+    _onWallRotation    = serializer["on_wall_rotation"]    
+    _onWallDir         = serializer["on_wall_dir"]         
+    _onWallLastPressed = serializer["on_wall_last_pressed"]
+
+    transform.localPosition                       = serializer["local_position"]           
+    transform.localRotation                       = serializer["local_rotation"]           
+    _transformCamera.localPosition                = serializer["camera_local_position"]    
+    _transformCamera.localRotation                = serializer["camera_local_rotation"]    
+    _transformInBetween.localPosition             = serializer["in_between_local_position"]
+    _transformInBetween.localRotation             = serializer["in_between_local_rotation"]
+    _rigidBody.gameObject.transform.localPosition = serializer["rigid_body_local_position"]
+    _rigidBody.gameObject.transform.localRotation = serializer["rigid_body_local_rotation"]
+    
+    _hooman.deserialize(serializer["hooman"])
+  }
+
   updateMesh() {
-    _hooman.inAir = !_onTheGround
-    _hooman.onWall = _onWall
+    _hooman.inAir    = !_onTheGround
+    _hooman.onWall   = _onWall
     _hooman.velocity = _velocity
 
     _hooman.fixedUpdate()
+    
+    var lastDoSerialize = _doSerialize
+    _doSerialize = (InputController.Serialize > 0.0 ? true : false)
+    if (_doSerialize && !lastDoSerialize) {
+      World.serialize("serialized")
+      //serialize(_serializer)
+    }
+
+    var lastDoDeserialize = _doDeserialize
+    _doDeserialize = (InputController.Deserialize > 0.0 ? true : false)
+    if (_doDeserialize && !lastDoDeserialize) {
+      World.deserialize("serialized")
+      //deserialize(_serializer)
+    }
   }
 
   initialize() {
@@ -358,6 +548,7 @@ class ThirdPersonCamera is MonoBehaviour {
     transform.localPosition = Vec3.new(0.0, 2.0, 0.0)
 
     _hooman = Hooman.new(gameObject)
+    _serializer = Serializer.new()
 
     makeMesh()
 
@@ -444,7 +635,7 @@ class ThirdPersonCamera is MonoBehaviour {
 
   fixedUpdate() {
     updateMesh()
-    gameObject.transform.worldPosition = _rigidBody.gameObject.transform.worldPosition - Vec3.new(0.0, -1.0, 0.0)
+    transform.worldPosition = _rigidBody.gameObject.transform.worldPosition - Vec3.new(0.0, -1.0, 0.0)
     _rigidBody.gameObject.transform.localPosition = Vec3.new(0.0, -1.0, 0.0)
 
     // Respawning.

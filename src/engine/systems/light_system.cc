@@ -83,6 +83,186 @@ namespace lambda
 					data.world_matrix = scene.transform.get(data.entity).world;
 				}
 			}
+
+			/////////////////////////////////////////////////////////////////////////////
+			void serialize(scene::Scene& scene, scene::Serializer& serializer)
+			{
+				for (auto v : scene.light.unused_data_entries.get_container())
+					serializer.serialize("light/unused_data_entries/", toString(v));
+				for (auto v : scene.light.marked_for_delete)
+					serializer.serialize("light/marked_for_delete/", toString(v));
+				for (auto v : scene.light.data_to_entity)
+					serializer.serialize("light/data_to_entity/", toString(v.first) + "|" + toString(v.second));
+				for (auto v : scene.light.entity_to_data)
+					serializer.serialize("light/entity_to_data/", toString(v.first) + "|" + toString(v.second));
+
+				for (auto v : scene.light.data)
+				{
+					String depth_target_texture;
+					for (const auto& texture : v.depth_target_texture)
+						depth_target_texture += (depth_target_texture.empty() ? "" : "|") + texture.getName().getName();
+					String render_target_texture;
+					for (const auto& texture : v.render_target_texture)
+						render_target_texture += (render_target_texture.empty() ? "" : "|") + texture.getName().getName();
+
+					serializer.serialize("light/data/entity/",  toString(v.entity));
+					serializer.serialize("light/data/valid/",   toString(v.valid));
+					serializer.serialize("light/data/ambient/", toString(v.ambient.x) + "|" + toString(v.ambient.y) + "|" + toString(v.ambient.z) + "|");
+					serializer.serialize("light/data/colour/",  toString(v.colour.x) + "|" + toString(v.colour.y) + "|" + toString(v.colour.z) + "|");
+					serializer.serialize("light/data/num_rts/", toString(v.culler.size()));
+
+					serializer.serialize("light/data/cut_off/",               toString(v.cut_off.asRad()));
+					serializer.serialize("light/data/depth/",                 toString(v.depth[0]));
+					serializer.serialize("light/data/dynamic_frequency/",     toString((uint32_t)v.dynamic_frequency));
+					serializer.serialize("light/data/dynamic_index/",         toString((uint32_t)v.dynamic_index));
+					serializer.serialize("light/data/intensity/",             toString(v.intensity));
+					serializer.serialize("light/data/outer_cut_off/",         toString(v.outer_cut_off.asRad()));
+					serializer.serialize("light/data/rsm/",                   toString(v.rsm));
+					serializer.serialize("light/data/shadow_map_size_px/",    toString(v.shadow_map_size_px));
+					serializer.serialize("light/data/shadow_type/",           toString((uint32_t)v.shadow_type));
+					serializer.serialize("light/data/size/",                  toString(v.size));
+					serializer.serialize("light/data/type/",                  toString((uint32_t)v.type));
+					serializer.serialize("light/data/texture/",               v.texture.getName().getName());
+					serializer.serialize("light/data/depth_target_texture/",  depth_target_texture);
+					serializer.serialize("light/data/render_target_texture/", render_target_texture);
+
+					for (const auto& rt : v.render_target)
+					{
+						String name = rt.getName().getName();
+						serializer.serialize("light/targets/" + name + "/layers",        toString(rt.getLayer()));
+						serializer.serialize("light/targets/" + name + "/mip_maps",      toString(rt.getMipMap()));
+						serializer.serialize("light/targets/" + name + "/names",         rt.getName().getName());
+						serializer.serialize("light/targets/" + name + "/render_scales", toString(rt.getRenderScale()));
+						serializer.serialize("light/targets/" + name + "/textures",      rt.getTexture().getName().getName());
+						serializer.serialize("light/targets/" + name + "/from_texture",  toString(rt.fromTexture()));
+					}
+
+					for (const auto& rt : v.depth_target)
+					{
+						String name = rt.getName().getName();
+						serializer.serialize("light/targets/" + name + "/layers",        toString(rt.getLayer()));
+						serializer.serialize("light/targets/" + name + "/mip_maps",      toString(rt.getMipMap()));
+						serializer.serialize("light/targets/" + name + "/names",         rt.getName().getName());
+						serializer.serialize("light/targets/" + name + "/render_scales", toString(rt.getRenderScale()));
+						serializer.serialize("light/targets/" + name + "/textures",      rt.getTexture().getName().getName());
+						serializer.serialize("light/targets/" + name + "/from_texture",  toString(rt.fromTexture()));
+					}
+				}
+			}
+
+#pragma optimize ("", off)
+			/////////////////////////////////////////////////////////////////////////////
+			void deserialize(scene::Scene& scene, scene::Serializer& serializer)
+			{
+				scene.light.unused_data_entries.get_container().clear();
+				scene.light.marked_for_delete.clear();
+				scene.light.data_to_entity.clear();
+				scene.light.entity_to_data.clear();
+				auto data_backup = scene.light.data;
+				scene.light.data.clear();
+
+				for (const String& str : serializer.deserializeNamespace("light/unused_data_entries/"))
+					scene.light.unused_data_entries.push(std::stoul(stlString(str)));
+				for (const String& str : serializer.deserializeNamespace("light/marked_for_delete/"))
+					scene.light.marked_for_delete.insert(std::stoul(stlString(str)));
+				for (const String& str : serializer.deserializeNamespace("light/entity_to_data/"))
+					scene.light.entity_to_data.insert({ std::stoul(stlString(split(str, '|')[0])), std::stoul(stlString(split(str, '|')[1])) });
+				for (const String& str : serializer.deserializeNamespace("light/data_to_entity/"))
+					scene.light.data_to_entity.insert({ std::stoul(stlString(split(str, '|')[0])), std::stoul(stlString(split(str, '|')[1])) });
+
+				Vector<String> entities              = serializer.deserializeNamespace("light/data/entity/");
+				Vector<String> validity              = serializer.deserializeNamespace("light/data/valid/");
+				Vector<String> ambient               = serializer.deserializeNamespace("light/data/ambient/");
+				Vector<String> colour                = serializer.deserializeNamespace("light/data/colour/");
+				Vector<String> num_rts               = serializer.deserializeNamespace("light/data/num_rts/");
+				Vector<String> cut_off               = serializer.deserializeNamespace("light/data/cut_off/");
+				Vector<String> depth                 = serializer.deserializeNamespace("light/data/depth/");
+				Vector<String> dynamic_frequency     = serializer.deserializeNamespace("light/data/dynamic_frequency/");
+				Vector<String> dynamic_index         = serializer.deserializeNamespace("light/data/dynamic_index/");
+				Vector<String> intensity             = serializer.deserializeNamespace("light/data/intensity/");
+				Vector<String> outer_cut_off         = serializer.deserializeNamespace("light/data/outer_cut_off/");
+				Vector<String> rsm                   = serializer.deserializeNamespace("light/data/rsm/");
+				Vector<String> shadow_map_size_px    = serializer.deserializeNamespace("light/data/shadow_map_size_px/");
+				Vector<String> shadow_type           = serializer.deserializeNamespace("light/data/shadow_type/");
+				Vector<String> size                  = serializer.deserializeNamespace("light/data/size/");
+				Vector<String> type                  = serializer.deserializeNamespace("light/data/type/");
+				Vector<String> texture               = serializer.deserializeNamespace("light/data/texture/");
+				Vector<String> depth_target_texture  = serializer.deserializeNamespace("light/data/depth_target_texture/");
+				Vector<String> render_target_texture = serializer.deserializeNamespace("light/data/render_target_texture/");
+
+				for (uint32_t i = 0; i < entities.size(); ++i)
+				{
+					uint32_t num = std::stoul(stlString(num_rts[i]));
+					Data data((entity::Entity)std::stoul(stlString(entities[i])));
+					data.valid = std::stoul(stlString(validity[i])) > 0ul ? true : false;
+					data.ambient = glm::vec3(
+						std::stof(stlString(split(ambient[i], '|')[0])),
+						std::stof(stlString(split(ambient[i], '|')[1])),
+						std::stof(stlString(split(ambient[i], '|')[2]))
+					);
+					data.colour = glm::vec3(
+						std::stof(stlString(split(colour[i], '|')[0])),
+						std::stof(stlString(split(colour[i], '|')[1])),
+						std::stof(stlString(split(colour[i], '|')[2]))
+					);
+					data.culler.resize(num);
+					data.cut_off = utilities::Angle::fromRad(std::stof(stlString(cut_off[i])));
+					data.depth.resize(num, std::stof(stlString(depth[i])));
+					data.dynamic_frequency = (uint8_t)std::stoul(stlString(dynamic_frequency[i]));
+					data.dynamic_index = (uint8_t)std::stoul(stlString(dynamic_index[i]));
+					data.intensity = std::stof(stlString(intensity[i]));
+					data.outer_cut_off = utilities::Angle::fromRad(std::stof(stlString(outer_cut_off[i])));
+					data.rsm = std::stoul(stlString(rsm[i])) > 0ul ? true : false;
+					data.shadow_map_size_px = std::stoul(stlString(shadow_map_size_px[i]));
+					data.shadow_type = (ShadowType)std::stoul(stlString(shadow_type[i]));
+					data.size = std::stof(stlString(size[i]));
+					data.type = (LightType)std::stoul(stlString(type[i]));
+					data.texture = asset::TextureManager::getInstance()->getFromCache(texture[i]);
+					
+					for (const String& name : split(render_target_texture[i], '|'))
+					{
+						String layer        = serializer.deserialize("light/targets/" + name + "/layers");
+						String mip_map      = serializer.deserialize("light/targets/" + name + "/mip_maps");
+						String name         = serializer.deserialize("light/targets/" + name + "/names");
+						String render_scale = serializer.deserialize("light/targets/" + name + "/render_scales");
+						String texture      = serializer.deserialize("light/targets/" + name + "/textures");
+						String from_texture = serializer.deserialize("light/targets/" + name + "/from_texture");
+
+						platform::RenderTarget rt(
+							name,
+							std::stof(stlString(render_scale)),
+							asset::TextureManager::getInstance()->getFromCache(Name(texture)),
+							std::stoul(stlString(from_texture)) > 0ul ? true : false
+						);
+						rt.setLayer(std::stoi(stlString(layer)));
+						rt.setMipMap(std::stoi(stlString(mip_map)));
+						data.render_target.push_back(rt);
+					}
+
+					for (const String& name : split(depth_target_texture[i], '|'))
+					{
+						String layer        = serializer.deserialize("light/targets/" + name + "/layers");
+						String mip_map      = serializer.deserialize("light/targets/" + name + "/mip_maps");
+						String name         = serializer.deserialize("light/targets/" + name + "/names");
+						String render_scale = serializer.deserialize("light/targets/" + name + "/render_scales");
+						String texture      = serializer.deserialize("light/targets/" + name + "/textures");
+						String from_texture = serializer.deserialize("light/targets/" + name + "/from_texture");
+
+						platform::RenderTarget rt(
+							name,
+							std::stof(stlString(render_scale)),
+							asset::TextureManager::getInstance()->getFromCache(Name(texture)),
+							std::stoul(stlString(from_texture)) > 0ul ? true : false
+						);
+						rt.setLayer(std::stoi(stlString(layer)));
+						rt.setMipMap(std::stoi(stlString(mip_map)));
+						data.depth_target.push_back(rt);
+					}
+
+					scene.light.data.push_back(data);
+				}
+			}
+
 			LightComponent addDirectionalLight(const entity::Entity& entity, scene::Scene& scene)
 			{
 				addComponent(entity, scene);

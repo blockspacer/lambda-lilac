@@ -11,6 +11,11 @@
 
 namespace lambda
 {
+	namespace scene
+	{
+		class Serializer;
+	}
+
 	namespace components
 	{
 		class CameraComponent : public IComponent
@@ -83,6 +88,8 @@ namespace lambda
 			void deinitialize(scene::Scene& scene);
 			void onRender(scene::Scene& scene);
 			void updateCameraTransforms(scene::Scene& scene);
+			void serialize(scene::Scene& scene, scene::Serializer& serializer);
+			void deserialize(scene::Scene& scene, scene::Serializer& serializer);
 
 			void setFov(const entity::Entity& entity, const utilities::Angle& fov, scene::Scene& scene);
 			utilities::Angle getFov(const entity::Entity& entity, scene::Scene& scene);

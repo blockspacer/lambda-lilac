@@ -91,6 +91,51 @@ namespace lambda
 						scene.scripting->executeFunction(data.object, data.fixed_update, {});
 				}
 			}
+
+			void serialize(scene::Scene& scene, scene::Serializer& serializer)
+			{
+				for (auto v : scene.mono_behaviour.unused_data_entries.get_container())
+					serializer.serialize("mono_behaviour/unused_data_entries/", toString(v));
+				for (auto v : scene.mono_behaviour.marked_for_delete)
+					serializer.serialize("mono_behaviour/marked_for_delete/", toString(v));
+				for (auto v : scene.mono_behaviour.data_to_entity)
+					serializer.serialize("mono_behaviour/data_to_entity/", toString(v.first) + "|" + toString(v.second));
+				for (auto v : scene.mono_behaviour.entity_to_data)
+					serializer.serialize("mono_behaviour/entity_to_data/", toString(v.first) + "|" + toString(v.second));
+
+				for (auto v : scene.mono_behaviour.data)
+				{
+					serializer.serialize("mono_behaviour/data/entity/", toString(v.entity));
+					serializer.serialize("mono_behaviour/data/valid/", toString(v.valid));
+				}
+			}
+
+			void deserialize(scene::Scene& scene, scene::Serializer& serializer)
+			{
+				scene.mono_behaviour.unused_data_entries.get_container().clear();
+				scene.mono_behaviour.marked_for_delete.clear();
+				scene.mono_behaviour.data_to_entity.clear();
+				scene.mono_behaviour.entity_to_data.clear();
+				//scene.name.data.clear();
+
+				for (const String& str : serializer.deserializeNamespace("mono_behaviour/unused_data_entries/"))
+					scene.mono_behaviour.unused_data_entries.push(std::stoul(stlString(str)));
+				for (const String& str : serializer.deserializeNamespace("mono_behaviour/marked_for_delete/"))
+					scene.mono_behaviour.marked_for_delete.insert(std::stoul(stlString(str)));
+				for (const String& str : serializer.deserializeNamespace("mono_behaviour/entity_to_data/"))
+					scene.mono_behaviour.entity_to_data.insert({ std::stoul(stlString(split(str, '|')[0])), std::stoul(stlString(split(str, '|')[1])) });
+				for (const String& str : serializer.deserializeNamespace("mono_behaviour/data_to_entity/"))
+					scene.mono_behaviour.data_to_entity.insert({ std::stoul(stlString(split(str, '|')[0])), std::stoul(stlString(split(str, '|')[1])) });
+
+				for (Data& data : scene.mono_behaviour.data)
+				{
+					if (!hasComponent(data.entity, scene))
+						data.valid = false;
+				}
+
+				// TODO (Hilze): Implement this.
+			}
+
 			void setObject(const entity::Entity& entity, void* ptr, scene::Scene& scene)
 			{
 				scene.mono_behaviour.get(entity).object = ptr;

@@ -87,7 +87,7 @@ class Rando is MonoBehaviour {
   }
 
   fixedUpdate() {
-    if (_positionList == null || _currPosition == null) {
+    /*if (_positionList == null || _currPosition == null)*/ {
       // Keep the rando near the player.
       var diff = Vec2.new(transform.worldPosition.x - _user.x, transform.worldPosition.z - _user.z)
       if (diff.lengthSqr > __maxRange * __maxRange) {
@@ -99,7 +99,7 @@ class Rando is MonoBehaviour {
         transform.worldPosition = Vec3.new(x, 2, z)
         _positionList = null
         _currPosition = null
-        getPath(Vec3.new(pos.x - dir.x, 0.0, pos.y - dir.y))
+        return
       }
 
       if (transform.worldPosition.y < -20) {

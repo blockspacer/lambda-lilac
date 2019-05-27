@@ -13,6 +13,7 @@ namespace lambda
 	namespace scene
 	{
 		struct Scene;
+		class Serializer;
 	}
 
 	namespace components
@@ -128,6 +129,8 @@ namespace lambda
 
 			void collectGarbage(scene::Scene& scene);
 			void deinitialize(scene::Scene& scene);
+			void serialize(scene::Scene& scene, scene::Serializer& serializer);
+			void deserialize(scene::Scene& scene, scene::Serializer& serializer);
 
 			glm::mat4 getLocal(const entity::Entity& entity, scene::Scene& scene);
 			glm::mat4 getWorld(const entity::Entity& entity, scene::Scene& scene);

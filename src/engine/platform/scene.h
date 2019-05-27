@@ -13,6 +13,7 @@
 #include <platform/post_process_manager.h>
 #include <platform/debug_renderer.h>
 #include <interfaces/iscript_context.h>
+#include <containers/containers.h>
 
 namespace lambda
 {
@@ -54,6 +55,23 @@ namespace lambda
 			Vector<IRenderAction*>     render_actions;
 			double                     fixed_time_step;
 			double                     time_scale;
+			bool                       do_serialize = false;
+			bool                       do_deserialize = false;
+		};
+
+		class Serializer
+		{
+		public:
+			Serializer();
+			~Serializer();
+			void serialize(String name, String data);
+			String deserialize(String name);
+			Vector<String> deserializeNamespace(String name);
+
+		private:
+			UnorderedMap<String, Serializer*> namespaces;
+			UnorderedMap<String, String>      datas;
+			Vector<String>                    namespace_datas;
 		};
 
 		///////////////////////////////////////////////////////////////////////////
@@ -63,5 +81,8 @@ namespace lambda
 		void sceneConstructRender(scene::Scene& scene);
 		void sceneCollectGarbage(scene::Scene& scene);
 		void sceneDeinitialize(scene::Scene& scene);
+
+		void sceneSerialize(scene::Scene& scene);
+		void sceneDeserialize(scene::Scene& scene);
 	}
 }

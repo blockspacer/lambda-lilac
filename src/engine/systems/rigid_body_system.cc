@@ -109,6 +109,103 @@ namespace lambda
 				scene.rigid_body.physics_world->update(delta_time);
 			}
 
+
+			/////////////////////////////////////////////////////////////////////////////
+			void serialize(scene::Scene& scene, scene::Serializer& serializer)
+			{
+				for (auto v : scene.rigid_body.unused_data_entries.get_container())
+					serializer.serialize("rigid_body/unused_data_entries/", toString(v));
+				for (auto v : scene.rigid_body.marked_for_delete)
+					serializer.serialize("rigid_body/marked_for_delete/", toString(v));
+				for (auto v : scene.rigid_body.data_to_entity)
+					serializer.serialize("rigid_body/data_to_entity/", toString(v.first) + "|" + toString(v.second));
+				for (auto v : scene.rigid_body.entity_to_data)
+					serializer.serialize("rigid_body/entity_to_data/", toString(v.first) + "|" + toString(v.second));
+
+				for (auto v : scene.rigid_body.data)
+				{
+					serializer.serialize("rigid_body/data/entity/", toString(v.entity));
+					serializer.serialize("rigid_body/data/valid/", toString(v.valid));
+					serializer.serialize("rigid_body/data/angular_constraints/", toString((uint32_t)v.collision_body->getAngularConstraints()));
+					serializer.serialize("rigid_body/data/angular_velocity/", toString(v.collision_body->getAngularVelocity().x) + "|" + toString(v.collision_body->getAngularVelocity().y) + "|" + toString(v.collision_body->getAngularVelocity().z));
+					serializer.serialize("rigid_body/data/friction/", toString(v.collision_body->getFriction()));
+					serializer.serialize("rigid_body/data/layers/", toString(v.collision_body->getLayers()));
+					serializer.serialize("rigid_body/data/mass/", toString(v.collision_body->getMass()));
+					serializer.serialize("rigid_body/data/position/", toString(v.collision_body->getPosition().x) + "|" + toString(v.collision_body->getPosition().y) + "|" + toString(v.collision_body->getPosition().z));
+					serializer.serialize("rigid_body/data/rotation/", toString(v.collision_body->getRotation().x) + "|" + toString(v.collision_body->getRotation().y) + "|" + toString(v.collision_body->getRotation().z) + "|" + toString(v.collision_body->getRotation().w));
+					serializer.serialize("rigid_body/data/velocity/", toString(v.collision_body->getVelocity().x) + "|" + toString(v.collision_body->getVelocity().y) + "|" + toString(v.collision_body->getVelocity().z));
+					serializer.serialize("rigid_body/data/velocity_constraints/", toString((uint32_t)v.collision_body->getVelocityConstraints()));
+				}
+			}
+
+			/////////////////////////////////////////////////////////////////////////////
+			void deserialize(scene::Scene& scene, scene::Serializer& serializer)
+			{
+				scene.name.unused_data_entries.get_container().clear();
+				scene.name.marked_for_delete.clear();
+				scene.name.data_to_entity.clear();
+				scene.name.entity_to_data.clear();
+				//scene.name.data.clear();
+
+				for (const String& str : serializer.deserializeNamespace("rigid_body/unused_data_entries/"))
+					scene.name.unused_data_entries.push(std::stoul(stlString(str)));
+				for (const String& str : serializer.deserializeNamespace("rigid_body/marked_for_delete/"))
+					scene.name.marked_for_delete.insert(std::stoul(stlString(str)));
+				for (const String& str : serializer.deserializeNamespace("rigid_body/entity_to_data/"))
+					scene.name.entity_to_data.insert({ std::stoul(stlString(split(str, '|')[0])), std::stoul(stlString(split(str, '|')[1])) });
+				for (const String& str : serializer.deserializeNamespace("rigid_body/data_to_entity/"))
+					scene.name.data_to_entity.insert({ std::stoul(stlString(split(str, '|')[0])), std::stoul(stlString(split(str, '|')[1])) });
+
+				Vector<String> entities             = serializer.deserializeNamespace("rigid_body/data/entity/");
+				Vector<String> validity             = serializer.deserializeNamespace("rigid_body/data/valid/");
+				Vector<String> angular_constraints  = serializer.deserializeNamespace("rigid_body/data/angular_constraints/");
+				Vector<String> angular_velocity     = serializer.deserializeNamespace("rigid_body/data/angular_velocity/");
+				Vector<String> friction             = serializer.deserializeNamespace("rigid_body/data/friction/");
+				Vector<String> layers               = serializer.deserializeNamespace("rigid_body/data/layers/");
+				Vector<String> mass                 = serializer.deserializeNamespace("rigid_body/data/mass/");
+				Vector<String> position             = serializer.deserializeNamespace("rigid_body/data/position/");
+				Vector<String> rotation             = serializer.deserializeNamespace("rigid_body/data/rotation/");
+				Vector<String> velocity             = serializer.deserializeNamespace("rigid_body/data/velocity/");
+				Vector<String> velocity_constraints = serializer.deserializeNamespace("rigid_body/data/velocity_constraints/");
+
+				for (uint32_t i = 0; i < entities.size(); ++i)
+				{
+					entity::Entity entity = (entity::Entity)std::stoul(stlString(entities[i]));
+					//Data data((entity::Entity)std::stoul(stlString(entities[i])));
+					Data& data = scene.rigid_body.get(entity);
+					data.valid = std::stoul(stlString(validity[i])) > 0ul ? true : false;
+					data.entity = entity;
+					data.collision_body->setAngularConstraints((uint8_t)std::stoul(stlString(angular_constraints[i])));
+					data.collision_body->setAngularVelocity(glm::vec3(
+						std::stof(stlString(split(angular_velocity[i], '|')[0])),
+						std::stof(stlString(split(angular_velocity[i], '|')[1])),
+						std::stof(stlString(split(angular_velocity[i], '|')[2]))
+					));
+					data.collision_body->setFriction(std::stof(stlString(friction[i])));
+					data.collision_body->setLayers((uint16_t)std::stoul(stlString(layers[i])));
+					data.collision_body->setMass(std::stof(stlString(mass[i])));
+					data.collision_body->setPosition(glm::vec3(
+						std::stof(stlString(split(position[i], '|')[0])),
+						std::stof(stlString(split(position[i], '|')[1])),
+						std::stof(stlString(split(position[i], '|')[2]))
+					));
+					data.collision_body->setRotation(glm::quat(
+						std::stof(stlString(split(rotation[i], '|')[3])),
+						std::stof(stlString(split(rotation[i], '|')[0])),
+						std::stof(stlString(split(rotation[i], '|')[1])),
+						std::stof(stlString(split(rotation[i], '|')[2]))
+					));
+					data.collision_body->setVelocity(glm::vec3(
+						std::stof(stlString(split(velocity[i], '|')[0])),
+						std::stof(stlString(split(velocity[i], '|')[1])),
+						std::stof(stlString(split(velocity[i], '|')[2]))
+					));
+					data.collision_body->setVelocityConstraints((uint8_t)std::stoul(stlString(velocity_constraints[i])));
+
+					//scene.rigid_body.data.push_back(data);
+				}
+			}
+
 		  physics::IPhysicsWorld* RigidBodySystem::getPhysicsWorld(scene::Scene& scene)
 		  {
 			  return scene.rigid_body.physics_world;
