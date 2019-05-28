@@ -319,9 +319,12 @@ SET(UtilsSources
   "utils/mt_manager.h"
   "utils/mt_manager.cc"
   "utils/name.h"
+  "utils/register_meta.h"
+  "utils/register_serializer.h"
   "utils/renderable.h"
   "utils/nav_mesh.h"
   "utils/nav_mesh.cc"
+  "utils/serializer.h"
   "utils/zone_manager.h"
   "utils/zone_manager.cc"
 )
@@ -463,7 +466,7 @@ ENDIF()
 # /// CREATE EXE ////////////////////////////////////////////////
 # ///////////////////////////////////////////////////////////////
 ADD_EXECUTABLE(lambda-engine ${Sources})
-TARGET_LINK_LIBRARIES(lambda-engine PUBLIC lambda-foundation fast-noise inih rapidjson mesh-decimation poly-partition stb tiny-gltf soloud)
+TARGET_LINK_LIBRARIES(lambda-engine PUBLIC lambda-foundation fast-noise meta-stuff inih rapidjson mesh-decimation poly-partition stb tiny-gltf soloud)
 
 # ///////////////////////////////////////////////////////////////
 # /// MISC //////////////////////////////////////////////////////

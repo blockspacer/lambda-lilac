@@ -67,6 +67,7 @@ namespace lambda
 			bool getKeepInMemory() const;
 			void setKeepInMemory(bool keep_in_memory);
 			static void release(Texture* texture, const size_t& hash);
+			static VioletHandle<Texture> privMetaSet(const String& name);
 
 		private:
 			Vector<TextureLayer> layers_;

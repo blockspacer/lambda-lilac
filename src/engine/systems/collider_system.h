@@ -10,7 +10,6 @@ namespace lambda
 	namespace scene
 	{
 		struct Scene;
-		class Serializer;
 	}
 	namespace components
 	{
@@ -44,12 +43,12 @@ namespace lambda
 		{
 			struct Data
 			{
+				Data() {}
 				Data(const entity::Entity& entity) : entity(entity) {};
 				Data(const Data& other);
 				Data& operator=(const Data& other);
 
 				ColliderType             type = ColliderType::kCapsule; // TODO (Hilze): Remove this
-				physics::ICollisionBody* collision_body = nullptr;
 				bool                     is_trigger = false;
 				bool                     valid = true;
 
@@ -77,9 +76,6 @@ namespace lambda
 
 			void deinitialize(scene::Scene& data);
 			void collectGarbage(scene::Scene& data);
-
-			void serialize(scene::Scene& data, scene::Serializer& serializer);
-			void deserialize(scene::Scene& data, scene::Serializer& serializer);
 
 			void makeBox(const entity::Entity& entity, scene::Scene& data);
 			void makeSphere(const entity::Entity& entity, scene::Scene& data);

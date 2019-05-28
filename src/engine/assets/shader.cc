@@ -68,6 +68,12 @@ namespace lambda
 			ShaderManager::getInstance()->destroy(shader, hash);
 		}
 
+		///////////////////////////////////////////////////////////////////////////
+		VioletHandle<Shader> Shader::privMetaSet(const String& name)
+		{
+			return ShaderManager::getInstance()->getFromCache(Name(name));
+		}
+
 
 
 

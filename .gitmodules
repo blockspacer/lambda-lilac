@@ -82,3 +82,6 @@
 [submodule "deps/polypartition"]
 	path = deps/polypartition
 	url = https://github.com/ivanfratric/polypartition.git
+[submodule "deps/MetaStuff"]
+	path = deps/MetaStuff
+	url = https://github.com/eliasdaler/MetaStuff.git

@@ -52,7 +52,7 @@ namespace lambda
 
 				return ref > 0;
 			}
-			static Name getName(const size_t& hash)
+			static const Name& getName(const size_t& hash)
 			{
 				g_mutex.lock();
 				LMB_ASSERT(g_valid, "AssetHandle not valid anymore");
@@ -71,7 +71,7 @@ namespace lambda
 			static void releaseAll()
 			{
 				g_mutex.lock();
-				g_refs  = UnorderedMap<size_t, int>();
+				g_refs = UnorderedMap<size_t, int>();
 				g_names = UnorderedMap<size_t, Name>();
 				g_valid = false;
 			}
@@ -191,9 +191,15 @@ namespace lambda
 			{
 				return hash_;
 			}
-			Name getName() const
+			Name getName()
 			{
 				return hash_ ? VioletRefHandler<T>::getName(hash_) : Name();
+			}
+
+			const Name& getName() const
+			{
+				static Name k_name;
+				return hash_ ? VioletRefHandler<T>::getName(hash_) : k_name;
 			}
 
 			void release()
@@ -206,6 +212,15 @@ namespace lambda
 					data_ = nullptr;
 					hash_ = 0ull;
 				}
+			}
+
+			void metaSet(String name)
+			{
+				*this = T::privMetaSet(name);
+			}
+			String metaGet() const
+			{
+				return getName().getName();
 			}
 
 		private:

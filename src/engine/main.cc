@@ -340,7 +340,7 @@ int main(int argc, char** argv)
 	LMB_ASSERT(argc != 1, "No project folder was speficied!");
 
 	lambda::FileSystem::SetBaseDir(argv[1]);
-
+	
 	{
 #if defined VIOLET_RENDERER_D3D11
 		platform::IRenderer* renderer = foundation::Memory::construct<windows::D3D11Renderer>();

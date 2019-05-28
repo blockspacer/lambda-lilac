@@ -12,11 +12,11 @@ namespace lambda
       float asDeg() const { return asRad() * radToDeg; }
       float asRad() const { return rad_; }
 
-      void setDeg(const float& deg) { setRad(deg * degToRad); }
-      void setRad(const float& rad) { rad_ = rad; }
+      void setDeg(float deg) { setRad(deg * degToRad); }
+      void setRad(float rad) { rad_ = rad; }
 
-      static Angle fromDeg(const float& deg) { return Angle(deg * degToRad); }
-      static Angle fromRad(const float& rad) { return Angle(rad); }
+      static Angle fromDeg(float deg) { return Angle(deg * degToRad); }
+      static Angle fromRad(float rad) { return Angle(rad); }
 
       static constexpr float pi = 3.14159265f;
       static constexpr float tau = 6.28318531f;

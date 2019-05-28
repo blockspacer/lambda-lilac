@@ -210,6 +210,7 @@ namespace lambda
 			static Mesh createScreenQuad();
 
 			static void release(Mesh* mesh, const size_t& hash);
+			static VioletHandle<Mesh> privMetaSet(const String& name);
 
 		private:
 			UnorderedMap<uint32_t, Buffer> buffer_;

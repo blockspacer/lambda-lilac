@@ -13,7 +13,6 @@
 #include <algorithm>
 #include <cmath>
 #include "platform/culling.h"
-#include "utils/renderable.h"
 #include <platform/scene.h>
 #include <interfaces/irenderer.h>
 #include <memory/frame_heap.h>
@@ -55,10 +54,8 @@ namespace lambda
 					TransformSystem::addComponent(entity, scene);
 
 				scene.mesh_render.add(entity);
-
-				utilities::Renderable* renderable = foundation::Memory::construct<utilities::Renderable>();
-				renderable->entity = entity;
-				scene.mesh_render.dynamic_renderables.push_back(renderable);
+				
+				scene.mesh_render.dynamic_renderables.push_back(scene.mesh_render.entity_to_data[entity]);
 
 				return MeshRenderComponent(entity, scene);
 			}
@@ -84,21 +81,14 @@ namespace lambda
 						const auto& it = scene.mesh_render.entity_to_data.find(entity);
 						if (it != scene.mesh_render.entity_to_data.end())
 						{
-							auto dit = eastl::find_if(
-								scene.mesh_render.dynamic_renderables.begin(), scene.mesh_render.dynamic_renderables.end(),
-								[&entity](const utilities::Renderable* x) { return x->entity == entity; });
+							auto dit = eastl::find(scene.mesh_render.dynamic_renderables.begin(), scene.mesh_render.dynamic_renderables.end(), scene.mesh_render.entity_to_data[entity]);
 							if (dit != scene.mesh_render.dynamic_renderables.end())
-							{
-								foundation::Memory::destruct(*dit);
 								scene.mesh_render.dynamic_renderables.erase(dit);
-							}
-							auto sit = eastl::find_if(
-								scene.mesh_render.static_renderables.begin(), scene.mesh_render.static_renderables.end(),
-								[&entity](const utilities::Renderable* x) { return x->entity == entity; });
+
+							auto sit = eastl::find(scene.mesh_render.static_renderables.begin(), scene.mesh_render.static_renderables.end(), scene.mesh_render.entity_to_data[entity]);
 							if (sit != scene.mesh_render.static_renderables.end())
 							{
 								scene.mesh_render.static_bvh->remove(entity);
-								foundation::Memory::destruct(*sit);
 								scene.mesh_render.static_renderables.erase(sit);
 							}
 
@@ -174,117 +164,31 @@ namespace lambda
 			{
 				scene.mesh_render.dynamic_bvh->clear();
 
-				for (utilities::Renderable* renderable : scene.mesh_render.dynamic_renderables)
+				for (uint32_t index : scene.mesh_render.dynamic_renderables)
 				{
-					auto& data = scene.mesh_render.get(renderable->entity);
-					
-					renderable->mesh             = data.mesh;
-					renderable->sub_mesh         = data.sub_mesh;
-					renderable->albedo_texture   = data.albedo_texture;
-					renderable->normal_texture   = data.normal_texture;
-					renderable->dmra_texture     = data.dmra_texture;
-					renderable->emissive_texture = data.emissive_texture;
-					renderable->metallicness     = data.metallicness;
-					renderable->roughness        = data.roughness;
-					renderable->emissiveness     = data.emissiveness;
-					renderable->model_matrix     = components::TransformSystem::getWorld(data.entity, scene);
+					auto& data = scene.mesh_render.data[index];
+					auto& renderable = data.renderable;
+
+					renderable.mesh             = data.mesh;
+					renderable.sub_mesh         = data.sub_mesh;
+					renderable.albedo_texture   = data.albedo_texture;
+					renderable.normal_texture   = data.normal_texture;
+					renderable.dmra_texture     = data.dmra_texture;
+					renderable.emissive_texture = data.emissive_texture;
+					renderable.metallicness     = data.metallicness;
+					renderable.roughness        = data.roughness;
+					renderable.emissiveness     = data.emissiveness;
+					renderable.model_matrix     = components::TransformSystem::getWorld(data.entity, scene);
 
 					if (data.mesh)
 					{
-						const asset::SubMesh& sub_mesh = renderable->mesh->getSubMeshes().at(renderable->sub_mesh);
-						getMinMax(sub_mesh.min, sub_mesh.max, renderable->model_matrix, renderable->min, renderable->max);
-						renderable->center = (renderable->min + renderable->max) * 0.5f;
-						renderable->radius = glm::length(renderable->center - renderable->max);
+						const asset::SubMesh& sub_mesh = renderable.mesh->getSubMeshes().at(renderable.sub_mesh);
+						getMinMax(sub_mesh.min, sub_mesh.max, renderable.model_matrix, renderable.min, renderable.max);
+						renderable.center = (renderable.min + renderable.max) * 0.5f;
+						renderable.radius = glm::length(renderable.center - renderable.max);
 
-						scene.mesh_render.dynamic_bvh->add(renderable->entity, renderable, utilities::BVHAABB(renderable->min, renderable->max));
+						scene.mesh_render.dynamic_bvh->add(renderable.entity, &renderable.entity, utilities::BVHAABB(renderable.min, renderable.max));
 					}
-				}
-			}
-
-			/////////////////////////////////////////////////////////////////////////////
-			void serialize(scene::Scene& scene, scene::Serializer& serializer)
-			{
-				for (auto v : scene.mesh_render.unused_data_entries.get_container())
-					serializer.serialize("mesh_render/unused_data_entries/", toString(v));
-				for (auto v : scene.mesh_render.marked_for_delete)
-					serializer.serialize("mesh_render/marked_for_delete/", toString(v));
-				for (auto v : scene.mesh_render.data_to_entity)
-					serializer.serialize("mesh_render/data_to_entity/", toString(v.first) + "|" + toString(v.second));
-				for (auto v : scene.mesh_render.entity_to_data)
-					serializer.serialize("mesh_render/entity_to_data/", toString(v.first) + "|" + toString(v.second));
-
-				for (auto v : scene.mesh_render.data)
-				{
-					serializer.serialize("mesh_render/data/entity/", toString(v.entity));
-					serializer.serialize("mesh_render/data/valid/", toString(v.valid));
-					serializer.serialize("mesh_render/data/visible/", toString(v.visible));
-					serializer.serialize("mesh_render/data/sub_mesh/", toString(v.sub_mesh));
-					serializer.serialize("mesh_render/data/cast_shadows/", toString(v.cast_shadows));
-					serializer.serialize("mesh_render/data/emissiveness/", toString(v.emissiveness.x) + "|" + toString(v.emissiveness.y) + "|" + toString(v.emissiveness.z));
-					serializer.serialize("mesh_render/data/metallicness/", toString(v.metallicness));
-					serializer.serialize("mesh_render/data/roughness/", toString(v.roughness));
-					serializer.serialize("mesh_render/data/normal_texture/", v.normal_texture.getName().getName());
-					serializer.serialize("mesh_render/data/albedo_texture/", v.albedo_texture.getName().getName());
-					serializer.serialize("mesh_render/data/dmra_texture/", v.dmra_texture.getName().getName());
-					serializer.serialize("mesh_render/data/emissive_texture/", v.emissive_texture.getName().getName());
-					serializer.serialize("mesh_render/data/mesh/", v.mesh.getName().getName());
-				}
-			}
-
-			/////////////////////////////////////////////////////////////////////////////
-			void deserialize(scene::Scene& scene, scene::Serializer& serializer)
-			{
-				scene.mesh_render.unused_data_entries.get_container().clear();
-				scene.mesh_render.marked_for_delete.clear();
-				scene.mesh_render.data_to_entity.clear();
-				scene.mesh_render.entity_to_data.clear();
-				auto data_backup = scene.mesh_render.data;
-				scene.mesh_render.data.clear();
-
-				for (const String& str : serializer.deserializeNamespace("mesh_render/unused_data_entries/"))
-					scene.mesh_render.unused_data_entries.push(std::stoul(stlString(str)));
-				for (const String& str : serializer.deserializeNamespace("mesh_render/marked_for_delete/"))
-					scene.mesh_render.marked_for_delete.insert(std::stoul(stlString(str)));
-				for (const String& str : serializer.deserializeNamespace("mesh_render/entity_to_data/"))
-					scene.mesh_render.entity_to_data.insert({ std::stoul(stlString(split(str, '|')[0])), std::stoul(stlString(split(str, '|')[1])) });
-				for (const String& str : serializer.deserializeNamespace("mesh_render/data_to_entity/"))
-					scene.mesh_render.data_to_entity.insert({ std::stoul(stlString(split(str, '|')[0])), std::stoul(stlString(split(str, '|')[1])) });
-
-				Vector<String> entities          = serializer.deserializeNamespace("mesh_render/data/entity/");
-				Vector<String> validity          = serializer.deserializeNamespace("mesh_render/data/valid/");
-				Vector<String> visibility        = serializer.deserializeNamespace("mesh_render/data/visible/");
-				Vector<String> sub_meshes        = serializer.deserializeNamespace("mesh_render/data/sub_mesh/");
-				Vector<String> cast_shadows      = serializer.deserializeNamespace("mesh_render/data/cast_shadows/");
-				Vector<String> emissiveness      = serializer.deserializeNamespace("mesh_render/data/emissiveness/");
-				Vector<String> metallicness      = serializer.deserializeNamespace("mesh_render/data/metallicness/");
-				Vector<String> roughness         = serializer.deserializeNamespace("mesh_render/data/roughness/");
-				Vector<String> normal_textures   = serializer.deserializeNamespace("mesh_render/data/normal_texture/");
-				Vector<String> albedo_textures   = serializer.deserializeNamespace("mesh_render/data/albedo_texture/");
-				Vector<String> dmra_textures     = serializer.deserializeNamespace("mesh_render/data/dmra_texture/");
-				Vector<String> emissive_textures = serializer.deserializeNamespace("mesh_render/data/emissive_texture/");
-				Vector<String> meshes            = serializer.deserializeNamespace("mesh_render/data/mesh/");
-				
-				for (uint32_t i = 0; i < entities.size(); ++i)
-				{
-					Data data((entity::Entity)std::stoul(stlString(entities[i])));
-					data.valid = std::stoul(stlString(validity[i])) > 0ul ? true : false;
-					data.visible = std::stoul(stlString(visibility[i])) > 0ul ? true : false;
-					data.cast_shadows = std::stoul(stlString(cast_shadows[i])) > 0ul ? true : false;
-
-					data.sub_mesh = std::stoul(stlString(sub_meshes[i]));
-					data.emissiveness = glm::vec3(
-						std::stof(stlString(split(emissiveness[i], '|')[0])),
-						std::stof(stlString(split(emissiveness[i], '|')[1])),
-						std::stof(stlString(split(emissiveness[i], '|')[2]))
-					);
-					data.metallicness = std::stof(stlString(metallicness[i]));
-					data.roughness = std::stof(stlString(roughness[i]));
-					data.normal_texture   = asset::TextureManager::getInstance()->getFromCache(normal_textures[i]);
-					data.albedo_texture   = asset::TextureManager::getInstance()->getFromCache(albedo_textures[i]);
-					data.dmra_texture     = asset::TextureManager::getInstance()->getFromCache(dmra_textures[i]);
-					data.emissive_texture = asset::TextureManager::getInstance()->getFromCache(emissive_textures[i]);
-					data.mesh = asset::MeshManager::getInstance()->get(meshes[i]);
-					scene.mesh_render.data.push_back(data);
 				}
 			}
 
@@ -453,70 +357,53 @@ namespace lambda
 			}
 			void makeStatic(const entity::Entity& entity, scene::Scene& scene)
 			{
-				for (const auto& data : scene.mesh_render.static_renderables)
-					if (data->entity == entity)
+				for (uint32_t index : scene.mesh_render.static_renderables)
+					if (scene.mesh_render.data[index].entity == entity)
 						return;
 
-				utilities::Renderable* renderable = nullptr;
-				auto it = eastl::find_if(
-					scene.mesh_render.dynamic_renderables.begin(), scene.mesh_render.dynamic_renderables.end(),
-					[&entity](const utilities::Renderable* x) { return x->entity == entity; });
+
+				auto it = eastl::find(scene.mesh_render.dynamic_renderables.begin(), scene.mesh_render.dynamic_renderables.end(), scene.mesh_render.entity_to_data[entity]);
 				if (it != scene.mesh_render.dynamic_renderables.end())
-				{
-					renderable = *it;
 					scene.mesh_render.dynamic_renderables.erase(it);
-				}
 
-				LMB_ASSERT(renderable, "MESH RENDER: Could not find dynamic renderable with entity: %llu", entity);
-
-				const Data& data = scene.mesh_render.get(entity);
+				Data& data = scene.mesh_render.get(entity);
 				
-				renderable->entity           = entity;
-				renderable->model_matrix     = TransformSystem::getWorld(entity, scene);
-				renderable->mesh             = data.mesh;
-				renderable->sub_mesh         = data.sub_mesh;
-				renderable->albedo_texture   = data.albedo_texture;
-				renderable->normal_texture   = data.normal_texture;
-				renderable->dmra_texture     = data.dmra_texture;
-				renderable->emissive_texture = data.emissive_texture;
-				renderable->metallicness     = data.metallicness;
-				renderable->roughness        = data.roughness;
-				renderable->emissiveness     = data.emissiveness;
+				data.renderable.model_matrix     = TransformSystem::getWorld(entity, scene);
+				data.renderable.mesh             = data.mesh;
+				data.renderable.sub_mesh         = data.sub_mesh;
+				data.renderable.albedo_texture   = data.albedo_texture;
+				data.renderable.normal_texture   = data.normal_texture;
+				data.renderable.dmra_texture     = data.dmra_texture;
+				data.renderable.emissive_texture = data.emissive_texture;
+				data.renderable.metallicness     = data.metallicness;
+				data.renderable.roughness        = data.roughness;
+				data.renderable.emissiveness     = data.emissiveness;
 
-				if (renderable->mesh)
+				if (data.renderable.mesh)
 				{
-					const asset::SubMesh& sub_mesh = renderable->mesh->getSubMeshes().at(renderable->sub_mesh);
-					getMinMax(sub_mesh.min, sub_mesh.max, renderable->model_matrix, renderable->min, renderable->max);
-					renderable->center = (renderable->min + renderable->max) * 0.5f;
-					renderable->radius = glm::length(renderable->center - renderable->max);
+					const asset::SubMesh& sub_mesh = data.renderable.mesh->getSubMeshes().at(data.renderable.sub_mesh);
+					getMinMax(sub_mesh.min, sub_mesh.max, data.renderable.model_matrix, data.renderable.min, data.renderable.max);
+					data.renderable.center = (data.renderable.min + data.renderable.max) * 0.5f;
+					data.renderable.radius = glm::length(data.renderable.center - data.renderable.max);
 
-					scene.mesh_render.static_bvh->add(entity, renderable, utilities::BVHAABB(renderable->min, renderable->max));
+					scene.mesh_render.static_bvh->add(data.renderable.entity, &data.renderable.entity, utilities::BVHAABB(data.renderable.min, data.renderable.max));
 				}
 
-				scene.mesh_render.static_renderables.push_back(renderable);
+				scene.mesh_render.static_renderables.push_back(scene.mesh_render.entity_to_data[entity]);
 			}
 			void makeDynamic(const entity::Entity& entity, scene::Scene& scene)
 			{
-				for (utilities::Renderable* renderable : scene.mesh_render.dynamic_renderables)
-					if (renderable->entity == entity)
+				for (uint32_t index : scene.mesh_render.dynamic_renderables)
+					if (scene.mesh_render.data[index].entity == entity)
 						return;
 
-				utilities::Renderable* renderable = nullptr;
 
-				for (uint32_t i = 0u; i < scene.mesh_render.static_renderables.size(); ++i)
-				{
-					if (scene.mesh_render.static_renderables.at(i)->entity == entity)
-					{
-						renderable = scene.mesh_render.static_renderables.at(i);
-						scene.mesh_render.static_renderables.erase(scene.mesh_render.static_renderables.begin() + i);
-						break;
-					}
-				}
-
-				LMB_ASSERT(renderable, "MESH RENDER: Could not find static renderable with entity: %llu", entity);
+				auto it = eastl::find(scene.mesh_render.static_renderables.begin(), scene.mesh_render.static_renderables.end(), scene.mesh_render.entity_to_data[entity]);
+				if (it != scene.mesh_render.static_renderables.end())
+					scene.mesh_render.static_renderables.erase(it);
 
 				scene.mesh_render.static_bvh->remove(entity);
-				scene.mesh_render.dynamic_renderables.push_back(renderable);
+				scene.mesh_render.dynamic_renderables.push_back(scene.mesh_render.entity_to_data[entity]);
 			}
 
 			void createRenderList(utilities::Culler& culler, const utilities::Frustum& frustum, scene::Scene& scene)
@@ -531,7 +418,7 @@ namespace lambda
 				{
 					for (utilities::LinkedNode* node = linked_node->next; node != nullptr; node = node->next)
 					{
-						utilities::Renderable* renderable = (utilities::Renderable*)node->data;
+						utilities::Renderable* renderable = &scene.mesh_render.get(node->entity).renderable;
 						// TODO (Hilze): Implement.
 						if (renderable->albedo_texture && renderable->albedo_texture->getLayer(0u).containsAlpha())
 							alpha.push_back(renderable);
@@ -650,11 +537,12 @@ namespace lambda
 				entity_to_data[entity] = idx;
 
 				Data& d = data[idx];
-
-				d.albedo_texture   = default_albedo;
-				d.normal_texture   = default_normal;
-				d.dmra_texture     = default_dmra;
-				d.emissive_texture = default_emissive;
+				d.entity            = entity;
+				d.albedo_texture    = default_albedo;
+				d.normal_texture    = default_normal;
+				d.dmra_texture      = default_dmra;
+				d.emissive_texture  = default_emissive;
+				d.renderable.entity = entity;
 
 				return d;
 			}
@@ -696,6 +584,7 @@ namespace lambda
 				cast_shadows = other.cast_shadows;
 				entity = other.entity;
 				valid = other.valid;
+				renderable = other.renderable;
 			}
 			Data& Data::operator=(const Data& other)
 			{
@@ -712,6 +601,7 @@ namespace lambda
 				cast_shadows = other.cast_shadows;
 				entity = other.entity;
 				valid = other.valid;
+				renderable = other.renderable;
 
 				return *this;
 			}

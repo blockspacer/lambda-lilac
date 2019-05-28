@@ -1,13 +1,10 @@
 #pragma once
-#include "interfaces/isystem.h"
-#include "interfaces/icomponent.h"
-#include "interfaces/iwindow.h"
-#include "interfaces/irenderer.h"
-#include "utils/angle.h"
-#include "utils/distance.h"
-#include "platform/shader_pass.h"
-#include "platform/frustum.h"
-#include "platform/culling.h"
+#include <systems/entity.h>
+#include <utils/angle.h>
+#include <utils/distance.h>
+#include <platform/shader_pass.h>
+#include <platform/frustum.h>
+#include <platform/culling.h>
 
 namespace lambda
 {
@@ -46,6 +43,7 @@ namespace lambda
 		{
 			struct Data
 			{
+				Data() {};
 				Data(const entity::Entity& entity) : entity(entity) {};
 				Data(const Data& other);
 				Data& operator=(const Data& other);
@@ -88,8 +86,6 @@ namespace lambda
 			void deinitialize(scene::Scene& scene);
 			void onRender(scene::Scene& scene);
 			void updateCameraTransforms(scene::Scene& scene);
-			void serialize(scene::Scene& scene, scene::Serializer& serializer);
-			void deserialize(scene::Scene& scene, scene::Serializer& serializer);
 
 			void setFov(const entity::Entity& entity, const utilities::Angle& fov, scene::Scene& scene);
 			utilities::Angle getFov(const entity::Entity& entity, scene::Scene& scene);

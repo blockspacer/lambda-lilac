@@ -25,6 +25,7 @@ namespace lambda
       SoLoud::Wav* getBuffer() const;
 
 	  static void release(Wave* wave, const size_t& hash);
+		static VioletHandle<Wave> privMetaSet(const String& name);
 
     private:
       SoLoud::Wav* buffer_;

@@ -4,6 +4,7 @@
 #include "interfaces/iwindow.h"
 #include "assets/mesh_io.h"
 #include "utils/bvh.h"
+#include "utils/renderable.h"
 
 namespace lambda
 {
@@ -18,7 +19,6 @@ namespace lambda
 	namespace scene
 	{
 		struct Scene;
-		class Serializer;
 	}
 
 	namespace components
@@ -62,6 +62,7 @@ namespace lambda
 		{
 			struct Data
 			{
+				Data() {}
 				Data(const entity::Entity& entity) : entity(entity) {};
 				Data(const Data& other);
 				Data& operator=(const Data& other);
@@ -78,6 +79,7 @@ namespace lambda
 				bool visible       = true;
 				bool cast_shadows  = true;
 				bool valid         = true;
+				utilities::Renderable renderable;
 
 				entity::Entity entity;
 			};
@@ -95,10 +97,10 @@ namespace lambda
 				void  remove(const entity::Entity& entity);
 				bool  has(const entity::Entity& entity);
 
-				Vector<utilities::Renderable*> dynamic_renderables;
-				Vector<utilities::Renderable*> static_renderables;
-				utilities::BVH*                static_bvh;
-				utilities::TransientBVH*       dynamic_bvh;
+				Vector<uint32_t>         dynamic_renderables;
+				Vector<uint32_t>         static_renderables;
+				utilities::BVH*          static_bvh;
+				utilities::TransientBVH* dynamic_bvh;
 
 				asset::VioletTextureHandle default_albedo;
 				asset::VioletTextureHandle default_normal;
@@ -115,9 +117,6 @@ namespace lambda
 			void initialize(scene::Scene& scene);
 			void deinitialize(scene::Scene& scene);
 			void updateDynamicsBvh(scene::Scene& scene);
-
-			void serialize(scene::Scene& scene, scene::Serializer& serializer);
-			void deserialize(scene::Scene& scene, scene::Serializer& serializer);
 
 			void setMesh(const entity::Entity& entity, asset::VioletMeshHandle mesh, scene::Scene& scene);
 			void setSubMesh(const entity::Entity& entity, const uint32_t& sub_mesh, scene::Scene& scene);

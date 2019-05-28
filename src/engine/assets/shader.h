@@ -28,6 +28,7 @@ namespace lambda
 			void setKeepInMemory(bool keep_in_memory);
 
 			static void release(Shader* shader, const size_t& hash);
+			static VioletHandle<Shader> privMetaSet(const String& name);
 
 		protected:
 			VioletShader& getVioletShader() { return shader_; }

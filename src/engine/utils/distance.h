@@ -13,13 +13,13 @@ namespace lambda
       float asCentimeter() const { return meter_ * meterToCentimeter(); }
       float asMillimeter() const { return meter_ * meterToMillimeter(); }
 
-      void setMeter(const float& meter) { meter_ = meter; }
-      void setCentimeter(const float& centimeter) { meter_ = centimeter * centimeterToMeter(); }
-      void setMillimeter(const float& millimeter) { meter_ = millimeter * millimeterToMeter(); }
+      void setMeter(float meter) { meter_ = meter; }
+      void setCentimeter(float centimeter) { meter_ = centimeter * centimeterToMeter(); }
+      void setMillimeter(float millimeter) { meter_ = millimeter * millimeterToMeter(); }
 
-      static Distance fromMeter     (const float& meter)      { return Distance(meter); }
-      static Distance fromCentimeter(const float& centimeter) { return Distance(centimeter * centimeterToMeter()); }
-      static Distance fromMillimeter(const float& millimeter) { return Distance(millimeter * millimeterToMeter()); }
+      static Distance fromMeter     (float meter)      { return Distance(meter); }
+      static Distance fromCentimeter(float centimeter) { return Distance(centimeter * centimeterToMeter()); }
+      static Distance fromMillimeter(float millimeter) { return Distance(millimeter * millimeterToMeter()); }
 
       static float meterToMillimeter()      { return 1000.0f; }
       static float meterToCentimeter()      { return 100.0f;  }

@@ -1,8 +1,8 @@
 #pragma once
 #include "systems/entity.h"
-#include <glm/glm.hpp>
 #include "assets/mesh.h"
 #include "assets/texture.h"
+#include <glm/glm.hpp>
 
 namespace lambda
 {
@@ -26,6 +26,5 @@ namespace lambda
       glm::vec3 center;
       float     radius;
     };
-
   }
 }

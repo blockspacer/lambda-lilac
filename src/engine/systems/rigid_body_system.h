@@ -13,7 +13,6 @@ namespace lambda
 	namespace scene
 	{
 		struct Scene;
-		class Serializer;
 	}
 
 	namespace components
@@ -55,11 +54,11 @@ namespace lambda
 		{
 			struct Data
 			{
+				Data() {}
 				Data(const entity::Entity& entity) : entity(entity) {};
 				Data(const Data& other);
 				Data& operator=(const Data& other);
 
-				physics::ICollisionBody* collision_body = nullptr;
 				bool valid = true;
 				entity::Entity entity;
 			};
@@ -90,9 +89,6 @@ namespace lambda
 			void initialize(scene::Scene& scene);
 			void deinitialize(scene::Scene& scene);
 			void fixedUpdate(const float& delta_time, scene::Scene& scene);
-
-			void serialize(scene::Scene& scene, scene::Serializer& serializer);
-			void deserialize(scene::Scene& scene, scene::Serializer& serializer);
 
 			float getMass(const entity::Entity& entity, scene::Scene& scene);
 			void setMass(const entity::Entity& entity, const float& mass, scene::Scene& scene);

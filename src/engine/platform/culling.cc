@@ -3,7 +3,6 @@
 #include <glm/gtx/norm.hpp>
 #include "systems/mesh_render_system.h"
 #include "utils/zone_manager.h"
-#include "utils/renderable.h"
 #include <memory/frame_heap.h>
 #include "frustum.h"
 #include <algorithm>
@@ -49,17 +48,13 @@ namespace lambda
 
 			BVHAABB aabb(frustum.getMin(), frustum.getMax());
 
-			for (const void* user_data : bvh.getAllUserDataInFrustum(frustum))
+			for (const entity::Entity& entity : bvh.getAllEntityInAABB(frustum))
 			{
-				Renderable* data = (Renderable*)user_data;
-				if (data->mesh)
-				{
-					LinkedNode* node = foundation::GetFrameHeap()->construct<LinkedNode>();
-					node_it->next  = node;
-					node->data     = data;
-					node->previous = node_it;
-					node_it        = node;
-				}
+				LinkedNode* node = foundation::GetFrameHeap()->construct<LinkedNode>();
+				node_it->next  = node;
+				node->entity   = entity;
+				node->previous = node_it;
+				node_it        = node;
 			}
 		}
 
@@ -71,17 +66,13 @@ namespace lambda
 
 			BVHAABB aabb(frustum.getMin(), frustum.getMax());
 
-			for (const void* user_data : bvh.getAllUserDataInFrustum(frustum))
+			for (const entity::Entity& entity : bvh.getAllEntityInAABB(frustum))
 			{
-				Renderable* data = (Renderable*)user_data;
-				if (data->mesh)
-				{
-					LinkedNode* node = foundation::GetFrameHeap()->construct<LinkedNode>();
-					node_it->next  = node;
-					node->data     = data;
-					node->previous = node_it;
-					node_it        = node;
-				}
+				LinkedNode* node = foundation::GetFrameHeap()->construct<LinkedNode>();
+				node_it->next  = node;
+				node->entity   = entity;
+				node->previous = node_it;
+				node_it        = node;
 			}
 		}
 	}

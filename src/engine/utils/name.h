@@ -1,10 +1,13 @@
 #pragma once
 #include <containers/containers.h>
+#include <utils/serializer.h>
 
 namespace lambda
 {
   class Name
   {
+		friend auto meta::registerMembers<lambda::Name>();
+
   public:
     Name() :
       name_(""), hash_(0u)

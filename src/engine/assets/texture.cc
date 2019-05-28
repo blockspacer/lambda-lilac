@@ -299,6 +299,12 @@ namespace lambda
 			TextureManager::getInstance()->destroy(texture, hash);
 		}
 
+		///////////////////////////////////////////////////////////////////////////
+		VioletHandle<Texture> Texture::privMetaSet(const String& name)
+		{
+			return TextureManager::getInstance()->getFromCache(Name(name));
+		}
+
 
 
 

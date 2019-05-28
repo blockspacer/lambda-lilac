@@ -13,7 +13,6 @@ namespace lambda
 	namespace scene
 	{
 		struct Scene;
-		class Serializer;
 	}
 
 	namespace components
@@ -86,6 +85,7 @@ namespace lambda
 		{
 			struct Data
 			{
+				Data() {};
 				Data(const entity::Entity& entity) : entity(entity) {};
 				Data(const Data& other);
 				Data& operator=(const Data& other);
@@ -100,12 +100,10 @@ namespace lambda
 				glm::mat4 world = glm::mat4(1.0f);
 				bool dirty = true;
 				bool valid = true;
+				entity::Entity parent = entity::InvalidEntity;
 
 				entity::Entity getParent() const { return parent; }
 				void setParent(entity::Entity p) { parent = p; }
-
-			private:
-				entity::Entity parent = entity::InvalidEntity;
 			};
 
 			struct SystemData
@@ -129,8 +127,6 @@ namespace lambda
 
 			void collectGarbage(scene::Scene& scene);
 			void deinitialize(scene::Scene& scene);
-			void serialize(scene::Scene& scene, scene::Serializer& serializer);
-			void deserialize(scene::Scene& scene, scene::Serializer& serializer);
 
 			glm::mat4 getLocal(const entity::Entity& entity, scene::Scene& scene);
 			glm::mat4 getWorld(const entity::Entity& entity, scene::Scene& scene);

@@ -49,6 +49,7 @@ namespace lambda
 		  virtual glm::quat getRotation() const = 0;
 		  virtual void setRotation(glm::quat rotation) = 0;
 		  virtual entity::Entity getEntity() const = 0;
+			virtual void setEntity(entity::Entity entity) = 0;
 
 		  virtual float getFriction() const = 0;
 		  virtual void setFriction(float friction) = 0;
@@ -89,8 +90,9 @@ namespace lambda
 		  virtual void render(scene::Scene& scene) = 0;
 		  virtual void update(const double& time_step) = 0;
 
-		  virtual ICollisionBody* createCollisionBody(entity::Entity entity) = 0;
-		  virtual void destroyCollisionBody(ICollisionBody* collision_body) = 0;
+			virtual void createCollisionBody(entity::Entity entity) = 0;
+			virtual void destroyCollisionBody(entity::Entity entity) = 0;
+			virtual ICollisionBody& getCollisionBody(entity::Entity entity) = 0;
 
 		  virtual Vector<Manifold> raycast(
 			  const glm::vec3& start,

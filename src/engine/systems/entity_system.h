@@ -8,7 +8,6 @@ namespace lambda
 	namespace scene
 	{
 		struct Scene;
-		class Serializer;
 	}
 
 	namespace components
@@ -25,9 +24,20 @@ namespace lambda
 				void destroy(entity::Entity entity);
 				bool valid(entity::Entity entity);
 			};
-
-			void serialize(scene::Scene& scene, scene::Serializer& serializer);
-			void deserialize(scene::Scene& scene, scene::Serializer& serializer);
 		}
+	}
+}
+
+#include "utils/serializer.h"
+
+namespace meta
+{
+	template <>
+	inline auto registerMembers<lambda::components::EntitySystem::SystemData>()
+	{
+		return members(
+			member("free_id_count", &lambda::components::EntitySystem::SystemData::free_id_count),
+			member("free_ids", &lambda::components::EntitySystem::SystemData::free_ids)
+		);
 	}
 }

@@ -59,21 +59,6 @@ namespace lambda
 			bool                       do_deserialize = false;
 		};
 
-		class Serializer
-		{
-		public:
-			Serializer();
-			~Serializer();
-			void serialize(String name, String data);
-			String deserialize(String name);
-			Vector<String> deserializeNamespace(String name);
-
-		private:
-			UnorderedMap<String, Serializer*> namespaces;
-			UnorderedMap<String, String>      datas;
-			Vector<String>                    namespace_datas;
-		};
-
 		///////////////////////////////////////////////////////////////////////////
 		void sceneInitialize(scene::Scene& scene);
 		void sceneUpdate(const float& delta_time, scene::Scene& scene);

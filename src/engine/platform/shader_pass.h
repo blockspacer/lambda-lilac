@@ -24,8 +24,13 @@ namespace lambda
       const Vector<RenderTarget>& getOutputs() const;
 
       Name getName() const;
-      void setEnabled(const bool& enabled);
+      void setEnabled(bool enabled);
       bool getEnabled() const;
+
+			void metaSetName(Name name);
+			void metaSetShader(asset::VioletShaderHandle shader);
+			void metaSetInputs(const Vector<RenderTarget>& inputs);
+			void metaSetOutputs(const Vector<RenderTarget>& outputs);
 
     private:
       bool enabled_;

@@ -10,7 +10,6 @@ namespace lambda
 	namespace scene
 	{
 		struct Scene;
-		class Serializer;
 	}
 
 	namespace components
@@ -30,6 +29,7 @@ namespace lambda
 		{
 			struct Data
 			{
+				Data() {}
 				Data(const entity::Entity& entity) : entity(entity) {};
 				Data(const Data& other);
 				Data& operator=(const Data& other);
@@ -75,9 +75,6 @@ namespace lambda
 			void collectGarbage(scene::Scene& scene);
 			void update(const float& delta_time, scene::Scene& scene);
 			void fixedUpdate(const float& delta_time, scene::Scene& scene);
-
-			void serialize(scene::Scene& scene, scene::Serializer& serializer);
-			void deserialize(scene::Scene& scene, scene::Serializer& serializer);
 
 			void setObject(const entity::Entity& entity, void* ptr, scene::Scene& scene);
 			void setInitialize(const entity::Entity& entity, void* ptr, scene::Scene& scene);

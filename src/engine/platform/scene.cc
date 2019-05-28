@@ -12,6 +12,13 @@
 #include <memory/frame_heap.h>
 #include <algorithm>
 #include <utils/decompose_matrix.h>
+#include <rapidjson/document.h>
+#include <rapidjson/writer.h>
+#include <rapidjson/stringbuffer.h>
+#include <utils/serializer.h>
+#include <utils/register_serializer.h>
+#include <utils/register_meta.h>
+#include <interfaces/irenderer.h>
 
 #define USE_MT 1
 #define USE_RENDERABLES 1
@@ -24,68 +31,6 @@ namespace lambda
 {
 	namespace scene
 	{
-		Serializer::Serializer()
-		{
-		}
-
-		Serializer::~Serializer()
-		{
-			for (auto& serializer : namespaces)
-				foundation::Memory::destruct(serializer.second);
-		}
-
-		void Serializer::serialize(String name, String data)
-		{
-			Vector<String> s = split(name, '/');
-			if (s.size() > 1 || (s.size() == 1 && name.back() == '/'))
-			{
-				auto it = namespaces.find(s[0]);
-				if (it == namespaces.end())
-				{
-					namespaces.insert({ s[0], foundation::Memory::construct<Serializer>() });
-					it = namespaces.find(s[0]);
-				}
-				namespaces[s[0]]->serialize(name.substr(s[0].size() + 1), data);
-			}
-			else if (s.empty())
-				namespace_datas.push_back(data);
-			else
-				datas[s[0]] = data;
-		}
-
-		String Serializer::deserialize(String name)
-		{
-			const char* cstr = name.c_str();
-			Vector<String> s = split(name, '/');
-			if (s.size() > 1 || (s.size() == 1 && name.back() == '/'))
-			{
-				auto it = namespaces.find(s[0]);
-				if (it == namespaces.end())
-					return "";
-				return it->second->deserialize(name.substr(s[0].size() + 1));
-			}
-			else if (s.empty())
-				return namespace_datas[0];
-			else
-				return datas[s[0]];
-		}
-
-		Vector<String> Serializer::deserializeNamespace(String name)
-		{
-			Vector<String> s = split(name, '/');
-			if (s.size() > 1 || (s.size() == 1 && name.back() == '/'))
-			{
-				auto it = namespaces.find(s[0]);
-				if (it == namespaces.end())
-					return{};
-				return it->second->deserializeNamespace(name.substr(s[0].size() + 1));
-			}
-			else if (s.empty())
-				return namespace_datas;
-			else
-				return{ datas[s[0]] };
-		}
-
 		void sceneInitialize(scene::Scene& scene)
 		{
 			components::CameraSystem::initialize(scene);
@@ -1395,35 +1340,91 @@ namespace lambda
 			components::WaveSourceSystem::deinitialize(scene);
 			components::LightSystem::deinitialize(scene);
 		}
-		Serializer k_serializer;
+
+		std::string k_src;
 		void sceneSerialize(scene::Scene& scene)
 		{
-			k_serializer = Serializer();
-			components::EntitySystem::serialize(scene, k_serializer);
-			components::NameSystem::serialize(scene, k_serializer);
-			components::LODSystem::serialize(scene, k_serializer);
-			components::CameraSystem::serialize(scene, k_serializer);
-			components::RigidBodySystem::serialize(scene, k_serializer);
-			components::ColliderSystem::serialize(scene, k_serializer);
-			components::MonoBehaviourSystem::serialize(scene, k_serializer);
-			components::WaveSourceSystem::serialize(scene, k_serializer);
-			components::LightSystem::serialize(scene, k_serializer);
-			components::TransformSystem::serialize(scene, k_serializer);
-			components::MeshRenderSystem::serialize(scene, k_serializer);
+			rapidjson::Document doc;
+			doc.SetObject();
+			doc.AddMember("entities",        utilities::serialize(doc, scene.entity),         doc.GetAllocator());
+			doc.AddMember("names",           utilities::serialize(doc, scene.name),           doc.GetAllocator());
+			doc.AddMember("lods",            utilities::serialize(doc, scene.lod),            doc.GetAllocator());
+			doc.AddMember("cameras",         utilities::serialize(doc, scene.camera),         doc.GetAllocator());
+			doc.AddMember("colliders",       utilities::serialize(doc, scene.collider),       doc.GetAllocator());
+			doc.AddMember("rigid_bodies",    utilities::serialize(doc, scene.rigid_body),     doc.GetAllocator());
+			//doc.AddMember("mono_behaviours", utilities::serialize(doc, scene.mono_behaviour), doc.GetAllocator());
+			doc.AddMember("wave_sources",    utilities::serialize(doc, scene.wave_source),    doc.GetAllocator());
+			doc.AddMember("lights",          utilities::serialize(doc, scene.light),          doc.GetAllocator());
+			doc.AddMember("transforms",      utilities::serialize(doc, scene.transform),      doc.GetAllocator());
+			doc.AddMember("mesh_renders",    utilities::serialize(doc, scene.mesh_render),    doc.GetAllocator());
+
+#if VIOLET_PHYSICS_REACT
+			doc.AddMember("collision_bodies", utilities::serialize(doc, static_cast<physics::ReactPhysicsWorld*>(scene.rigid_body.physics_world)->getCollisionBodies()), doc.GetAllocator());
+#endif
+
+			rapidjson::StringBuffer buffer;
+			rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+			doc.Accept(writer);
+			k_src = buffer.GetString();
 		}
 		void sceneDeserialize(scene::Scene& scene)
 		{
-			components::EntitySystem::deserialize(scene, k_serializer);
-			components::NameSystem::deserialize(scene, k_serializer);
-			components::LODSystem::deserialize(scene, k_serializer);
-			components::CameraSystem::deserialize(scene, k_serializer);
-			components::RigidBodySystem::deserialize(scene, k_serializer);
-			components::ColliderSystem::deserialize(scene, k_serializer);
-			components::MonoBehaviourSystem::deserialize(scene, k_serializer);
-			components::WaveSourceSystem::deserialize(scene, k_serializer);
-			components::LightSystem::deserialize(scene, k_serializer);
-			components::TransformSystem::deserialize(scene, k_serializer);
-			components::MeshRenderSystem::deserialize(scene, k_serializer);
+			rapidjson::Document doc;
+			const auto& parse_error = doc.Parse(k_src.data(), k_src.size());
+			LMB_ASSERT(!parse_error.HasParseError(), "DESERIALIZE: A parse error occurred %s", parse_error.GetString());
+
+			scene::Scene new_scene;
+			utilities::deserialize(doc["entities"],        new_scene.entity);
+			utilities::deserialize(doc["names"],           new_scene.name);
+			utilities::deserialize(doc["lods"],            new_scene.lod);
+			utilities::deserialize(doc["cameras"],         new_scene.camera);
+			utilities::deserialize(doc["colliders"],       new_scene.collider);
+			utilities::deserialize(doc["rigid_bodies"],    new_scene.rigid_body);
+			//utilities::deserialize(doc["mono_behaviours"], new_scene.mono_behaviour);
+			utilities::deserialize(doc["wave_sources"],    new_scene.wave_source);
+			utilities::deserialize(doc["lights"],          new_scene.light);
+			utilities::deserialize(doc["transforms"],      new_scene.transform);
+			utilities::deserialize(doc["mesh_renders"],    new_scene.mesh_render);
+
+			new_scene.collider                        = scene.collider;
+			new_scene.rigid_body                      = scene.rigid_body;
+			new_scene.mono_behaviour                  = scene.mono_behaviour;
+			new_scene.wave_source.engine              = scene.wave_source.engine;
+			new_scene.mesh_render.dynamic_bvh         = scene.mesh_render.dynamic_bvh;
+			new_scene.mesh_render.dynamic_renderables = scene.mesh_render.dynamic_renderables;
+			new_scene.mesh_render.static_renderables  = scene.mesh_render.static_renderables;
+			new_scene.mesh_render.static_bvh          = scene.mesh_render.static_bvh;
+
+			new_scene.debug_renderer       = scene.debug_renderer;
+			new_scene.post_process_manager = scene.post_process_manager;
+			new_scene.scripting            = scene.scripting;
+			new_scene.renderer             = scene.renderer;
+			new_scene.window               = scene.window;
+			new_scene.gui                  = scene.gui;
+			new_scene.render_actions       = scene.render_actions;
+			new_scene.fixed_time_step      = scene.fixed_time_step;
+			new_scene.time_scale           = scene.time_scale;
+			new_scene.do_serialize         = scene.do_serialize;
+			new_scene.do_deserialize       = scene.do_deserialize;
+
+			scene = new_scene;
+
+			// Reconstruct the static BVH.
+			scene.mesh_render.static_bvh->clear();
+			for (const auto& index : scene.mesh_render.static_renderables)
+			{
+				auto& data = scene.mesh_render.data[index];
+				scene.mesh_render.static_bvh->add(data.renderable.entity, &data.renderable.entity, utilities::BVHAABB(data.renderable.min, data.renderable.max));
+			}
+
+
+#if VIOLET_PHYSICS_REACT
+			auto collision_bodies = static_cast<physics::ReactPhysicsWorld*>(scene.rigid_body.physics_world)->getCollisionBodies();
+			for (const auto& collision_body : collision_bodies)
+				scene.rigid_body.physics_world->destroyCollisionBody(collision_body.getEntity());
+
+			utilities::deserialize(doc["collision_bodies"], static_cast<physics::ReactPhysicsWorld*>(scene.rigid_body.physics_world)->getCollisionBodies());
+#endif
 		}
 	}
 }

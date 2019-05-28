@@ -14,7 +14,7 @@ namespace lambda
     {
       LinkedNode* previous = nullptr;
       LinkedNode* next = nullptr;
-      void* data = nullptr;
+      entity::Entity entity = entity::InvalidEntity;
     };
     
     ///////////////////////////////////////////////////////////////////////////

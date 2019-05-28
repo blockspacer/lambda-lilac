@@ -20,7 +20,7 @@ namespace lambda
 				/** Init start */
 				auto& data = scene.collider.get(entity);
 
-				data.collision_body = RigidBodySystem::getPhysicsWorld(scene)->createCollisionBody(entity);
+				RigidBodySystem::getPhysicsWorld(scene)->createCollisionBody(entity);
 
 				return ColliderComponent(entity, scene);
 			}
@@ -47,9 +47,6 @@ namespace lambda
 						if (it != scene.collider.entity_to_data.end())
 						{
 							auto& data = scene.collider.data.at(it->second);
-							auto collision_body = data.collision_body;
-							
-							data.collision_body = nullptr;
 
 							uint32_t idx = it->second;
 							scene.collider.unused_data_entries.push(idx);
@@ -59,7 +56,7 @@ namespace lambda
 
 							if (RigidBodySystem::hasComponent(entity, scene))
 								RigidBodySystem::removeComponent(entity, scene);
-							RigidBodySystem::getPhysicsWorld(scene)->destroyCollisionBody(collision_body);
+							RigidBodySystem::getPhysicsWorld(scene)->destroyCollisionBody(entity);
 						}
 					}
 					scene.collider.marked_for_delete.clear();
@@ -76,42 +73,32 @@ namespace lambda
 				collectGarbage(scene);
 			}
 
-			void serialize(scene::Scene& data, scene::Serializer& serializer)
-			{
-				// TODO (Hilze): Implement this.
-			}
-
-			void deserialize(scene::Scene& data, scene::Serializer& serializer)
-			{
-				// TODO (Hilze): Implement this.
-			}
-
 			void makeBox(const entity::Entity& entity, scene::Scene& scene)
 			{
-				scene.collider.get(entity).collision_body->makeBoxCollider();
+				scene.rigid_body.physics_world->getCollisionBody(entity).makeBoxCollider();
 			}
 			void makeSphere(const entity::Entity& entity, scene::Scene& scene)
 			{
-				scene.collider.get(entity).collision_body->makeSphereCollider();
+				scene.rigid_body.physics_world->getCollisionBody(entity).makeSphereCollider();
 			}
 			void makeCapsule(const entity::Entity& entity, scene::Scene& scene)
 			{
-				scene.collider.get(entity).collision_body->makeCapsuleCollider();
+				scene.rigid_body.physics_world->getCollisionBody(entity).makeCapsuleCollider();
 			}
 
 			void makeMeshCollider(const entity::Entity& entity, asset::VioletMeshHandle mesh, const uint32_t& sub_mesh_id, scene::Scene& scene)
 			{
-				scene.collider.get(entity).collision_body->makeMeshCollider(mesh, sub_mesh_id);
+				scene.rigid_body.physics_world->getCollisionBody(entity).makeMeshCollider(mesh, sub_mesh_id);
 			}
 
 			uint16_t getLayers(const entity::Entity& entity, scene::Scene& scene)
 			{
-				return scene.collider.get(entity).collision_body->getLayers();
+				return scene.rigid_body.physics_world->getCollisionBody(entity).getLayers();
 			}
 
 			void setLayers(const entity::Entity& entity, const uint16_t& layers, scene::Scene& scene)
 			{
-				scene.collider.get(entity).collision_body->setLayers(layers);
+				scene.rigid_body.physics_world->getCollisionBody(entity).setLayers(layers);
 			}
 		}
 
@@ -169,7 +156,6 @@ namespace lambda
 			Data::Data(const Data& other)
 			{
 				type = other.type;
-				collision_body = other.collision_body;
 				is_trigger = other.is_trigger;
 				entity = other.entity;
 				valid = other.valid;
@@ -177,7 +163,6 @@ namespace lambda
 			Data& Data::operator=(const Data& other)
 			{
 				type = other.type;
-				collision_body = other.collision_body;
 				is_trigger = other.is_trigger;
 				entity = other.entity;
 				valid = other.valid;

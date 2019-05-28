@@ -274,6 +274,12 @@ namespace lambda
 			MeshManager::getInstance()->destroy(mesh, hash);
 		}
 
+		///////////////////////////////////////////////////////////////////////////
+		VioletHandle<Mesh> Mesh::privMetaSet(const String& name)
+		{
+			return MeshManager::getInstance()->getFromCache(Name(name));
+		}
+
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void getMinMax(const Vector<glm::vec3>& positions, glm::vec3& min, glm::vec3& max)
     {
