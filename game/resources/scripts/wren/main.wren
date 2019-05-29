@@ -261,7 +261,7 @@ class World {
   }
 
   initializeCity() {
-    _city = City.new(Vec2.new(10), Vec2.new(100), Vec2.new(25), Vec2.new(10), 50, 100)
+    _city = City.new(Vec2.new(5), Vec2.new(100), Vec2.new(25), Vec2.new(10), 50, 100)
     _randos = []
 
   for (i in 0...100) {

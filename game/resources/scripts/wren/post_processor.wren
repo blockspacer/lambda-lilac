@@ -306,7 +306,9 @@ class PostProcessor {
     }
 
     // Position update.
+    var prev_dof_pos = _dof_pos_output
     PostProcess.addShaderPass("dof_pos", Shader.load("resources/shaders/dof_pos.fx"), [ _dof_pos_output, _position_output ], [ flipFlopDofPos() ])
+    PostProcess.addShaderPass("dof_pos_copy", Shader.load("resources/shaders/copy.fx"), [ _dof_pos_output ], [ prev_dof_pos ])
 
     // Apply.
     PostProcess.addShaderPass("dof_apply", Shader.load("resources/shaders/dof.fx"), [ _post_process_output, _dof_output, _dof_pos_output, _position_output ], [ flipFlopPostProcess() ])

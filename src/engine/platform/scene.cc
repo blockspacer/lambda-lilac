@@ -21,7 +21,7 @@
 #include <interfaces/irenderer.h>
 
 #define USE_MT 1
-#define USE_RENDERABLES 1
+#define USE_RENDERABLES 0
 
 #if USE_MT
 #include "utils/mt_manager.h"
@@ -97,10 +97,10 @@ namespace lambda
 			float near;
 			float far;
 #if USE_RENDERABLES
-			Vector<SceneRenderable*> renderables;
+			Vector<SceneRenderable> renderables;
 #else
-			Vector<utilities::Renderable*> opaque;
-			Vector<utilities::Renderable*> alpha;
+			Vector<utilities::Renderable> opaque;
+			Vector<utilities::Renderable> alpha;
 #endif
 			Vector<SceneShaderPass>  shader_passes;
 
@@ -133,10 +133,10 @@ namespace lambda
 				glm::vec3   direction;
 
 #if USE_RENDERABLES
-				Vector<SceneRenderable*>  renderables;
+				Vector<SceneRenderable>  renderables;
 #else
-				Vector<utilities::Renderable*> opaque;
-				Vector<utilities::Renderable*> alpha;
+				Vector<utilities::Renderable> opaque;
+				Vector<utilities::Renderable> alpha;
 #endif
 
 				SceneShaderPass           generate;
@@ -187,43 +187,43 @@ namespace lambda
 
 #if USE_RENDERABLES
 		static constexpr uint32_t kNumRenderModels = 8ull;
-		void convertRenderableList(const Vector<utilities::Renderable*>& u_renderables, Vector<SceneRenderable*>& s_renderables)
+		void convertRenderableList(const Vector<utilities::Renderable>& u_renderables, Vector<SceneRenderable>& s_renderables)
 		{
-			for (const utilities::Renderable* renderable : u_renderables)
+			for (const utilities::Renderable& renderable : u_renderables)
 			{
 				bool found = false;
 				for (auto s_renderable : s_renderables)
 				{
-					if (s_renderable->mesh     == renderable->mesh &&
-						s_renderable->sub_mesh == renderable->sub_mesh &&
-						s_renderable->albedo   == renderable->albedo_texture &&
-						s_renderable->normal   == renderable->normal_texture &&
-						s_renderable->dmra     == renderable->dmra_texture &&
-						s_renderable->emissive == renderable->emissive_texture)
+					if (s_renderable.mesh     == renderable.mesh &&
+						s_renderable.sub_mesh == renderable.sub_mesh &&
+						s_renderable.albedo   == renderable.albedo_texture &&
+						s_renderable.normal   == renderable.normal_texture &&
+						s_renderable.dmra     == renderable.dmra_texture &&
+						s_renderable.emissive == renderable.emissive_texture)
 					{
-						if (s_renderable->model_count + 1ul > s_renderable->model_size)
+						if (s_renderable.model_count + 1ul > s_renderable.model_size)
 						{
-							uint32_t new_model_size = s_renderable->model_size + kNumRenderModels;
-							s_renderable->mm = (glm::mat4x4*)foundation::GetFrameHeap()->realloc(
-								s_renderable->mm,
-								sizeof(glm::mat4x4) * s_renderable->model_size,
+							uint32_t new_model_size = s_renderable.model_size + kNumRenderModels;
+							s_renderable.mm = (glm::mat4x4*)foundation::GetFrameHeap()->realloc(
+								s_renderable.mm,
+								sizeof(glm::mat4x4) * s_renderable.model_size,
 								sizeof(glm::mat4x4) * new_model_size
 							);
-							s_renderable->mr = (glm::vec4*)foundation::GetFrameHeap()->realloc(
-								s_renderable->mr,
-								sizeof(glm::vec4) * s_renderable->model_size,
+							s_renderable.mr = (glm::vec4*)foundation::GetFrameHeap()->realloc(
+								s_renderable.mr,
+								sizeof(glm::vec4) * s_renderable.model_size,
 								sizeof(glm::vec4) * new_model_size
 							);
-							s_renderable->em = (glm::vec4*)foundation::GetFrameHeap()->realloc(
-								s_renderable->em,
-								sizeof(glm::vec4) * s_renderable->model_size,
+							s_renderable.em = (glm::vec4*)foundation::GetFrameHeap()->realloc(
+								s_renderable.em,
+								sizeof(glm::vec4) * s_renderable.model_size,
 								sizeof(glm::vec4) * new_model_size
 							);
-							s_renderable->model_size = new_model_size;
+							s_renderable.model_size = new_model_size;
 						}
-						s_renderable->mm[s_renderable->model_count]   = renderable->model_matrix;
-						s_renderable->mr[s_renderable->model_count]   = glm::vec4(renderable->metallicness, renderable->roughness, 0.0f, 0.0f);
-						s_renderable->em[s_renderable->model_count++] = glm::vec4(renderable->emissiveness.x, renderable->emissiveness.y, renderable->emissiveness.z, 0.0f);
+						s_renderable.mm[s_renderable.model_count]   = renderable.model_matrix;
+						s_renderable.mr[s_renderable.model_count]   = glm::vec4(renderable.metallicness, renderable.roughness, 0.0f, 0.0f);
+						s_renderable.em[s_renderable.model_count++] = glm::vec4(renderable.emissiveness.x, renderable.emissiveness.y, renderable.emissiveness.z, 0.0f);
 						found = true;
 						break;
 					}
@@ -231,31 +231,31 @@ namespace lambda
 
 				if (!found)
 				{
-					SceneRenderable* s_renderable = foundation::GetFrameHeap()->construct<SceneRenderable>();
-					s_renderable->mesh     = renderable->mesh;
-					s_renderable->sub_mesh = renderable->sub_mesh;
-					s_renderable->albedo   = renderable->albedo_texture;
-					s_renderable->normal   = renderable->normal_texture;
-					s_renderable->dmra     = renderable->dmra_texture;
-					s_renderable->emissive = renderable->emissive_texture;
-					s_renderable->model_count = 0ul;
-					s_renderable->model_size  = 1ul;
-					s_renderable->mm = (glm::mat4x4*)foundation::GetFrameHeap()->alloc(sizeof(glm::mat4x4) * s_renderable->model_size);
-					s_renderable->mr = (glm::vec4*)foundation::GetFrameHeap()->alloc(sizeof(glm::vec4) * s_renderable->model_size);
-					s_renderable->em = (glm::vec4*)foundation::GetFrameHeap()->alloc(sizeof(glm::vec4) * s_renderable->model_size);
+					SceneRenderable s_renderable;
+					s_renderable.mesh     = renderable.mesh;
+					s_renderable.sub_mesh = renderable.sub_mesh;
+					s_renderable.albedo   = renderable.albedo_texture;
+					s_renderable.normal   = renderable.normal_texture;
+					s_renderable.dmra     = renderable.dmra_texture;
+					s_renderable.emissive = renderable.emissive_texture;
+					s_renderable.model_count = 0ul;
+					s_renderable.model_size  = 1ul;
+					s_renderable.mm = (glm::mat4x4*)foundation::GetFrameHeap()->alloc(sizeof(glm::mat4x4) * s_renderable.model_size);
+					s_renderable.mr = (glm::vec4*)foundation::GetFrameHeap()->alloc(sizeof(glm::vec4) * s_renderable.model_size);
+					s_renderable.em = (glm::vec4*)foundation::GetFrameHeap()->alloc(sizeof(glm::vec4) * s_renderable.model_size);
 					
-					if (renderable->emissiveness.x != 0.0f || renderable->emissiveness.y != 0.0f || renderable->emissiveness.z != 0.0f)
+					if (renderable.emissiveness.x != 0.0f || renderable.emissiveness.y != 0.0f || renderable.emissiveness.z != 0.0f)
 						int xxx = 0;
 					
-					s_renderable->mm[s_renderable->model_count]   = renderable->model_matrix;
-					s_renderable->mr[s_renderable->model_count]   = glm::vec4(renderable->metallicness, renderable->roughness, 0.0, 0.0f);
-					s_renderable->em[s_renderable->model_count++] = glm::vec4(renderable->emissiveness.x, renderable->emissiveness.y, renderable->emissiveness.z, 0.0f);
+					s_renderable.mm[s_renderable.model_count]   = renderable.model_matrix;
+					s_renderable.mr[s_renderable.model_count]   = glm::vec4(renderable.metallicness, renderable.roughness, 0.0, 0.0f);
+					s_renderable.em[s_renderable.model_count++] = glm::vec4(renderable.emissiveness.x, renderable.emissiveness.y, renderable.emissiveness.z, 0.0f);
 					s_renderables.push_back(s_renderable);
 				}
 			}
 		}
 
-		void renderMeshes(platform::IRenderer* renderer, const Vector<SceneRenderable*>& renderables, platform::RasterizerState::CullMode cull_mode)
+		void renderMeshes(platform::IRenderer* renderer, const Vector<SceneRenderable>& renderables, platform::RasterizerState::CullMode cull_mode)
 		{
 			struct CBData
 			{
@@ -268,19 +268,19 @@ namespace lambda
 			renderer->setConstantBuffer(cb, cbPerMeshIdx);
 
 			renderer->setBlendState(platform::BlendState::Alpha());
-			for (SceneRenderable* renderable : renderables)
+			for (const SceneRenderable& renderable : renderables)
 			{
-				renderer->setMesh(renderable->mesh);
-				renderer->setSubMesh(renderable->sub_mesh);
+				renderer->setMesh(renderable.mesh);
+				renderer->setSubMesh(renderable.sub_mesh);
 
-				renderer->setTexture(renderable->albedo,   0);
-				renderer->setTexture(renderable->normal,   1);
-				renderer->setTexture(renderable->dmra,     2);
-				renderer->setTexture(renderable->emissive, 3);
+				renderer->setTexture(renderable.albedo,   0);
+				renderer->setTexture(renderable.normal,   1);
+				renderer->setTexture(renderable.dmra,     2);
+				renderer->setTexture(renderable.emissive, 3);
 
-				auto sub_mesh = renderable->mesh->getSubMeshes().at(renderable->sub_mesh);
+				auto sub_mesh = renderable.mesh->getSubMeshes().at(renderable.sub_mesh);
 				// TODO (Hilze): Implement.
-				if (sub_mesh.io.double_sided == true || (sub_mesh.io.tex_alb >= 0 && renderable->mesh->getAttachedTextures().at(sub_mesh.io.tex_alb)->getLayer(0u).containsAlpha()))
+				if (sub_mesh.io.double_sided == true || (sub_mesh.io.tex_alb >= 0 && renderable.mesh->getAttachedTextures().at(sub_mesh.io.tex_alb)->getLayer(0u).containsAlpha()))
 					renderer->setRasterizerState(platform::RasterizerState::SolidNone());
 				else
 				{
@@ -293,12 +293,12 @@ namespace lambda
 				}
 
 				uint32_t offset = 0u;
-				while (offset < renderable->model_count)
+				while (offset < renderable.model_count)
 				{
-					uint32_t count = std::min(renderable->model_count - offset, 64u);
-					memcpy(data.mm, renderable->mm + offset, count * sizeof(glm::mat4x4));
-					memcpy(data.mr, renderable->mr + offset, count * sizeof(glm::vec4));
-					memcpy(data.em, renderable->em + offset, count * sizeof(glm::vec4));
+					uint32_t count = std::min(renderable.model_count - offset, 64u);
+					memcpy(data.mm, renderable.mm + offset, count * sizeof(glm::mat4x4));
+					memcpy(data.mr, renderable.mr + offset, count * sizeof(glm::vec4));
+					memcpy(data.em, renderable.em + offset, count * sizeof(glm::vec4));
 					memcpy(cb->lock(), &data, sizeof(data));
 					cb->unlock();
 
@@ -310,7 +310,7 @@ namespace lambda
 			}
 		}
 #else
-		void renderMeshes(platform::IRenderer* renderer, const Vector<utilities::Renderable*>& renderables, platform::RasterizerState::CullMode cull_mode)
+		void renderMeshes(platform::IRenderer* renderer, const Vector<utilities::Renderable>& renderables, platform::RasterizerState::CullMode cull_mode)
 		{
 			struct CBData
 			{
@@ -323,27 +323,27 @@ namespace lambda
 			renderer->setConstantBuffer(cb, cbPerMeshIdx);
 
 			renderer->setBlendState(platform::BlendState::Alpha());
-			for (utilities::Renderable* renderable : renderables)
+			for (utilities::Renderable renderable : renderables)
 			{
-				glm::vec4 mr(renderable->metallicness, renderable->roughness, 0.0f, 0.0f);
-				glm::vec4 em(renderable->emissiveness.x, renderable->emissiveness.y, renderable->emissiveness.z, 0.0f);
-				memcpy(data.mm, &renderable->model_matrix, sizeof(glm::mat4x4));
+				glm::vec4 mr(renderable.metallicness, renderable.roughness, 0.0f, 0.0f);
+				glm::vec4 em(renderable.emissiveness.x, renderable.emissiveness.y, renderable.emissiveness.z, 0.0f);
+				memcpy(data.mm, &renderable.model_matrix, sizeof(glm::mat4x4));
 				memcpy(data.mr, &mr, sizeof(glm::vec4));
 				memcpy(data.em, &em, sizeof(glm::vec4));
 				memcpy(cb->lock(), &data, sizeof(data));
 				cb->unlock();
 
-				renderer->setMesh(renderable->mesh);
-				renderer->setSubMesh(renderable->sub_mesh);
+				renderer->setMesh(renderable.mesh);
+				renderer->setSubMesh(renderable.sub_mesh);
 
-				renderer->setTexture(renderable->albedo_texture,   0);
-				renderer->setTexture(renderable->normal_texture,   1);
-				renderer->setTexture(renderable->dmra_texture,     2);
-				renderer->setTexture(renderable->emissive_texture, 3);
+				renderer->setTexture(renderable.albedo_texture,   0);
+				renderer->setTexture(renderable.normal_texture,   1);
+				renderer->setTexture(renderable.dmra_texture,     2);
+				renderer->setTexture(renderable.emissive_texture, 3);
 
-				auto sub_mesh = renderable->mesh->getSubMeshes().at(renderable->sub_mesh);
+				auto sub_mesh = renderable.mesh->getSubMeshes().at(renderable.sub_mesh);
 				// TODO (Hilze): Implement.
-				if (sub_mesh.io.double_sided == true || (sub_mesh.io.tex_alb >= 0 && renderable->mesh->getAttachedTextures().at(sub_mesh.io.tex_alb)->getLayer(0u).containsAlpha()))
+				if (sub_mesh.io.double_sided == true || (sub_mesh.io.tex_alb >= 0 && renderable.mesh->getAttachedTextures().at(sub_mesh.io.tex_alb)->getLayer(0u).containsAlpha()))
 					renderer->setRasterizerState(platform::RasterizerState::SolidNone());
 				else
 				{
@@ -393,8 +393,8 @@ namespace lambda
 			auto statics  = culler.getStatics();
 			auto dynamics = culler.getDynamics();
 #if USE_RENDERABLES
-			Vector<utilities::Renderable*> opaque;
-			Vector<utilities::Renderable*> alpha;
+			Vector<utilities::Renderable> opaque;
+			Vector<utilities::Renderable> alpha;
 			components::MeshRenderSystem::createSortedRenderList(&statics,  opaque, alpha, scene);
 			components::MeshRenderSystem::createSortedRenderList(&dynamics, opaque, alpha, scene);
 			convertRenderableList(opaque, camera_batch.renderables);
@@ -583,8 +583,8 @@ namespace lambda
 				auto statics = data.culler.back().getStatics();
 				auto dynamics = data.culler.back().getDynamics();
 #if USE_RENDERABLES
-				Vector<utilities::Renderable*> opaque;
-				Vector<utilities::Renderable*> alpha;
+				Vector<utilities::Renderable> opaque;
+				Vector<utilities::Renderable> alpha;
 				components::MeshRenderSystem::createSortedRenderList(&statics, opaque, alpha, scene);
 				components::MeshRenderSystem::createSortedRenderList(&dynamics, opaque, alpha, scene);
 				convertRenderableList(opaque, light_batch_face.renderables);
@@ -798,8 +798,8 @@ namespace lambda
 						components::MeshRenderSystem::createRenderList(data.culler.back(), frustum, scene);
 						auto statics = data.culler.back().getStatics();
 #if USE_RENDERABLES
-						Vector<utilities::Renderable*> opaque;
-						Vector<utilities::Renderable*> alpha;
+						Vector<utilities::Renderable> opaque;
+						Vector<utilities::Renderable> alpha;
 						components::MeshRenderSystem::createSortedRenderList(&statics, opaque, alpha, scene);
 						convertRenderableList(opaque, light_batch_faces[i].renderables);
 						convertRenderableList(alpha, light_batch_faces[i].renderables);
@@ -813,8 +813,8 @@ namespace lambda
 						auto statics = data.culler.back().getStatics();
 						auto dynamics = data.culler.back().getDynamics();
 #if USE_RENDERABLES
-						Vector<utilities::Renderable*> opaque;
-						Vector<utilities::Renderable*> alpha;
+						Vector<utilities::Renderable> opaque;
+						Vector<utilities::Renderable> alpha;
 						components::MeshRenderSystem::createSortedRenderList(&statics, opaque, alpha, scene);
 						components::MeshRenderSystem::createSortedRenderList(&dynamics, opaque, alpha, scene);
 						convertRenderableList(opaque, light_batch_faces[i].renderables);

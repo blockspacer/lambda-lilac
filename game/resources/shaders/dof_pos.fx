@@ -34,7 +34,7 @@ float4 PS(VSOutput pIn) : SV_TARGET0
   const float dst = (old_pos - new_pos) / camera_far;
   const float fnl = dir * clamp(BezierBlend(dst), 0.0f, 1.0f) * spd; 
 
-
+  return new_pos;
 
   float final_pos = old_pos - fnl;
   final_pos = clamp(final_pos, 0.0f, camera_far);

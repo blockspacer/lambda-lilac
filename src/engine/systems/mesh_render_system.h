@@ -146,6 +146,7 @@ namespace lambda
 
 			void createRenderList(utilities::Culler& culler, const utilities::Frustum& frustum, scene::Scene& scene);
 			void createSortedRenderList(utilities::LinkedNode* linked_node, Vector<utilities::Renderable*>& opaque, Vector<utilities::Renderable*>& alpha, scene::Scene& scene);
+			void createSortedRenderList(utilities::LinkedNode* linked_node, Vector<utilities::Renderable>& opaque, Vector<utilities::Renderable>& alpha, scene::Scene& scene);
 			void renderAll(utilities::Culler& culler, const utilities::Frustum& frustum, scene::Scene& scene, bool is_rh = true);
 			void renderAll(utilities::LinkedNode* statics, utilities::LinkedNode* dynamics, scene::Scene& scene, bool is_rh = true);
 			void renderAll(const Vector<utilities::Renderable*>& opaque, const Vector<utilities::Renderable*>& alpha, scene::Scene& scene, bool is_rh = true);

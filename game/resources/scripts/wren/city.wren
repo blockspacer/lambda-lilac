@@ -1,10 +1,10 @@
 import "Core" for Vec2, Vec3, Vec4
-import "Core" for Texture, Shader, Mesh
+import "Core" for Texture, Shader, Mesh, TextureFormat
 import "Core" for GameObject, Transform, Camera, MeshRender, Lod, RigidBody, WaveSource, Collider
 import "Core" for Input, Keys, Buttons, Axes
 import "Core" for Math
 import "Core" for Graphics, GUI, Time, File, Assert
-import "Core" for MonoBehaviour
+import "Core" for MonoBehaviour, Light, LightTypes
 import "Core" for PostProcess, Console, Physics, Debug, Sort
 import "Core" for NavMesh, TriNavMesh
 
@@ -107,19 +107,27 @@ class City {
     _maxHeight     = maxHeight
     _actorSize     = 1.0
 
+    _lightPositions = []
+
     _meshBuildings = CustomMesh.new()
     _meshRoads     = CustomMesh.new()
     _meshSidewalks = CustomMesh.new()
     _meshGreenery  = CustomMesh.new()
+    _meshLanterns  = CustomMesh.new()
+    _meshLights    = CustomMesh.new()
 
     constructTriNavMesh()
     constructBlocks()
     constructNavMesh()
+    constructLights()
 
     makeBuildings()
     makeRoads()
     makeSidewalks()
     makeGreenery()
+    makeLanterns()
+    makeLights()
+    spawnLights()
   }
 
   numBlocks    { _numBlocks    }
@@ -208,6 +216,59 @@ class City {
     _meshGreenery.clear()
   }
 
+  makeLanterns() {
+    _lanterns = GameObject.new()
+    _lanterns.name = "lanterns"
+    
+    var meshRender = _lanterns.addComponent(MeshRender)
+    meshRender.mesh    = _meshLanterns.make
+    meshRender.subMesh = 0
+    meshRender.albedo  = Texture.load("resources/textures/metal/Metal19_alb.jpg")
+    meshRender.normal  = Texture.load("resources/textures/metal/Metal19_nrm.jpg")
+    meshRender.DMRA    = Texture.load("resources/textures/metal/Metal19_dmra.png")
+    meshRender.makeStatic()
+
+    var collider = _lanterns.addComponent(Collider)
+    collider.makeMeshCollider(meshRender.mesh, 0)
+    collider.layers = PhysicsLayers.General
+  
+    _meshLanterns.clear()
+  }
+
+  makeLights() {
+    _lightsMesh = GameObject.new()
+    _lightsMesh.name = "lanterns"
+    
+    var meshRender = _lightsMesh.addComponent(MeshRender)
+    meshRender.mesh    = _meshLights.make
+    meshRender.subMesh = 0
+    meshRender.emissivenessFactor = Vec3.new(10.0, 10.0, 7.0)
+    meshRender.makeStatic()
+
+    var collider = _lightsMesh.addComponent(Collider)
+    collider.makeMeshCollider(meshRender.mesh, 0)
+    collider.layers = PhysicsLayers.General
+  
+    _meshLights.clear()
+  }
+
+  spawnLights() {
+    _lights = []
+    for (position in _lightPositions) {
+      var go = GameObject.new()
+      go.name = "light"
+      go.transform.worldPosition = position
+
+      var light            = go.addComponent(Light)
+      light.type           = LightTypes.Point
+      light.lightColour    = Vec3.new(1.0, 1.0, 0.75)
+      light.lightIntensity = 20.0
+      light.depth          = 15.0
+
+      _lights.add(go)
+    }
+  }
+
   constructSquare(min, max) {
     var size = (max - min) * 0.5
     var pos  = (max + min) * 0.5
@@ -234,6 +295,26 @@ class City {
     var pos  = (max + min) * 0.5
     _meshRoads.addQuad(pos + Vec3.new(-size.x,  size.y, -size.z), pos + Vec3.new(-size.x,  size.y,  size.z), pos + Vec3.new( size.x,  size.y,  size.z), pos + Vec3.new( size.x,  size.y, -size.z), Vec2.new(0.0, size.z), Vec2.new(0.0, 0.0), Vec2.new(size.x, 0.0), Vec2.new(size.x, size.z))
   }
+
+  constructLantern(pos) {
+    // Pole
+    var min = pos + Vec3.new(-0.2, 0.0, -0.2)
+    var max = pos + Vec3.new( 0.2, 7.5,  0.2)
+    spawnCube(min, max, 1.0, _meshLanterns)
+
+    // Light
+    min = pos + Vec3.new(-0.1, 7.5, -0.1)
+    max = pos + Vec3.new( 0.1, 8.0,  0.1)
+    spawnCube(min, max, 1.0, _meshLights)
+
+    // Cap
+    min = pos + Vec3.new(-0.4, 8.0,  -0.4)
+    max = pos + Vec3.new( 0.4, 8.25,  0.4)
+    spawnCube(min, max, 1.0, _meshLanterns)
+
+    //_lightPositions.add(pos + Vec3.new(0.0, 7.75, 0.0))
+  }
+
   constructRoad(min, max, type, navMesh) {
     // 0: up.
     // 1: right.
@@ -282,16 +363,16 @@ class City {
     constructRoad(min, max, type, false)
   }
 
-  spawnCube(min, max, scale) {
+  spawnCube(min, max, scale, mesh) {
     var size = (max - min) * 0.5
     var pos  = (max + min) * 0.5
     var uv   = size * (1.0 / scale)
-    /*-z*/_meshBuildings.addQuad(pos + Vec3.new(-size.x, -size.y, -size.z), pos + Vec3.new(-size.x,  size.y, -size.z), pos + Vec3.new( size.x,  size.y, -size.z), pos + Vec3.new( size.x, -size.y, -size.z), Vec2.new(0.0,  0.0), Vec2.new(0.0,  uv.y), Vec2.new(uv.x, uv.y), Vec2.new(uv.x, 0.0))
-    /*+z*/_meshBuildings.addQuad(pos + Vec3.new(-size.x, -size.y,  size.z), pos + Vec3.new( size.x, -size.y,  size.z), pos + Vec3.new( size.x,  size.y,  size.z), pos + Vec3.new(-size.x,  size.y,  size.z), Vec2.new(0.0,  0.0), Vec2.new(uv.x, 0.0),  Vec2.new(uv.x, uv.y), Vec2.new(0.0,  uv.y))
-    /*-x*/_meshBuildings.addQuad(pos + Vec3.new(-size.x, -size.y,  size.z), pos + Vec3.new(-size.x,  size.y,  size.z), pos + Vec3.new(-size.x,  size.y, -size.z), pos + Vec3.new(-size.x, -size.y, -size.z), Vec2.new(uv.z, 0.0), Vec2.new(uv.z, uv.y), Vec2.new(0.0,  uv.y), Vec2.new(0.0,  0.0))
-    /*+x*/_meshBuildings.addQuad(pos + Vec3.new( size.x, -size.y, -size.z), pos + Vec3.new( size.x,  size.y, -size.z), pos + Vec3.new( size.x,  size.y,  size.z), pos + Vec3.new( size.x, -size.y,  size.z), Vec2.new(0.0,  0.0), Vec2.new(0.0,  uv.y), Vec2.new(uv.z, uv.y), Vec2.new(uv.z, 0.0))    
-    /*+y*/_meshBuildings.addQuad(pos + Vec3.new(-size.x,  size.y, -size.z), pos + Vec3.new(-size.x,  size.y,  size.z), pos + Vec3.new( size.x,  size.y,  size.z), pos + Vec3.new( size.x,  size.y, -size.z), Vec2.new(0.0,  0.0), Vec2.new(0.0,  uv.z), Vec2.new(uv.x, uv.z), Vec2.new(uv.x, 0.0))
-    /*-y*/_meshBuildings.addQuad(pos + Vec3.new( size.x, -size.y, -size.z), pos + Vec3.new( size.x, -size.y,  size.z), pos + Vec3.new(-size.x, -size.y,  size.z), pos + Vec3.new(-size.x, -size.y, -size.z), Vec2.new(uv.x, 0.0), Vec2.new(uv.x, uv.z), Vec2.new(0.0,  uv.z), Vec2.new(0.0,  0.0))
+    /*-z*/mesh.addQuad(pos + Vec3.new(-size.x, -size.y, -size.z), pos + Vec3.new(-size.x,  size.y, -size.z), pos + Vec3.new( size.x,  size.y, -size.z), pos + Vec3.new( size.x, -size.y, -size.z), Vec2.new(0.0,  0.0), Vec2.new(0.0,  uv.y), Vec2.new(uv.x, uv.y), Vec2.new(uv.x, 0.0))
+    /*+z*/mesh.addQuad(pos + Vec3.new(-size.x, -size.y,  size.z), pos + Vec3.new( size.x, -size.y,  size.z), pos + Vec3.new( size.x,  size.y,  size.z), pos + Vec3.new(-size.x,  size.y,  size.z), Vec2.new(0.0,  0.0), Vec2.new(uv.x, 0.0),  Vec2.new(uv.x, uv.y), Vec2.new(0.0,  uv.y))
+    /*-x*/mesh.addQuad(pos + Vec3.new(-size.x, -size.y,  size.z), pos + Vec3.new(-size.x,  size.y,  size.z), pos + Vec3.new(-size.x,  size.y, -size.z), pos + Vec3.new(-size.x, -size.y, -size.z), Vec2.new(uv.z, 0.0), Vec2.new(uv.z, uv.y), Vec2.new(0.0,  uv.y), Vec2.new(0.0,  0.0))
+    /*+x*/mesh.addQuad(pos + Vec3.new( size.x, -size.y, -size.z), pos + Vec3.new( size.x,  size.y, -size.z), pos + Vec3.new( size.x,  size.y,  size.z), pos + Vec3.new( size.x, -size.y,  size.z), Vec2.new(0.0,  0.0), Vec2.new(0.0,  uv.y), Vec2.new(uv.z, uv.y), Vec2.new(uv.z, 0.0))    
+    /*+y*/mesh.addQuad(pos + Vec3.new(-size.x,  size.y, -size.z), pos + Vec3.new(-size.x,  size.y,  size.z), pos + Vec3.new( size.x,  size.y,  size.z), pos + Vec3.new( size.x,  size.y, -size.z), Vec2.new(0.0,  0.0), Vec2.new(0.0,  uv.z), Vec2.new(uv.x, uv.z), Vec2.new(uv.x, 0.0))
+    /*-y*/mesh.addQuad(pos + Vec3.new( size.x, -size.y, -size.z), pos + Vec3.new( size.x, -size.y,  size.z), pos + Vec3.new(-size.x, -size.y,  size.z), pos + Vec3.new(-size.x, -size.y, -size.z), Vec2.new(uv.x, 0.0), Vec2.new(uv.x, uv.z), Vec2.new(0.0,  uv.z), Vec2.new(0.0,  0.0))
   }
 
   //             __
@@ -323,7 +404,7 @@ class City {
 
       var min = Vec3.new(center.x - size.x, prev, center.z - size.z)
       var max = Vec3.new(center.x + size.x, curr, center.z + size.z)
-      spawnCube(min, max, scale)
+      spawnCube(min, max, scale, _meshBuildings)
     }
   }
 
@@ -357,10 +438,10 @@ class City {
     var centerMax  = Vec3.new(max.x, min.y, max.z - size.z * 0.4)
     var walkwayMin = Vec3.new(min.x + size.x * 0.2, (min.y + max.y) / 2, min.z + size.z * 0.4)
     var walkwayMax = Vec3.new(max.x - size.x * 0.2, (min.y + max.y) / 2 + 20, max.z - size.z * 0.4)
-    spawnCube(leftMin, leftMax, scale)
+    spawnCube(leftMin, leftMax, scale, _meshBuildings)
     constructSidewalk(centerMin, centerMax)
-    spawnCube(rightMin, rightMax, scale)
-    spawnCube(walkwayMin, walkwayMax, scale)
+    spawnCube(rightMin, rightMax, scale, _meshBuildings)
+    spawnCube(walkwayMin, walkwayMax, scale, _meshBuildings)
   }
 
   // _________________
@@ -393,21 +474,21 @@ class City {
     var centerMax = Vec3.new(max.x - size.x * 0.4, min.y, max.z - size.z * 0.2)
     var backMin   = Vec3.new(max.x - size.x * 0.4, min.y, min.z + size.z * 0.2)
     var backMax   = Vec3.new(max.x, max.y, max.z - size.z * 0.2)
-    spawnCube(leftMin, leftMax, scale)
+    spawnCube(leftMin, leftMax, scale, _meshBuildings)
     constructSidewalk(centerMin, centerMax)
-    spawnCube(rightMin, rightMax, scale)
-    spawnCube(backMin, backMax, scale)
+    spawnCube(rightMin, rightMax, scale, _meshBuildings)
+    spawnCube(backMin, backMax, scale, _meshBuildings)
 
     var fcenter = center - Vec3.new(size.x * 0.25, 0.0, 0.0)
     var fmin = fcenter - size * 0.1
     var fmax = fcenter + size * 0.1
 
-    spawnCube(Vec3.new(fmin.x, min.y, fmin.z), Vec3.new(fmin.x + 1, min.y + 2, fmax.z), scale)
-    spawnCube(Vec3.new(fmax.x - 1, min.y, fmin.z), Vec3.new(fmax.x, min.y + 2, fmax.z), scale)
-    spawnCube(Vec3.new(fmin.x + 1, min.y, fmin.z), Vec3.new(fmax.x - 1, min.y + 2, fmin.z + 1), scale)
-    spawnCube(Vec3.new(fmin.x + 1, min.y, fmax.z - 1), Vec3.new(fmax.x - 1, min.y + 2, fmax.z), scale)
-    spawnCube(Vec3.new(fcenter.x - 0.5, min.y, fcenter.z - 0.5), Vec3.new(fcenter.x + 0.5, min.y + 2, fcenter.z + 0.5), scale)
-    spawnCube(Vec3.new(fcenter.x - 1.0, min.y + 2, fcenter.z - 1.0), Vec3.new(fcenter.x + 1.0, min.y + 5, fcenter.z + 1.0), scale)
+    spawnCube(Vec3.new(fmin.x, min.y, fmin.z), Vec3.new(fmin.x + 1, min.y + 2, fmax.z), scale, _meshBuildings)
+    spawnCube(Vec3.new(fmax.x - 1, min.y, fmin.z), Vec3.new(fmax.x, min.y + 2, fmax.z), scale, _meshBuildings)
+    spawnCube(Vec3.new(fmin.x + 1, min.y, fmin.z), Vec3.new(fmax.x - 1, min.y + 2, fmin.z + 1), scale, _meshBuildings)
+    spawnCube(Vec3.new(fmin.x + 1, min.y, fmax.z - 1), Vec3.new(fmax.x - 1, min.y + 2, fmax.z), scale, _meshBuildings)
+    spawnCube(Vec3.new(fcenter.x - 0.5, min.y, fcenter.z - 0.5), Vec3.new(fcenter.x + 0.5, min.y + 2, fcenter.z + 0.5), scale, _meshBuildings)
+    spawnCube(Vec3.new(fcenter.x - 1.0, min.y + 2, fcenter.z - 1.0), Vec3.new(fcenter.x + 1.0, min.y + 5, fcenter.z + 1.0), scale, _meshBuildings)
   }
 
   spawnBuildingBlock(fullMin, fullMax, num, scale) {
@@ -540,9 +621,44 @@ class City {
     }
   }
 
+  constructLights() {
+    var distance = Vec2.new(
+      _blockSize.x - (_streetSize.x - _sidewalkSize.x),
+      _blockSize.y - (_streetSize.y - _sidewalkSize.y)
+    )
+    var numLanterns = Vec2.new(
+      2,//(distance.x / (_streetSize.x * 2.0)).round,
+      2//(distance.y / (_streetSize.y * 2.0)).round
+    )
+    var lanternDistance = Vec2.new(
+      distance.x / numLanterns.x,
+      distance.y / numLanterns.y
+    )
+
+    for (z in (-_numBlocks.y / 2)...(_numBlocks.y / 2)) {
+      var zOffset = z * _blockSize.y - (_blockSize.y * 0.5)
+      for (x in (-_numBlocks.x / 2)...(_numBlocks.x / 2)) {
+        var xOffset = x * _blockSize.x - (_blockSize.x * 0.5)
+
+        for (vx in 0..numLanterns.x) {
+          var vxOffset = xOffset + vx * lanternDistance.x + (_streetSize.x - _sidewalkSize.x) / 2.0
+          if (vx != 0) constructLantern(Vec3.new(vxOffset, 0.0, zOffset - (_streetSize.y - _sidewalkSize.y) / 2.0))
+          constructLantern(Vec3.new(vxOffset, 0.0, zOffset + (_streetSize.y - _sidewalkSize.y) / 2.0))
+        }
+        
+        for (vz in 0..numLanterns.y) {
+          var vzOffset = zOffset + vz * lanternDistance.y + (_streetSize.y - _sidewalkSize.y) / 2.0
+          if (vz != 0) constructLantern(Vec3.new(xOffset - (_streetSize.x - _sidewalkSize.x) / 2.0, 0.0, vzOffset))
+          if (vz != 0) constructLantern(Vec3.new(xOffset + (_streetSize.x - _sidewalkSize.x) / 2.0, 0.0, vzOffset))
+        }
+      }
+    }
+  }
+
   constructTriNavMesh() {
     _triNavMesh = TriNavMesh.new()
   }
+  
   addTriNavMeshQuad(min, max) {
     _triNavMesh.addQuad(min, max)
     return

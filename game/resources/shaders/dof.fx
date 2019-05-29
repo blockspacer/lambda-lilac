@@ -11,7 +11,7 @@ Make_Texture2D(tex_blurred, 1);
 Make_Texture2D(tex_dof_pos, 2);
 Make_Texture2D(tex_position, 3);
 
-static float distance = 1.0f / 15.0f;
+static float distance = 1.0f / 100.0f;
 
 float BezierBlend(float t)
 {

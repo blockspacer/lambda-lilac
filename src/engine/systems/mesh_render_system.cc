@@ -428,6 +428,22 @@ namespace lambda
 				}
 			}
 
+			void createSortedRenderList(utilities::LinkedNode* linked_node, Vector<utilities::Renderable>& opaque, Vector<utilities::Renderable>& alpha, scene::Scene& scene)
+			{
+				if (linked_node)
+				{
+					for (utilities::LinkedNode* node = linked_node->next; node != nullptr; node = node->next)
+					{
+						utilities::Renderable& renderable = scene.mesh_render.get(node->entity).renderable;
+						// TODO (Hilze): Implement.
+						if (renderable.albedo_texture && renderable.albedo_texture->getLayer(0u).containsAlpha())
+							alpha.push_back(renderable);
+						else
+							opaque.push_back(renderable);
+					}
+				}
+			}
+
 			struct DepthSort
 			{
 				bool larger = false;
