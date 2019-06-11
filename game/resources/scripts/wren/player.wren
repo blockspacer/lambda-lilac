@@ -1,9 +1,9 @@
 import "Core" for Vec2, Vec3, Vec4, Quat
 import "Core" for Texture, Shader, Mesh
-import "Core" for GameObject, Transform, Camera, Lod, RigidBody, WaveSource, Collider, MonoBehaviour, Light, MeshRender
+import "Core" for GameObject, Transform, Camera, CameraProjection, Lod, RigidBody, WaveSource, Collider, MonoBehaviour, Light, MeshRender
 import "Core" for PhysicsConstraints, Physics, Manifold
 import "Core" for Input, Keys, Buttons, Axes
-import "Core" for Math, Time, Debug, Sort, Console, World
+import "Core" for Math, Time, Debug, Sort, Console, World, Graphics
 import "Core" for PostProcess, LightTypes, ShadowTypes
 
 import "resources/scripts/wren/input_controller" for InputController
@@ -606,6 +606,7 @@ class ThirdPersonCamera is MonoBehaviour {
 
   rotation { _playerRotation }
   cameraTransform { _transformCamera }
+  transformInBetween { _transformInBetween }
   camera { _camera }
 
   cameraVertical     { _hasInput ? InputController.CameraVertical   * (Time.fixedDeltaTime / Time.timeScale) * _sensitivity.x : 0.0 }
@@ -640,7 +641,7 @@ class ThirdPersonCamera is MonoBehaviour {
 
     // Respawning.
     if (transform.worldPosition.y < -10) {
-      transform.worldPosition = Vec3.new(0.0, 2.0, -0.0) * 2
+      transform.worldPosition = Vec3.new(0.0, 20.0, -0.0)
       _rigidBody.velocity = Vec3.new(0.0)
     }
 

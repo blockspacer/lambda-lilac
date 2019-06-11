@@ -710,10 +710,6 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		void BulletPhysicsWorld::deinitialize()
 		{
-			for (BulletCollisionBody* collision_body : collision_bodies_)
-				foundation::Memory::destruct(collision_body);
-			collision_bodies_.resize(0ull);
-
 			foundation::Memory::destruct(dynamics_world_);
 			foundation::Memory::destruct(constraint_solver_);
 			foundation::Memory::destruct(pair_cache_);
@@ -731,12 +727,9 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		void BulletPhysicsWorld::update(const double& time_step)
 		{
-			for (const auto& data : scene_->rigid_body.data)
+			for (BulletCollisionBody& rb : collision_bodies_)
 			{
-				if (!data.valid)
-					continue;
-
-				btRigidBody* rigid_body = ((BulletCollisionBody*)data.collision_body)->getBody();
+				btRigidBody* rigid_body = rb.getBody();
 
 				if (!rigid_body->isStaticObject())
 				{
@@ -783,12 +776,9 @@ namespace lambda
 
 			dynamics_world_->stepSimulation((float)time_step, 1, (float)time_step);
 
-			for (const auto& data : scene_->rigid_body.data)
+			for (BulletCollisionBody& rb : collision_bodies_)
 			{
-				if (!data.valid)
-					continue;
-
-				btRigidBody* rigid_body = ((BulletCollisionBody*)data.collision_body)->getBody();
+				btRigidBody* rigid_body = rb.getBody();
 				btTransform transform;
 
 				if (rigid_body && false == rigid_body->isStaticObject())
@@ -878,28 +868,33 @@ namespace lambda
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		ICollisionBody* BulletPhysicsWorld::createCollisionBody(entity::Entity entity)
+		void BulletPhysicsWorld::createCollisionBody(entity::Entity entity)
 		{
-			BulletCollisionBody* rb = foundation::Memory::construct<BulletCollisionBody>(
-				*scene_,
+			size_t entry = scene_->collider.entity_to_data[entity];
+			if (collision_bodies_.size() < entry + 1ull)
+				collision_bodies_.resize(entry + 1ull);
+
+			collision_bodies_[entry] = BulletCollisionBody(
+				scene_,
 				dynamics_world_,
 				this,
 				entity
-				);
-			rb->makeCollider();
-			collision_bodies_.push_back(rb);
-
-			return rb;
+			);
+			collision_bodies_[entry].makeCollider();
 		}
 
 		///////////////////////////////////////////////////////////////////////////
-		void BulletPhysicsWorld::destroyCollisionBody(ICollisionBody* collision_body)
+		void BulletPhysicsWorld::destroyCollisionBody(entity::Entity entity)
 		{
-			auto it = eastl::find(collision_bodies_.begin(), collision_bodies_.end(), collision_body);
-			if (it != collision_bodies_.end())
-				collision_bodies_.erase(it);
+			size_t entry = scene_->collider.entity_to_data[entity];
+			collision_bodies_[entry] = BulletCollisionBody();
+		}
 
-			foundation::Memory::destruct(collision_body);
+		///////////////////////////////////////////////////////////////////////////
+		ICollisionBody& BulletPhysicsWorld::getCollisionBody(entity::Entity entity)
+		{
+			size_t entry = scene_->collider.entity_to_data[entity];
+			return collision_bodies_[entry];
 		}
 
 		///////////////////////////////////////////////////////////////////////////

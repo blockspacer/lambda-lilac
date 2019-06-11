@@ -1336,6 +1336,18 @@ static constexpr char* wrenModuleSource =
 "}\n"
 
 "///////////////////////////////////////////////////////////////////////////////////////////////////\n"
+"///// camera projection ///////////////////////////////////////////////////////////////////////////\n"
+"///////////////////////////////////////////////////////////////////////////////////////////////////\n"
+/*
+* Class: CameraProjection
+* _*Camera Projection*_
+*/
+"foreign class CameraProjection {\n"
+"  static Perspective { 0 }\n"
+"  static Ortho { 1 }\n"
+"}\n"
+
+"///////////////////////////////////////////////////////////////////////////////////////////////////\n"
 "///// camera //////////////////////////////////////////////////////////////////////////////////////\n"
 "///////////////////////////////////////////////////////////////////////////////////////////////////\n"
 /*
@@ -1379,6 +1391,12 @@ static constexpr char* wrenModuleSource =
 "    foreign fovDeg=(deg)\n"
 "    foreign fovRad\n"
 "    foreign fovRad=(rad)\n"
+"    foreign width\n"
+"    foreign width=(width)\n"
+"    foreign height\n"
+"    foreign height=(height)\n"
+"    foreign projection\n"
+"    foreign projection=(projection)\n"
 "    fov { fovRad }\n"
 "    fov(rad) { fovRad = rad }\n"
 "}\n"
@@ -1859,7 +1877,8 @@ static constexpr char* wrenModuleSource =
 "    foreign static renderScale=(scale)\n"
 "    foreign static renderScale\n"
 "    foreign static setLightShaders(generate, modify, modifyCount, publish, shadowType)\n"
-"	foreign static windowSize\n"
+"    foreign static windowSize\n"
+"    foreign static aspectRatio\n"
 "}\n"
 
 "///////////////////////////////////////////////////////////////////////////////////////////////////\n"

@@ -27,6 +27,10 @@
 #include "utils/mt_manager.h"
 #endif
 
+#if VIOLET_PHYSICS_BULLET
+#include <physics/bullet/bullet_physics_world.h>
+#endif
+
 namespace lambda
 {
 	namespace scene
@@ -374,18 +378,10 @@ namespace lambda
 				camera_batch.far        = camera.far_plane.asMeter();
 				camera_batch.view       = glm::inverse(camera.world_matrix);
 				utilities::decomposeMatrix(camera.world_matrix, nullptr, nullptr, &camera_batch.position);
-				camera_batch.projection = glm::perspective(
-					camera.fov.asRad(),
-					(float)scene.window->getSize().x / (float)scene.window->getSize().y,
-					camera_batch.near,
-					camera_batch.far
-				);
+				camera_batch.projection = components::CameraSystem::getProjectionMatrix(entity, scene);
 
 				// Update the frustum.
-				frustum.construct(
-					camera_batch.projection,
-					camera_batch.view
-				);
+				frustum.construct(camera_batch.projection, camera_batch.view);
 			}
 
 			// Create render list.
@@ -1361,6 +1357,9 @@ namespace lambda
 #if VIOLET_PHYSICS_REACT
 			doc.AddMember("collision_bodies", utilities::serialize(doc, static_cast<physics::ReactPhysicsWorld*>(scene.rigid_body.physics_world)->getCollisionBodies()), doc.GetAllocator());
 #endif
+#if VIOLET_PHYSICS_BULLET
+			doc.AddMember("collision_bodies", utilities::serialize(doc, static_cast<physics::BulletPhysicsWorld*>(scene.rigid_body.physics_world)->getCollisionBodies()), doc.GetAllocator());
+#endif
 
 			rapidjson::StringBuffer buffer;
 			rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
@@ -1417,13 +1416,20 @@ namespace lambda
 				scene.mesh_render.static_bvh->add(data.renderable.entity, &data.renderable.entity, utilities::BVHAABB(data.renderable.min, data.renderable.max));
 			}
 
-
 #if VIOLET_PHYSICS_REACT
 			auto collision_bodies = static_cast<physics::ReactPhysicsWorld*>(scene.rigid_body.physics_world)->getCollisionBodies();
 			for (const auto& collision_body : collision_bodies)
 				scene.rigid_body.physics_world->destroyCollisionBody(collision_body.getEntity());
 
 			utilities::deserialize(doc["collision_bodies"], static_cast<physics::ReactPhysicsWorld*>(scene.rigid_body.physics_world)->getCollisionBodies());
+#endif
+
+#if VIOLET_PHYSICS_BULLET
+			auto collision_bodies = static_cast<physics::BulletPhysicsWorld*>(scene.rigid_body.physics_world)->getCollisionBodies();
+			for (const auto& collision_body : collision_bodies)
+				scene.rigid_body.physics_world->destroyCollisionBody(collision_body.getEntity());
+
+			utilities::deserialize(doc["collision_bodies"], static_cast<physics::BulletPhysicsWorld*>(scene.rigid_body.physics_world)->getCollisionBodies());
 #endif
 		}
 	}

@@ -1965,18 +1965,48 @@ namespace lambda
             utilities::Angle::fromRad((float)wrenGetSlotDouble(vm, 1))
           );
         };
-        if (strcmp(signature, "fovDeg") == 0) return [](WrenVM* vm) {
-          wrenSetSlotDouble(
-            vm, 
-            0, 
-            (double)GetForeign<CameraHandle>(vm)->handle.getFov().asDeg()
-          );
-        };
-        if (strcmp(signature, "fovDeg=(_)") == 0) return [](WrenVM* vm) {
-          GetForeign<CameraHandle>(vm)->handle.setFov(
-            utilities::Angle::fromDeg((float)wrenGetSlotDouble(vm, 1))
-          );
-        };
+		if (strcmp(signature, "fovDeg") == 0) return [](WrenVM* vm) {
+			wrenSetSlotDouble(
+				vm,
+				0,
+				(double)GetForeign<CameraHandle>(vm)->handle.getFov().asDeg()
+			);
+		};
+		if (strcmp(signature, "fovDeg=(_)") == 0) return [](WrenVM* vm) {
+			GetForeign<CameraHandle>(vm)->handle.setFov(
+				utilities::Angle::fromDeg((float)wrenGetSlotDouble(vm, 1))
+			);
+		};
+		if (strcmp(signature, "projection") == 0) return [](WrenVM* vm) {
+			wrenSetSlotDouble(
+				vm,
+				0,
+				(double)GetForeign<CameraHandle>(vm)->handle.getProjection()
+			);
+		};
+		if (strcmp(signature, "projection=(_)") == 0) return [](WrenVM* vm) {
+			GetForeign<CameraHandle>(vm)->handle.setProjection((components::CameraProjection)(uint8_t)wrenGetSlotDouble(vm, 1));
+		};
+		if (strcmp(signature, "width") == 0) return [](WrenVM* vm) {
+			wrenSetSlotDouble(
+				vm,
+				0,
+				(double)GetForeign<CameraHandle>(vm)->handle.getWidth()
+			);
+		};
+		if (strcmp(signature, "width=(_)") == 0) return [](WrenVM* vm) {
+			GetForeign<CameraHandle>(vm)->handle.setWidth((float)wrenGetSlotDouble(vm, 1));
+		};
+		if (strcmp(signature, "height") == 0) return [](WrenVM* vm) {
+			wrenSetSlotDouble(
+				vm,
+				0,
+				(double)GetForeign<CameraHandle>(vm)->handle.getHeight()
+			);
+		};
+		if (strcmp(signature, "height=(_)") == 0) return [](WrenVM* vm) {
+			GetForeign<CameraHandle>(vm)->handle.setHeight((float)wrenGetSlotDouble(vm, 1));
+		};
         if (strcmp(signature, "addShaderPass(_,_,_,_)") == 0)
           return [](WrenVM* vm)
         {
@@ -2975,6 +3005,9 @@ namespace lambda
 				if (strcmp(signature, "windowSize") == 0) return [](WrenVM* vm) {
 					Vec2::make(vm, (glm::vec2)g_scene->window->getSize());
 				};
+				if (strcmp(signature, "aspectRatio") == 0) return [](WrenVM* vm) {
+					wrenSetSlotDouble(vm, 0, (double)g_scene->window->getAspectRatio());
+				};
 				return nullptr;
 			}
 		}
@@ -3277,7 +3310,6 @@ namespace lambda
     }
 	namespace Math
 	{
-#pragma optimize ("", off)
 		WrenForeignMethodFn Bind(const char* signature)
 		{
 			if (strcmp(signature, "random(_,_)") == 0) return [](WrenVM* vm) {

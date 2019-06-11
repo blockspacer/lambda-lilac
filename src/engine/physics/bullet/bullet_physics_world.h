@@ -118,14 +118,17 @@ namespace lambda
 				const glm::vec3& end
 			) override;
 
-			virtual ICollisionBody* createCollisionBody(entity::Entity entity) override;
-			virtual void destroyCollisionBody(ICollisionBody* collision_body) override;
+			virtual void createCollisionBody(entity::Entity entity) override;
+			virtual void destroyCollisionBody(entity::Entity entity) override;
+			virtual ICollisionBody& getCollisionBody(entity::Entity entity) override;
 
 			virtual void setDebugDrawEnabled(bool debug_draw_enabled) override;
 			virtual bool getDebugDrawEnabled() const override;
 
 			virtual void setGravity(glm::vec3 gravity) override;
 			virtual glm::vec3 getGravity() const override;
+
+			Vector<BulletCollisionBody>& getCollisionBodies() { return collision_bodies_; };
 
 		private:
 			scene::Scene* scene_;
@@ -139,7 +142,7 @@ namespace lambda
 			btBroadphaseInterface* pair_cache_;
 			btDiscreteDynamicsWorld* dynamics_world_;
 
-			Vector<BulletCollisionBody*> collision_bodies_;
+			Vector<BulletCollisionBody> collision_bodies_;
 		};
 	}
 }

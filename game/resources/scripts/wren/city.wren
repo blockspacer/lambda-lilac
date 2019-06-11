@@ -10,91 +10,32 @@ import "Core" for NavMesh, TriNavMesh
 
 import "resources/scripts/wren/physics_layers" for PhysicsLayers
 //import "resources/scripts/wren/node_map" for Node, NodeMap, NodeEditor
+import "resources/scripts/wren/meshes" for MeshCreator
 
-class CustomMesh {
-  construct new () {
-    _mesh = Mesh.create()
-    clear()
+class Spline {
+  construct new(a, b, c, d) {
+    _a = a
+    _b = b
+    _c = c
+    _d = d
   }
+  
+	length(precision) {
+		var length = 0.0
+		var b
+		for (i in 0...precision) {
+			var a = point(i / precision)
+			if (i == 0) b = a
+			var c = a - b
+			length = length + Math.sqrt(c.x * c.x + c.y * c.y)
+			b = a
+		}
+		return length
+	}
 
-  addTri(posA, posB, posC, uvA, uvB, uvC) {
-   	var u = posB - posA
-    var v = posC - posA
-    var normal = Vec3.new(u.y * v.z - u.z * v.y, u.z * v.x - u.x * v.z, u.x * v.y - u.y * v.x)
-
-    var t1 = normal.cross(Vec3.new(1.0, 0.0, 0.0))
-    var t2 = normal.cross(Vec3.new(0.0, 1.0, 0.0))
-    var tangent = (t1.lengthSqr > t2.lengthSqr) ? t1 : t2
-
-    _positions.add(posA)
-    _positions.add(posB)
-    _positions.add(posC)
-    _normals.add(normal)
-    _normals.add(normal)
-    _normals.add(normal)
-    _tangents.add(tangent)
-    _tangents.add(tangent)
-    _tangents.add(tangent)
-    _uvs.add(uvA)
-    _uvs.add(uvB)
-    _uvs.add(uvC)
-    _indices.add(_positions.count - 3)
-    _indices.add(_positions.count - 2)
-    _indices.add(_positions.count - 1)
-    _baseIndex = _baseIndex + 3
-  }
-
-  addQuad(posA, posB, posC, posD, uvA, uvB, uvC, uvD) {
-   	var u = posB - posA
-    var v = posC - posA
-    var normal = Vec3.new(u.y * v.z - u.z * v.y, u.z * v.x - u.x * v.z, u.x * v.y - u.y * v.x)
-
-    var t1 = normal.cross(Vec3.new(1.0, 0.0, 0.0))
-    var t2 = normal.cross(Vec3.new(0.0, 1.0, 0.0))
-    var tangent = (t1.lengthSqr > t2.lengthSqr) ? t1 : t2
-
-    _positions.add(posA)
-    _positions.add(posB)
-    _positions.add(posC)
-    _positions.add(posD)
-    _normals.add(normal)
-    _normals.add(normal)
-    _normals.add(normal)
-    _normals.add(normal)
-    _tangents.add(tangent)
-    _tangents.add(tangent)
-    _tangents.add(tangent)
-    _tangents.add(tangent)
-    _uvs.add(uvA)
-    _uvs.add(uvB)
-    _uvs.add(uvC)
-    _uvs.add(uvD)
-    _indices.add(_baseIndex + 0)
-    _indices.add(_baseIndex + 1)
-    _indices.add(_baseIndex + 2)
-    _indices.add(_baseIndex + 2)
-    _indices.add(_baseIndex + 3)
-    _indices.add(_baseIndex + 0)
-    _baseIndex = _baseIndex + 4
-  }
-
-  clear() {
-      _positions = []
-      _normals   = []
-      _tangents  = []
-      _uvs       = []
-      _indices   = []
-      _baseIndex = 0
-  }
-
-  make {
-    _mesh.positions = _positions
-    _mesh.normals   = _normals
-    _mesh.tangents  = _tangents
-    _mesh.texCoords = _uvs
-    _mesh.indices   = _indices
-    return _mesh
-  }
+	point(val) {
+		return _a * val * val * val + _b * val * val + _c * val + _d
+	}
 }
 
 class City {
@@ -109,12 +50,12 @@ class City {
 
     _lightPositions = []
 
-    _meshBuildings = CustomMesh.new()
-    _meshRoads     = CustomMesh.new()
-    _meshSidewalks = CustomMesh.new()
-    _meshGreenery  = CustomMesh.new()
-    _meshLanterns  = CustomMesh.new()
-    _meshLights    = CustomMesh.new()
+    _meshBuildings = MeshCreator.new()
+    _meshRoads     = MeshCreator.new()
+    _meshSidewalks = MeshCreator.new()
+    _meshGreenery  = MeshCreator.new()
+    _meshLanterns  = MeshCreator.new()
+    _meshLights    = MeshCreator.new()
 
     constructTriNavMesh()
     constructBlocks()
@@ -128,6 +69,8 @@ class City {
     makeLanterns()
     makeLights()
     spawnLights()
+
+    makeRoad()
   }
 
   numBlocks    { _numBlocks    }
@@ -138,6 +81,97 @@ class City {
 
   draw() {
     _nodeMap.draw()
+  }
+
+  getControlPoint(i) {
+		while (i < 0) i = i + _controlPoints.count
+		return _controlPoints[i.round % _controlPoints.count]
+  }
+
+  makeRoad() {
+    var segments = 1024
+    var width = 2.5
+    
+    _controlPoints = [ Vec3.new(-10.0, 0.1, -10.0), Vec3.new(-10.0, 0.1, 10.0), Vec3.new(10.0, 0.1, 10.0), Vec3.new(10.0, 0.1, -10.0) ]
+
+    if (_controlPoints.count < 2) return
+
+		var a
+    var b
+    var c
+    var d
+		var t = 0.5
+
+		var splines = []
+
+		// Draw intermediate segments
+		for (j in 0..._controlPoints.count) {
+			a = getControlPoint(j) * -t      + getControlPoint(j + 1) * (2.0 - t) + getControlPoint(j + 3) * t               + getControlPoint(j + 2) * (t - 2.0)
+			b = getControlPoint(j) * 2.0 * t + getControlPoint(j + 1) * (t - 3.0) + getControlPoint(j + 2) * (3.0 - 2.0 * t) - getControlPoint(j + 3) * t
+			c = getControlPoint(j) * -t      + getControlPoint(j + 2) * t
+			d = getControlPoint(j + 1)
+      splines.add(Spline.new(a, b, c, d))
+		}
+
+		var totalLength = 0.0
+    var lengths = []
+		for (spline in splines) {
+      var length = spline.length(segments)
+      totalLength = totalLength + length
+      lengths.add(length)
+    }
+
+    var numSegmentsUsed = 0
+    var points = []
+		for (i in 0...splines.count) {
+      var spline = splines[i]
+			var numSegments = (segments * (lengths[i] / totalLength)).round
+      numSegmentsUsed = numSegmentsUsed + numSegments
+			for (k in 0...numSegments) points.add(spline.point(k / numSegments))
+		}
+
+    var mesh = MeshCreator.new()
+
+    for (i in 0...points.count) {
+      var prev = points[((i == 0) ? (points.count - 1) : (i - 1)) % points.count]
+      var curr = points[i % points.count]
+      var next = points[(i + 1) % points.count]
+      var dirP = (curr - prev)
+      var dirC = (next - curr)
+      var lenP = dirP.length
+      var lenC = dirC.length
+      
+      var t = -dirP.z
+      dirP.z = dirP.x / lenP * width
+      dirP.x = t / lenP * width
+
+      t = -dirC.z
+      dirC.z = dirC.x / lenC * width
+      dirC.x = t / lenC * width
+
+      var uvA = Vec2.new(0.0)
+      var uvB = Vec2.new(0.0)
+      var uvC = Vec2.new(0.0)
+      var uvD = Vec2.new(0.0)
+      mesh.addQuad(curr + dirP, next + dirC, next - dirC, curr - dirP, uvA, uvB, uvC, uvD)
+      mesh.addQuad(curr - dirP, next - dirC, next + dirC, curr + dirP, uvA, uvB, uvC, uvD)
+    }
+
+    
+    var road = GameObject.new()
+    road.name = "road"
+    
+    var meshRender = road.addComponent(MeshRender)
+    meshRender.mesh    = mesh.make
+    meshRender.subMesh = 0
+    meshRender.albedo  = Texture.load("resources/textures/facade/Facade01_alb.jpg")
+    meshRender.normal  = Texture.load("resources/textures/facade/Facade01_nrm.jpg")
+    meshRender.DMRA    = Texture.load("resources/textures/facade/Facade01_dmra.png")
+    meshRender.makeStatic()
+
+    var collider = road.addComponent(Collider)
+    collider.makeMeshCollider(meshRender.mesh, 0)
+    collider.layers = PhysicsLayers.General
   }
 
   makeBuildings() {

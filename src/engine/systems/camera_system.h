@@ -15,6 +15,12 @@ namespace lambda
 
 	namespace components
 	{
+		enum class CameraProjection : uint8_t
+		{
+			kPerspective,
+			kOrtho,
+		};
+
 		class CameraComponent : public IComponent
 		{
 		public:
@@ -28,6 +34,12 @@ namespace lambda
 			utilities::Distance getNearPlane() const;
 			void setFarPlane(const utilities::Distance& far_plane);
 			utilities::Distance getFarPlane() const;
+			void setProjection(const CameraProjection& projection);
+			CameraProjection getProjection() const;
+			void setWidth(const float& width);
+			float getWidth() const;
+			void setHeight(const float& height);
+			float getHeight() const;
 			void addShaderPass(const platform::ShaderPass& shader_pass);
 			void setShaderPasses(const Vector<platform::ShaderPass>& shader_pass);
 			platform::ShaderPass getShaderPass(uint32_t id) const;
@@ -52,6 +64,10 @@ namespace lambda
 				utilities::Distance near_plane = utilities::Distance::fromMeter(0.1f);
 				utilities::Distance far_plane = utilities::Distance::fromMeter(1000.0f);
 				Vector<platform::ShaderPass> shader_passes;
+				CameraProjection projection = CameraProjection::kPerspective;
+				float width = 1.0f;
+				float height = 1.0f;
+
 				glm::mat4x4 world_matrix;
 
 				entity::Entity entity;
@@ -93,6 +109,12 @@ namespace lambda
 			utilities::Distance getNearPlane(const entity::Entity& entity, scene::Scene& scene);
 			void setFarPlane(const entity::Entity& entity, const utilities::Distance& far_plane, scene::Scene& scene);
 			utilities::Distance getFarPlane(const entity::Entity& entity, scene::Scene& scene);
+			void setProjection(const entity::Entity& entity, const CameraProjection& projection, scene::Scene& scene);
+			CameraProjection getProjection(const entity::Entity& entity, scene::Scene& scene);
+			void setWidth(const entity::Entity& entity, const float& width, scene::Scene& scene);
+			float getWidth(const entity::Entity& entity, scene::Scene& scene);
+			void setHeight(const entity::Entity& entity, const float& height, scene::Scene& scene);
+			float getHeight(const entity::Entity& entity, scene::Scene& scene);
 			void addShaderPass(const entity::Entity& entity, const platform::ShaderPass& shader_pass, scene::Scene& scene);
 			void setShaderPasses(const entity::Entity& entity, const Vector<platform::ShaderPass>& shader_pass, scene::Scene& scene);
 			platform::ShaderPass getShaderPass(const entity::Entity& entity, uint32_t id, scene::Scene& scene);

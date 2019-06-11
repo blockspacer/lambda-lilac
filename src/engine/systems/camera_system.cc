@@ -1,3 +1,4 @@
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include "camera_system.h"
 #include "transform_system.h"
 #include "mesh_render_system.h"
@@ -149,19 +150,43 @@ namespace lambda
 			{
 				return scene.camera.get(entity).far_plane;
 			}
-			void CameraSystem::addShaderPass(const entity::Entity & entity, const platform::ShaderPass & shader_pass, scene::Scene& scene)
+			void setProjection(const entity::Entity& entity, const CameraProjection& projection, scene::Scene& scene)
+			{
+				scene.camera.get(entity).projection = projection;
+			}
+			CameraProjection getProjection(const entity::Entity& entity, scene::Scene& scene)
+			{
+				return scene.camera.get(entity).projection;
+			}
+			void setWidth(const entity::Entity& entity, const float& width, scene::Scene& scene)
+			{
+				scene.camera.get(entity).width = width;
+			}
+			float getWidth(const entity::Entity& entity, scene::Scene& scene)
+			{
+				return scene.camera.get(entity).width;
+			}
+			void setHeight(const entity::Entity& entity, const float& height, scene::Scene& scene)
+			{
+				scene.camera.get(entity).height = height;
+			}
+			float getHeight(const entity::Entity& entity, scene::Scene& scene)
+			{
+				return scene.camera.get(entity).height;
+			}
+			void CameraSystem::addShaderPass(const entity::Entity& entity, const platform::ShaderPass& shader_pass, scene::Scene& scene)
 			{
 				scene.camera.get(entity).shader_passes.push_back(shader_pass);
 			}
-			void CameraSystem::setShaderPasses(const entity::Entity & entity, const Vector<platform::ShaderPass>& shader_pass, scene::Scene& scene)
+			void CameraSystem::setShaderPasses(const entity::Entity& entity, const Vector<platform::ShaderPass>& shader_pass, scene::Scene& scene)
 			{
 				scene.camera.get(entity).shader_passes = shader_pass;
 			}
-			platform::ShaderPass CameraSystem::getShaderPass(const entity::Entity & entity, uint32_t id, scene::Scene& scene)
+			platform::ShaderPass CameraSystem::getShaderPass(const entity::Entity& entity, uint32_t id, scene::Scene& scene)
 			{
 				return scene.camera.get(entity).shader_passes[id];
 			}
-			Vector<platform::ShaderPass> CameraSystem::getShaderPasses(const entity::Entity & entity, scene::Scene& scene)
+			Vector<platform::ShaderPass> CameraSystem::getShaderPasses(const entity::Entity& entity, scene::Scene& scene)
 			{
 				return scene.camera.get(entity).shader_passes;
 			}
@@ -174,12 +199,26 @@ namespace lambda
 			{
 				Data& data = scene.camera.get(entity);
 
-				return glm::perspective(
-					data.fov.asRad(),
-					(float)scene.window->getSize().x / (float)scene.window->getSize().y,
-					data.near_plane.asMeter(),
-					data.far_plane.asMeter()
-				);
+				if (data.projection == CameraProjection::kPerspective)
+				{
+					return glm::perspective(
+						data.fov.asRad(),
+						(float)scene.window->getSize().x / (float)scene.window->getSize().y,
+						data.near_plane.asMeter(),
+						data.far_plane.asMeter()
+					);
+				}
+				else
+				{
+					return glm::orthoRH(
+						-data.width  * 0.5f,
+						 data.width  * 0.5f,
+						-data.height * 0.5f,
+						 data.height * 0.5f,
+						 data.near_plane.asMeter(),
+						 data.far_plane.asMeter()
+					);
+				}
 			}
 			void CameraSystem::bindCamera(const entity::Entity& entity, scene::Scene& scene)
 			{
@@ -245,7 +284,7 @@ namespace lambda
 
 		namespace CameraSystem
 		{
-			Data::Data(const Data & other)
+			Data::Data(const Data& other)
 			{
 				fov = other.fov;
 				near_plane = other.near_plane;
@@ -253,9 +292,12 @@ namespace lambda
 				shader_passes = other.shader_passes;
 				entity = other.entity;
 				valid = other.valid;
+				projection = other.projection;
+				width = other.width;
+				height = other.height;
 				world_matrix = other.world_matrix;
 			}
-			Data& Data::operator=(const Data & other)
+			Data& Data::operator=(const Data& other)
 			{
 				fov = other.fov;
 				near_plane = other.near_plane;
@@ -263,6 +305,9 @@ namespace lambda
 				shader_passes = other.shader_passes;
 				entity = other.entity;
 				valid = other.valid;
+				projection = other.projection;
+				width = other.width;
+				height = other.height;
 				world_matrix = other.world_matrix;
 				return *this;
 			}
@@ -314,7 +359,37 @@ namespace lambda
 			return CameraSystem::getFarPlane(entity_, *scene_);
 		}
 
-		void CameraComponent::addShaderPass(const platform::ShaderPass & shader_pass)
+		void CameraComponent::setProjection(const CameraProjection& projection)
+		{
+			return CameraSystem::setProjection(entity_, projection, *scene_);
+		}
+
+		CameraProjection CameraComponent::getProjection() const
+		{
+			return CameraSystem::getProjection(entity_, *scene_);
+		}
+
+		void CameraComponent::setWidth(const float& width)
+		{
+			CameraSystem::setWidth(entity_, width, *scene_);
+		}
+
+		float CameraComponent::getWidth() const
+		{
+			return CameraSystem::getWidth(entity_, *scene_);
+		}
+
+		void CameraComponent::setHeight(const float& height)
+		{
+			CameraSystem::setHeight(entity_, height, *scene_);
+		}
+
+		float CameraComponent::getHeight() const
+		{
+			return CameraSystem::getHeight(entity_, *scene_);
+		}
+
+		void CameraComponent::addShaderPass(const platform::ShaderPass& shader_pass)
 		{
 			CameraSystem::addShaderPass(entity_, shader_pass, *scene_);
 		}
