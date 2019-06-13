@@ -20,6 +20,10 @@
 #include "physics/react/react_physics_world.h"
 #endif
 
+#if VIOLET_PHYSICS_BULLET
+#include "physics/bullet/bullet_physics_world.h"
+#endif
+
 namespace lambda
 {
 	namespace utilities
@@ -605,6 +609,116 @@ namespace lambda
 			else if (collider_type == lambda::physics::ReactCollisionColliderType::kCapsule)
 				t.makeCapsuleCollider();
 			else if (collider_type == lambda::physics::ReactCollisionColliderType::kMesh)
+				t.makeMeshCollider(mesh, sub_mesh_id);
+		}
+#endif
+#if VIOLET_PHYSICS_BULLET
+		template <>
+		inline rapidjson::Value serialize(rapidjson::Document& doc, const lambda::physics::BulletCollisionBodyType& t)
+		{
+			return rapidjson::Value((int32_t)t);
+		}
+		template <>
+		inline void deserialize(const rapidjson::Value& self, lambda::physics::BulletCollisionBodyType& t)
+		{
+			t = (lambda::physics::BulletCollisionBodyType)self.GetInt();
+		}
+
+		template <>
+		inline rapidjson::Value serialize(rapidjson::Document& doc, const lambda::physics::BulletCollisionColliderType& t)
+		{
+			return rapidjson::Value((int32_t)t);
+		}
+		template <>
+		inline void deserialize(const rapidjson::Value& self, lambda::physics::BulletCollisionColliderType& t)
+		{
+			t = (lambda::physics::BulletCollisionColliderType)self.GetInt();
+		}
+
+		template <>
+		inline rapidjson::Value serialize(rapidjson::Document& doc, const lambda::physics::BulletCollisionBody& t)
+		{
+			rapidjson::Value self(rapidjson::kObjectType);
+
+			self.AddMember("position", serialize(doc, t.getPosition()), doc.GetAllocator());
+			self.AddMember("rotation", serialize(doc, t.getRotation()), doc.GetAllocator());
+			self.AddMember("entity", serialize(doc, t.getEntity()), doc.GetAllocator());
+			self.AddMember("friction", serialize(doc, t.getFriction()), doc.GetAllocator());
+			self.AddMember("mass", serialize(doc, t.getMass()), doc.GetAllocator());
+			self.AddMember("layers", serialize(doc, t.getLayers()), doc.GetAllocator());
+			self.AddMember("velocity_constraints", serialize(doc, t.getVelocityConstraints()), doc.GetAllocator());
+			self.AddMember("angular_constraints", serialize(doc, t.getAngularConstraints()), doc.GetAllocator());
+			self.AddMember("velocity", serialize(doc, t.getVelocity()), doc.GetAllocator());
+			self.AddMember("angular_velocity", serialize(doc, t.getAngularVelocity()), doc.GetAllocator());
+			self.AddMember("mesh", serialize(doc, t.metaGetMesh()), doc.GetAllocator());
+			self.AddMember("sub_mesh_id", serialize(doc, t.metaGetSubMeshId()), doc.GetAllocator());
+			self.AddMember("type", serialize(doc, t.metaGetType()), doc.GetAllocator());
+			self.AddMember("collider_type", serialize(doc, t.metaGetColliderType()), doc.GetAllocator());
+
+			return self;
+		}
+		template <>
+		inline void deserialize(const rapidjson::Value& self, lambda::physics::BulletCollisionBody& t)
+		{
+			entity::Entity entity;
+			deserialize(self["entity"], entity);
+
+			t = lambda::physics::BulletCollisionBody(
+				lambda::physics::k_bulletScene,
+				lambda::physics::k_bulletDynamicsWorld,
+				lambda::physics::k_bulletPhysicsWorld,
+				entity
+			);
+
+			glm::vec3 position;
+			glm::vec3 rotation;
+			float friction;
+			float mass;
+			uint16_t layers;
+			uint8_t velocity_constraints;
+			uint8_t angular_constraints;
+			glm::vec3 velocity;
+			glm::vec3 angular_velocity;
+			asset::VioletMeshHandle mesh;
+			uint32_t sub_mesh_id;
+			lambda::physics::BulletCollisionBodyType type;
+			lambda::physics::BulletCollisionColliderType collider_type;
+			deserialize(self["position"], position);
+			deserialize(self["rotation"], rotation);
+			deserialize(self["friction"], friction);
+			deserialize(self["mass"], mass);
+			deserialize(self["layers"], layers);
+			deserialize(self["velocity_constraints"], velocity_constraints);
+			deserialize(self["angular_constraints"], angular_constraints);
+			deserialize(self["velocity"], velocity);
+			deserialize(self["angular_velocity"], angular_velocity);
+			deserialize(self["mesh"], mesh);
+			deserialize(self["sub_mesh_id"], sub_mesh_id);
+			deserialize(self["type"], type);
+			deserialize(self["collider_type"], collider_type);
+
+			t.setPosition(position);
+			t.setRotation(rotation);
+			t.setFriction(friction);
+			t.setMass(mass);
+			t.setLayers(layers);
+			t.setVelocityConstraints(velocity_constraints);
+			t.setAngularConstraints(angular_constraints);
+			t.setVelocity(velocity);
+			t.setAngularVelocity(angular_velocity);
+
+			if (type == lambda::physics::BulletCollisionBodyType::kCollider)
+				t.makeCollider();
+			else if (type == lambda::physics::BulletCollisionBodyType::kRigidBody)
+				t.makeRigidBody();
+
+			if (collider_type == lambda::physics::BulletCollisionColliderType::kBox)
+				t.makeBoxCollider();
+			else if (collider_type == lambda::physics::BulletCollisionColliderType::kSphere)
+				t.makeSphereCollider();
+			else if (collider_type == lambda::physics::BulletCollisionColliderType::kCapsule)
+				t.makeCapsuleCollider();
+			else if (collider_type == lambda::physics::BulletCollisionColliderType::kMesh)
 				t.makeMeshCollider(mesh, sub_mesh_id);
 		}
 #endif

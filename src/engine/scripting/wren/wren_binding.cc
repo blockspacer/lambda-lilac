@@ -3270,15 +3270,15 @@ namespace lambda
     }
     namespace Input
     {
+#pragma optimize ("", off)
       WrenForeignMethodFn Bind(const char* signature)
       {
         if (strcmp(signature, "getKey(_)") == 0) return [](WrenVM* vm) {
-
+          auto world = g_world;
           io::KeyboardKeys key = (io::KeyboardKeys)(uint32_t)wrenGetSlotDouble(vm, 1);
-          wrenSetSlotBool(vm, 0, g_world->getKeyboard().getCurrentState().getKey(key));
+          wrenSetSlotBool(vm, 0, world->getKeyboard().getCurrentState().getKey(key));
         };
         if (strcmp(signature, "getAxis(_)") == 0) return [](WrenVM* vm) {
-
           uint32_t val = (uint32_t)wrenGetSlotDouble(vm, 1);
           if (val < 20u) // Controller.
           {
@@ -3320,6 +3320,12 @@ namespace lambda
 			};
 			if (strcmp(signature, "random()") == 0) return [](WrenVM* vm) {
 				wrenSetSlotDouble(vm, 0, (double)utilities::random());
+			};
+			if (strcmp(signature, "seed=(_)") == 0) return [](WrenVM* vm) {
+				utilities::setRandomSeed((uint32_t)wrenGetSlotDouble(vm, 1));
+			};
+			if (strcmp(signature, "hash(_)") == 0) return [](WrenVM* vm) {
+				wrenSetSlotDouble(vm, 0, (double)constexprHash(wrenGetSlotString(vm, 1)));
 			};
 			if (strcmp(signature, "clamp(_,_,_)") == 0) return [](WrenVM* vm) {
 				wrenSetSlotDouble(vm, 0, std::min(std::max(wrenGetSlotDouble(vm, 1), wrenGetSlotDouble(vm, 2)), wrenGetSlotDouble(vm, 3)));
@@ -3432,6 +3438,12 @@ namespace lambda
 			};
 			if (strcmp(signature, "atan2(_,_)") == 0) return [](WrenVM* vm) {
 				wrenSetSlotDouble(vm, 0, std::atan2(wrenGetSlotDouble(vm, 1), wrenGetSlotDouble(vm, 2)));
+			};
+			if (strcmp(signature, "sign(_)") == 0) return [](WrenVM* vm) {
+				double x = wrenGetSlotDouble(vm, 1);
+				if (x > 0.0) wrenSetSlotDouble(vm, 0,  1.0);
+				if (x < 0.0) wrenSetSlotDouble(vm, 0, -1.0);
+				else         wrenSetSlotDouble(vm, 0,  0.0);
 			};
 			if (strcmp(signature, "wrapMax(_,_)") == 0) return [](WrenVM* vm) {
 				double val = wrenGetSlotDouble(vm, 1);

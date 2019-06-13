@@ -5,6 +5,11 @@
 
 #include <containers/containers.h>
 
+// TODO (Hilze): Remove ASAP!
+#if VIOLET_GUI_ULTRALIGHT
+#undef VIOLET_GUI_ULTRALIGHT
+#endif
+
 #if VIOLET_GUI_ULTRALIGHT
 #include <Ultralight/Renderer.h>
 #include <Ultralight/View.h>

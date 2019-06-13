@@ -29,22 +29,38 @@ namespace lambda
 			kCollider,
 			kRigidBody
 		};
+		enum class BulletCollisionColliderType
+		{
+			kBox,
+			kSphere,
+			kCapsule,
+			kMesh,
+		};
+
+		extern btDiscreteDynamicsWorld* k_bulletDynamicsWorld;
+		extern scene::Scene*            k_bulletScene;
+		extern BulletPhysicsWorld*      k_bulletPhysicsWorld;
+
 		///////////////////////////////////////////////////////////////////////////
 		class BulletCollisionBody : public ICollisionBody
 		{
 		public:
+			BulletCollisionBody() {};
 			BulletCollisionBody(
-				scene::Scene& scene,
+				scene::Scene* scene,
 				btDiscreteDynamicsWorld* dynamics_world,
 				BulletPhysicsWorld* physics_world,
 				entity::Entity entity
 			);
+			BulletCollisionBody(const BulletCollisionBody& other);
+			void operator=(const BulletCollisionBody& other);
 			virtual ~BulletCollisionBody() override;
 			virtual glm::vec3 getPosition() const override;
 			virtual void setPosition(glm::vec3 position) override;
 			virtual glm::quat getRotation() const override;
 			virtual void setRotation(glm::quat rotation) override;
 			virtual entity::Entity getEntity() const override;
+			virtual void setEntity(entity::Entity entity) override;
 
 			virtual float getFriction() const override;
 			virtual void setFriction(float friction) override;
@@ -82,23 +98,51 @@ namespace lambda
 
 			btRigidBody* getBody();
 
+			void ensureExists(btDiscreteDynamicsWorld* dynamics_world, scene::Scene* scene, BulletPhysicsWorld* physics_world);
+
+			asset::VioletMeshHandle metaGetMesh() const;
+			uint32_t metaGetSubMeshId() const;
+			BulletCollisionBodyType metaGetType() const;
+			BulletCollisionColliderType metaGetColliderType() const;
+
 		private:
-			btRigidBody* body_;
-			btMotionState* motion_state_;
-			btCollisionShape* collision_shape_;
-			btTriangleMesh* triangle_mesh_;
-			scene::Scene& scene_;
-			btDiscreteDynamicsWorld* dynamics_world_; // TODO (Hilze): Try btDynamicsWorld.
-			BulletPhysicsWorld* physics_world_;
-			BulletCollisionBodyType type_;
-			entity::Entity entity_;
-			uint8_t velocity_constraints_;
-			uint8_t angular_constraints_;
+			//btRigidBody* body_;
+			//btMotionState* motion_state_;
+			//btCollisionShape* collision_shape_;
+			//btTriangleMesh* triangle_mesh_;
+			//scene::Scene& scene_;
+			//btDiscreteDynamicsWorld* dynamics_world_; // TODO (Hilze): Try btDynamicsWorld.
+			//BulletPhysicsWorld* physics_world_;
+			//BulletCollisionBodyType type_;
+			//entity::Entity entity_;
+			//uint8_t velocity_constraints_;
+			//uint8_t angular_constraints_;
 			uint16_t layers_;
 			float mass_;
 
-			int* indices_;
-			glm::vec3* vertices_;
+			//int* indices_;
+			//glm::vec3* vertices_;
+
+
+			btRigidBody* body_ = nullptr;
+			btMotionState* motion_state_ = nullptr;
+			btCollisionShape* collision_shape_ = nullptr;
+			btTriangleMesh* triangle_mesh_ = nullptr;
+
+			asset::VioletMeshHandle mesh_;
+			uint32_t sub_mesh_id_ = 0ul;
+			int*       indices_ = nullptr;
+			glm::vec3* vertices_ = nullptr;
+
+			btDiscreteDynamicsWorld* dynamics_world_ = nullptr;
+			scene::Scene* scene_ = nullptr;
+			BulletPhysicsWorld* physics_world_ = nullptr;
+
+			BulletCollisionBodyType type_ = BulletCollisionBodyType::kNone;
+			BulletCollisionColliderType collider_type_ = BulletCollisionColliderType::kBox;
+			entity::Entity entity_ = entity::InvalidEntity;
+			uint8_t velocity_constraints_ = 0ul;
+			uint8_t angular_constraints_ = 0ul;
 		};
 
 		///////////////////////////////////////////////////////////////////////////

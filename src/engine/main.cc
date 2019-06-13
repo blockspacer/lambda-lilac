@@ -1,10 +1,3 @@
-
-// TODO (Hilze): Remove ASAP!
-#if VIOLET_GUI_ULTRALIGHT
-#undef VIOLET_GUI_ULTRALIGHT
-#endif
-
-
 #include <memory/memory.h>
 #include <memory/frame_heap.h>
 //void* operator new  (std::size_t count)

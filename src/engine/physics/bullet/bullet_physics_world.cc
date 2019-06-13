@@ -14,6 +14,10 @@ namespace lambda
 {
 	namespace physics
 	{
+		btDiscreteDynamicsWorld* k_bulletDynamicsWorld = nullptr;
+		scene::Scene*            k_bulletScene         = nullptr;
+		BulletPhysicsWorld*      k_bulletPhysicsWorld  = nullptr;
+
 		template<typename T>
 		bool is_infinite(const T &value)
 		{
@@ -89,7 +93,7 @@ namespace lambda
 
 		///////////////////////////////////////////////////////////////////////////
 		BulletCollisionBody::BulletCollisionBody(
-			scene::Scene& scene,
+			scene::Scene* scene,
 			btDiscreteDynamicsWorld* dynamics_world,
 			BulletPhysicsWorld* physics_world,
 			entity::Entity entity)
@@ -111,6 +115,54 @@ namespace lambda
 		{
 			collision_shape_ = foundation::Memory::construct<btEmptyShape>();
 			createBody();
+		}
+
+		BulletCollisionBody::BulletCollisionBody(const BulletCollisionBody& other)
+		{
+			destroyBody();
+
+			layers_ = other.layers_;
+			mass_ = other.mass_;
+
+			mesh_ = other.mesh_;
+			sub_mesh_id_ = other.sub_mesh_id_;
+
+			dynamics_world_ = other.dynamics_world_;
+			scene_ = other.scene_;
+			physics_world_ = other.physics_world_;
+
+			type_ = other.type_;
+			collider_type_ = other.collider_type_;
+			entity_ = other.entity_;
+			velocity_constraints_ = other.velocity_constraints_;
+			angular_constraints_ = other.angular_constraints_;
+
+			if (scene_)
+				ensureExists(dynamics_world_, scene_, physics_world_);
+		}
+
+		void BulletCollisionBody::operator=(const BulletCollisionBody& other)
+		{
+			destroyBody();
+
+			layers_ = other.layers_;
+			mass_ = other.mass_;
+
+			mesh_ = other.mesh_;
+			sub_mesh_id_ = other.sub_mesh_id_;
+
+			dynamics_world_ = other.dynamics_world_;
+			scene_          = other.scene_;
+			physics_world_  = other.physics_world_;
+
+			type_ = other.type_;
+			collider_type_ = other.collider_type_;
+			entity_ = other.entity_;
+			velocity_constraints_ = other.velocity_constraints_;
+			angular_constraints_ = other.angular_constraints_;
+
+			if (scene_)
+				ensureExists(dynamics_world_, scene_, physics_world_);
 		}
 
 		///////////////////////////////////////////////////////////////////////////
@@ -160,6 +212,11 @@ namespace lambda
 		entity::Entity BulletCollisionBody::getEntity() const
 		{
 			return entity_;
+		}
+
+		void BulletCollisionBody::setEntity(entity::Entity entity)
+		{
+			entity_ = entity;
 		}
 
 		///////////////////////////////////////////////////////////////////////////
@@ -301,7 +358,8 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		void BulletCollisionBody::makeBoxCollider()
 		{
-			glm::vec3 scale = components::TransformSystem::getWorldScale(entity_, scene_) * VIOLET_PHYSICS_SCALE;
+			collider_type_ = BulletCollisionColliderType::kBox;
+			glm::vec3 scale = components::TransformSystem::getWorldScale(entity_, *scene_) * VIOLET_PHYSICS_SCALE;
 			btVector3 half_extends(scale.x * 0.5f, scale.y * 0.5f, scale.z * 0.5f);
 			btCollisionShape* shape = foundation::Memory::construct<btBoxShape>(half_extends);
 			makeShape(shape);
@@ -310,7 +368,8 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		void BulletCollisionBody::makeSphereCollider()
 		{
-			glm::vec3 scale = components::TransformSystem::getWorldScale(entity_, scene_) * VIOLET_PHYSICS_SCALE;
+			collider_type_ = BulletCollisionColliderType::kSphere;
+			glm::vec3 scale = components::TransformSystem::getWorldScale(entity_, *scene_) * VIOLET_PHYSICS_SCALE;
 			btScalar radius = (scale.x + scale.z) / 4.0f;
 			btCollisionShape* shape = foundation::Memory::construct<btSphereShape>(radius);
 			makeShape(shape);
@@ -319,7 +378,8 @@ namespace lambda
 		///////////////////////////////////////////////////////////////////////////
 		void BulletCollisionBody::makeCapsuleCollider()
 		{
-			glm::vec3 scale = components::TransformSystem::getWorldScale(entity_, scene_) * VIOLET_PHYSICS_SCALE;
+			collider_type_ = BulletCollisionColliderType::kCapsule;
+			glm::vec3 scale = components::TransformSystem::getWorldScale(entity_, *scene_) * VIOLET_PHYSICS_SCALE;
 			btScalar radius = (scale.x * 0.5f + scale.z * 0.5f) * 0.5f;
 			btScalar height = scale.y * 0.5f;
 			btCollisionShape* shape = foundation::Memory::construct<btCapsuleShape>(radius, height);
@@ -349,7 +409,7 @@ namespace lambda
 		void BulletCollisionBody::makeMeshCollider(asset::VioletMeshHandle mesh, uint32_t sub_mesh_id)
 		{
 			// Get the indices.
-			glm::vec3 scale = components::TransformSystem::getWorldScale(entity_, scene_);
+			glm::vec3 scale = components::TransformSystem::getWorldScale(entity_, *scene_);
 			asset::SubMesh sub_mesh = mesh->getSubMeshes().at(sub_mesh_id);
 			auto index_offset = sub_mesh.offsets[asset::MeshElements::kIndices];
 			auto vertex_offset = sub_mesh.offsets[asset::MeshElements::kPositions];
@@ -424,6 +484,9 @@ namespace lambda
 				);
 			}
 
+			mesh_ = mesh;
+			sub_mesh_id_ = sub_mesh_id;
+			collider_type_ = BulletCollisionColliderType::kMesh;
 			btCollisionShape* shape = foundation::Memory::construct<btBvhTriangleMeshShape>(triangle_mesh, false);
 			makeShape(shape, triangle_mesh);
 		}
@@ -499,8 +562,8 @@ namespace lambda
 		{
 			destroyBody();
 
-			glm::quat rotation = components::TransformSystem::hasComponent(entity_, scene_) ? components::TransformSystem::getWorldRotation(entity_, scene_) : glm::quat();
-			glm::vec3 translation = components::TransformSystem::hasComponent(entity_, scene_) ? (components::TransformSystem::getWorldTranslation(entity_, scene_) * VIOLET_PHYSICS_SCALE) : glm::vec3();
+			glm::quat rotation = components::TransformSystem::hasComponent(entity_, *scene_) ? components::TransformSystem::getWorldRotation(entity_, *scene_) : glm::quat();
+			glm::vec3 translation = components::TransformSystem::hasComponent(entity_, *scene_) ? (components::TransformSystem::getWorldTranslation(entity_, *scene_) * VIOLET_PHYSICS_SCALE) : glm::vec3();
 
 			motion_state_ = foundation::Memory::construct<btDefaultMotionState>(btTransform(toBt(rotation), toBt(translation)));
 			btRigidBody::btRigidBodyConstructionInfo rigid_body_ci(
@@ -516,6 +579,53 @@ namespace lambda
 		btRigidBody* BulletCollisionBody::getBody()
 		{
 			return body_;
+		}
+
+		void BulletCollisionBody::ensureExists(btDiscreteDynamicsWorld* dynamics_world, scene::Scene* scene, BulletPhysicsWorld* physics_world)
+		{
+			if (body_ == nullptr)
+			{
+				dynamics_world_ = dynamics_world;
+				scene_          = scene;
+				physics_world_  = physics_world;
+
+				auto type = type_;
+				createBody();
+				type_ = type;
+
+				switch (collider_type_)
+				{
+				case BulletCollisionColliderType::kBox:     makeBoxCollider();                     break;
+				case BulletCollisionColliderType::kSphere:  makeSphereCollider();                  break;
+				case BulletCollisionColliderType::kCapsule: makeCapsuleCollider();                 break;
+				case BulletCollisionColliderType::kMesh:    makeMeshCollider(mesh_, sub_mesh_id_); break;
+				}
+
+				if (type_ == BulletCollisionBodyType::kCollider)
+					makeCollider();
+				else if (type_ == BulletCollisionBodyType::kRigidBody)
+					makeRigidBody();
+			}
+		}
+
+		asset::VioletMeshHandle BulletCollisionBody::metaGetMesh() const
+		{
+			return mesh_;
+		}
+
+		uint32_t BulletCollisionBody::metaGetSubMeshId() const
+		{
+			return sub_mesh_id_;
+		}
+
+		BulletCollisionBodyType BulletCollisionBody::metaGetType() const
+		{
+			return type_;
+		}
+
+		BulletCollisionColliderType BulletCollisionBody::metaGetColliderType() const
+		{
+			return collider_type_;
 		}
 
 
@@ -705,6 +815,10 @@ namespace lambda
 			gContactStartedCallback = ContactStarted;
 			gContactEndedCallback = ContactEnded;
 			gContactProcessedCallback = ContactProcessed;
+			
+			k_bulletDynamicsWorld = dynamics_world_;
+			k_bulletScene         = scene_;
+			k_bulletPhysicsWorld  = this;
 		}
 
 		///////////////////////////////////////////////////////////////////////////
