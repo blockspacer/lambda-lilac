@@ -1,0 +1,23 @@
+<html>
+	<head>
+	</head>
+	<script>
+		var Loading = 1
+		var Game = 2
+		var gameState = Loading
+    </script>
+    <body style="padding: 0px; margin: 0px; border: 0px;">
+        <iframe width="100%" height="100%" frameBorder="0" style="padding: 0px; margin: 0px; border: 0px solid;" id="mainCanvas" src=""></iframe>
+    </body>
+    <script>
+        var mainCanvas    = document.getElementById("mainCanvas");
+        var contentWindow = mainCanvas.contentWindow
+
+		var Unknown = 1
+		var Loading = 1
+		var Game    = 2
+		var gameState = Unknown
+
+        function LoadWebPage(src) { mainCanvas.src = src; }
+    </script>
+</html>

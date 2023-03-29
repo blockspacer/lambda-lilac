@@ -1,0 +1,267 @@
+<html>
+  <head>
+  </head>
+  <style>
+  @-webkit-keyframes fadeIn {
+    0% {opacity: 0;}
+    100% {opacity: 1;}
+  }
+
+  @keyframes fadeIn {
+    0% {opacity: 0;}
+    100% {opacity: 1;}
+  }
+
+  @-webkit-keyframes fadeOut {
+    0% {opacity: 1;}
+    100% {opacity: 0;}
+  }
+
+  @keyframes fadeOut {
+    0% {opacity: 1;}
+    100% {opacity: 0;}
+  }
+
+  .fadeIn {
+    -webkit-animation-duration: 0.5s;
+    animation-duration: 0.5s;
+    -webkit-animation-fill-mode: both;
+    animation-fill-mode: both;
+    -webkit-animation-name: fadeIn;
+    animation-name: fadeIn;
+  }
+
+  .fadeOut {
+    -webkit-animation-duration: 0.5s;
+    animation-duration: 0.5s;
+    -webkit-animation-fill-mode: both;
+    animation-fill-mode: both;
+    -webkit-animation-name: fadeOut;
+    animation-name: fadeOut;
+  }
+  
+  .loader {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    margin: 0px;
+    display: inline-block;
+    vertical-align: middle;
+    left: 10px;
+    bottom: 10px;
+    position: fixed;
+  }
+
+  .loader .loader-outter {
+    position: absolute;
+    border: 4px solid black;
+    border-left-color: transparent;
+    border-bottom: 0;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    -webkit-animation: loader-outter 1s cubic-bezier(.42, .61, .58, .41) infinite;
+    animation: loader-outter 1s cubic-bezier(.42, .61, .58, .41) infinite;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  .loader .loader-inner {
+    position: absolute;
+    border: 4px solid black;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    left: 10px;
+    top: 10px;
+    border-right: 0;
+    border-top-color: transparent;
+    -webkit-animation: loader-inner 1s cubic-bezier(.42, .61, .58, .41) infinite;
+    animation: loader-inner 1s cubic-bezier(.42, .61, .58, .41) infinite;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* ----------------     KEYFRAMES    ----------------- */
+
+  @-webkit-keyframes loader-outter {
+    0% {
+      -webkit-transform: rotate(0deg);
+      transform: rotate(0deg);
+    }
+    100% {
+      -webkit-transform: rotate(360deg);
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes loader-outter {
+    0% {
+      -webkit-transform: rotate(0deg);
+      transform: rotate(0deg);
+    }
+    100% {
+      -webkit-transform: rotate(360deg);
+      transform: rotate(360deg);
+    }
+  }
+
+  @-webkit-keyframes loader-inner {
+    0% {
+      -webkit-transform: rotate(0deg);
+      transform: rotate(0deg);
+    }
+    100% {
+      -webkit-transform: rotate(-360deg);
+      transform: rotate(-360deg);
+    }
+  }
+
+  @keyframes loader-inner {
+    0% {
+      -webkit-transform: rotate(0deg);
+      transform: rotate(0deg);
+    }
+    100% {
+      -webkit-transform: rotate(-360deg);
+      transform: rotate(-360deg);
+    }
+  }
+  </style>
+  <body style="background:rgba(0,0,0,0) ">
+    <div class="loader">
+      <div class="loader-outter"></div>
+      <div class="loader-inner"></div>
+    </div>
+    <div id="subtitles" style="position:fixed; left:50%; height:100%;"></div>
+    <script>
+    var g_canvas  = getTextWidth.canvas || (getTextWidth.canvas = document.createElement("canvas"));
+    var g_context = g_canvas.getContext("2d");
+     
+    function getTextWidth(e, text, font) {
+      // re-use canvas object for better performance
+      g_context.font = font;
+
+      var longest = 0;
+      var lines   = text.split('\n');
+      for (var i = 0; i < lines.length; ++i)
+      {
+        var metrics = g_context.measureText(lines[i]);
+        if (metrics.width > longest)
+          longest = metrics.width;
+      }
+      return longest;
+    }
+
+    function Resize(e, width, height)
+    {
+      var desired_height = 150;
+      e.style.marginLeft = -width / 2 + 'px';
+      e.style.bottom     = desired_height - height + 'px';
+      e.style.width      = width + 'px';
+      e.style.height     = height + 'px';
+    }
+
+    var setting_subtitles = false;
+    var new_subtitles     = "";
+    function SubtitlesReset()
+    {
+      var e_div = document.getElementById('subtitles');
+
+      for (var i = 0; i < e_div.childElementCount; ++i)
+      {
+        e_div.children[i].classList.remove('fadeIn');
+        e_div.children[i].classList.add('fadeOut');
+      }
+    }
+    function SubtitlesSet()
+    {
+      var e_div = document.getElementById('subtitles');
+
+      while (e_div.childElementCount)
+        e_div.removeChild(e_div.children[e_div.childElementCount - 1]);
+
+      var lines       = new_subtitles.split('\n');
+      var top         = 200;
+      var font        = "30pt arial";
+      var line_height = "45px";
+
+      while (e_div.childElementCount < lines.length)
+      {
+        var child = document.createElement("p");
+
+        child.style.textAlign  = "center";
+        child.style.preWrap    = "pre-wrap";
+        child.style.color      = "white";
+        child.style.font       = font;
+        child.style.textShadow = "-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000";
+        child.style.margin     = "0px";
+        child.style.padding    = "5px";
+        child.style.background = "rgba(0,0,0,0.5) ";
+        child.style.position   = "fixed";
+        child.style.lineHeight = line_height;
+        child.classList.add('fadeIn');
+
+        e_div.appendChild(child);
+      }
+
+      for (var i = 0; i < lines.length; ++i)
+      {
+        var e_child = e_div.children[i];
+        var w = getTextWidth(e_child, lines[i], font);
+        var h = parseInt(line_height);
+        e_child.innerHTML = lines[i];
+        Resize(e_child, w, h);
+        var nh = h + parseInt(e_child.style.padding) + parseInt(e_child.style.paddingBottom);
+        var v  = i * nh - top;
+        e_child.style.bottom = -v + "px";
+      }
+
+      setting_subtitles = false;
+    }
+
+    function Subtitles(text)
+    {
+      if (setting_subtitles)
+        return;
+      setting_subtitles = true;
+      new_subtitles = text;
+      SubtitlesReset();
+
+      if (text == "")
+      {
+        setting_subtitles = false;
+        return;
+      }
+      setTimeout(SubtitlesSet, 500);
+    }
+
+    var idx = 0;
+    var lines = "I miss you,\nmiss you\nHello there \nThe angel from my nightmare\nThe shadow in the background\nof the morgue\nThe unsuspecting victim\nOf darkness in the valley\nWe can live like\nJack and Sally if we want\nWhere you can\nalways find me\nAnd we'll have Halloween on Christmas\nAnd in the night we'll wish this never ends\nWe'll wish this never ends\n\nI miss you,\nI miss you\nI miss you\nI miss you\nWhere are you?\nAnd I'm so sorry\nI cannot sleep\nI cannot dream tonight\nI need somebody and always\nThis sick strange darkness\nComes creeping on\nso haunting every time\nAnd as I stared I counted\nThe Webs from all the spiders\nCatching things and eating their insides\nLike indecision to call you\nAnd hear your voice of treason\nWill you come home and stop the pain tonight\nStop this pain tonight\n\nDon't waste your time on me\nYou're already the voice inside my head\n(I miss you, I miss you)\nDon't waste your time on me\nYou're already the voice inside my head\n(I miss you, I miss you)\nDon't waste your time on me\nYou're already the voice inside my head\n(I miss you, I miss you)\nDon't waste your time on me\nYou're already the voice inside my head\n(I miss you, I miss you)\nDon't waste your time on me\nYou're already the voice inside my head\n(I miss you, I miss you)\nDon't waste your time on me\nYou're already the voice inside my head\n(I miss you, I miss you)\nI miss you,\nI miss you\nI miss you,\nI miss you\nI miss you,\nI miss you\nI miss you,\nI miss you".split('\n');
+
+    function Reset()
+    {
+      Subtitles("");
+    }
+
+    function TimeOut()
+    {
+      var selected = lines[idx] + "\n" + lines[idx + 1];
+      idx += 2;
+
+      Subtitles(selected);
+
+      if (idx < lines.length)
+        setTimeout(TimeOut, 4500);
+      else
+        setTimeout(Reset, 4500);
+    }
+
+    TimeOut();
+    </script>
+  </body>
+</html>

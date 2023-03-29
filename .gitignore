@@ -1,0 +1,12 @@
+
+\.idea/
+
+cmake-build-debug/
+
+\.DS_Store
+
+deps/DXC/
+bin/
+game/**/__*
+
+game/generated/

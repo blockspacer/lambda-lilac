@@ -1,0 +1,717 @@
+<html>
+	<head>
+	</head>
+	<style>
+	.menu {
+		position: fixed;
+		left: 0pt;
+		top: 0pt;
+		width: fit-content;
+	}
+	
+	.menu_TitleTD {
+		padding: 0pt;
+		margin: 0pt;
+	}
+	
+	.menu_TitleName {
+		color: white;
+        text-align: center;
+		user-select: none;
+		
+		font-weight: bold;
+		font-size: 40pt;
+		font-family: arial;
+
+		float: left;
+		writing-mode: vertical-rl;
+		margin: 0pt;
+		white-space: nowrap;
+		height: 100%;
+		width: 50pt;
+	
+		padding: 0pt;
+		
+		border-right: 2pt solid orange;
+		border-left:  2pt solid orange;
+		
+		position: absolute;
+		left: 23pt;
+		top: 0pt;
+		
+		background-color: black;
+	}
+	
+	.menu_TitlePrev {
+		color: gray;
+        text-align: center;
+		user-select: none;
+		
+		font-size: 15pt;
+		font-family: arial;
+
+		float: left;
+		writing-mode: vertical-rl;
+		margin: 0pt;
+		white-space: nowrap;
+		height: 100%;
+		width: 18pt;
+	
+		padding: 0pt;
+		
+		position: absolute;
+		left: 0pt;
+		top: 0pt;
+		
+		border-left:  2pt solid orange;
+		border-right: 2pt solid orange;
+		
+		background-color: black;
+	}
+	
+	.menu_BodyTD {
+		vertical-align:top;
+		padding: 0pt;
+		margin: 0pt;
+		
+		position: absolute;
+		left: 81pt;
+		top: 0pt;
+		
+		height: 100%;
+		width: 300pt;
+		
+		background-color: black;
+		
+		border-left:  2pt solid orange;
+		border-right: 2pt solid orange;
+	}
+	
+	.menu_BodyWrapper {
+		padding: 0pt;
+		margin: 0pt;
+		
+		background-color:black;
+	}
+	
+	.menu_BodyName {
+		color: white;
+		user-select: none;
+		cursor: pointer;
+				
+		font-weight: bold;
+		font-size: 20pt;
+		font-family: arial;
+		
+		text-align: left;
+		display: inline-block;
+		
+		text-shadow:
+			-1px -1px 0 #000,
+			1px -1px 0 #000,
+			-1px 1px 0 #000,
+			1px 1px 0 #000;  
+		
+		margin: 0pt;
+		padding-top: 6pt;
+		padding-bottom: 6pt;
+		padding-left: 10pt;
+		padding-right: 10pt;
+		width: 130pt;
+	}
+	
+	.menu_BodySubName {
+		user-select: none;
+		
+		font-weight: bold;
+		font-size: 20pt;
+		font-family: arial;
+		
+		text-align: left;
+		display: inline-block;
+		
+		margin: 0pt;
+		padding-top: 6pt;
+		padding-bottom: 6pt;
+		padding-left: 10pt;
+		padding-right: 10pt;
+		width: 150pt;
+		
+		cursor: default;
+		font-weight: normal;
+		padding-top: 1pt;
+		padding-bottom: 1pt;
+		padding-left: 30pt;
+		padding-right: 0pt;
+		width: 135pt;
+		font-size: 15pt;
+		
+		color: #DDDDDD;
+	}
+	
+	.menu_Button {
+		color: gray;
+		cursor: pointer;
+		text-align: left;
+		
+		font-weight: bold;
+		font-size: 20pt;
+		font-family: arial;
+		font-weight: normal;
+		
+		display: inline-block;
+		
+		padding: 0pt;
+		margin: 0pt;
+		
+		-webkit-transition: color 0.25s; /* For Safari 3.1 to 6.0 */
+		transition: color 0.25s;
+	}
+	
+	.menu_Button:hover {
+		color: orange;
+	}
+	
+	.menu_BodyOption {
+		color: gray;
+		cursor: pointer;
+		text-align: left;
+		
+		font-weight: bold;
+		font-size: 20pt;
+		font-family: arial;
+		font-weight: normal;
+		font-size: 15pt;
+		
+		display: inline-block;
+		
+		padding: 0pt;
+		margin: 4pt;
+		
+		width: 150pt;
+		
+		border: none;
+	}
+	
+	.menu_Sideways {
+		text-align: center;
+		width: 100pt;
+		margin: 0pt;
+		user-select: none;
+		cursor: default;
+		
+		-webkit-transition: color 0.5s; /* For Safari 3.1 to 6.0 */
+		transition: color 0.5s;
+	}
+	
+	.menu_Sideways:hover {
+		color: orange;
+	}
+	
+	.menu_Transition {
+		-webkit-transition: background-color 0.5s; /* For Safari 3.1 to 6.0 */
+		transition: background-color 0.5s;
+	}
+	
+	.menu_Transition:hover {
+		background-color: orange;
+	}
+	
+	.menu_Slider {
+		-webkit-appearance: none;
+		appearance: none;
+
+		border: solid 1pt black;
+		border-radius: 5pt;
+		outline: none;
+		
+		height: 7pt;
+	}
+	
+	.menu_Slider::-webkit-slider-thumb {
+		-webkit-appearance: none;
+		appearance: none;
+		width: 12pt;
+		height: 12pt;
+		border-radius: 50%;
+		border: solid 1pt black;
+		background: orange;
+		cursor: pointer;
+	}
+
+	@-webkit-keyframes fadeIn {
+		0% {opacity: 0; left: -100%;}
+		100% {opacity: 1; left: 0%;}
+	}
+
+	@keyframes fadeIn {
+		0% {opacity: 0; left: -100%;}
+		100% {opacity: 1; left: 0%;}
+	}
+
+	@-webkit-keyframes fadeOut {
+		0% {opacity: 1; left: 0%; }
+		100% {opacity: 0; left: -100%; }
+	}
+
+	@keyframes fadeOut {
+		0% {opacity: 1; left: 0%; }
+		100% {opacity: 0; left: -100%; }
+	}
+
+	.fadeBase {
+		-webkit-animation-duration: 0.5s;
+		animation-duration: 0.5s;
+		-webkit-animation-fill-mode: both;
+		animation-fill-mode: both;
+
+		transition-timing-function: ease-in-out;
+		transition-timing-function: cubic-bezier(0.42, 0, 0.58, 1);
+	}
+
+	.fadeIn {
+		-webkit-animation-name: fadeIn;
+		animation-name: fadeIn;
+	}
+
+	.fadeOut {
+		-webkit-animation-name: fadeOut;
+		animation-name: fadeOut;
+	}
+	</style>
+	<script>
+		parent.gameState = parent.Game
+
+		var menus = {};
+		var current_menu = "";
+		var sideways = {};
+		var current_sideways = {};
+		
+		function moveToMenu(id)
+		{
+			if	(current_menu in menus)
+			{
+				menus[current_menu].classList.remove('fadeIn');
+				menus[current_menu].classList.add('fadeOut');
+			}
+			if	(id in menus)
+			{
+				menus[id].classList.remove('fadeOut');
+				menus[id].classList.add('fadeIn');
+			}
+			current_menu = id;
+
+			parent.movedToMenu(id);
+		}
+		
+		function changeSidewaysUp(id)
+		{
+			var curr = sideways[id][current_sideways[id]];
+			
+			current_sideways[id]++;
+			
+			if (current_sideways[id] >= sideways[id].length)
+			{
+				current_sideways[id] = 0;
+			}
+			
+			var next = sideways[id][current_sideways[id]];
+			curr.style.display = "none";
+			next.style.display = "inline-block";
+
+      parent.changedSetting(id, current_sideways[id]);
+		}
+		
+		function changeSidewaysDown(id)
+		{
+			var curr = sideways[id][current_sideways[id]];
+			
+			current_sideways[id]--;
+			
+			if (current_sideways[id] < 0)
+			{
+				current_sideways[id] = sideways[id].length - 1;
+			}
+
+			var next = sideways[id][current_sideways[id]];
+			curr.style.display = "none";
+			next.style.display = "inline-block";
+
+      parent.changedSetting(id, current_sideways[id]);
+		}
+	</script>
+	<body>
+		<div class="menu" id="pause">
+			<div class="menu_TitleTD">
+				<p class="menu_TitlePrev"></p>
+				<p class="menu_TitleName">Pause Menu</p>
+			</div>
+			<div class="menu_BodyTD">
+				<div class="menu_BodyWrapper">
+					<p class="menu_BodyName menu_Transition" style="width: 280pt" onclick="moveToMenu('');">Continue</p>
+				</div>
+				<div class="menu_BodyWrapper">
+					<p class="menu_BodyName menu_Transition" style="width: 280pt">Settings</p>
+				</div>
+				<div class="menu_BodyWrapper">
+					<p class="menu_BodyName menu_Transition" style="width: 280pt" onclick="moveToMenu('main');">Exit to Main Menu</p>
+				</div>
+				<div class="menu_BodyWrapper">
+					<p class="menu_BodyName menu_Transition" style="width: 280pt" onclick="moveToMenu('debug');">Debug</p>
+				</div>
+				<div class="menu_BodyWrapper">
+					<p class="menu_BodyName menu_Transition" style="width: 280pt">Exit to Desktop</p>
+				</div>
+			</div>
+		</div>
+		<div class="menu" id="main">
+			<div class="menu_TitleTD">
+				<p class="menu_TitlePrev"></p>
+				<p class="menu_TitleName">Main Menu</p>
+			</div>
+			<div class="menu_BodyTD">
+				<div class="menu_BodyWrapper">
+					<p class="menu_BodyName menu_Transition" style="width: 280pt" onclick="moveToMenu('');">Continue</p>
+				</div>
+				<div class="menu_BodyWrapper">
+					<p class="menu_BodyName menu_Transition" style="width: 280pt" onclick="moveToMenu('new_game');">New Game</p>
+				</div>
+				<div class="menu_BodyWrapper">
+					<p class="menu_BodyName menu_Transition" style="width: 280pt" onclick="moveToMenu('settings');">Settings</p>
+				</div>
+				<div class="menu_BodyWrapper">
+					<p class="menu_BodyName menu_Transition" style="width: 280pt" onclick="moveToMenu('accessibility');">Accessibility</p>
+				</div>
+				<div class="menu_BodyWrapper">
+					<p class="menu_BodyName menu_Transition" style="width: 280pt" onclick="moveToMenu('debug');">Debug</p>
+				</div>
+			</div>
+		</div>
+		<div class="menu" id="new_game">
+			<table>
+				<tr>
+					<td class="menu_TitleTD">
+						<p class="menu_TitlePrev">Main Menu</p>
+						<p class="menu_TitleName">New Game</p>
+					</td>
+					<td class="menu_BodyTD">
+						<div class="menu_BodyWrapper">
+							<p class="menu_BodyName" style="padding-top: 15pt; padding-bottom: 0pt; cursor: default;">Difficulty</p>
+						</div>
+						<div class="menu_BodyWrapper" style="user-select: none; cursor: default;">
+							<p class="menu_BodySubName"></p>
+							<a class="menu_Button" style="user-select: none;"    onclick="changeSidewaysDown('cbm2');">&laquo;</a>
+							<p class="menu_BodyOption menu_Sideways" id="cbm2_0" onclick="changeSidewaysUp('cbm2');">Easy</p>
+							<p class="menu_BodyOption menu_Sideways" id="cbm2_1" onclick="changeSidewaysUp('cbm2');">Medium</p>
+							<p class="menu_BodyOption menu_Sideways" id="cbm2_2" onclick="changeSidewaysUp('cbm2');">Hard</p>
+							<a class="menu_Button" style="user-select: none;"    onclick="changeSidewaysUp('cbm2');">&raquo;</a>
+						</div>
+						<div class="menu_BodyWrapper" style="user-select: none; cursor: default;">
+							<p class="menu_BodyName menu_Transition" style="width: 280pt" onclick="moveToMenu('');">Play</p>
+						</div>
+						<div class="menu_BodyWrapper" style="padding-top: 10pt;">
+							<p class="menu_BodyName menu_Transition" style="font-size: 15pt; width: 280pt; bottom: 0pt; position: absolute;" onclick="moveToMenu('main');">Back</p>
+						</div>
+					</td>
+				</tr>
+			</table>
+		</div>
+		<div class="menu" id="settings">
+			<table>
+				<tr>
+					<td class="menu_TitleTD">
+						<p class="menu_TitlePrev">Main Menu</p>
+						<p class="menu_TitleName">Settings</p>
+					</td>
+					<td class="menu_BodyTD">
+						<div class="menu_BodyWrapper">
+							<p class="menu_BodyName menu_Transition" style="width: 280pt;" onclick="moveToMenu('settings_game');">Game</p>
+						</div>
+						<div class="menu_BodyWrapper">
+							<p class="menu_BodyName menu_Transition" style="width: 280pt;" onclick="moveToMenu('settings_graphics');">Graphics</p>
+						</div>
+						<div class="menu_BodyWrapper" style="padding-top: 10pt;">
+							<p class="menu_BodyName menu_Transition" style="font-size: 15pt; width: 280pt; bottom: 0pt; position: absolute;" onclick="moveToMenu('main');">Back</p>
+						</div>
+					</td>
+				</tr>
+			</table>
+		</div>
+		<div class="menu" id="settings_game">
+			<table>
+				<tr>
+					<td class="menu_TitleTD">
+						<p class="menu_TitlePrev">Settings</p>
+						<p class="menu_TitleName">Game</p>
+					</td>
+					<td class="menu_BodyTD">
+						<div class="menu_BodyWrapper">
+							<p class="menu_BodyName" style="padding-top: 15pt; padding-bottom: 0pt; cursor: default;">Volume</p>
+						</div>
+						<div class="menu_BodyWrapper">
+							<p class="menu_BodySubName">Music</p>
+							<p class="menu_BodyOption" id="vol_music" style="cursor: default; width: 20pt; margin: 0pt;">50</p>
+							<input id="subtitles_font_size" type="range" min="0" max="100" value="50" onchange="this.parentElement.children[1].innerHTML = this.value;" class="menu_Slider menu_Transition">
+						</div>
+						<div class="menu_BodyWrapper">
+							<p class="menu_BodySubName">SFX</p>
+							<p class="menu_BodyOption" id="vol_sfx" style="cursor: default; width: 20pt; margin: 0pt;">50</p>
+							<input id="subtitles_font_size" type="range" min="0" max="100" value="50" onchange="this.parentElement.children[1].innerHTML = this.value;" class="menu_Slider menu_Transition">
+						</div>
+						<div class="menu_BodyWrapper">
+							<p class="menu_BodySubName">Speech</p>
+							<p class="menu_BodyOption" id="vol_speech" style="cursor: default; width: 20pt; margin: 0pt;">50</p>
+							<input id="subtitles_font_size" type="range" min="0" max="100" value="50" onchange="this.parentElement.children[1].innerHTML = this.value;" class="menu_Slider menu_Transition">
+						</div>
+						<div class="menu_BodyWrapper" style="padding-top: 10pt;">
+							<p class="menu_BodyName menu_Transition" style="font-size: 15pt; width: 280pt; bottom: 0pt; position: absolute;" onclick="moveToMenu('settings');">Back</p>
+						</div>
+					</td>
+				</tr>
+			</table>
+		</div>
+		<div class="menu" id="settings_graphics">
+			<table>
+				<tr>
+					<td class="menu_TitleTD">
+						<p class="menu_TitlePrev">Settings</p>
+						<p class="menu_TitleName">Graphics</p>
+					</td>
+					<td class="menu_BodyTD">
+						<div class="menu_BodyWrapper">
+							<p class="menu_BodyName" style="padding-top: 15pt; padding-bottom: 0pt; cursor: default;"></p>
+						</div>
+						<div class="menu_BodyWrapper">
+							<p class="menu_BodySubName">Full screen</p>
+							<a class="menu_Button" style="user-select: none;"           onclick="changeSidewaysDown('full_screen');">&laquo;</a>
+							<p class="menu_BodyOption menu_Sideways" id="full_screen_0" onclick="changeSidewaysUp('full_screen');">Disabled</p>
+							<p class="menu_BodyOption menu_Sideways" id="full_screen_1" onclick="changeSidewaysUp('full_screen');">Enabled</p>
+							<a class="menu_Button" style="user-select: none;"           onclick="changeSidewaysUp('full_screen');">&raquo;</a>
+						</div>
+						<div class="menu_BodyWrapper">
+							<p class="menu_BodySubName">V-Sync</p>
+							<a class="menu_Button" style="user-select: none;"     onclick="changeSidewaysDown('vsync');">&laquo;</a>
+							<p class="menu_BodyOption menu_Sideways" id="vsync_0" onclick="changeSidewaysUp('vsync');">Disabled</p>
+							<p class="menu_BodyOption menu_Sideways" id="vsync_1" onclick="changeSidewaysUp('vsync');">Enabled</p>
+							<a class="menu_Button" style="user-select: none;"     onclick="changeSidewaysUp('vsync');">&raquo;</a>
+						</div>
+						<div class="menu_BodyWrapper">
+							<p class="menu_BodySubName">Render Scale</p>
+							<p class="menu_BodyOption" id="render_scale" style="cursor: default; width: 20pt; margin: 0pt;">1</p>
+							<input id="subtitles_font_size" type="range" min="0.1" max="2" value="1" step="0.01" onchange="this.parentElement.children[1].innerHTML = this.value; parent.changedSetting('render_scale', parseFloat(this.value));" class="menu_Slider menu_Transition">
+						</div>
+						<div class="menu_BodyWrapper">
+							<p class="menu_BodySubName">Preset</p>
+							<a class="menu_Button" style="user-select: none;"               onclick="changeSidewaysDown('graphics_preset');">&laquo;</a>
+							<p class="menu_BodyOption menu_Sideways" id="graphics_preset_0" onclick="changeSidewaysUp('graphics_preset');">Low</p>
+							<p class="menu_BodyOption menu_Sideways" id="graphics_preset_1" onclick="changeSidewaysUp('graphics_preset');">Medium</p>
+							<p class="menu_BodyOption menu_Sideways" id="graphics_preset_2" onclick="changeSidewaysUp('graphics_preset');">High</p>
+							<a class="menu_Button" style="user-select: none;"               onclick="changeSidewaysUp('graphics_preset');">&raquo;</a>
+						</div>
+						<div class="menu_BodyWrapper" style="padding-top: 10pt;">
+							<p class="menu_BodyName menu_Transition" style="font-size: 15pt; width: 280pt; bottom: 0pt; position: absolute;" onclick="moveToMenu('settings');">Back</p>
+						</div>
+					</td>
+				</tr>
+			</table>
+		</div>
+		<div class="menu" id="accessibility">
+			<table>
+				<tr>
+					<td class="menu_TitleTD">
+						<p class="menu_TitlePrev">Main Menu</p>
+						<p class="menu_TitleName">Accessibility</p>
+					</td>
+					<td class="menu_BodyTD">
+						<div class="menu_BodyWrapper">
+							<p class="menu_BodyName" style="padding-top: 15pt; padding-bottom: 0pt; cursor: default;">Subtitles</p>
+						</div>
+						<div class="menu_BodyWrapper">
+							<p class="menu_BodySubName"></p>
+							<a class="menu_Button" style="user-select: none;"        onclick="changeSidewaysDown('subitles');">&laquo;</a>
+							<p class="menu_BodyOption menu_Sideways" id="subitles_0" onclick="changeSidewaysUp('subitles');">Disabled</p>
+							<p class="menu_BodyOption menu_Sideways" id="subitles_1" onclick="changeSidewaysUp('subitles');">Enabled</p>
+							<a class="menu_Button" style="user-select: none;"        onclick="changeSidewaysUp('subitles');">&raquo;</a>
+						</div>
+						<div class="menu_BodyWrapper">
+							<p class="menu_BodySubName">Background</p>
+							<a class="menu_Button" style="user-select: none;"                    onclick="changeSidewaysDown('subtitles_background');">&laquo;</a>
+							<p class="menu_BodyOption menu_Sideways" id="subtitles_background_0" onclick="changeSidewaysUp('subtitles_background');">Disabled</p>
+							<p class="menu_BodyOption menu_Sideways" id="subtitles_background_1" onclick="changeSidewaysUp('subtitles_background');">Enabled</p>
+							<a class="menu_Button" style="user-select: none;"                    onclick="changeSidewaysUp('subtitles_background');">&raquo;</a>
+						</div>
+						<div class="menu_BodyWrapper">
+							<p class="menu_BodySubName">Font size</p>
+							<p class="menu_BodyOption" id="subtitles_font_size_value" style="cursor: default; width: 20pt; margin: 0pt;">12</p>
+							<input id="subtitles_font_size" type="range" min="8" max="64" value="12" onchange="this.parentElement.children[1].innerHTML = this.value;" class="menu_Slider menu_Transition">
+						</div>
+						<div class="menu_BodyWrapper">
+							<p class="menu_BodyName" style="padding-top: 15pt; padding-bottom: 0pt; cursor: default; width: 200pt;">Color blind mode</p>
+						</div>
+						<div class="menu_BodyWrapper" style="user-select: none; cursor: default;">
+							<p class="menu_BodySubName"></p>
+							<a class="menu_Button" style="user-select: none;"   onclick="changeSidewaysDown('cbm');">&laquo;</a>
+							<p class="menu_BodyOption menu_Sideways" id="cbm_0" onclick="changeSidewaysUp('cbm');">Default</p>
+							<p class="menu_BodyOption menu_Sideways" id="cbm_1" onclick="changeSidewaysUp('cbm');">Protanomaly</p>
+							<p class="menu_BodyOption menu_Sideways" id="cbm_2" onclick="changeSidewaysUp('cbm');">Protanopia</p>
+							<p class="menu_BodyOption menu_Sideways" id="cbm_3" onclick="changeSidewaysUp('cbm');">Deuteranomaly</p>
+							<p class="menu_BodyOption menu_Sideways" id="cbm_4" onclick="changeSidewaysUp('cbm');">Deuteranopia</p>
+							<p class="menu_BodyOption menu_Sideways" id="cbm_5" onclick="changeSidewaysUp('cbm');">Tritanomaly</p>
+							<p class="menu_BodyOption menu_Sideways" id="cbm_6" onclick="changeSidewaysUp('cbm');">Tritanopia</p>
+							<a class="menu_Button" style="user-select: none;"   onclick="changeSidewaysUp('cbm');">&raquo;</a>
+						</div>
+						<div class="menu_BodyWrapper" style="padding-top: 10pt;">
+							<p class="menu_BodyName menu_Transition" style="font-size: 15pt; width: 280pt; bottom: 0pt; position: absolute;" onclick="moveToMenu('main');">Back</p>
+						</div>
+					</td>
+				</tr>
+			</table>
+		</div>
+		<div class="menu" id="debug">
+			<table>
+				<tr>
+					<td class="menu_TitleTD">
+						<p class="menu_TitlePrev">Main Menu</p>
+						<p class="menu_TitleName">Debug</p>
+					</td>
+					<td class="menu_BodyTD">
+						<div class="menu_BodyWrapper">
+							<p class="menu_BodyName" style="padding-top: 15pt; padding-bottom: 0pt; cursor: default;">Physics</p>
+						</div>
+						<div class="menu_BodyWrapper">
+							<p class="menu_BodySubName">Debug Draw</p>
+							<a class="menu_Button" style="user-select: none;"                  onclick="changeSidewaysDown('physics_debug_draw');">&laquo;</a>
+							<p class="menu_BodyOption menu_Sideways" id="physics_debug_draw_0" onclick="changeSidewaysUp('physics_debug_draw');">Disabled</p>
+							<p class="menu_BodyOption menu_Sideways" id="physics_debug_draw_1" onclick="changeSidewaysUp('physics_debug_draw');">Enabled</p>
+							<a class="menu_Button" style="user-select: none;"                  onclick="changeSidewaysUp('physics_debug_draw');">&raquo;</a>
+						</div>
+						<div class="menu_BodyWrapper" style="padding-top: 10pt;">
+							<p class="menu_BodyName menu_Transition" style="font-size: 15pt; width: 280pt; bottom: 0pt; position: absolute;" onclick="moveToMenu('main');">Back</p>
+						</div>
+					</td>
+				</tr>
+			</table>
+		</div>
+		<div style="padding: 10pt; margin: 10pt; right:0px; top: 0px; position: fixed; width: 104pt; height: fit-content; background: black; border-right: 2pt solid orange; border-left:  2pt solid orange;">
+			<a class="menu_Button" style="user-select: none; padding: 0pt; margin: 0pt; width: 100pt; font-size: 15pt; text-align: center;" onclick="moveToMenu(current_menu == '' ? 'main' : '');">Main Menu</a>
+			<a class="menu_Button" style="user-select: none; padding: 0pt; padding-bottom: 10pt; margin: 0pt; width: 100pt; font-size: 15pt; text-align: center;" onclick="moveToMenu(current_menu == '' ? 'pause' : '');">Pause Menu</a>
+			<p class="menu_BodySubName" id="dbg_fps" style="padding: 0pt; margin: 0pt; width: 50pt; text-align: right;">0</p>
+			<p class="menu_BodySubName" style="padding: 0pt; margin: 0pt; width: 50pt; font-weight: bold;">FPS</p>
+			<p class="menu_BodySubName" id="dbg_ms" style="padding: 0pt; margin: 0pt; width: 50pt; text-align: right;">0</p>
+			<p class="menu_BodySubName" style="padding: 0pt; margin: 0pt; width: 50pt; font-weight: bold;">MS</p>
+			<p class="menu_BodySubName" id="dbg_mem" style="padding: 0pt; margin: 0pt; width: 50pt; text-align: right;">0</p>
+		</div>
+		<div style="padding: 10pt; margin: 10pt; left:50% -152pt; top: 0px; position: fixed; width: 304pt; height: fit-content; background: black; border-right: 2pt solid orange; border-left:  2pt solid orange;">
+			<p class="menu_BodySubName" style="padding: 0pt; margin: 0pt; width: 300pt; font-weight: bold;">Frame Layout</p>
+			<div style="width:100%; height:20pt; position:relative;"><div id="timers"></div></div>
+		</div>
+		<script>
+			var m = document.getElementsByClassName("menu");
+			for (var i = 0; i < m.length; ++i)
+			{
+				m[i].style.left = "-100%";
+				m[i].classList.add('fadeBase');
+				menus[m[i].id] = m[i];
+			}
+			
+			var s = document.getElementsByClassName("menu_Sideways");
+			for (var i = 0; i < s.length; ++i)
+			{
+				var id = s[i].id.substring(0, s[i].id.lastIndexOf('_'));
+				var idx = parseInt(s[i].id.substring(s[i].id.lastIndexOf('_') + 1));
+				if (!(id in sideways))
+				{
+					sideways[id] = [];
+					current_sideways[id] = 0;
+				}
+				s[i].style.display = idx == 0 ? "inline-block" : "none";
+				sideways[id][idx] = s[i];
+			}
+			
+			var sl = document.getElementsByClassName("menu_Slider");
+			
+			for (var i = 0; i < sl.length; ++i)
+			{
+				sl[i].oninput = function() {
+					var v = (this.value - this.min) / (this.max - this.min) * 100.0;
+					this.style.background = 'linear-gradient(to right, orange 0%, orange '+ v +'%, gray ' + v + '%, gray 100%)'
+				};
+				sl[i].oninput();
+			}
+			
+			function resizeMenuBar() {				
+				var mttd = document.getElementsByClassName("menu_TitleTD");
+				for (var i = 0; i < mttd.length; ++i)
+				{
+					var height = window.innerHeight
+						|| document.documentElement.clientHeight
+						|| document.body.clientHeight;
+					mttd[i].style.height = height + "px";
+				}
+			}
+			
+			window.addEventListener("resize", resizeMenuBar);
+			resizeMenuBar();
+
+      var g_time = 0;
+      var g_fps  = 0;
+			function updateDebug(delta_time) {
+				g_time += delta_time;
+				g_fps++;
+				
+				if (g_time >= 1.0)
+				{
+					document.getElementById("dbg_fps").innerHTML = g_fps;
+					document.getElementById("dbg_ms").innerHTML  = Math.round(1000.0 / g_fps);
+					g_time -= 1.0;
+					g_fps = 0;
+				}
+			}
+			function updateAllocatedMemory(memSize) {
+				document.getElementById("dbg_mem").innerHTML = memSize + "MB"
+			}
+			function setAllTimers(timerInfo) {
+				var numTimers = timerInfo.length / 3;
+				var total = 0;
+				for (var i = 0; i < numTimers; ++i) {
+					total += timerInfo[1 + i * 3];
+				}
+
+				var timers = document.getElementById("timers");
+
+				while (timers.children.length > numTimers) {
+					timers.removeChild(timers.children[timers.children.length - 1]);
+				}
+
+				while (timers.children.length < numTimers) {
+					var child = document.createElement("DIV");
+					child.style.display    = "table-cell";
+					child.style.padding    = "0pt";
+					child.style.margin     = "0pt";
+					child.style.fontSize   = "15pt";
+					child.style.fontFamily = "arial";
+					child.style.position   = "absolute";
+					child.style.color      = "#DDDDDD";
+					timers.appendChild(child);
+				}
+
+				var offset = 0.0;
+				for (var i = 0; i < numTimers; ++i) {
+					var width = (timerInfo[1 + i * 3] / total) * 100;
+					timers.children[i].style.left       = offset + "%";
+					timers.children[i].style.width      = width  + "%";
+					timers.children[i].style.background = timerInfo[2 + i * 3];
+					timers.children[i].innerHTML        = timerInfo[0 + i * 3];
+					timers.children[i].lastChild.innerHTML = timerInfo[0 + i * 3];
+					offset += width;
+				}
+			}
+
+			setAllTimers([ "test", 100, "red","all", 200, "green", "things", 50, "blue" ]);
+			
+			parent.updateDebug           = updateDebug
+			parent.updateAllocatedMemory = updateAllocatedMemory
+			parent.setAllTimers          = setAllTimers
+		</script>
+	</body>
+</html>
